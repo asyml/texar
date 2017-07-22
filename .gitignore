@@ -207,3 +207,7 @@ flycheck_*.el
 # directory configuration
 .dir-locals.el
 
+# Editors
+.idea
+.vscode
+
