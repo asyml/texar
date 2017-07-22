@@ -9,8 +9,8 @@ from __future__ import division
 
 import tensorflow as tf
 
-
 _IS_TRAIN = tf.placeholder(tf.bool, name="is_train")
 
-is_train():
-  return _IS_TRAIN
+
+def is_train():
+    return _IS_TRAIN
