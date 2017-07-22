@@ -155,14 +155,12 @@ Temporary Items
 Session.vim
 # temporary
 .netrwhist
-*~
 # auto-generated tag files
 tags
 
 
 ### Emacs ###
 # -*- mode: gitignore; -*-
-*~
 \#*\#
 /.emacs.desktop
 /.emacs.desktop.lock
@@ -193,7 +191,6 @@ tramp
 
 # cask packages
 .cask/
-dist/
 
 # Flycheck
 flycheck_*.el
@@ -210,4 +207,5 @@ flycheck_*.el
 # Editors
 .idea
 .vscode
+txtgen.iml
 
