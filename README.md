@@ -10,7 +10,7 @@
 
     - example cmd: 
       ``` bash
-      pylint --reports=n --include-ids=y --rcfile=pylint.config foo.py
+      pylint --reports=n --include-ids=y --rcfile=.pylintrc foo.py
       ```
 
 # Reference libraries
