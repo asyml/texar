@@ -22,3 +22,7 @@
   * [sonnet](https://github.com/deepmind/sonnet)
 
   * [tensorflow](https://github.com/tensorflow/tensorflow)
+
+# TODO
+    
+  * New name of the project ?
