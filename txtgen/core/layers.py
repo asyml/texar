@@ -10,58 +10,59 @@ from __future__ import division
 import tensorflow.contrib.rnn as rnn
 
 from txtgen.core.utils import get_instance, switch_dropout
-from txtgen import custom
 
 
 def default_rnn_cell_hparams():
     """Returns default hyperparameters of an RNN cell.
 
     Returns:
-      A dictionary of default hyperparameters of an RNN cell, with the following
-      structure and values:
+        A dictionary of default hyperparameters of an RNN cell, with the
+        following structure and values:
 
-      ```python
-      {
-        "cell": {
-            # Class name of the cell, either defined by users in `txtgen.custom`,
-            # or built-in class pre-defined in `tensorflow.contrib.rnn`
+        ```python
+        {
+            "cell": {
+                # Class name of the cell, either defined by users in
+                # `txtgen.custom`, or built-in class pre-defined in
+                # `tensorflow.contrib.rnn`
 
-            "type": "BasicLSTMCell",
+                "type": "BasicLSTMCell",
 
-            # A dictionary of arguments for the constructor of the cell class
+                # A dictionary of arguments for constructor of the cell class
 
-            "args": {
-              "num_units": 64
-            }
-        },
+                "args": {
+                    "num_units": 64
+                }
+            },
 
-        # Dropout applied to the cell. If `num_layers>1`, dropout is applied to
-        # the cell of each layer. See `tensorflow.contrib.rnn.DropoutWrapper`
-        # for each of the hyperparameters
+            # Dropout applied to the cell if `use=True`. If `num_layers>1`,
+            # dropout is applied to the cell of each layer. See
+            # `tensorflow.contrib.rnn.DropoutWrapper` for each of the
+            # hyperparameters.
 
-        "dropout": {
-            "use": False,
-            "input_keep_prob": 1.0,
-            "output_keep_prob": 1.0,
-            "state_keep_prob": 1.0,
-            "variational_recurrent": False
-        },
-        "num_layers": 1       # Number of cell layers
+            "dropout": {
+                "use": False,
+                "input_keep_prob": 1.0,
+                "output_keep_prob": 1.0,
+                "state_keep_prob": 1.0,
+                "variational_recurrent": False
+            },
+            "num_layers": 1       # Number of cell layers
 
-        # Whether to apply residual connection on cell inputs and outputs. If
-        # `num_layers>1`, the connection is between the inputs and outputs of the
-        # multi-layer cell as a whole
+            # Whether to apply residual connection on cell inputs and outputs.
+            # If `num_layers>1`, the connection is between the inputs and
+            # outputs of the multi-layer cell as a whole
 
-        "residual": False,
+            "residual": False,
 
-        # Whether to apply highway connection on cell inputs and outputs. If
-        # `num_layers>1`, the connection is between the inputs and outputs of the
-        # multi-layer cell as a whole
+            # Whether to apply highway connection on cell inputs and outputs. If
+            # `num_layers>1`, the connection is between the inputs and outputs
+            # of the multi-layer cell as a whole
 
-        "highway": False,
-      }
+            "highway": False,
+        }
 
-      ```
+        ```
     """
     return {
         "cell": {
@@ -95,34 +96,30 @@ def get_rnn_cell(cell_hparams):
     cells = []
     for _ in range(cell_hparams["num_layers"]):
         cell_type = cell_hparams["cell"]["type"]
-        try:
-            try:
-                cell_class = getattr(custom, cell_type)
-            except:
-                cell_class = getattr(rnn, cell_type)
-        except:
-            raise ValueError("Cell type not found: %s" % cell_type)
-        cell = get_instance(cell_class, cell_hparams["cell"]["args"])
+        cell_modules = ['txtgen.custom', 'tensorflow.contrib.rnn']
+        cell = get_instance(cell_type, cell_hparams["cell"]["args"],
+                            cell_modules)
 
-        dpt_hparams = cell_hparams["dropout"]
-        if dpt_hparams["use"]:
+        d_hp = cell_hparams["dropout"]
+        if d_hp["use"]:
             cell = rnn.DropoutWrapper(
                 cell=cell,
-                input_keep_prob=switch_dropout(dpt_hparams["input_dropout_prob"]),
-                output_keep_prob=switch_dropout(dpt_hparams["output_dropout_prob"]),
-                state_keep_prob=switch_dropout(dpt_hparams["state_dropout_prob"]),
-                variational_recurrent=dpt_hparams["variational_recurrent"])
+                input_keep_prob=switch_dropout(d_hp["input_dropout_prob"]),
+                output_keep_prob=switch_dropout(d_hp["output_dropout_prob"]),
+                state_keep_prob=switch_dropout(d_hp["state_dropout_prob"]),
+                variational_recurrent=d_hp["variational_recurrent"])
 
         cells.append(cell)
 
     if cell_hparams["num_layers"] > 1:
-        cell = rnn.MultiRNNCell(cells)
+        cell = rnn.MultiRNNCell(cells)    # pylint: disable=redefined-variable-type
     else:
         cell = cells[0]
 
     if cell_hparams["residual"]:
         cell = rnn.ResidualWrapper(cell)
     if cell_hparams["highway"]:
-        cell = rnn.HighwayWrapper(cell)   # FIXME No Highway wrapper yet
+        cell = rnn.HighwayWrapper(cell)
 
     return cell
+

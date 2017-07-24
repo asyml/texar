@@ -1,6 +1,7 @@
 #
 """
-Base class for connectors that transform encoder outputs into decoder initial states.
+Base class for connectors that transform encoder outputs/states into decoder
+initial states.
 """
 
 from __future__ import absolute_import
@@ -10,43 +11,27 @@ from __future__ import print_function
 from txtgen.modules.module_base import ModuleBase
 
 
-def make_connector_output(outputs, **kwargs):
-    """Wraps the connector outputs with a dictionary.
-
-    Args:
-      outputs: Outputs of the connector.
-      **kwargs: Other outputs.
-
-    Returns:
-      A dictionary containing the outputs.
-    """
-    return dict({"outputs": outputs}, **kwargs)
-
-
 class ConnectorBase(ModuleBase):
-    """Base class inherited by all connector classes.
+    """Base class inherited by all connector classes. A connector is to
+    transform encoder outputs and states into decoder initial states.
     """
 
-    @staticmethod
-    def default_hparams():
-        pass
-
-    def __init__(self, name, hparams=None):
-        ModuleBase.__init__(name, hparams)
-
-    def _build(self, *args, **kwargs):
-        return self.connect(*args, **kwargs)
-
-    def connect(self, encoder_outputs, *args, **kwargs):
-        """Transforms the outputs of encoder to the initial states of decoder.
+    def __init__(self, decoder_state_size, name, hparams=None):
+        """Initializes the connector.
 
         Args:
-          encoder_outputs: A dictionary of encoder outputs. See
-            `txtgen.modules.encoder.encoder_base.make_encoder_output`.
-          *args: Other arguments.
-          **kwargs: Keyword arguments.
+            decoder_state_size: Size(s) of state(s) of the decoder cell. Can be
+                an Integer, a Tensorshape , or a tuple of Integers or
+                TensorShapes. Typically can be obtained by
+                `decoder.cell.state_size`.
+            name: Name of connector.
+            hparams: A dictionary of hyperparameters.
+        """
+        ModuleBase.__init__(name, hparams)
+        self._decoder_state_size = decoder_state_size
 
-        Returns:
-          A dictionary of outputs.
+    def _build(self, *args, **kwargs):
+        """Transforms the encoder outputs and states to the decoder initial
+        states.
         """
         raise NotImplementedError
