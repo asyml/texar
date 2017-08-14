@@ -22,19 +22,9 @@ class ForwardRNNEncoder(EncoderBase):
         """Initializes the encoder.
 
         Args:
-          name: Name of the encoder.
-          hparams: A dictionary of hyperparameters with the following structure
-              and default values:
-
-              ```python
-              {
-                # A dictionary of rnn cell hyperparameters. See
-                # `txtgen.core.layers.default_rnn_cell_hparams` for the
-                # structure.
-
-                "rnn_cell": default_rnn_cell_hparams
-              }
-              ```
+            name: Name of the encoder.
+            hparams: A dictionary of hyperparameters. See `default_hparams` for
+                the sturcture and default values.
         """
         EncoderBase.__init__(self, name, hparams)
 
@@ -64,7 +54,22 @@ class ForwardRNNEncoder(EncoderBase):
 
     @staticmethod
     def default_hparams():
+        """Returns a dictionary of hyperparameters with default values.
+
+        The dictionary has the following structure and default values:
+
+            ```python
+            {
+              # A dictionary of rnn cell hyperparameters. See
+              # `txtgen.core.layers.default_rnn_cell_hparams` for the
+              # structure and default values.
+
+              "rnn_cell": default_rnn_cell_hparams
+            }
+            ```
+        """
         return {
             "rnn_cell": default_rnn_cell_hparams()
         }
+
 

@@ -20,10 +20,9 @@ class ConnectorBase(ModuleBase):
         """Initializes the connector.
 
         Args:
-            decoder_state_size: Size(s) of state(s) of the decoder cell. Can be
-                an Integer, a Tensorshape , or a tuple of Integers or
-                TensorShapes. Typically can be obtained by
-                `decoder.cell.state_size`.
+            decoder_state_size: Size of state of the decoder cell. Can be an
+                Integer, a Tensorshape , or a tuple of Integers or TensorShapes.
+                This can typically be obtained by `decoder.cell.state_size`.
             name: Name of connector.
             hparams: A dictionary of hyperparameters.
         """

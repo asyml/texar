@@ -64,8 +64,8 @@ def get_function(func_name, module_paths=None):
         func_name: Name of the function.
         module_paths: A list of paths to candidate modules to search for the
             function. The first module in the list that contains the function
-            is used. If `module_paths` is `None`, function is directly located
-            based on `func_name`.
+            is used. If `module_paths` is not given, function is directly
+            located based on `func_name`.
 
     Returns:
         A function.

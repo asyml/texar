@@ -11,21 +11,21 @@ import tensorflow as tf
 from tensorflow.python.util import nest    # pylint: disable=E0611
 
 from txtgen.modules.connectors.connector_base import ConnectorBase
-from txtgen.core.utils import get_function
+from txtgen.core.utils import get_function, transpose_batch_time
 
-def _mlp_transform(inputs, output_size, activation="identity"):
+def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
     """Transforms inputs through a fully-connected layer that creates the output
     with specified size.
 
     Args:
         inputs: A Tensor of shape `[batch_size, ...]` (i.e., batch-major), or a
-            (possibly nested) tuple of such elements. A Tensor or a (possibly
-            nested) tuple of Tensors with shape `[max_time, batch_size, ...]`
-            (i.e., time-major) can be transposed to batch-major using
+            (nested) tuple of such elements. A Tensor or a (nested) tuple of
+            Tensors with shape `[max_time, batch_size, ...]` (i.e., time-major)
+            can be transposed to batch-major using
             `txtgen.core.utils.transpose_batch_time` prior to this function.
-        output_size: Can be an Integer, a TensorShape, or a (possibly nested)
-            tuple of Integers or TensorShape.
-        activation: Name of activation function applied to the output.
+        output_size: Can be an Integer, a TensorShape, or a (nested) tuple of
+            Integers or TensorShape.
+        activation_fn: Activation function applied to the output.
 
     Returns:
         If `output_size` is an Integer or a TensorShape, returns a Tensor of
@@ -44,11 +44,14 @@ def _mlp_transform(inputs, output_size, activation="identity"):
     flat_output_size = nest.flatten(output_size)
     sum_output_size = sum(flat_output_size)
 
-    # get activation function
-    module_names = ['tensorflow', 'tensorflow.nn']
-    activation_fn = get_function(activation, module_names)
+    fc_output = tf.contrib.layers.fully_connected(
+        concat_input, sum_output_size, activation_fn=activation_fn)
 
-    output = tf.contrib.layers.fully_connected(concat_input, sum_output_size)
+    flat_output = tf.split(fc_output, flat_output_size, axis=1)
+    output = nest.pack_sequence_as(structure=output_size,
+                                   flat_sequence=flat_output)
+
+    return output
 
 
 class ForwardConnector(ConnectorBase):
@@ -62,10 +65,9 @@ class ForwardConnector(ConnectorBase):
         """Initializes the connector.
 
         Args:
-            decoder_state_size: Size(s) of state(s) of the decoder cell. Can be
-                an Integer, a Tensorshape , or a tuple of Integers or
-                TensorShapes. Typically can be obtained by
-                `decoder.cell.state_size`.
+            decoder_state_size: Size of state of the decoder cell. Can be an
+                Integer, a Tensorshape , or a tuple of Integers or TensorShapes.
+                This can typically be obtained by `decoder.cell.state_size`.
             name: Name of connector.
         """
         ConnectorBase.__init__(decoder_state_size, name, None)
@@ -89,11 +91,51 @@ class ForwardConnector(ConnectorBase):
         return {}
 
 
-class StochasticConnector(ConnectorBase):
-    """Samples decoder initial state from a distribution defined by the
-    encoder outputs.
-
-    Used in, e.g., variational autoencoders, adversarial autoencoders, and other
-    models.
+class MLPTransformConnector(ConnectorBase):
+    """Transforms the encoder results (e.g., outputs or final states) with an
+    MLP layer. Takes the outputs as the decoder initial state.
     """
-    pass  # TODO
+
+    def __init__(self, decoder_state_size, name="mlp_connector", hparams=None):
+        ConnectorBase.__init__(decoder_state_size, name, hparams)
+
+    def _build(self, encoder_result): #pylint: disable=W0221
+        """Transforms the encoder results with an MLP layer.
+
+        Args:
+            encoder_result: Result of encoder (e.g., encoder outputs or final
+                states) to be transformed and passed to the decoder. Must be a
+                Tensor of shape `[batch_size, ...]` or a (nested) tuple of such
+                Tensors.
+
+        Returns:
+            A Tensor or a (nested) tuple of Tensors of the same structure of
+            the decoder state.
+        """
+        activation_fn = get_function(self.hparams.activation_fn)
+
+        decoder_state = _mlp_transform(
+            encoder_result, self._decoder_state_size, activation_fn)
+
+        return decoder_state
+
+    @staticmethod
+    def default_hparams():
+        """
+        activation_fn: The module path and name of the activation function
+            applied to the outputs of the MLP layer. Default is
+            "tensorflow.identity".
+        """
+        return {
+            "activation_fn": "tensorflow.identity"
+        }
+
+#class StochasticConnector(ConnectorBase):
+#    """Samples decoder initial state from a distribution defined by the
+#    encoder outputs.
+#
+#    Used in, e.g., variational autoencoders, adversarial autoencoders, and other
+#    models.
+#    """
+#    pass  # TODO
+
