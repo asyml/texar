@@ -22,21 +22,19 @@ def get_instance(class_name, args, module_paths=None):
     """Creates an class instance.
 
     Args:
-        class_name: Name of the class to instantiate.
+        class_name: Name (or full path) of the class to instantiate.
         args: A dictionary of arguments for the class constructor.
         module_paths: A list of paths to candidate modules to search for the
-            class. The first module in the list that contains the class is used.
-            If `module_paths` is `None`, class is directly located based on
-            `class_name`.
+            class. This is used if the class cannot be located solely based on
+            `class_name`. The first module in the list that contains the class
+            is used.
 
     Returns:
         A class instance.
     """
     # locate the class
-    class_ = None
-    if module_paths is None:
-        class_ = locate(class_name)
-    else:
+    class_ = locate(class_name)
+    if (class_ is None) and (module_paths is not None):
         for module_path in module_paths:
             module = importlib.import_module(module_path)
             if class_name in dir(module):
@@ -48,11 +46,11 @@ def get_instance(class_name, args, module_paths=None):
             "Class not found in {}: {}".format(module_paths, class_name))
 
     # Check validity of params
-    class_args = set(inspect.getargspec(class_.__init__).args)
+    class_args = set(inspect.getargspec(class_.__init__).args)          # pylint: disable=E1101
     for k in args.keys():
         if k not in class_args:
             raise ValueError("Invalid argument for class %s.%s: %s" %
-                             (class_.__module__, class_.__name__, k))
+                             (class_.__module__, class_.__name__, k))   # pylint: disable=E1101
 
     return class_(**args)
 
@@ -63,17 +61,15 @@ def get_function(func_name, module_paths=None):
     Args:
         func_name: Name of the function.
         module_paths: A list of paths to candidate modules to search for the
-            function. The first module in the list that contains the function
-            is used. If `module_paths` is not given, function is directly
-            located based on `func_name`.
+            function. This is used when the function cannot be located solely
+            based on `func_name`. The first module in the list that contains the
+            function is used.
 
     Returns:
         A function.
     """
-    func = None
-    if module_paths is None:
-        func = locate(func_name)
-    else:
+    func = locate(func_name)
+    if (func is None) and (module_paths is not None):
         for module_path in module_paths:
             module = importlib.import_module(module_path)
             if func_name in dir(module):
@@ -87,17 +83,23 @@ def get_function(func_name, module_paths=None):
     return func
 
 
-def switch_dropout(dropout_keep_prob):
+def switch_dropout(dropout_keep_prob, is_train=None):
     """Turn off dropout when not in training mode
 
     Args:
-      dropout_keep_prob: dropout keep probability in training mode
+        dropout_keep_prob: Dropout keep probability in training mode
+        is_train: Boolean Tensor indicator of the training mode. Dropout is
+            activated if `is_train=True`. If `is_train` is not given, the mode
+            is inferred from the global mode.
 
     Returns:
-      A unit Tensor that equals the dropout keep probability in training mode,
-      and 1 in eval mode
+        A unit Tensor that equals the dropout keep probability in training mode,
+        and 1 in eval mode
     """
-    return 1. - (1. - dropout_keep_prob) * tf.to_int32(context.is_train())
+    if is_train is None:
+        return 1. - (1. - dropout_keep_prob) * tf.to_int32(context.is_train())
+    else:
+        return 1. - (1. - dropout_keep_prob) * tf.to_int32(is_train)
 
 
 def transpose_batch_time(inputs):

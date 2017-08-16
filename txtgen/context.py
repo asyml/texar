@@ -11,6 +11,5 @@ import tensorflow as tf
 
 _IS_TRAIN = tf.placeholder(tf.bool, name="is_train")
 
-
 def is_train():
     return _IS_TRAIN

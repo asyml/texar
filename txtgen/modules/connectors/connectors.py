@@ -112,7 +112,8 @@ class MLPTransformConnector(ConnectorBase):
             A Tensor or a (nested) tuple of Tensors of the same structure of
             the decoder state.
         """
-        activation_fn = get_function(self.hparams.activation_fn)
+        fn_modules = ['txtgen.custom', 'tensorflow', 'tensorflow.nn']
+        activation_fn = get_function(self.hparams.activation_fn, fn_modules)
 
         decoder_state = _mlp_transform(
             encoder_result, self._decoder_state_size, activation_fn)
@@ -121,10 +122,20 @@ class MLPTransformConnector(ConnectorBase):
 
     @staticmethod
     def default_hparams():
-        """
-        activation_fn: The module path and name of the activation function
-            applied to the outputs of the MLP layer. Default is
-            "tensorflow.identity".
+        """Returns a dictionary of hyperparameters with default values.
+
+        Returns:
+            ```python
+            {
+                # The name or full path of the activation function applied to
+                # the outputs of the MLP layer. E.g., the name of built-in
+                # functions defined in module `tensorflow` or `tensorflow.nn`,
+                # or user-defined functions defined in `user.custom`, or a
+                # full path like "my_module.my_activation_fn".
+
+                "activation_fn": "tensorflow.identity"
+            }
+            ```
         """
         return {
             "activation_fn": "tensorflow.identity"

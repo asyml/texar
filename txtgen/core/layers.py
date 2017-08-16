@@ -22,13 +22,14 @@ def default_rnn_cell_hparams():
         ```python
         {
             "cell": {
-                # Class name of the cell, either defined by users in
-                # `txtgen.custom`, or built-in class pre-defined in
-                # `tensorflow.contrib.rnn`
+                # Name or full path of the cell class. E.g., the classname of
+                # built-in cells in `tensorflow.contrib.rnn`, or the classname
+                # of user-defined cells in `txtgen.custom`, or a full path
+                # like "my_module.MyCell".
 
                 "type": "BasicLSTMCell",
 
-                # A dictionary of arguments for constructor of the cell class
+                # A dictionary of arguments for constructor of the cell class.
 
                 "args": {
                     "num_units": 64
@@ -36,7 +37,7 @@ def default_rnn_cell_hparams():
             },
 
             # Dropout applied to the cell if `use=True`. If `num_layers>1`,
-            # dropout is applied to the cell of each layer. See
+            # dropout is applied to the cell of each layer independently. See
             # `tensorflow.contrib.rnn.DropoutWrapper` for each of the
             # hyperparameters.
 
@@ -47,6 +48,7 @@ def default_rnn_cell_hparams():
                 "state_keep_prob": 1.0,
                 "variational_recurrent": False
             },
+
             "num_layers": 1       # Number of cell layers
 
             # Whether to apply residual connection on cell inputs and outputs.

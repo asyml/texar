@@ -30,9 +30,9 @@ class HParams(object):
     def _parse(hparams, default_hparams):
         """Parses hyperparameters.
 
-        Replaces missing values with default values, and checks the types of values.
-        Hyperparameter named "args" is the arguments of a function. For such
-        hyperparameters only typecheck is performed.
+        Replaces missing values with default values, and checks the types of
+        values. Hyperparameter named "args" is the arguments of a function. For
+        such hyperparameters only typecheck is performed.
 
         Args:
           hparams: A dictionary of hyperparameters.
@@ -50,21 +50,20 @@ class HParams(object):
             # parse recursively for param of type dictionary
             if isinstance(value, dict):
                 if not isinstance(default_value, dict):
-                    raise ValueError("Hyperparameter should have type %s, %s given: %s" %
-                                     (_type_name(default_value), _type_name(value), name))
-                if (not default_value) or name == "args":
-                    # default_value is an empty dict or arguments of a function
-                    pass
-                    # FIXME default_value code need fix
-                    # elif default_value:
-                    #   value = self._parse(value, default_value)
+                    raise ValueError(
+                        "Hyperparameter must have type %s, %s given: %s" %
+                        (_type_name(default_value), _type_name(value), name))
+                if default_value and name != "args":
+                    # default_value is not empty and is not function arguments
+                    value = HParams._parse(value, default_value)
             if value is None:
                 continue
             try:
                 parsed_hparams[name] = type(default_value)(value)
             except TypeError:
-                raise ValueError("Hyperparameter should have type %s, %s given: %s" %
-                                 (_type_name(default_value), _type_name(value), name))
+                raise ValueError(
+                    "Hyperparameter should have type %s, %s given: %s" %
+                    (_type_name(default_value), _type_name(value), name))
 
         return parsed_hparams
 
