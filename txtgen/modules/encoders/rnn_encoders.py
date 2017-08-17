@@ -17,16 +17,22 @@ class ForwardRNNEncoder(EncoderBase):
     """One directional forward RNN encoder.
     """
 
-    def __init__(self, name="forward_rnn_encoder", hparams=None):
+    def __init__(self, cell=None, hparams=None, name="forward_rnn_encoder"):
         """Initializes the encoder.
 
         Args:
+            cell: (optional) An instance of `RNNCell`. If it is not specified,
+                a cell is created as specified by `rnn_cell` in `hparams`.
+            hparams: (optional) A dictionary of hyperparameters. If it is not
+                specified, the default hyperparameter setting is used. See
+                `default_hparams` for the sturcture and default values.
             name: Name of the encoder.
-            hparams: A dictionary of hyperparameters. See `default_hparams` for
-                the sturcture and default values.
         """
-        EncoderBase.__init__(self, name, hparams)
-        self._cell = get_rnn_cell(self.hparams.rnn_cell)
+        EncoderBase.__init__(self, hparams, name)
+        if cell is not None:
+            self._cell = cell
+        else:
+            self._cell = get_rnn_cell(self.hparams.rnn_cell)
 
     def _build(self, inputs, **kwargs):
         """Encodes the inputs.

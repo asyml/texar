@@ -15,7 +15,7 @@ class EncoderBase(ModuleBase):
     """Base class inherited by all encoder classes.
     """
 
-    def __init__(self, name, hparams=None):
+    def __init__(self, hparams=None, name="encoder"):
         ModuleBase.__init__(name, hparams)
 
     def _build(self, inputs, *args, **kwargs):
@@ -41,7 +41,8 @@ class EncoderBase(ModuleBase):
             {
               # A dictionary of rnn cell hyperparameters. See
               # `txtgen.core.layers.default_rnn_cell_hparams` for the
-              # structure and default values.
+              # structure and default values. It is not used if a cell instance
+              # is already specified.
 
               "rnn_cell": default_rnn_cell_hparams
             }

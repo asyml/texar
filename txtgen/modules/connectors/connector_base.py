@@ -16,15 +16,15 @@ class ConnectorBase(ModuleBase):
     transform encoder outputs and states into decoder initial states.
     """
 
-    def __init__(self, decoder_state_size, name, hparams=None):
+    def __init__(self, decoder_state_size, hparams=None, name="connector"):
         """Initializes the connector.
 
         Args:
             decoder_state_size: Size of state of the decoder cell. Can be an
                 Integer, a Tensorshape , or a tuple of Integers or TensorShapes.
                 This can typically be obtained by `decoder.cell.state_size`.
-            name: Name of connector.
             hparams: A dictionary of hyperparameters.
+            name: Name of connector.
         """
         ModuleBase.__init__(name, hparams)
         self._decoder_state_size = decoder_state_size

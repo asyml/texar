@@ -17,8 +17,9 @@ class BasicRNNDecoder(RNNDecoderBase):
     """Basic RNN decoder that performs simple sampling at each step.
     """
 
-    def __init__(self, vocab_size, name="basic_rnn_decoder", hparams=None):
-        RNNDecoderBase.__init__(self, name, hparams)
+    def __init__(self, vocab_size, cell=None, hparams=None,
+                 name="basic_rnn_decoder"):
+        RNNDecoderBase.__init__(self, cell, hparams, name)
         self._vocab_size = vocab_size
 
     def initialize(self, name=None):

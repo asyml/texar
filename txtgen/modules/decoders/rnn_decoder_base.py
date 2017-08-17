@@ -19,13 +19,26 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
     """Base class inherited by all RNN decoder classes.
     """
 
-    def __init__(self, name, hparams=None):
+    def __init__(self, cell=None, hparams=None, name="decoder"):
+        """Initializes the decoder.
+
+        Args:
+            cell: (optional) An instance of `RNNCell`. If it is not specified,
+                a cell is created as specified by `rnn_cell` in `hparams`.
+            hparams: (optional) A dictionary of hyperparameters. If it is not
+                specified, the default hyperparameter setting is used. See
+                `default_hparams` for the sturcture and default values.
+            name: Name of the encoder.
+        """
         ModuleBase.__init__(name, hparams)
         self._helper = None
         self._initial_state = None
-        self._cell = get_rnn_cell(self.hparams.rnn_cell)
+        if cell is not None:
+            self._cell = cell
+        else:
+            self._cell = get_rnn_cell(self.hparams.rnn_cell)
 
-    def _build(self, helper, initial_state):
+    def _build(self, helper, initial_state):    # pylint: disable=W0221
         """Performs decoding.
 
         Args:
@@ -57,7 +70,8 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             {
               # A dictionary of rnn cell hyperparameters. See
               # `txtgen.core.layers.default_rnn_cell_hparams` for the
-              # structure and default values.
+              # structure and default values. It is not used if a cell instance
+              # is already specified.
 
               "rnn_cell": default_rnn_cell_hparams
 

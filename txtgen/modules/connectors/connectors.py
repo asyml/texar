@@ -11,7 +11,7 @@ import tensorflow as tf
 from tensorflow.python.util import nest    # pylint: disable=E0611
 
 from txtgen.modules.connectors.connector_base import ConnectorBase
-from txtgen.core.utils import get_function, transpose_batch_time
+from txtgen.core.utils import get_function
 
 def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
     """Transforms inputs through a fully-connected layer that creates the output
@@ -70,9 +70,9 @@ class ForwardConnector(ConnectorBase):
                 This can typically be obtained by `decoder.cell.state_size`.
             name: Name of connector.
         """
-        ConnectorBase.__init__(decoder_state_size, name, None)
+        ConnectorBase.__init__(decoder_state_size, None, name)
 
-    def _build(self, encoder_state):    #pylint: disable=W0221
+    def _build(self, encoder_state):    # pylint: disable=W0221
         """Passes the encoder outputs to the initial states of decoder.
 
         Args:
@@ -96,8 +96,8 @@ class MLPTransformConnector(ConnectorBase):
     MLP layer. Takes the outputs as the decoder initial state.
     """
 
-    def __init__(self, decoder_state_size, name="mlp_connector", hparams=None):
-        ConnectorBase.__init__(decoder_state_size, name, hparams)
+    def __init__(self, decoder_state_size, hparams=None, name="mlp_connector"):
+        ConnectorBase.__init__(decoder_state_size, hparams, name)
 
     def _build(self, encoder_result): #pylint: disable=W0221
         """Transforms the encoder results with an MLP layer.

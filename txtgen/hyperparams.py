@@ -38,9 +38,11 @@ class HParams(object):
           hparams: A dictionary of hyperparameters.
           default_hparams: A dictionary of hyperparameters with default values.
         """
-        if hparams is None:
-            hparams = {}
         parsed_hparams = copy.deepcopy(default_hparams)
+
+        if hparams is None:
+            return parsed_hparams
+
         for name, value in hparams.items():
             if name not in default_hparams:
                 raise ValueError("Unknown hyperparameter %s", name)
