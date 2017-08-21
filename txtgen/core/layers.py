@@ -87,13 +87,13 @@ def default_rnn_cell_hparams():
 
 
 def get_rnn_cell(cell_hparams):
-    """Creates an RNN cell
+    """Creates an RNN cell.
 
     Args:
-      cell_hparams: a dictionary of hyperparameters
+      cell_hparams: a dictionary of hyperparameters.
 
     Returns:
-      An instance of RNN cell
+      An instance of RNN cell.
     """
     cells = []
     for _ in range(cell_hparams["num_layers"]):

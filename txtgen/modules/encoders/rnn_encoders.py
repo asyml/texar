@@ -11,6 +11,7 @@ import tensorflow as tf
 
 from txtgen.modules.encoders.encoder_base import EncoderBase
 from txtgen.core.layers import get_rnn_cell
+from txtgen.core.layers import default_rnn_cell_hparams
 
 
 class ForwardRNNEncoder(EncoderBase):
@@ -56,4 +57,26 @@ class ForwardRNNEncoder(EncoderBase):
                 cell=self._cell,
                 inputs=inputs,
                 **kwargs)
+
+    @staticmethod
+    def default_hparams():
+        """Returns a dictionary of hyperparameters with default values.
+
+        The dictionary has the following structure and default values:
+
+            ```python
+            {
+              # A dictionary of rnn cell hyperparameters. See
+              # `txtgen.core.layers.default_rnn_cell_hparams` for the
+              # structure and default values. It is not used if a cell instance
+              # is already specified.
+
+              "rnn_cell": default_rnn_cell_hparams
+            }
+            ```
+        """
+        return {
+            "rnn_cell": default_rnn_cell_hparams()
+        }
+
 

@@ -27,7 +27,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 a cell is created as specified by `rnn_cell` in `hparams`.
             hparams: (optional) A dictionary of hyperparameters. If it is not
                 specified, the default hyperparameter setting is used. See
-                `default_hparams` for the sturcture and default values.
+                `default_hparams` for the structure and default values.
             name: Name of the encoder.
         """
         ModuleBase.__init__(name, hparams)
@@ -48,7 +48,10 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             initial_state: Initial state of decoding.
 
         Returns:
-            Decoding results.
+            `(outputs, final_state, sequence_lengths)`: `outputs` is an object
+            containing the decoder output on all time steps, `final_state` is
+            the cell state of the final time step, `sequence_lengths` is a
+            Tensor of shape `[batch_size]`.
         """
         self._helper = helper
         self._initial_state = initial_state

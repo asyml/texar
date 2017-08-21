@@ -56,7 +56,7 @@ def get_instance(class_name, args, module_paths=None):
 
 
 def get_function(func_name, module_paths=None):
-    """Returns the function of specified name and module
+    """Returns the function of specified name and module.
 
     Args:
         func_name: Name of the function.
@@ -84,7 +84,7 @@ def get_function(func_name, module_paths=None):
 
 
 def switch_dropout(dropout_keep_prob, is_train=None):
-    """Turn off dropout when not in training mode
+    """Turns off dropout when not in training mode.
 
     Args:
         dropout_keep_prob: Dropout keep probability in training mode
@@ -94,7 +94,7 @@ def switch_dropout(dropout_keep_prob, is_train=None):
 
     Returns:
         A unit Tensor that equals the dropout keep probability in training mode,
-        and 1 in eval mode
+        and 1 in eval mode.
     """
     if is_train is None:
         return 1. - (1. - dropout_keep_prob) * tf.to_int32(context.is_train())
@@ -103,7 +103,7 @@ def switch_dropout(dropout_keep_prob, is_train=None):
 
 
 def transpose_batch_time(inputs):
-    """Transposes inputs between time-major and batch-major
+    """Transposes inputs between time-major and batch-major.
 
     Args:
         inputs: A Tensor of shape `[batch_size, max_time, ...]` (batch-major)
@@ -111,7 +111,7 @@ def transpose_batch_time(inputs):
             nested) tuple of such elements.
 
     Returns:
-        A Tensor with transposed batch and time dimensions of inputs
+        A Tensor with transposed batch and time dimensions of inputs.
     """
     flat_input = nest.flatten(inputs)
     flat_input = [ops.convert_to_tensor(input_) for input_ in flat_input]
