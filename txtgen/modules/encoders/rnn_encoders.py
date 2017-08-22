@@ -47,16 +47,23 @@ class ForwardRNNEncoder(EncoderBase):
             Outputs and final state of the encoder.
         """
         if ('dtype' not in kwargs) and ('initial_state' not in kwargs):
-            return tf.nn.dynamic_rnn(
+            results = tf.nn.dynamic_rnn(
                 cell=self._cell,
                 inputs=inputs,
                 dtype=tf.float32,
                 **kwargs)
         else:
-            return tf.nn.dynamic_rnn(
+            results = tf.nn.dynamic_rnn(
                 cell=self._cell,
                 inputs=inputs,
                 **kwargs)
+
+        self._add_internal_trainable_variables()
+        # Add trainable variables of `self._cell` which may be constructed
+        # externally
+        self._add_trainable_variable(self._cell.trainable_variables())
+
+        return results
 
     @staticmethod
     def default_hparams():

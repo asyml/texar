@@ -84,6 +84,7 @@ class ForwardConnector(ConnectorBase):
         """
         nest.assert_same_structure(encoder_state,
                                    self._decoder_state_size)
+
         return encoder_state
 
     @staticmethod
@@ -117,6 +118,8 @@ class MLPTransformConnector(ConnectorBase):
 
         decoder_state = _mlp_transform(
             encoder_result, self._decoder_state_size, activation_fn)
+
+        self._add_internal_trainable_variables()
 
         return decoder_state
 

@@ -19,7 +19,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
     """Base class inherited by all RNN decoder classes.
     """
 
-    def __init__(self, cell=None, hparams=None, name="decoder"):
+    def __init__(self, cell=None, hparams=None, name="rnn_decoder"):
         """Initializes the decoder.
 
         Args:
@@ -60,6 +60,11 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
 
         outputs, final_state, sequence_lengths = dynamic_decode(
             decoder=self, maximum_iterations=max_decoding_length)
+
+        self._add_internal_trainable_variables()
+        # Add trainable variables of `self._cell` which may be constructed
+        # externally
+        self._add_trainable_variable(self._cell.trainable_variables())
 
         return outputs, final_state, sequence_lengths
 
