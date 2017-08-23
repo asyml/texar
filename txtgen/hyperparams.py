@@ -31,8 +31,8 @@ class HParams(object):
         """Parses hyperparameters.
 
         Replaces missing values with default values, and checks the types of
-        values. Hyperparameter named "args" is the arguments of a function. For
-        such hyperparameters only typecheck is performed.
+        values. Hyperparameter named "kwargs" is the arguments of a function.
+        For such hyperparameters only typecheck is performed.
 
         Args:
           hparams: A dictionary of hyperparameters.
@@ -55,7 +55,7 @@ class HParams(object):
                     raise ValueError(
                         "Hyperparameter must have type %s, %s given: %s" %
                         (_type_name(default_value), _type_name(value), name))
-                if default_value and name != "args":
+                if default_value and name != "kwargs":
                     # default_value is not empty and is not function arguments
                     value = HParams._parse(value, default_value)
             if value is None:

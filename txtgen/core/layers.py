@@ -31,7 +31,7 @@ def default_rnn_cell_hparams():
 
                 # A dictionary of arguments for constructor of the cell class.
 
-                "args": {
+                "kwargs": {
                     "num_units": 64
                 }
             },
@@ -69,7 +69,7 @@ def default_rnn_cell_hparams():
     return {
         "cell": {
             "type": "BasicLSTMCell",
-            "args": {
+            "kwargs": {
                 "num_units": 64
             }
         },
