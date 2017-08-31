@@ -30,6 +30,9 @@ def default_rnn_cell_hparams():
                 "type": "BasicLSTMCell",
 
                 # A dictionary of arguments for constructor of the cell class.
+                # An RNN cell is created by calling the cell class named in
+                # `type` passing the arguments specified in `kwargs` as in:
+                #     cell_class(**kwargs)
 
                 "kwargs": {
                     "num_units": 64

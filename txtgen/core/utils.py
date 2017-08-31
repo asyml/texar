@@ -18,6 +18,35 @@ from tensorflow.python.ops import rnn          # pylint: disable=E0611
 
 from txtgen import context
 
+
+def get_class(class_name, module_paths=None):
+    """Returns the class based on class name.
+
+    Args:
+        class_name: Name (or full path) of the class to instantiate.
+        module_paths: A list of paths to candidate modules to search for the
+            class. This is used if the class cannot be located solely based on
+            `class_name`. The first module in the list that contains the class
+            is used.
+
+    Returns:
+        A class.
+    """
+    class_ = locate(class_name)
+    if (class_ is None) and (module_paths is not None):
+        for module_path in module_paths:
+            module = importlib.import_module(module_path)
+            if class_name in dir(module):
+                class_ = getattr(module, class_name)
+                break
+
+    if class_ is None:
+        raise ValueError(
+            "Class not found in {}: {}".format(module_paths, class_name))
+
+    return class_
+
+
 def get_instance(class_name, args, module_paths=None):
     """Creates an class instance.
 
@@ -33,17 +62,7 @@ def get_instance(class_name, args, module_paths=None):
         A class instance.
     """
     # locate the class
-    class_ = locate(class_name)
-    if (class_ is None) and (module_paths is not None):
-        for module_path in module_paths:
-            module = importlib.import_module(module_path)
-            if class_name in dir(module):
-                class_ = getattr(module, class_name)
-                break
-
-    if class_ is None:
-        raise ValueError(
-            "Class not found in {}: {}".format(module_paths, class_name))
+    class_ = get_class(class_name, module_paths)
 
     # Check validity of params
     class_args = set(inspect.getargspec(class_.__init__).args)          # pylint: disable=E1101
@@ -117,4 +136,21 @@ def transpose_batch_time(inputs):
     flat_input = [ops.convert_to_tensor(input_) for input_ in flat_input]
     flat_input = [rnn._transpose_batch_time(input_) for input_ in flat_input]    # pylint: disable=protected-access
     return nest.pack_sequence_as(structure=inputs, flat_sequence=flat_input)
+
+
+def default_string(str_, default_str):
+    """Returns `str_` if `str_` is not None or empty, otherwise returns
+    `default_str`.
+
+    Args:
+        str_: A string.
+        default_str: A string.
+
+    Returns:
+        Either `str_` or `default_str`.
+    """
+    if str_ is not None or len(str_) > 0:
+        return str_
+    else:
+        return default_str
 

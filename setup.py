@@ -15,8 +15,13 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     platforms='any',
 
-    install_requires=['tensorflow==1.1.0'],
-
+    install_requires=[
+        'numpy'
+    ],
+    extras_require={
+        'tensorflow': ['tensorflow'],
+        'tensorflow with gpu': ['tensorflow-gpu']
+    },
     classifiers=[
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
