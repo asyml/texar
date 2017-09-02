@@ -9,10 +9,10 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import tensorflow as tf
-from tensorflow.contrib.slim.python.slim.data.data_decoder import TFDataDecoder
+from tensorflow.contrib.slim.python.slim.data import data_decoder
 
 
-class TextDataDecoder(TFDataDecoder):   # pylint: disable=too-many-instance-attributes
+class TextDataDecoder(data_decoder.DataDecoder):   # pylint: disable=too-many-instance-attributes
     """A text data decoder that decodes raw text data, including splitting on
     word or character level, truncation, inserting special tokens, mapping
     text units to indexes, etc.
@@ -80,7 +80,7 @@ class TextDataDecoder(TFDataDecoder):   # pylint: disable=too-many-instance-attr
         """
         # Split
         if self._split_level == "word":
-            tokens = tf.string_split([data], delimiter=self.delimiter).values
+            tokens = tf.string_split([data], delimiter=self._delimiter).values
         elif self._split_level == "character":
             raise NotImplementedError
         else:
@@ -94,7 +94,7 @@ class TextDataDecoder(TFDataDecoder):   # pylint: disable=too-many-instance-attr
         if self._bos_token is not None:
             tokens = tf.concat([[self._bos_token], tokens], axis=0)
         if self._eos_token is not None:
-            tokens = tf.concat([tokens, [self._bos_token]], axis=0)
+            tokens = tf.concat([tokens, [self._eos_token]], axis=0)
 
         # Map to index
         token_ids = None
@@ -116,7 +116,6 @@ class TextDataDecoder(TFDataDecoder):   # pylint: disable=too-many-instance-attr
         """
         return [self._text_tensor_name,
                 self._length_tensor_name,
-
                 self._text_id_tensor_name]
 
     @property

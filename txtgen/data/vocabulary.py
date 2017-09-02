@@ -12,6 +12,7 @@ from collections import defaultdict
 
 import tensorflow as tf
 from tensorflow import gfile
+import numpy as np
 
 def _make_defaultdict(keys, values, default_value):
     """Creates a python defaultdict.
@@ -26,11 +27,13 @@ def _make_defaultdict(keys, values, default_value):
         A python defaultdict instance.
     """
     dict_ = defaultdict(lambda: default_value)
-    for k, v in zip(keys, values):
+    for k, v in zip(keys, values):  # pylint: disable=invalid-name
         dict_[k] = v
+
+
     return dict_
 
-class Vocab(object):
+class Vocab(object):    # pylint: disable=too-many-instance-attributes
     """Vocabulary class that loads vocabulary from file, and maintains mapping
     tables between token strings and indexes.
     """
@@ -89,7 +92,7 @@ class Vocab(object):
 
         vocab += [self._bos_token, self._eos_token, self._unk_token]
         vocab_size = len(vocab)
-        vocab_idx = tf.range(vocab_size, dtype=tf.int64)
+        vocab_idx = np.arange(vocab_size)
         unk_token_idx = vocab_size - 1
 
         # Creates TF maps
@@ -141,6 +144,15 @@ class Vocab(object):
         return self._token_to_id_map_py
 
     @property
+    def vocab_size(self):
+        """Returns the vocab size.
+
+        Returns:
+            An integer.
+        """
+        return len(self.token_to_id_map_py)
+
+    @property
     def bos_token(self):
         """Returns the special token indicating the beginning of sequence.
         """
@@ -157,3 +169,9 @@ class Vocab(object):
         """Returns the special token indicating unkown token.
         """
         return self._unk_token
+
+    @property
+    def special_tokens(self):
+        """Returns the list of special tokens.
+        """
+        return [self._bos_token, self._eos_token, self._unk_token]

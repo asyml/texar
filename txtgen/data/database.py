@@ -27,7 +27,7 @@ def default_text_dataset_hparams():
     """
     return {
         "name": "",
-        "files": "",
+        "files": [],
         "vocab.file": "",
         "vocab.share_with": "",
         "embedding": {
@@ -174,13 +174,21 @@ class TextDataBase(DataBaseBase):
     def __call__(self):
         data = self._data_provider.get(self._data_provider.list_items())
         data = dict(zip(self._data_provider.list_items(), data))
+        # Discard extra tensors inserted by DatasetDataProvider
+        if 'record_key' in data:
+            data.pop('record_key')
+
+        num_threads = 1
+        # Recommended: capacity =
+        # (num_threads + a small safety margin) * batch_size + margin
+        capacity = (num_threads + 32) * self._hparams.batch_size + 1024
 
         if self._hparams.bucket_boundaries is None:
             data_batch = tf.train.batch(
                 tensors=data,
                 batch_size=self._hparams.batch_size,
-                num_threads=1,
-                capacity=32*self._hparams.batch_size+1024,
+                num_threads=num_threads,
+                capacity=capacity,
                 enqueue_many=False,
                 dynamic_pad=True,
                 allow_smaller_final_batch=self._hparams.allow_smaller_final_batch,
@@ -192,8 +200,8 @@ class TextDataBase(DataBaseBase):
                 tensors=data,
                 batch_size=self._hparams.batch_size,
                 bucket_boundaries=self._hparams.bucket_boundaries,
-                num_threads=1,
-                capacity=32*self._hparams.batch_size+1024,
+                num_threads=num_threads,
+                capacity=capacity,
                 dynamic_pad=True,
                 allow_smaller_final_batch=self._hparams.allow_smaller_final_batch,
                 keep_input=input_length > 0,
@@ -201,10 +209,16 @@ class TextDataBase(DataBaseBase):
 
         return data_batch
 
+    def list_items(self):
+        """Returns the list of item names that the database can produce.
 
+        Returns:
+            A list of strings..
+        """
+        return self._dataset.decoder.list_items()   # pylint: disable=no-member
 
-
-
-
-
-
+    @property
+    def dataset(self):
+        """Returns the dataset.
+        """
+        return self._dataset
