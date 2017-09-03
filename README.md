@@ -26,3 +26,4 @@
 # TODO
     
   * New name of the project ?
+  * Use Sphinx for auto doc?
