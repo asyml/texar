@@ -47,12 +47,12 @@ def get_class(class_name, module_paths=None):
     return class_
 
 
-def get_instance(class_name, args, module_paths=None):
+def get_instance(class_name, kwargs, module_paths=None):
     """Creates an class instance.
 
     Args:
         class_name: Name (or full path) of the class to instantiate.
-        args: A dictionary of arguments for the class constructor.
+        kwargs: A dictionary of arguments for the class constructor.
         module_paths: A list of paths to candidate modules to search for the
             class. This is used if the class cannot be located solely based on
             `class_name`. The first module in the list that contains the class
@@ -66,12 +66,12 @@ def get_instance(class_name, args, module_paths=None):
 
     # Check validity of params
     class_args = set(inspect.getargspec(class_.__init__).args)          # pylint: disable=E1101
-    for k in args.keys():
+    for k in kwargs.keys():
         if k not in class_args:
             raise ValueError("Invalid argument for class %s.%s: %s" %
                              (class_.__module__, class_.__name__, k))   # pylint: disable=E1101
 
-    return class_(**args)
+    return class_(**kwargs)
 
 
 def get_function(func_name, module_paths=None):

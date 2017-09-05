@@ -30,11 +30,8 @@ def default_text_dataset_hparams():
         "files": [],
         "vocab.file": "",
         "vocab.share_with": "",
-        "embedding": {
-            "file": "",
-            "read_fn": "load_word2vec",
-            "share_with": ""
-        },
+        "embedding": Embedding.default_hparams(),
+        "embedding.share_with": "",
         "reader": {
             "type": "tensorflow.TextLineReader",
             "kwargs": {}
@@ -64,7 +61,7 @@ class DataBaseBase(object):
             "num_epochs": 1,
             "batch_size": 64,
             "allow_smaller_final_batch": False,
-            "bucket_boundaries": None,
+            "bucket_boundaries": [],
             "shuffle": True,
             "seed": None
         }
@@ -139,12 +136,7 @@ class TextDataBase(DataBaseBase):
         emb_hparams = dataset_hparams["embedding"]
         embedding = None
         if emb_hparams["file"] is not None and len(emb_hparams["file"]) > 0:
-            emb_read_fn = utils.get_function(
-                emb_hparams["read_fn"],
-                ["txtgen.custom", "txtgen.data.embedding"])
-            embedding = Embedding(emb_hparams["file"],
-                                  vocab.token_to_id_map_py,
-                                  emb_read_fn)
+            embedding = Embedding(vocab.token_to_id_map_py, emb_hparams)
 
         # Create the dataset
         dataset = tf_slim.dataset.Dataset(
@@ -179,11 +171,11 @@ class TextDataBase(DataBaseBase):
             data.pop('record_key')
 
         num_threads = 1
-        # Recommended: capacity =
+        # Recommended capacity =
         # (num_threads + a small safety margin) * batch_size + margin
         capacity = (num_threads + 32) * self._hparams.batch_size + 1024
 
-        if self._hparams.bucket_boundaries is None:
+        if len(self._hparams.bucket_boundaries) == 0:
             data_batch = tf.train.batch(
                 tensors=data,
                 batch_size=self._hparams.batch_size,

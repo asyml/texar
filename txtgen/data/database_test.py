@@ -64,7 +64,7 @@ class TextDatabaseTest(tf.test.TestCase):
                                      len(vocab_list) + 3)
 
             except tf.errors.OutOfRangeError:
-                print('Done -- epoch limit reaached')
+                print('Done -- epoch limit reached')
             finally:
                 coord.request_stop()
             coord.join(threads)
