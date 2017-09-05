@@ -117,7 +117,7 @@ def get_rnn_cell(cell_hparams):
         cells.append(cell)
 
     if cell_hparams["num_layers"] > 1:
-        cell = rnn.MultiRNNCell(cells)    # pylint: disable=redefined-variable-type
+        cell = rnn.MultiRNNCell(cells)  # pylint: disable=redefined-variable-type
     else:
         cell = cells[0]
 
@@ -127,4 +127,3 @@ def get_rnn_cell(cell_hparams):
         cell = rnn.HighwayWrapper(cell)
 
     return cell
-
