@@ -23,7 +23,24 @@
 
   * [tensorflow](https://github.com/tensorflow/tensorflow)
 
+## View Documentation
+TxtGen uses [Sphinx](http://www.sphinx-doc.org/en/stable/index.html)
+to automatically generate beautiful documentations. TxtGen assumes the
+code comments are in [Google Python DocString style](http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html).
+
+Install Sphinx:
+
+    apt-get install python-sphinx
+
+Generate HTML:
+
+    cd ./doc
+    make html
+
+View HTML
+
+    open ./doc/_build/index.html
+
 # TODO
     
   * New name of the project ?
-  * Use Sphinx for auto doc?
