@@ -29,13 +29,13 @@ class ForwardRNNEncoder(EncoderBase):
         """Constructs the encoder.
 
         Args:
-            cell: (optional) An instance of `RNNCell`. If it is not specified,
+            cell: (RNNCell, optional) If it is not specified,
                 a cell is created as specified in `hparams["rnn_cell"]`.
-            embedding: (optional) A `Variable` or a 2D Tensor (or numpy array)
+            embedding (optional): A `Variable` or a 2D Tensor (or numpy array)
                 of shape `[vocab_size, embedding_dim]` that contains the token
                 embeddings.
 
-                If a `Variable`, it is directly used in encoding, and
+                If a ``Variable``, it is directly used in encoding, and
                 the hyperparameters in `hparams["embedding"]` is ignored.
 
                 If a Tensor or numpy array, a new `Variable` is created taking
@@ -43,24 +43,27 @@ class ForwardRNNEncoder(EncoderBase):
                 hyperparameters in `hparams["embedding"]` are ignored.
 
                 If not given, a new `Variable` is created as specified in
-                `hparams["embedding"].`
-            embedding_trainable: A Boolean. If `True` (default), the encoder
+                ``hparams["embedding"]``.
+            embedding_trainable (bool): If ``True`` (default), the encoder
                 will update the embeddings during training. If `False`, the
                 embeddings are not updated in the encoder, but might be updated
-                elsewhere if they are shared.
-            vocab_size: (optional) An Integer. The vocabulary size. Required if
+                elsewhere if they are created externally and used in other
+                modules.
+            vocab_size (int, optional): The vocabulary size. Required if
                 `embedding` is not provided.
-            hparams: (optional) A dictionary of hyperparameters. If it is not
+            hparams (dict, optional): Encoder hyperparameters. If it is not
                 specified, the default hyperparameter setting is used. See
-                `default_hparams` for the sturcture and default values.
-            name: Name of the encoder.
+                :attr:`default_hparams` for the sturcture and default values.
+            name (string): Name of the encoder.
         """
         EncoderBase.__init__(self, hparams, name)
 
         if cell is not None:
             self._cell = cell
         else:
-            self._cell = get_rnn_cell(self.hparams.rnn_cell)
+            #a = self._hparams.rnn_cell
+            #exit()
+            self._cell = get_rnn_cell(self._hparams.rnn_cell)
 
         if embedding is None and vocab_size is None:
             raise ValueError("If `embedding` is not provided, `vocab_size` must"
@@ -73,9 +76,8 @@ class ForwardRNNEncoder(EncoderBase):
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
-        The dictionary has the following structure and default values:
+        The dictionary has the following structure and default values::
 
-            ```python
             {
                 # A dictionary of rnn cell hyperparameters. See
                 # `txtgen.core.layers.default_rnn_cell_hparams` for the
@@ -110,7 +112,6 @@ class ForwardRNNEncoder(EncoderBase):
                     }
                 }
             }
-            ```
         """
         return {
             "rnn_cell": default_rnn_cell_hparams(),
@@ -179,8 +180,9 @@ class ForwardRNNEncoder(EncoderBase):
         self._add_internal_trainable_variables()
         # Add trainable variables of `self._cell` and `self._embedding` which
         # may be constructed externally
-        self._add_trainable_variable([self._cell.trainable_variables(),
-                                      self._embedding])
+        self._add_trainable_variable(self._cell.trainable_variables)
+        if self._embedding_trainable:
+            self._add_trainable_variable(self._embedding)
 
         return results
 

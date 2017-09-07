@@ -15,7 +15,7 @@ class EncoderBase(ModuleBase):
     """
 
     def __init__(self, hparams=None, name="encoder"):
-        ModuleBase.__init__(name, hparams)
+        ModuleBase.__init__(self, name, hparams)
 
     def _build(self, inputs, *args, **kwargs):
         """Encodes the inputs.

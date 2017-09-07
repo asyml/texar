@@ -7,7 +7,9 @@ from __future__ import division
 from __future__ import print_function
 
 import copy
+import pickle
 
+import tempfile
 import tensorflow as tf
 
 from txtgen.hyperparams import HParams
@@ -61,6 +63,12 @@ class HParamsTest(tf.test.TestCase):
         self.assertEqual(hparams_.added_str, "added_str")
         self.assertEqual(hparams_.added_dict.todict(), {"key4": "value4"})
         self.assertEqual(hparams_.kwargs.added_arg, "added_argv")
+
+        # Test HParams I/O
+        hparams_file = tempfile.NamedTemporaryFile()
+        pickle.dumps(hparams_, hparams_file)
+        hparams_loaded = pickle.load(hparams_file)
+        self.assertEqual(hparams_loaded.todict(), hparams_.todict())
 
 
 if __name__ == "__main__":

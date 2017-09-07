@@ -83,10 +83,9 @@ class ModuleBase(object):
                 internally in the module or constructured outside but used
                 inside the module.
         """
-        if isinstance(variable, list):
+        if isinstance(variable, (list, tuple)):
             for var in variable:
-                if var not in self.trainable_variables:
-                    self._trainable_variables.append(var)
+                self._add_trainable_variable(var)
         else:
             if variable not in self.trainable_variables:
                 self._trainable_variables.append(variable)

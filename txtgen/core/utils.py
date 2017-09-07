@@ -116,9 +116,9 @@ def switch_dropout(dropout_keep_prob, is_train=None):
         and 1 in eval mode.
     """
     if is_train is None:
-        return 1. - (1. - dropout_keep_prob) * tf.to_int32(context.is_train())
+        return 1. - (1. - dropout_keep_prob) * tf.to_float(context.is_train())
     else:
-        return 1. - (1. - dropout_keep_prob) * tf.to_int32(is_train)
+        return 1. - (1. - dropout_keep_prob) * tf.to_float(is_train)
 
 
 def transpose_batch_time(inputs):

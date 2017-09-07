@@ -70,7 +70,7 @@ class ForwardConnector(ConnectorBase):
                 This can typically be obtained by `decoder.cell.state_size`.
             name: Name of connector.
         """
-        ConnectorBase.__init__(decoder_state_size, None, name)
+        ConnectorBase.__init__(self, decoder_state_size, None, name)
 
     def _build(self, encoder_state):    # pylint: disable=W0221
         """Passes the encoder outputs to the initial states of decoder.
@@ -98,7 +98,7 @@ class MLPTransformConnector(ConnectorBase):
     """
 
     def __init__(self, decoder_state_size, hparams=None, name="mlp_connector"):
-        ConnectorBase.__init__(decoder_state_size, hparams, name)
+        ConnectorBase.__init__(self, decoder_state_size, hparams, name)
 
     def _build(self, encoder_result): #pylint: disable=W0221
         """Transforms the encoder results with an MLP layer.

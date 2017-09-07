@@ -51,25 +51,29 @@ class HParams(object):
                 hyperparameter name is not in `default_hparams`. If `True`,
                 new hyperparameters not in `default_hparams` are added.
         """
-        parsed_hparams = copy.deepcopy(default_hparams)
+        if hparams is None and default_hparams is None:
+            return None
 
         if hparams is None:
-            return parsed_hparams
+            return HParams._parse(default_hparams, default_hparams)
+
+        parsed_hparams = copy.deepcopy(default_hparams)
 
         for name, value in hparams.items():
-            if value is None:
-                continue
-
             if name not in default_hparams:
                 if allow_new_hparam:
-                    parsed_hparams[name] = HParams._parse_value(name, value)
+                    parsed_hparams[name] = HParams._parse_value(value, name)
                     continue
                 else:
                     raise ValueError("Unknown hyperparameter %s", name)
 
+            if value is None:
+                parsed_hparams[name] = \
+                    HParams._parse_value(parsed_hparams[name])
+
             default_value = default_hparams[name]
             if default_value is None:
-                parsed_hparams[name] = value
+                parsed_hparams[name] = HParams._parse_value(value)
                 continue
 
             # Parse recursively for param of type dictionary
@@ -98,8 +102,8 @@ class HParams(object):
         return parsed_hparams
 
     @staticmethod
-    def _parse_value(name, value):
-        if isinstance(value, dict) and name != "kwargs":
+    def _parse_value(value, name=None):
+        if isinstance(value, dict) and (name is None or name != "kwargs"):
             return HParams(value, None)
         else:
             return value
@@ -109,9 +113,8 @@ class HParams(object):
         """
         if name not in self._hparams:
             # Raise AttributeError to allow copy.deepcopy
-            raise AttributeError("Unknown hyperparameter: %s", name)
+            raise AttributeError("Unknown hyperparameter: %s" % name)
         return self._hparams[name]
-
 
     def __getitem__(self, name):
         """Retrieves the value of the hyperparameter.
@@ -122,15 +125,35 @@ class HParams(object):
         """Sets the value of the hyperparameter.
         """
         if name not in self._hparams:
-            raise ValueError("Unknown hyperparameter: %s", name)
-        self._hparams[name] = self._parse_value(name, value)
+            raise ValueError("Unknown hyperparameter: %s" % name)
+        self._hparams[name] = self._parse_value(value, name)
+
+    def items(self):
+        """Returns the list of hyperparam `(name, value)` pairs
+        """
+        return iter(self)
+
+    def keys(self):
+        """Returns the list of hyperparam names
+        """
+        return self._hparams.keys()
+
+    def __iter__(self):
+        for name, value in self._hparams.items():
+            yield name, value
+
+    def __len__(self):
+        return len(self._hparams)
+
+    def __contains__(self, name):
+        return name in self._hparams
 
     def add_hparam(self, name, value):
         """Adds a new hyperparameter.
         """
         if (name in self._hparams) or hasattr(self, name):
-            raise ValueError("Hyperparameter name already exists: %s", name)
-        self._hparams[name] = self._parse_value(name, value)
+            raise ValueError("Hyperparameter name already exists: %s" % name)
+        self._hparams[name] = self._parse_value(value, name)
 
     def todict(self):
         """Returns a copy of hyperparameters as a dictionary.
