@@ -26,7 +26,8 @@
 ## View Documentation
 TxtGen uses [Sphinx](http://www.sphinx-doc.org/en/stable/index.html)
 to automatically generate beautiful documentations. TxtGen assumes the
-code comments are in [Google Python DocString style](http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html).
+code comments are in [Google Python DocString style](http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html). 
+[Pytorch documentation](http://pytorch.org/docs/master/nn.html#parameters) gives a great example of writing docstrings.
 
 Install Sphinx:
 
