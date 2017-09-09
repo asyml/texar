@@ -1,6 +1,6 @@
 #
 """
-Various RNN decoders
+Various RNN decoders.
 """
 
 from __future__ import absolute_import

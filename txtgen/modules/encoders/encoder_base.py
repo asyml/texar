@@ -1,6 +1,6 @@
 #
 """
-Base class for encoders
+Base class for encoders.
 """
 
 from __future__ import absolute_import

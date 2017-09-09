@@ -1,6 +1,6 @@
 #
 """
-Various RNN encoders
+Various RNN encoders.
 """
 
 from __future__ import absolute_import
@@ -17,6 +17,35 @@ from txtgen.core import utils
 
 class ForwardRNNEncoder(EncoderBase):
     """One directional forward RNN encoder.
+
+    Args:
+        cell: (RNNCell, optional) If it is not specified,
+            a cell is created as specified in :attr:`hparams["rnn_cell"]`.
+        embedding (optional): A `Variable` or a 2D `Tensor` (or `numpy array`)
+            of shape `[vocab_size, embedding_dim]` that contains the token
+            embeddings.
+
+            If a `Variable`, it is directly used in encoding, and
+            the hyperparameters in :attr:`hparams["embedding"]` is ignored.
+
+            If a `Tensor` or `numpy array`, a new `Variable` is created taking
+            :attr:`embedding` as initial value. The :attr:`"initializer"` and
+            :attr:`"dim"` hyperparameters in :attr:`hparams["embedding"]` are
+            ignored.
+
+            If not given, a new `Variable` is created as specified in
+            :attr:`hparams["embedding"]`.
+        embedding_trainable (bool): If `True` (default), the encoder
+            will update the embeddings during training. If `False`, the
+            embeddings are not updated in the encoder, but might be updated
+            elsewhere if they are created externally and used in other
+            modules.
+        vocab_size (int, optional): The vocabulary size. Required if
+            :attr:`embedding` is not provided.
+        hparams (dict, optional): Encoder hyperparameters. If it is not
+            specified, the default hyperparameter setting is used. See
+            :attr:`default_hparams` for the sturcture and default values.
+        name (string): Name of the encoder.
     """
 
     def __init__(self,  # pylint: disable=too-many-arguments
@@ -26,36 +55,6 @@ class ForwardRNNEncoder(EncoderBase):
                  vocab_size=None,
                  hparams=None,
                  name="forward_rnn_encoder"):
-        """Constructs the encoder.
-
-        Args:
-            cell: (RNNCell, optional) If it is not specified,
-                a cell is created as specified in `hparams["rnn_cell"]`.
-            embedding (optional): A `Variable` or a 2D Tensor (or numpy array)
-                of shape `[vocab_size, embedding_dim]` that contains the token
-                embeddings.
-
-                If a ``Variable``, it is directly used in encoding, and
-                the hyperparameters in `hparams["embedding"]` is ignored.
-
-                If a Tensor or numpy array, a new `Variable` is created taking
-                `embedding` as initial value. The "initializer" and "dim"
-                hyperparameters in `hparams["embedding"]` are ignored.
-
-                If not given, a new `Variable` is created as specified in
-                ``hparams["embedding"]``.
-            embedding_trainable (bool): If ``True`` (default), the encoder
-                will update the embeddings during training. If `False`, the
-                embeddings are not updated in the encoder, but might be updated
-                elsewhere if they are created externally and used in other
-                modules.
-            vocab_size (int, optional): The vocabulary size. Required if
-                `embedding` is not provided.
-            hparams (dict, optional): Encoder hyperparameters. If it is not
-                specified, the default hyperparameter setting is used. See
-                :attr:`default_hparams` for the sturcture and default values.
-            name (string): Name of the encoder.
-        """
         EncoderBase.__init__(self, hparams, name)
 
         if cell is not None:
@@ -76,23 +75,35 @@ class ForwardRNNEncoder(EncoderBase):
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
-        The dictionary has the following structure and default values::
+        The dictionary has the following structure and default values.
+
+        See :class:`~txtgen.core.layers.default_rnn_cell_hparams` for the
+        default rnn cell hyperparameters.
+
+        .. code-block:: python
 
             {
                 # A dictionary of rnn cell hyperparameters. See
                 # `txtgen.core.layers.default_rnn_cell_hparams` for the
-                # structure and default values. It is not used if a cell
-                # instance is already specified when constructing the encoder.
-                "rnn_cell": default_rnn_cell_hparams
+                # structure and default values. Ignored if `cell` is given
+                # when constructing the encoder.
+                "rnn_cell": default_rnn_cell_hparams,
 
                 # A dictionary of token embedding hyperparameters for embedding
-                # initialization. It is not used if embedding is already
-                # specified when constructing the encoder.
+                # initialization. Ignored if `embedding` is given and is
+                # a `Variable` when constructing the encoder.
                 "embedding": {
-                    "dim": 100, # dimension of the embedding
+
+                    # Embedding dimension. Ignored if `embedding` is given
+                    # when constructing the encoder.
+                    "dim": 100,
+
+                    # Initializer of embedding values. Ignored if
+                    # `embedding` is given when constructing the encoder.
                     "initializer": {
                         # A string. Name of the embedding variables.
                         "name": "embedding",
+
                         # A string. Name or full path to the initializer class.
                         # An initializer is a class inheriting from
                         # `tensorflow.Initializer`, which can be built-in
@@ -100,6 +111,7 @@ class ForwardRNNEncoder(EncoderBase):
                         # classes in `txtgen.custom`, or a full path like
                         # `my_module.MyInitializer`.
                         "type": "tensorflow.random_uniform_initializer",
+
                         # A dictionary of arguments for constructor of the
                         # initializer class. An initializer is created by
                         # calling `initialzier_class(**kwargs)` where

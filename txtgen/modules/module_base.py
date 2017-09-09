@@ -1,6 +1,6 @@
 #
 """
-Base class for modules
+Base class for modules.
 """
 
 from __future__ import absolute_import
@@ -16,16 +16,15 @@ from txtgen.hyperparams import HParams
 
 class ModuleBase(object):
     """Base class inherited by modules that create Variables and are
-    configurable through hyperparameters
+    configurable through hyperparameters.
+
+    Args:
+        name (string): Name of the module.
+        hparams (dict, optional): Hyperparameters of the module. See
+            :attr:`default_hparams` for the structure and default values.
     """
 
     def __init__(self, name, hparams=None):
-        """Initialize the module.
-
-        Args:
-            name: Name of the module
-            hparams: A dictionary of hyperparameters
-        """
         self.name = name
         self._template = tf.make_template(name, self._build,
                                           create_scope_now_=True)
@@ -34,6 +33,13 @@ class ModuleBase(object):
         self._trainable_variables = tf.get_collection(
             tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.variable_scope.name)
 
+    @staticmethod
+    def default_hparams():
+        """Returns a dictionary of hyperparameters of the module with default
+        values. Used to replace the missing values of input :attr:`hparams`
+        during module construction.
+        """
+        raise NotImplementedError
 
     def _build(self, *args, **kwargs):
         """Subclass must implement this method to build the logic.
@@ -43,7 +49,7 @@ class ModuleBase(object):
           **kwargs: Keyword arguments.
 
         Returns:
-          output Tensor(s).
+          Output Tensor(s).
         """
         raise NotImplementedError
 
@@ -90,34 +96,26 @@ class ModuleBase(object):
             if variable not in self.trainable_variables:
                 self._trainable_variables.append(variable)
 
-    @staticmethod
-    def default_hparams():
-        """Returns a dictionary of default hyperparameters of the module.
-        Used to replace the missing values of input hyperparameters during
-        initialization.
-        """
-        raise NotImplementedError
-
     @property
     def variable_scope(self):
-        """Returns the variable scope of the module.
+        """The variable scope of the module.
         """
         return self._template.variable_scope
 
     @property
     def module_name(self):
-        """Returns the name of the module.
+        """The name of the module.
         """
         return self._unique_name
 
     @property
     def trainable_variables(self):
-        """Returns the list of trainable variables of the module.
+        """The list of trainable variables of the module.
         """
         return self._trainable_variables
 
     @property
     def hparams(self):
-        """Returns the hyperparameters of the module.
+        """The hyperparameters of the module.
         """
         return self._hparams
