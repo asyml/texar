@@ -10,9 +10,7 @@ from __future__ import print_function
 import tensorflow as tf
 
 from txtgen.modules.encoders.encoder_base import EncoderBase
-from txtgen.core.layers import get_rnn_cell
-from txtgen.core.layers import default_rnn_cell_hparams
-from txtgen.core import utils
+from txtgen.core import layers
 
 
 class ForwardRNNEncoder(EncoderBase):
@@ -57,19 +55,25 @@ class ForwardRNNEncoder(EncoderBase):
                  name="forward_rnn_encoder"):
         EncoderBase.__init__(self, hparams, name)
 
-        if cell is not None:
-            self._cell = cell
-        else:
-            #a = self._hparams.rnn_cell
-            #exit()
-            self._cell = get_rnn_cell(self._hparams.rnn_cell)
+        # Make rnn cell
+        with tf.variable_scope(self.variable_scope): # pylint: disable=not-context-manager
+            if cell is not None:
+                self._cell = cell
+            else:
+                self._cell = layers.get_rnn_cell(self._hparams.rnn_cell)
 
+        # Make embedding
         if embedding is None and vocab_size is None:
-            raise ValueError("If `embedding` is not provided, `vocab_size` must"
-                             " be specified.")
-        self._embedding = embedding
-        self._embedding_trainable = embedding_trainable
-        self._vocab_size = vocab_size
+            raise ValueError("If `embedding` is not provided, `vocab_size` "
+                             "must be specified.")
+        if isinstance(embedding, tf.Variable):
+            self._embedding = embedding
+        else:
+            self._embedding = layers.get_embedding(
+                self._hparams.embedding, embedding, vocab_size,
+                embedding_trainable, self.variable_scope)
+        if embedding_trainable:
+            self._add_trainable_variable(self._embedding)
 
     @staticmethod
     def default_hparams():
@@ -78,87 +82,29 @@ class ForwardRNNEncoder(EncoderBase):
         The dictionary has the following structure and default values.
 
         See :class:`~txtgen.core.layers.default_rnn_cell_hparams` for the
-        default rnn cell hyperparameters.
+        default rnn cell hyperparameters, and
+        :class:`~txtgen.core.layers.default_embedding_hparams` for the default
+        embedding hyperparameters.
 
         .. code-block:: python
 
             {
-                # A dictionary of rnn cell hyperparameters. See
-                # `txtgen.core.layers.default_rnn_cell_hparams` for the
-                # structure and default values. Ignored if `cell` is given
-                # when constructing the encoder.
-                "rnn_cell": default_rnn_cell_hparams,
+                # A dictionary of rnn cell hyperparameters. Ignored if `cell`
+                # is given when constructing the encoder.
+                "rnn_cell": txtgen.core.layers.default_rnn_cell_hparams(),
 
                 # A dictionary of token embedding hyperparameters for embedding
                 # initialization. Ignored if `embedding` is given and is
-                # a `Variable` when constructing the encoder.
-                "embedding": {
-
-                    # Embedding dimension. Ignored if `embedding` is given
-                    # when constructing the encoder.
-                    "dim": 100,
-
-                    # Initializer of embedding values. Ignored if
-                    # `embedding` is given when constructing the encoder.
-                    "initializer": {
-                        # A string. Name of the embedding variables.
-                        "name": "embedding",
-
-                        # A string. Name or full path to the initializer class.
-                        # An initializer is a class inheriting from
-                        # `tensorflow.Initializer`, which can be built-in
-                        # classes in module `tensorflow`, or user-defined
-                        # classes in `txtgen.custom`, or a full path like
-                        # `my_module.MyInitializer`.
-                        "type": "tensorflow.random_uniform_initializer",
-
-                        # A dictionary of arguments for constructor of the
-                        # initializer class. An initializer is created by
-                        # calling `initialzier_class(**kwargs)` where
-                        # `initializer_class` is specified in `type`.
-                        "kwargs": {
-                            "minval": -0.1,
-                            "maxval": 0.1,
-                            "seed": None
-                        }
-                    }
-                }
+                # a tf.Variable when constructing the encoder. If `embedding`
+                # is given and is a Tensor or numpy array, the "dim" and
+                # "initializer" specs of embedding are ignored.
+                "embedding": txtgen.core.layers.default_embedding_hparams()
             }
         """
         return {
-            "rnn_cell": default_rnn_cell_hparams(),
-            "embedding": { #TODO(zhiting): allow more hparams like regularizer
-                "name": "embedding",
-                "dim": 100,
-                "initializer": {
-                    "type": "tensorflow.random_uniform_initializer",
-                    "kwargs": {
-                        "minval": -0.1,
-                        "maxval": 0.1,
-                        "seed": None
-                    }
-                }
-            }
+            "rnn_cell": layers.default_rnn_cell_hparams(),
+            "embedding": layers.default_embedding_hparams()
         }
-
-    def _build_embedding(self):
-        if self._embedding is None:
-            initializer = utils.get_instance(
-                self._hparams.embedding.initializer.type,
-                self._hparams.embedding.initializer.kwargs,
-                ["txtgen.custom", "tensorflow"])
-            self._embedding = tf.get_variable(
-                name=self._hparams.embedding.name,
-                shape=[self._vocab_size, self._hparams.embedding.dim],
-                initializer=initializer,
-                trainable=self._embedding_trainable)
-        elif not isinstance(self._embedding, tf.Variable) and \
-                not isinstance(self._embedding, tf.Constant):
-            # self._embedding is a Tensor or numpy array
-            self._embedding = tf.get_variable(
-                name=self._hparams.embedding.name,
-                initializer=self._embedding,
-                trainable=self._embedding_trainable)
 
 
     def _build(self, inputs, **kwargs):
@@ -173,8 +119,6 @@ class ForwardRNNEncoder(EncoderBase):
         Returns:
             Outputs and final state of the encoder.
         """
-        self._build_embedding()
-
         embedded_inputs = tf.nn.embedding_lookup(self._embedding, inputs)
 
         if ('dtype' not in kwargs) and ('initial_state' not in kwargs):
@@ -190,11 +134,10 @@ class ForwardRNNEncoder(EncoderBase):
                 **kwargs)
 
         self._add_internal_trainable_variables()
-        # Add trainable variables of `self._cell` and `self._embedding` which
-        # may be constructed externally
+        # Add trainable variables of `self._cell` which may be constructed
+        # externally
         self._add_trainable_variable(self._cell.trainable_variables)
-        if self._embedding_trainable:
-            self._add_trainable_variable(self._embedding)
+        self._built = True
 
         return results
 

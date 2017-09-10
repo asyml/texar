@@ -29,9 +29,9 @@ class ModuleBase(object):
         self._template = tf.make_template(name, self._build,
                                           create_scope_now_=True)
         self._hparams = HParams(hparams, self.default_hparams())
-        self._unique_name = self._template.variable_scope.name.split("/")[-1]
-        self._trainable_variables = tf.get_collection(
-            tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.variable_scope.name)
+        self._unique_name = self.variable_scope.name.split("/")[-1]
+        self._trainable_variables = []
+        self._built = False
 
     @staticmethod
     def default_hparams():
@@ -93,7 +93,7 @@ class ModuleBase(object):
             for var in variable:
                 self._add_trainable_variable(var)
         else:
-            if variable not in self.trainable_variables:
+            if variable not in self._trainable_variables:
                 self._trainable_variables.append(variable)
 
     @property
@@ -112,6 +112,11 @@ class ModuleBase(object):
     def trainable_variables(self):
         """The list of trainable variables of the module.
         """
+        if not self._built:
+            raise ValueError(
+                "Attempting to access trainable_variables before module %s "
+                "was fully built. The module is built once it is called, "
+                "e.g., with `%s(...)`" % (self.module_name, self.module_name))
         return self._trainable_variables
 
     @property

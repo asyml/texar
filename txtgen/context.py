@@ -1,6 +1,6 @@
 #
 """
-Global context manager that handles train/eval mode, etc
+Global context manager that handles train/infer mode, etc
 """
 
 from __future__ import absolute_import
@@ -15,7 +15,7 @@ _IS_TRAIN_KEY = "CONTEXT_IS_TRAIN"
 def is_train():
     """Returns the global mode indicator.
 
-    Returns: A bool placeholder that indicates the global train/eval mode.
+    Returns: A bool placeholder that indicates the global train/infer mode.
     """
     is_train_values = tf.get_collection_ref(_IS_TRAIN_KEY)
     if len(is_train_values) < 1:

@@ -22,7 +22,6 @@ class ForwardENNEncoderTest(tf.test.TestCase):
         variables.
         """
         encoder = ForwardRNNEncoder(vocab_size=2)
-        self.assertEqual(len(encoder.trainable_variables), 0)
 
         inputs = [[1, 0]]
         _, _ = encoder(inputs)

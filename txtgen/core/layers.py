@@ -10,6 +10,7 @@ from __future__ import division
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
 
+from txtgen.hyperparams import HParams
 from txtgen.core.utils import get_instance, switch_dropout
 
 
@@ -92,9 +93,7 @@ def default_rnn_cell_hparams():
 
 
 def get_rnn_cell(hparams):
-    """
-
-    Creates an RNN cell.
+    """Creates an RNN cell.
 
     Args:
         hparams (dict or HParams): Cell hyperparameters.
@@ -112,12 +111,14 @@ def get_rnn_cell(hparams):
             (hparams["num_layers"], len(d_hp["input_size"])))
 
     cells = []
+    cell_kwargs = hparams["cell"]["kwargs"]
+    if isinstance(cell_kwargs, HParams):
+        cell_kwargs = cell_kwargs.todict()
     for layer_i in range(hparams["num_layers"]):
         # Create the basic cell
         cell_type = hparams["cell"]["type"]
         cell_modules = ['txtgen.custom', 'tensorflow.contrib.rnn']
-        cell = get_instance(cell_type, hparams["cell"]["kwargs"],
-                            cell_modules)
+        cell = get_instance(cell_type, cell_kwargs, cell_modules)
 
         # Optionally add dropout
         if d_hp["input_keep_prob"] < 1.0 or \
@@ -150,3 +151,90 @@ def get_rnn_cell(hparams):
         cell = cells[0]
 
     return cell
+
+
+def default_embedding_hparams():
+    """Returns default hyperparameters of embedding.
+
+    .. code-block:: python
+
+        {
+            "name": "embedding",  # A string. Name of the embedding variable.
+            "dim": 100,           # An integer. Embedding dimension.
+            "initializer": {      # Initializer of embedding values.
+                # A string. Name or full path to the initializer class.
+                # An initializer is a class inheriting from
+                # `tensorflow.Initializer`, which can be built-in
+                # classes in module `tensorflow`, or user-defined
+                # classes in `txtgen.custom`, or a full path like
+                # `my_module.MyInitializer`.
+                "type": "tensorflow.random_uniform_initializer",
+
+                # A dictionary of arguments for constructor of the
+                # initializer class. An initializer is created by
+                # calling `initialzier_class(**kwargs)` where
+                # `initializer_class` is specified in `type`.
+                "kwargs": {
+                    "minval": -0.1,
+                    "maxval": 0.1,
+                    "seed": None
+                }
+            }
+    """
+    return { #TODO(zhiting): allow more hparams like regularizer
+        "name": "embedding",
+        "dim": 100,
+        "initializer": {
+            "type": "tensorflow.random_uniform_initializer",
+            "kwargs": {
+                "minval": -0.1,
+                "maxval": 0.1,
+                "seed": None
+            }
+        }
+    }
+
+
+def get_embedding(hparams,
+                  init_values=None,
+                  vocab_size=None,
+                  trainable=True,
+                  variable_scope=None):
+    """Creates embedding variable if not exists.
+
+    Args:
+        hparams (dict or HParams): Embedding hyperparameters. See
+            :class:`~txtgen.core.layers.default_embedding_hparams` for the
+            default values. If :attr:`init_values` is given,
+            :attr:`"initializer"`, and :attr:`"dim"` are ignored.
+        init_values (Tensor or numpy array, optional): Initial values of the
+            embedding variable. If not given, embedding is initialized as
+            specified in :attr:`hparams["initializer"]`.
+        vocab_size (int, optional): The vocabulary size. Required if
+            :attr:`init_values` is not provided.
+        trainable (bool): If `True` (default), the embedding variable is a
+            trainable variable.
+        variable_scope (string or VariableScope, optional): Variable scope of
+            the embedding variable.
+
+    Returns:
+        (Variable): A 2D `Variable` of the same shape with :attr:`init_values`,
+            or of the shape [:attr:`vocab_size`, :attr:`hparams["dim"]`].
+    """
+    with tf.variable_scope(variable_scope, "embedding"): # pylint: disable=not-context-manager
+        if init_values is None:
+            kwargs = hparams["initializer"]["kwargs"]
+            if isinstance(kwargs, HParams):
+                kwargs = kwargs.todict()
+            initializer = get_instance(hparams["initializer"]["type"],
+                                       kwargs,
+                                       ["txtgen.custom", "tensorflow"])
+            return tf.get_variable(name=hparams["name"],
+                                   shape=[vocab_size, hparams["dim"]],
+                                   initializer=initializer,
+                                   trainable=trainable)
+        else:
+            return tf.get_variable(name=hparams["name"],
+                                   initializer=init_values,
+                                   trainable=trainable)
+
