@@ -206,7 +206,8 @@ def get_embedding(hparams,
         hparams (dict or HParams): Embedding hyperparameters. See
             :class:`~txtgen.core.layers.default_embedding_hparams` for the
             default values. If :attr:`init_values` is given,
-            :attr:`"initializer"`, and :attr:`"dim"` are ignored.
+            :attr:`hparams["initializer"]`, and :attr:`hparams["dim"]` are
+            ignored.
         init_values (Tensor or numpy array, optional): Initial values of the
             embedding variable. If not given, embedding is initialized as
             specified in :attr:`hparams["initializer"]`.
@@ -218,8 +219,8 @@ def get_embedding(hparams,
             the embedding variable.
 
     Returns:
-        (Variable): A 2D `Variable` of the same shape with :attr:`init_values`,
-            or of the shape [:attr:`vocab_size`, :attr:`hparams["dim"]`].
+        Variable: A 2D `Variable` of the same shape with :attr:`init_values`
+        or of the shape [:attr:`vocab_size`, :attr:`hparams["dim"]`].
     """
     with tf.variable_scope(variable_scope, "embedding"): # pylint: disable=not-context-manager
         if init_values is None:

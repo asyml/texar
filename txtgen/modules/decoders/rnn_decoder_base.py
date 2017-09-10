@@ -107,7 +107,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 # a tf.Variable when constructing the encoder. If `embedding`
                 # is given and is a Tensor or numpy array, the "dim" and
                 # "initializer" specs of embedding are ignored.
-                "embedding": txtgen.core.layers.default_embedding_hparams()
+                "embedding": txtgen.core.layers.default_embedding_hparams(),
 
                 # An integer. Maximum allowed number of decoding steps at
                 # inference time.
