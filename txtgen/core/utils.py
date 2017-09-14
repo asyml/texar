@@ -23,7 +23,7 @@ def get_class(class_name, module_paths=None):
     """Returns the class based on class name.
 
     Args:
-        class_name: Name (or full path) of the class to instantiate.
+        class_name: Name or full path of the class to instantiate.
         module_paths: A list of paths to candidate modules to search for the
             class. This is used if the class cannot be located solely based on
             `class_name`. The first module in the list that contains the class
@@ -31,6 +31,10 @@ def get_class(class_name, module_paths=None):
 
     Returns:
         A class.
+
+    Raises:
+        ValueError: If class is not found based on :attr:`class_name` and
+            :attr:`module_paths`.
     """
     class_ = locate(class_name)
     if (class_ is None) and (module_paths is not None):
@@ -48,10 +52,10 @@ def get_class(class_name, module_paths=None):
 
 
 def get_instance(class_name, kwargs, module_paths=None):
-    """Creates an class instance.
+    """Creates a class instance.
 
     Args:
-        class_name: Name (or full path) of the class to instantiate.
+        class_name: Name or full path of the class to instantiate.
         kwargs: A dictionary of arguments for the class constructor.
         module_paths: A list of paths to candidate modules to search for the
             class. This is used if the class cannot be located solely based on
@@ -60,18 +64,60 @@ def get_instance(class_name, kwargs, module_paths=None):
 
     Returns:
         A class instance.
+
+    Raises:
+        ValueError: If class is not found based on :attr:`class_name` and
+            :attr:`module_paths`.
+        ValueError: If :attr:`kwargs` contains arguments that are invalid
+            for the class construction.
     """
     # locate the class
     class_ = get_class(class_name, module_paths)
 
     # Check validity of params
-    class_args = set(inspect.getargspec(class_.__init__).args)          # pylint: disable=E1101
-    for k in kwargs.keys():
-        if k not in class_args:
-            raise ValueError("Invalid argument for class %s.%s: %s" %
-                             (class_.__module__, class_.__name__, k))   # pylint: disable=E1101
+    class_args = set(inspect.getargspec(class_.__init__).args) # pylint: disable=E1101
+    for key in kwargs.keys():
+        if key not in class_args:
+            raise ValueError(
+                "Invalid argument for class %s.%s: %s" %
+                (class_.__module__, class_.__name__, key)) # pylint: disable=E1101
 
     return class_(**kwargs)
+
+
+def get_instance_with_redundant_kwargs( # pylint: disable=invalid-name
+        class_name, kwargs, module_paths=None):
+    """Creates a class instance.
+
+    Only those keyword arguments in `kwargs` that are included in the class
+    construction method are used.
+
+    Args:
+        class_name: Name or full path of the class to instantiate.
+        kwargs: A dictionary of arguments for the class constructor.
+        module_paths: A list of paths to candidate modules to search for the
+            class. This is used if the class cannot be located solely based on
+            `class_name`. The first module in the list that contains the class
+            is used.
+
+    Returns:
+        A class instance.
+
+    Raises:
+        ValueError: If class is not found based on :attr:`class_name` and
+            :attr:`module_paths`.
+    """
+    # locate the class
+    class_ = get_class(class_name, module_paths)
+
+    # Check validity of params
+    selected_kwargs = {}
+    class_args = set(inspect.getargspec(class_.__init__).args) # pylint: disable=E1101
+    for key, value in kwargs.items():
+        if key in class_args:
+            selected_kwargs[key] = value
+
+    return class_(**selected_kwargs)
 
 
 def get_function(func_name, module_paths=None):

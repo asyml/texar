@@ -204,7 +204,7 @@ def get_embedding(hparams,
 
     Args:
         hparams (dict or HParams): Embedding hyperparameters. See
-            :class:`~txtgen.core.layers.default_embedding_hparams` for the
+            :meth:`~txtgen.core.layers.default_embedding_hparams` for the
             default values. If :attr:`init_values` is given,
             :attr:`hparams["initializer"]`, and :attr:`hparams["dim"]` are
             ignored.

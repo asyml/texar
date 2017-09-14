@@ -16,9 +16,6 @@ from txtgen.core import layers
 from txtgen import context
 
 
-#def make_helper(decoder):
-
-
 class RNNDecoderBase(ModuleBase, TFDecoder):
     """Base class inherited by all RNN decoder classes.
 
@@ -49,7 +46,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         hparams (dict, optional): Hyperparameters. If not specified, the default
             hyperparameter setting is used. See :attr:`default_hparams` for the
             structure and default values.
-        name (string): Name of the decoder.
+        name (str): Name of the decoder.
     """
 
     def __init__(self,  # pylint: disable=too-many-arguments
@@ -90,9 +87,9 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
 
         The dictionary has the following structure and default values.
 
-        See :class:`~txtgen.core.layers.default_rnn_cell_hparams` for the
+        See :meth:`~txtgen.core.layers.default_rnn_cell_hparams` for the
         default rnn cell hyperparameters, and
-        :class:`~txtgen.core.layers.default_embedding_hparams` for the default
+        :meth:`~txtgen.core.layers.default_embedding_hparams` for the default
         embedding hyperparameters.
 
         .. code-block:: python
@@ -163,7 +160,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         This methods must compute initial input values and initial state.
 
         Args:
-            name (string, optional): Name scope for any created operations.
+            name (str, optional): Name scope for any created operations.
 
         Returns:
             `(finished, initial_inputs, initial_state)`: initial values of

@@ -81,9 +81,9 @@ class ForwardRNNEncoder(EncoderBase):
 
         The dictionary has the following structure and default values.
 
-        See :class:`~txtgen.core.layers.default_rnn_cell_hparams` for the
+        See :meth:`~txtgen.core.layers.default_rnn_cell_hparams` for the
         default rnn cell hyperparameters, and
-        :class:`~txtgen.core.layers.default_embedding_hparams` for the default
+        :meth:`~txtgen.core.layers.default_embedding_hparams` for the default
         embedding hyperparameters.
 
         .. code-block:: python
@@ -111,7 +111,7 @@ class ForwardRNNEncoder(EncoderBase):
         """Encodes the inputs.
 
         Args:
-            inputs: An integer Tensor containing Input sequences of
+            inputs: An integer Tensor containing input sequences of
                 token indexes.
             **kwargs: Optional keyword arguments of `tensorflow.nn.dynamic_rnn`,
                 such as `sequence_length`, `initial_state`, etc.
