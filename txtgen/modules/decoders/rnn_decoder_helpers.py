@@ -13,6 +13,61 @@ from tensorflow.contrib.seq2seq import TrainingHelper as TFTrainingHelper
 from txtgen.core import utils
 
 
+def default_helper_train_hparams():
+    """Returns default hyperparameters of an RNN decoder helper in the training
+    phase.
+
+    See also :meth:`~txtgen.modules.decoders.rnn_decoder_helpers.make_helper`
+    for information of the hyperparameters.
+
+    Returns:
+        dict: A dictionary with following structure and values:
+
+        .. code-block:: python
+
+            {
+                # The `helper_type` argument for `make_helper`, i.e., the name
+                # or full path to the helper class.
+                "type": "EmbeddingTrainingHelper",
+
+                # The `**kwargs` argument for `make_helper`, i.e., additional
+                # keyword arguments for constructing the helper.
+                "kwargs": {}
+            }
+    """
+    return {
+        "type": "EmbeddingTrainingHelper",
+        "kwargs": {}
+    }
+
+def default_helper_infer_hparams():
+    """Returns default hyperparameters of an RNN decoder helper in the inference
+    phase.
+
+    See also :meth:`~txtgen.modules.decoders.rnn_decoder_helpers.make_helper`
+    for information of the hyperparameters.
+
+    Returns:
+        dict: A dictionary with following structure and values:
+
+        .. code-block:: python
+
+            {
+                # The `helper_type` argument for `make_helper`, i.e., the name
+                # or full path to the helper class.
+                "type": "SampleEmbeddingHelper",
+
+                # The `**kwargs` argument for `make_helper`, i.e., additional
+                # keyword arguments for constructing the helper.
+                "kwargs": {}
+            }
+    """
+    return {
+        "type": "EmbeddingTrainingHelper",
+        "kwargs": {}
+    }
+
+
 def make_helper(helper_type,    # pylint: disable=too-many-arguments
                 inputs=None,
                 sequence_length=None,

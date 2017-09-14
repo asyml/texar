@@ -18,8 +18,7 @@ def default_rnn_cell_hparams():
     """Returns default hyperparameters of an RNN cell.
 
     Returns:
-        A dictionary of default hyperparameters of an RNN cell, with the
-        following structure and values:
+        dict: A dictionary with the following structure and values:
 
         .. code-block:: python
 
@@ -156,28 +155,32 @@ def get_rnn_cell(hparams):
 def default_embedding_hparams():
     """Returns default hyperparameters of embedding.
 
-    .. code-block:: python
+    Returns:
+        dict: A dictionary with the following structure and values:
 
-        {
-            "name": "embedding",  # A string. Name of the embedding variable.
-            "dim": 100,           # An integer. Embedding dimension.
-            "initializer": {      # Initializer of embedding values.
-                # A string. Name or full path to the initializer class.
-                # An initializer is a class inheriting from
-                # `tensorflow.Initializer`, which can be built-in
-                # classes in module `tensorflow`, or user-defined
-                # classes in `txtgen.custom`, or a full path like
-                # `my_module.MyInitializer`.
-                "type": "tensorflow.random_uniform_initializer",
+        .. code-block:: python
 
-                # A dictionary of arguments for constructor of the
-                # initializer class. An initializer is created by
-                # calling `initialzier_class(**kwargs)` where
-                # `initializer_class` is specified in `type`.
-                "kwargs": {
-                    "minval": -0.1,
-                    "maxval": 0.1,
-                    "seed": None
+            {
+                "name": "embedding", # A string. Name of the embedding variable.
+                "dim": 100,          # An integer. Embedding dimension.
+                "initializer": {     # Initializer of embedding values.
+                    # A string. Name or full path to the initializer class.
+                    # An initializer is a class inheriting from
+                    # `tensorflow.Initializer`, which can be built-in
+                    # classes in module `tensorflow`, or user-defined
+                    # classes in `txtgen.custom`, or a full path like
+                    # `my_module.MyInitializer`.
+                    "type": "tensorflow.random_uniform_initializer",
+
+                    # A dictionary of arguments for constructor of the
+                    # initializer class. An initializer is created by
+                    # calling `initialzier_class(**kwargs)` where
+                    # `initializer_class` is specified in `type`.
+                    "kwargs": {
+                        "minval": -0.1,
+                        "maxval": 0.1,
+                        "seed": None
+                    }
                 }
             }
     """

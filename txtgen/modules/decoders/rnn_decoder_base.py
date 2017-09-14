@@ -12,9 +12,9 @@ from tensorflow.contrib.seq2seq import Decoder as TFDecoder
 from tensorflow.contrib.seq2seq import dynamic_decode
 
 from txtgen.modules.module_base import ModuleBase
+from txtgen.modules.decoders import rnn_decoder_helpers
 from txtgen.core import layers
 from txtgen import context
-
 
 class RNNDecoderBase(ModuleBase, TFDecoder):
     """Base class inherited by all RNN decoder classes.
@@ -114,6 +114,8 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         return {
             "rnn_cell": layers.default_rnn_cell_hparams(),
             "embedding": layers.default_embedding_hparams(),
+            "helper_train": rnn_decoder_helpers.default_helper_train_hparams(),
+            "helper_infer": rnn_decoder_helpers.default_helper_infer_hparams(),
             "max_decoding_length": 64
         }
 
