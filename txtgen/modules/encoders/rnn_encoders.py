@@ -141,3 +141,16 @@ class ForwardRNNEncoder(EncoderBase):
 
         return results
 
+
+    @property
+    def embedding(self):
+        """The embedding variable.
+        """
+        return self._embedding
+
+    @property
+    def cell(self):
+        """The RNN cell.
+        """
+        return self._cell
+

@@ -63,7 +63,7 @@ def default_helper_infer_hparams():
             }
     """
     return {
-        "type": "EmbeddingTrainingHelper",
+        "type": "SampleEmbeddingHelper",
         "kwargs": {}
     }
 
@@ -72,7 +72,7 @@ def make_helper(helper_type,    # pylint: disable=too-many-arguments
                 inputs=None,
                 sequence_length=None,
                 embedding=None,
-                start_token=None,
+                start_tokens=None,
                 end_token=None,
                 **kwargs):
     """Creates a Helper instance.
@@ -85,12 +85,12 @@ def make_helper(helper_type,    # pylint: disable=too-many-arguments
             helpers in :mod:`txtgen.custom`, or a full path like
             "my_module.MyHelper".
         inputs ((structure of) Tensors, optional): Inputs to the decoder.
-        sequence_length (1D integer list or Tensor, optional): Lengths of input
+        sequence_length (1D integer array or Tensor, optional): Lengths of input
             token sequences.
         embedding (optional): A callable that takes a vector tensor of integer
             indexes, or the `params` argument for `embedding_lookup` (e.g.,
             the embedding Tensor).
-        start_token (int list or 1D int Tensor, optional): Of shape
+        start_tokens (int array or 1D int Tensor, optional): Of shape
             `[batch_size]`. The start tokens.
         end_token (int or int scalar Tensor, optional): The token that marks
             end of decoding.
@@ -106,12 +106,11 @@ def make_helper(helper_type,    # pylint: disable=too-many-arguments
     class_kwargs = {"inputs": inputs,
                     "sequence_length": sequence_length,
                     "embedding": embedding,
-                    "start_token": start_token,
+                    "start_tokens": start_tokens,
                     "end_token": end_token}
     class_kwargs.update(kwargs)
-
     return utils.get_instance_with_redundant_kwargs(
-        helper_type, module_paths, class_kwargs)
+        helper_type, class_kwargs, module_paths)
 
 # TODO (zhiting): to remove
 #def _make_training_helper(helper_type,

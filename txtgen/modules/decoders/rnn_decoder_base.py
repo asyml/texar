@@ -13,8 +13,9 @@ from tensorflow.contrib.seq2seq import dynamic_decode
 
 from txtgen.modules.module_base import ModuleBase
 from txtgen.modules.decoders import rnn_decoder_helpers
-from txtgen.core import layers
+from txtgen.core import layers, utils
 from txtgen import context
+
 
 class RNNDecoderBase(ModuleBase, TFDecoder):
     """Base class inherited by all RNN decoder classes.
@@ -56,7 +57,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                  vocab_size=None,
                  hparams=None,
                  name="rnn_decoder"):
-        ModuleBase.__init__(name, hparams)
+        ModuleBase.__init__(self, name, hparams)
 
         self._helper = None
         self._initial_state = None
@@ -80,6 +81,8 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 embedding_trainable, self.variable_scope)
         if embedding_trainable:
             self._add_trainable_variable(self._embedding)
+
+        self._vocab_size = self._embedding.get_shape().as_list()[0]
 
     @staticmethod
     def default_hparams():
@@ -106,9 +109,15 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 # "initializer" specs of embedding are ignored.
                 "embedding": txtgen.core.layers.default_embedding_hparams(),
 
-                # An integer. Maximum allowed number of decoding steps at
-                # inference time.
-                "max_decoding_length": 64
+                # (optional) An integer. Maximum allowed number of decoding
+                # steps at training time. If `None` (default), decoding is
+                # performed until fully done, e.g., encountering the EOS token.
+                "max_decoding_length_train": None,
+
+                # (optional) An integer. Maximum allowed number of decoding
+                # steps at inference time. If `None` (default), decoding is
+                # performed until fully done, e.g., encountering the EOS token.
+                "max_decoding_length_infer": None
             }
         """
         return {
@@ -116,7 +125,8 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             "embedding": layers.default_embedding_hparams(),
             "helper_train": rnn_decoder_helpers.default_helper_train_hparams(),
             "helper_infer": rnn_decoder_helpers.default_helper_infer_hparams(),
-            "max_decoding_length": 64
+            "max_decoding_length_train": None,
+            "max_decoding_length_infer": None
         }
 
 
@@ -137,16 +147,24 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         """
         self._helper = helper
         self._initial_state = initial_state
-        max_decoding_length = tf.cond(
-            context.is_train(), None, self._hparams.max_decoding_length)
 
+        max_decoding_length_train = self._hparams.max_decoding_length_train
+        if max_decoding_length_train is None:
+            max_decoding_length_train = utils.MAX_SEQ_LENGTH
+        max_decoding_length_infer = self._hparams.max_decoding_length_infer
+        if max_decoding_length_infer is None:
+            max_decoding_length_infer = utils.MAX_SEQ_LENGTH
+        max_decoding_length = tf.cond(
+            context.is_train(),
+            lambda: max_decoding_length_train,
+            lambda: max_decoding_length_infer)
         outputs, final_state, sequence_lengths = dynamic_decode(
             decoder=self, maximum_iterations=max_decoding_length)
 
         self._add_internal_trainable_variables()
         # Add trainable variables of `self._cell` which may be constructed
         # externally
-        self._add_trainable_variable(self._cell.trainable_variables())
+        self._add_trainable_variable(self._cell.trainable_variables)
         self._built = True
 
         return outputs, final_state, sequence_lengths
@@ -194,3 +212,14 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
     def finalize(self, outputs, final_state, sequence_lengths):
         raise NotImplementedError
 
+    @property
+    def embedding(self):
+        """The embedding variable.
+        """
+        return self._embedding
+
+    @property
+    def cell(self):
+        """The RNN cell.
+        """
+        return self._cell

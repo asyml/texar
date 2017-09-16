@@ -10,6 +10,7 @@ from __future__ import division
 import importlib
 import inspect
 from pydoc import locate
+import numpy as np
 
 import tensorflow as tf
 from tensorflow.python.framework import ops    # pylint: disable=E0611
@@ -18,6 +19,8 @@ from tensorflow.python.ops import rnn          # pylint: disable=E0611
 
 from txtgen import context
 
+
+MAX_SEQ_LENGTH = np.iinfo(np.int32).max # pylint: disable=no-member
 
 def get_class(class_name, module_paths=None):
     """Returns the class based on class name.
@@ -180,7 +183,8 @@ def transpose_batch_time(inputs):
     """
     flat_input = nest.flatten(inputs)
     flat_input = [ops.convert_to_tensor(input_) for input_ in flat_input]
-    flat_input = [rnn._transpose_batch_time(input_) for input_ in flat_input]    # pylint: disable=protected-access
+    # pylint: disable=protected-access
+    flat_input = [rnn._transpose_batch_time(input_) for input_ in flat_input]
     return nest.pack_sequence_as(structure=inputs, flat_sequence=flat_input)
 
 
@@ -199,4 +203,5 @@ def default_string(str_, default_str):
         return str_
     else:
         return default_str
+
 
