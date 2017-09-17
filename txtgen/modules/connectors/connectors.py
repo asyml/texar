@@ -168,6 +168,11 @@ class StochasticConnector(ConnectorBase):
                 states) to be transformed and passed to the decoder. Must be a
                 Tensor of shape `[batch_size, ...]` or a (nested) tuple of such
                 Tensors.
+                
+                gaussian_distribution only supports type encoder results. The 
+                encoder results can either be (mu, logvar) or (mu, logvar, context) with 
+                size [batch_size, ...] for tuple element. When context is present, it will be
+                concatenated with the sample along the 1st axis.
 
         Returns:
             A Tensor or a (nested) tuple of Tensors of the same structure of
@@ -176,8 +181,20 @@ class StochasticConnector(ConnectorBase):
         sampler = get_function(self.hparams.distribution)
 
         if sampler is distributions.sample_gaussian:
-            encoder_mu, encoder_log_var = encoder_result
-            decoder_state = sampler(encoder_mu, encoder_log_var)
+            if type(encoder_result) is not tuple:
+                raise ValueError("Gaussian connector requires tuple encoder results")
+
+            if len(encoder_result) == 2:
+                encoder_mu, encoder_log_var = encoder_result
+                decoder_state = sampler(encoder_mu, encoder_log_var)
+
+            elif len(encoder_result) == 3:
+                encoder_mu, encoder_log_var, context = encoder_result
+                sample = sampler(encoder_mu, encoder_log_var)
+                decoder_state = tf.concat([sample, context], axis=1)
+            else:
+                raise ValueError("Gaussian connector supports either (mu, logvar) or (mu, logvar, context)")
+
         else:
             raise ValueError("Unsupported distribution")
 
