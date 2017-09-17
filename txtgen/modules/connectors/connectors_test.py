@@ -43,5 +43,3 @@ class TestStochasticConnector(tf.test.TestCase):
             for i in range(variable_size):
                 self.assertAlmostEqual(0, sample_mu[i], delta=0.1)
                 self.assertAlmostEqual(0, sample_log_var[i], delta=0.1)
-
-tf.test.main()
