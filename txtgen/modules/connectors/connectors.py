@@ -12,6 +12,8 @@ from tensorflow.python.util import nest    # pylint: disable=E0611
 
 from txtgen.modules.connectors.connector_base import ConnectorBase
 from txtgen.core.utils import get_function
+from txtgen.core import distributions
+
 
 def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
     """Transforms inputs through a fully-connected layer that creates the output
@@ -146,12 +148,62 @@ class MLPTransformConnector(ConnectorBase):
             "activation_fn": "tensorflow.identity"
         }
 
-#class StochasticConnector(ConnectorBase):
-#    """Samples decoder initial state from a distribution defined by the
-#    encoder outputs.
-#
-#    Used in, e.g., variational autoencoders, adversarial autoencoders, and other
-#    models.
-#    """
-#    pass  # TODO
+
+class StochasticConnector(ConnectorBase):
+    #    """Samples decoder initial state from a distribution defined by the
+    #    encoder outputs.
+    #
+    #    Used in, e.g., variational autoencoders, adversarial autoencoders, and other
+    #    models.
+    #    """
+
+    def __init__(self, decoder_state_size, hparams=None, name="stochastic_connector"):
+        ConnectorBase.__init__(self, decoder_state_size, hparams, name)
+
+    def _build(self, encoder_result):  # pylint: disable=W0221
+        """Transforms the encoder results with an MLP layer.
+
+        Args:
+            encoder_result: Result of encoder (e.g., encoder outputs or final
+                states) to be transformed and passed to the decoder. Must be a
+                Tensor of shape `[batch_size, ...]` or a (nested) tuple of such
+                Tensors.
+
+        Returns:
+            A Tensor or a (nested) tuple of Tensors of the same structure of
+            the decoder state.
+        """
+        sampler = get_function(self.hparams.distribution)
+
+        if sampler is distributions.sample_gaussian:
+            encoder_mu, encoder_log_var = encoder_result
+            decoder_state = sampler(encoder_mu, encoder_log_var)
+        else:
+            raise ValueError("Unsupported distribution")
+
+        self._add_internal_trainable_variables()
+        self._built = True
+
+        return decoder_state
+
+    @staticmethod
+    def default_hparams():
+        """Returns a dictionary of hyperparameters with default values.
+
+        Returns:
+            ```python
+            {
+                # The name or full path of the activation function applied to
+                # the outputs of the MLP layer. E.g., the name of built-in
+                # functions defined in module `tensorflow` or `tensorflow.nn`,
+                # or user-defined functions defined in `user.custom`, or a
+                # full path like "my_module.my_activation_fn".
+
+                "activation_fn": "tensorflow.identity"
+            }
+            ```
+        """
+        return {
+            "distribution": "txtgen.core.distributions.sample_gaussian"
+        }
 

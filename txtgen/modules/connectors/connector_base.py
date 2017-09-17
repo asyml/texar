@@ -26,7 +26,7 @@ class ConnectorBase(ModuleBase):
             hparams: A dictionary of hyperparameters.
             name: Name of connector.
         """
-        ModuleBase.__init__(name, hparams)
+        super(ConnectorBase, self).__init__(name, hparams)
         self._decoder_state_size = decoder_state_size
 
     def _build(self, *args, **kwargs):

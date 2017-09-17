@@ -14,6 +14,7 @@ from txtgen import context
 from txtgen.hyperparams import HParams
 from txtgen.core import layers
 
+
 class GetRNNCellTest(tf.test.TestCase):
     """Tests RNN cell creator.
     """
