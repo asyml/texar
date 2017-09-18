@@ -3,6 +3,8 @@
 # Code style
 
   * [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html)
+    
+    - E.g., Maximum line length is *80 characters*.
 
   * [Pylint: code analysis for Python](https://www.pylint.org)
 
