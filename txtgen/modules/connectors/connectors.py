@@ -56,9 +56,59 @@ def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
 
     return output
 
+class ConstantConnector(ConnectorBase):
+    """Creates decoder initial state that has a constant value.
+
+    Args:
+        decoder_state_size: Size of state of the decoder cell. Can be an
+            Integer, a Tensorshape, or a tuple of Integers or TensorShapes.
+            This can typically be obtained by :attr:`decoder.cell.state_size`.
+        hparams (dict): Hyperparameters of the connector.
+        name (str): Name of connector.
+    """
+    def __init__(self, decoder_state_size, hparams=None,
+                 name="constant_connector"):
+        ConnectorBase.__init__(self, decoder_state_size, hparams, name)
+
+    @staticmethod
+    def default_hparams():
+        """Returns a dictionary of default hyperparameters:
+
+        .. code-block:: python
+
+            {
+                # The constant value that the decoder initial state has.
+                "value": 0.
+            }
+        """
+        return {
+            "value": 0.
+        }
+
+    def _build(self, batch_size, value=None):   # pylint: disable=W0221
+        """Creates decoder initial state that has the given value.
+
+        Args:
+            batch_size (int or 0-D Tensor): The batch size.
+            value (scalar, optional): The value that the decoder initial state
+                has. If `None` (default), the decoder initial state is set to
+                :attr:`hparams.value`.
+
+        Returns:
+            A (structure of) tensor with the same structure of the decoder
+            state, and with the given value.
+        """
+        value_ = value
+        if value_ is None:
+            value_ = self.hparams.value
+        output = nest.map_structure(
+            lambda x: tf.constant(value_, shape=[batch_size, x]),
+            self._decoder_state_size)
+        return output
+
 
 class ForwardConnector(ConnectorBase):
-    """Directly forward input (structure of) tensors to decoder.
+    """Directly forwards input (structure of) tensors to decoder.
 
     The input must have the same structure with the decoder state,
     or must have the same number of elements and be re-packable into the decoder
@@ -119,6 +169,7 @@ class MLPTransformConnector(ConnectorBase):
         decoder_state_size: Size of state of the decoder cell. Can be an
             Integer, a Tensorshape , or a tuple of Integers or TensorShapes.
             This can typically be obtained by :attr:`decoder.cell.state_size`.
+        hparams (dict): Hyperparameters of the connector.
         name (str): Name of connector.
     """
 
@@ -137,7 +188,6 @@ class MLPTransformConnector(ConnectorBase):
                 # functions defined in module `tensorflow` or `tensorflow.nn`,
                 # or user-defined functions defined in `user.custom`, or a
                 # full path like "my_module.my_activation_fn".
-
                 "activation_fn": "tensorflow.identity"
             }
         """
