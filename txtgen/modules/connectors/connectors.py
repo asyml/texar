@@ -89,10 +89,10 @@ class ConstantConnector(ConnectorBase):
         """Creates decoder initial state that has the given value.
 
         Args:
-            batch_size (int or 0-D Tensor): The batch size.
-            value (scalar, optional): The value that the decoder initial state
-                has. If `None` (default), the decoder initial state is set to
-                :attr:`hparams.value`.
+            batch_size (int or scalar int Tensor): The batch size.
+            value (python number or scalar Tensor, optional): The value that
+                the decoder initial state has. If `None` (default), the decoder
+                initial state is set to :attr:`hparams.value`.
 
         Returns:
             A (structure of) tensor with the same structure of the decoder

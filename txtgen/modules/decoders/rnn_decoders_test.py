@@ -14,7 +14,7 @@ import tensorflow as tf
 from tensorflow.contrib.seq2seq import BasicDecoderOutput
 
 from txtgen.modules.decoders.rnn_decoders import BasicRNNDecoder
-from txtgen.modules.decoders.rnn_decoder_helpers import make_helper
+from txtgen.modules.decoders.rnn_decoder_helpers import get_helper
 from txtgen import context
 
 class BasicRNNDecoderTest(tf.test.TestCase):
@@ -35,7 +35,7 @@ class BasicRNNDecoderTest(tf.test.TestCase):
         """
         decoder = BasicRNNDecoder(vocab_size=self._vocab_size)
 
-        helper_train = make_helper(
+        helper_train = get_helper(
             decoder.hparams.helper_train.type,
             inputs=self._inputs,
             sequence_length=[self._max_time]*self._batch_size,
@@ -73,7 +73,7 @@ class BasicRNNDecoderTest(tf.test.TestCase):
         """
         decoder = BasicRNNDecoder(vocab_size=self._vocab_size)
 
-        helper_infer = make_helper(
+        helper_infer = get_helper(
             decoder.hparams.helper_infer.type,
             embedding=decoder.embedding,
             start_tokens=[self._vocab_size-2]*self._batch_size,
