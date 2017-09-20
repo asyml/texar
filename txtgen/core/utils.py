@@ -42,6 +42,12 @@ def get_class(class_name, module_paths=None):
     class_ = locate(class_name)
     if (class_ is None) and (module_paths is not None):
         for module_path in module_paths:
+            # Special treatment for module 'tensorflow.train' as
+            # `import tensorflow.train` fails.
+            if module_path == 'tensorflow.train':
+                class_ = locate('.'.join([module_path, class_name]))
+                if class_ is not None:
+                    break
             module = importlib.import_module(module_path)
             if class_name in dir(module):
                 class_ = getattr(module, class_name)
@@ -74,10 +80,10 @@ def get_instance(class_name, kwargs, module_paths=None):
         ValueError: If :attr:`kwargs` contains arguments that are invalid
             for the class construction.
     """
-    # locate the class
+    # Locate the class
     class_ = get_class(class_name, module_paths)
 
-    # Check validity of params
+    # Check validity of arguments
     class_args = set(inspect.getargspec(class_.__init__).args) # pylint: disable=E1101
     for key in kwargs.keys():
         if key not in class_args:
@@ -92,16 +98,17 @@ def get_instance_with_redundant_kwargs( # pylint: disable=invalid-name
         class_name, kwargs, module_paths=None):
     """Creates a class instance.
 
-    Only those keyword arguments in `kwargs` that are included in the class
-    construction method are used.
+    Only those keyword arguments in :attr:`kwargs` that are included in the
+    class construction method are used.
 
     Args:
-        class_name: Name or full path of the class to instantiate.
-        kwargs: A dictionary of arguments for the class constructor.
-        module_paths: A list of paths to candidate modules to search for the
-            class. This is used if the class cannot be located solely based on
-            `class_name`. The first module in the list that contains the class
-            is used.
+        class_name (str): Name or full path of the class to instantiate.
+        kwargs (dict): A dictionary of arguments for the class constructor. It
+            may include invalid arguments which will be ignored.
+        module_paths (list of str): A list of paths to candidate modules to
+            search for the class. This is used if the class cannot be located
+            solely based on :attr:`class_name`. The first module in the list
+            that contains the class is used.
 
     Returns:
         A class instance.
@@ -110,10 +117,10 @@ def get_instance_with_redundant_kwargs( # pylint: disable=invalid-name
         ValueError: If class is not found based on :attr:`class_name` and
             :attr:`module_paths`.
     """
-    # locate the class
+    # Locate the class
     class_ = get_class(class_name, module_paths)
 
-    # Check validity of params
+    # Select valid arguments
     selected_kwargs = {}
     class_args = set(inspect.getargspec(class_.__init__).args) # pylint: disable=E1101
     for key, value in kwargs.items():
@@ -123,32 +130,62 @@ def get_instance_with_redundant_kwargs( # pylint: disable=invalid-name
     return class_(**selected_kwargs)
 
 
-def get_function(func_name, module_paths=None):
+def get_function(fn_name, module_paths=None):
     """Returns the function of specified name and module.
 
     Args:
-        func_name: Name of the function.
-        module_paths: A list of paths to candidate modules to search for the
-            function. This is used when the function cannot be located solely
-            based on `func_name`. The first module in the list that contains the
-            function is used.
+        fn_name (str): Name of the function.
+        module_paths (list of str): A list of paths to candidate modules to
+            search for the function. This is used when the function cannot be
+            located solely based on `fn_name`. The first module in the list
+            that contains the function is used.
 
     Returns:
         A function.
     """
-    func = locate(func_name)
-    if (func is None) and (module_paths is not None):
+    fn = locate(fn_name)    # pylint: disable=invalid-name
+    if (fn is None) and (module_paths is not None):
         for module_path in module_paths:
+            # Special treatment for module 'tensorflow.train' as
+            # `import tensorflow.train` fails.
+            if module_path == 'tensorflow.train':
+                fn = locate('.'.join([module_path, fn_name])) # pylint: disable=invalid-name
+                if fn is not None:
+                    break
             module = importlib.import_module(module_path)
-            if func_name in dir(module):
-                func = getattr(module, func_name)
+            if fn_name in dir(module):
+                fn = getattr(module, fn_name) # pylint: disable=invalid-name
                 break
 
-    if func is None:
+    if fn is None:
         raise ValueError(
-            "Method not found in {}: {}".format(module_paths, func_name))
+            "Method not found in {}: {}".format(module_paths, fn_name))
 
-    return func
+    return fn
+
+
+def call_function_with_redundant_kwargs(fn, kwargs):  # pylint: disable=invalid-name
+    """Calls a function and returns the results.
+
+    Only those keyword arguments in :attr:`kwargs` that are included in the
+    function's argument list are used to call the function.
+
+    Args:
+        fn (function): The function to call.
+        kwargs (dict): A dictionary of arguments for the class constructor. It
+            may include invalid arguments which will be ignored.
+
+    Returns:
+        The returned results by calling :attr:`fn`.
+    """
+    # Select valid arguments
+    selected_kwargs = {}
+    fn_args = set(inspect.getargspec(fn).args)
+    for key, value in kwargs.items():
+        if key in fn_args:
+            selected_kwargs[key] = value
+
+    return fn(**selected_kwargs)
 
 
 def switch_dropout(dropout_keep_prob, is_train=None):

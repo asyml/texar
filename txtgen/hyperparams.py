@@ -36,7 +36,7 @@ class HParams(object):
         super(HParams, self).__setattr__('_hparams', parsed_hparams)
 
     @staticmethod
-    def _parse(hparams, default_hparams, allow_new_hparam=False):
+    def _parse(hparams, default_hparams, allow_new_hparam=False): # pylint: disable=too-many-branches
         """Parses hyperparameters.
 
         Replaces missing values with default values, and checks the types of
@@ -65,7 +65,10 @@ class HParams(object):
                     parsed_hparams[name] = HParams._parse_value(value, name)
                     continue
                 else:
-                    raise ValueError("Unknown hyperparameter %s", name)
+                    raise ValueError(
+                        "Unknown hyperparameter: %s. Only the `kwargs` "
+                        "hyperparameters can contain new entries undefined "
+                        "in default hyperparameters." % name)
 
             if value is None:
                 parsed_hparams[name] = \
@@ -125,7 +128,10 @@ class HParams(object):
         """Sets the value of the hyperparameter.
         """
         if name not in self._hparams:
-            raise ValueError("Unknown hyperparameter: %s" % name)
+            raise ValueError(
+                "Unknown hyperparameter: %s. Only the `kwargs` "
+                "hyperparameters can contain new entries undefined "
+                "in default hyperparameters." % name)
         self._hparams[name] = self._parse_value(value, name)
 
     def items(self):
