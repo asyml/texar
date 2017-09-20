@@ -209,3 +209,7 @@ flycheck_*.el
 .vscode
 
 doc/_build
+
+
+### IntelliJ ###
+*.iml
