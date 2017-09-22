@@ -36,7 +36,9 @@ class HParams(object):
         super(HParams, self).__setattr__('_hparams', parsed_hparams)
 
     @staticmethod
-    def _parse(hparams, default_hparams, allow_new_hparam=False): # pylint: disable=too-many-branches
+    def _parse(hparams, # pylint: disable=too-many-branches
+               default_hparams,
+               allow_new_hparam=False):
         """Parses hyperparameters.
 
         Replaces missing values with default values, and checks the types of
@@ -114,8 +116,10 @@ class HParams(object):
     def __getattr__(self, name):
         """Retrieves the value of the hyperparameter.
         """
+        if name == '_hparams':
+            return super(HParams, self).__getattribute__('_hparams')
         if name not in self._hparams:
-            # Raise AttributeError to allow copy.deepcopy
+            # Raise AttributeError to allow copy.deepcopy, etc
             raise AttributeError("Unknown hyperparameter: %s" % name)
         return self._hparams[name]
 
@@ -153,6 +157,19 @@ class HParams(object):
 
     def __contains__(self, name):
         return name in self._hparams
+
+    def get(self, name, default=None):
+        """Returns the hyperparameter value for the given name. If name is not
+        available then returns :attr:`default`.
+
+        Args:
+            name (str): the name of hyperparameter.
+            default: the value to be returned in case name does not exist.
+        """
+        try:
+            return self.__getattr__(name)
+        except AttributeError:
+            return default
 
     def add_hparam(self, name, value):
         """Adds a new hyperparameter.

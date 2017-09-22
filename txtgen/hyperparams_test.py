@@ -31,7 +31,7 @@ class HParamsTest(tf.test.TestCase):
             },
             "kwargs": {
                 "arg1": "argv1"
-            }
+            },
         }
         hparams = {
             "dict": {"key1": "new_value"},
@@ -51,11 +51,16 @@ class HParamsTest(tf.test.TestCase):
         new_hparams["kwargs"].update(hparams["kwargs"])
         self.assertEqual(hparams_.todict(), new_hparams)
 
+        self.assertTrue("dict" in hparams_)
+
+        self.assertIsNone(hparams_.get('not_existed_name', None))
+        self.assertEqual(hparams_.get('str'), default_hparams['str'])
+
         # Test HParams update related operations
         hparams_.str = "new_str"
         hparams_.dict = {"key3": "value3"}
         self.assertEqual(hparams_.str, "new_str")
-        self.assertEqual(hparams_.dict.key3, "value3")  # pylint: disable=no-member
+        self.assertEqual(hparams_.dict.key3, "value3") # pylint: disable=no-member
 
         hparams_.add_hparam("added_str", "added_str")
         hparams_.add_hparam("added_dict", {"key4": "value4"})
@@ -66,8 +71,9 @@ class HParamsTest(tf.test.TestCase):
 
         # Test HParams I/O
         hparams_file = tempfile.NamedTemporaryFile()
-        pickle.dumps(hparams_, hparams_file)
-        hparams_loaded = pickle.load(hparams_file)
+        pickle.dump(hparams_, hparams_file)
+        with open(hparams_file.name, 'rb') as hparams_file:
+            hparams_loaded = pickle.load(hparams_file)
         self.assertEqual(hparams_loaded.todict(), hparams_.todict())
 
 

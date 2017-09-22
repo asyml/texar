@@ -188,6 +188,25 @@ def call_function_with_redundant_kwargs(fn, kwargs):  # pylint: disable=invalid-
     return fn(**selected_kwargs)
 
 
+def get_default_arg_values(fn): # pylint: disable=invalid-name
+    """Gets the arguments and respective default values of a function.
+
+    Only arguments with default values are included in the output dictionary.
+
+    Args:
+        fn (function): The function to inspect.
+
+    Returns:
+        dict: A dictionary that maps argument names (str) to their default
+        values. The dictionary is empty if no arguments have default values.
+    """
+    argspec = inspect.getargspec(fn)
+    if argspec.defaults is None:
+        return {}
+    num_defaults = len(argspec.defaults)
+    return dict(zip(argspec.args[-num_defaults:], argspec.defaults))
+
+
 def switch_dropout(dropout_keep_prob, is_train=None):
     """Turns off dropout when not in training mode.
 

@@ -82,7 +82,7 @@ class OptimizationTest(tf.test.TestCase):
             self.assertEqual(pc_lr_, pc_lr_true_)
             self.assertEqual(ned_lr_, ned_lr_true_)
 
-    def test_get_gradient_clip_fn(self):
+    def test_get_gradient_clip_fn(self):    # pylint: disable=too-many-locals
         """Tests get_gradient_clip_fn.
         """
         default_grad_clip_fn = opt.get_gradient_clip_fn(
@@ -124,6 +124,21 @@ class OptimizationTest(tf.test.TestCase):
                 [gn_grads, gn_grads_true, v_grads, v_grads_true])
             np.testing.assert_array_equal(gn_grads_, gn_grads_true_)
             np.testing.assert_array_equal(v_grads_, v_grads_true_)
+
+    def test_get_train_op(self):
+        """Tests get_train_op.
+        """
+        var = tf.Variable(0.)
+        loss = tf.nn.l2_loss(var)
+        _, _ = opt.get_train_op(loss)
+
+        hparams = opt.default_optimization_hparams()
+        hparams['optimizer']['kwargs'] = {}
+        hparams['name'] = 'opt'
+        _, global_step = opt.get_train_op(
+            loss, variables=[var], hparams=hparams)
+        self.assertEqual(global_step.name.split(':')[-2].split('/')[-1],
+                         'opt_step')
 
 
 if __name__ == "__main__":

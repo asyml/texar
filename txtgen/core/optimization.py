@@ -44,7 +44,10 @@ def default_optimization_hparams():
         "gradient_clip": {
             "type": "",
             "kwargs": {}
-        }
+        },
+        "gradient_noise_scale": None,
+        # TODO(zhiting): allow module-level control of gradient_multipliers
+        "name": None
     }
 
 # TODO(zhiting): add YellowFin optimizer
@@ -179,3 +182,72 @@ def get_gradient_clip_fn(hparams):
     return grad_clip_fn
 
 
+def get_train_op(loss, variables=None, global_step=None,
+                 increment_global_step=True, hparams=None):
+    """Creates a training op.
+
+    Args:
+        loss (scalar Tensor): loss to optimize over.
+        variables (list of Variables, optional): Variables to optimize. If
+            `None`, all trainable variables are used.
+        global_step (scalar int Tensor, optional): step counter to update on
+            each step unless :attr:`increment_global_step` is `False`. If
+            `None`, a new global step variable will be created.
+        incremental_global_step (bool): Whether to increment
+            :attr:`global_step`. This is useful if the :attr:`global_step` is
+            used in multiple training ops per training step (e.g. to optimize
+            different parts of the model) to avoid incrementing
+            :attr:`global_step` more times than necessary.
+        hparams (dict or HParams, optional): hyperparameters. If `None`, the
+            default hyperparameters
+            defined in :meth:`~txtgen.core.optimizatio.DeprecationWarning` are
+            used.
+
+    Returns:
+        tuple: (train_op, global_step). If :attr:`global_step` is provided, the
+        same :attr:`global_step` variable is returned, otherwise a new global
+        step is created and returned.
+    """
+    if hparams is None:
+        hparams = default_optimization_hparams()
+
+    if variables is None:
+        variables = tf.trainable_variables()
+
+    if global_step is None:
+        global_step_name = None
+        if hparams["name"] is not None:
+            global_step_name = '_'.join([hparams["name"], 'step'])
+        global_step = tf.Variable(0, name=global_step_name, trainable=False)
+
+    optimizer = get_optimizer(hparams["optimizer"])
+
+    learning_rate = hparams["optimizer"]["kwargs"].get("learning_rate", None)
+    if learning_rate is None:
+        # Try to get learning_rate from the default value of the
+        # optimizer's argument
+        opt_argspec = utils.get_default_arg_values(optimizer.__init__)
+        if 'learning_rate' not in opt_argspec:
+            raise ValueError(
+                "`learning_rate` must be specified in "
+                "hparams['optimizer']['kwargs'], if the optimizer does not "
+                "have default value for it.")
+        learning_rate = opt_argspec["learning_rate"]
+
+    grad_clip_fn = get_gradient_clip_fn(hparams["gradient_clip"])
+
+    lr_decay_fn = get_learning_rate_decay_fn(hparams["learning_rate_decay"])
+
+    train_op = tf.contrib.layers.optimize_loss(
+        loss=loss,
+        global_step=global_step,
+        learning_rate=learning_rate,
+        optimizer=optimizer,
+        gradient_noise_scale=hparams["gradient_noise_scale"],
+        clip_gradients=grad_clip_fn,
+        learning_rate_decay_fn=lr_decay_fn,
+        variables=variables,
+        name=hparams["name"],
+        increment_global_step=increment_global_step)
+
+    return train_op, global_step
