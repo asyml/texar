@@ -154,3 +154,10 @@ class ForwardRNNEncoder(EncoderBase):
         """
         return self._cell
 
+    @property
+    def state_size(self):
+        """The state size of encoder cell.
+
+        Same as :attr:`encoder.cell.state_size`.
+        """
+        return self.cell.state_size

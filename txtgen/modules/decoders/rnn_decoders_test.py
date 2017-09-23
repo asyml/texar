@@ -92,7 +92,7 @@ class BasicRNNDecoderTest(tf.test.TestCase):
             sess.run(tf.global_variables_initializer())
             outputs_, final_state_, sequence_lengths_ = sess.run(
                 [outputs, final_state, sequence_lengths],
-                feed_dict={context.is_train(): True})
+                feed_dict={context.is_train(): False})
             self.assertIsInstance(outputs_, BasicDecoderOutput)
             max_length = max(sequence_lengths_)
             self.assertEqual(
