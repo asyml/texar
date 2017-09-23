@@ -12,7 +12,7 @@ import tensorflow as tf
 from txtgen.data import database
 from txtgen.modules.connectors import connectors
 from txtgen.modules.decoders import rnn_decoders, rnn_decoder_helpers
-from txtgen.losses import losses
+from txtgen.losses import mle_losses
 from txtgen.core import optimization as opt
 from txtgen import context
 
@@ -64,7 +64,7 @@ if __name__ == "__main__":
         helper=helper_train, initial_state=connector(text_db.batch_size))
 
     # Build loss
-    mle_loss = losses.average_sequence_sparse_softmax_cross_entropy(
+    mle_loss = mle_losses.average_sequence_sparse_softmax_cross_entropy(
         labels=data_batch['text_ids'],
         logits=outputs.rnn_output,
         sequence_length=sequence_lengths)
@@ -91,7 +91,8 @@ if __name__ == "__main__":
                     [train_op, global_step, mle_loss],
                     feed_dict={context.is_train(): True})
 
-                print("%d: %.6f" % (step, loss))
+                if step % 100 == 0:
+                    print("%d: %.6f" % (step, loss))
 
         except tf.errors.OutOfRangeError:
             print('Done -- epoch limit reached')
