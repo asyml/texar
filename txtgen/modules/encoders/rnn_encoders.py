@@ -13,8 +13,8 @@ from txtgen.modules.encoders.encoder_base import EncoderBase
 from txtgen.core import layers
 
 
-class ForwardRNNEncoder(EncoderBase):
-    """One directional forward RNN encoder.
+class RNNEncoderBase(EncoderBase):
+    """Base class for all RNN encoder classes.
 
     Args:
         cell: (RNNCell, optional) If it is not specified,
@@ -52,7 +52,7 @@ class ForwardRNNEncoder(EncoderBase):
                  embedding_trainable=True,
                  vocab_size=None,
                  hparams=None,
-                 name="forward_rnn_encoder"):
+                 name="rnn_encoder"):
         EncoderBase.__init__(self, hparams, name)
 
         # Make rnn cell
@@ -106,6 +106,59 @@ class ForwardRNNEncoder(EncoderBase):
             "embedding": layers.default_embedding_hparams()
         }
 
+    def _build(self, inputs, *args, **kwargs):
+        """Encodes the inputs.
+
+        Args:
+          inputs: Inputs to the encoder.
+          *args: Other arguments.
+          **kwargs: Keyword arguments.
+
+        Returns:
+          Encoding results.
+        """
+        raise NotImplementedError
+
+    @property
+    def embedding(self):
+        """The embedding variable.
+        """
+        return self._embedding
+
+    @property
+    def cell(self):
+        """The RNN cell.
+        """
+        return self._cell
+
+    @property
+    def state_size(self):
+        """The state size of encoder cell.
+
+        Same as :attr:`encoder.cell.state_size`.
+        """
+        return self.cell.state_size
+
+
+class ForwardRNNEncoder(RNNEncoderBase):
+    """One directional forward RNN encoder.
+
+    See :class:`~txtgen.modules.encoders.rnn_encoders.RNNEncoderBase` for the
+    arguments, and
+    :class:`~txtgen.modules.encoders.rnn_encoders.RNNEncoderBase.`
+    `default_hparams` for the default hyperparameters.
+    """
+
+    def __init__(self,  # pylint: disable=too-many-arguments
+                 cell=None,
+                 embedding=None,
+                 embedding_trainable=True,
+                 vocab_size=None,
+                 hparams=None,
+                 name="forward_rnn_encoder"):
+        RNNEncoderBase.__init__(
+            self, cell, embedding, embedding_trainable,
+            vocab_size, hparams, name)
 
     def _build(self, inputs, **kwargs):
         """Encodes the inputs.
@@ -140,24 +193,3 @@ class ForwardRNNEncoder(EncoderBase):
         self._built = True
 
         return results
-
-
-    @property
-    def embedding(self):
-        """The embedding variable.
-        """
-        return self._embedding
-
-    @property
-    def cell(self):
-        """The RNN cell.
-        """
-        return self._cell
-
-    @property
-    def state_size(self):
-        """The state size of encoder cell.
-
-        Same as :attr:`encoder.cell.state_size`.
-        """
-        return self.cell.state_size
