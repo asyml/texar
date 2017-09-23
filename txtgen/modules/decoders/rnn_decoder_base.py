@@ -223,3 +223,11 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         """The RNN cell.
         """
         return self._cell
+
+    @property
+    def state_size(self):
+        """The state size of decoder cell.
+
+        Same as :attr:`decoder.cell.state_size`.
+        """
+        return self.cell.state_size

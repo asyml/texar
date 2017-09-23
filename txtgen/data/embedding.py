@@ -93,9 +93,11 @@ class Embedding(object):
         in the file.
 
         Args:
-            vocab: A dictionary that maps token strings to integer index.
-            read_fn: Callable that takes `(filename, vocab)` and returns
-                `(word_vecs, vector_size)`.
+            vocab (dict): A dictionary that maps token strings to integer index.
+            read_fn: Callable that takes `(filename, vocab, word_vecs)` and
+                returns the updated `word_vecs`. See
+                :meth:`~txtgen.data.embedding.load_word2vec` and
+                :meth:`~txtgen.data.embedding.load_glove` for examples.
         """
         self._vocab = vocab
         self._hparams = HParams(hparams, self.default_hparams())
@@ -105,8 +107,8 @@ class Embedding(object):
         if "shape" in init_fn_kwargs or "size" in init_fn_kwargs:
             raise ValueError("Argument 'shape' or 'size' must not be specified."
                              " It is inferred automatically.")
-        init_fn = utils.get_function(
-            self._hparams.init_fn.type, ["numpy.random", "numpy"])
+        init_fn = utils.get_function(self._hparams.init_fn.type,
+                                     ["txtgen.custom", "numpy.random", "numpy"])
         try:
             self._word_vecs = init_fn(size=[len(vocab), self._hparams.dim],
                                       **init_fn_kwargs)
@@ -115,21 +117,22 @@ class Embedding(object):
                                       **init_fn_kwargs)
 
         # Optionally read embeddings from file
-        if self._hparams.file is not None and len(self._hparams.file) > 0:
+        if self._hparams.file is not None and self._hparams.file != "":
             read_fn = utils.get_function(
                 self._hparams.read_fn,
                 ["txtgen.custom", "txtgen.data.embedding"])
 
-            self._word_vecs, _ = \
+            self._word_vecs = \
                 read_fn(self._hparams.file, self._vocab, self._word_vecs)
 
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
         """
+        # TODO(zhiting): add more docs
         return {
             "file": "",
-            "dim": 100,
+            "dim": 50,
             "read_fn": "load_word2vec",
             "init_fn": {
                 "type": "numpy.random.uniform",
@@ -143,7 +146,7 @@ class Embedding(object):
     @property
     def word_vecs(self):
         """Returns a 2D numpy array where the 1st dimension is the word index
-        and the 2nd dimension is the embedding vector..
+        and the 2nd dimension is the embedding vector.
         """
         return self._word_vecs
 

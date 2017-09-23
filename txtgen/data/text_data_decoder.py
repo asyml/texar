@@ -12,7 +12,8 @@ import tensorflow as tf
 from tensorflow.contrib.slim.python.slim.data import data_decoder
 
 
-class TextDataDecoder(data_decoder.DataDecoder):   # pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes
+class TextDataDecoder(data_decoder.DataDecoder):
     """A text data decoder that decodes raw text data, including splitting on
     word or character level, truncation, inserting special tokens, mapping
     text units to indexes, etc.
@@ -112,7 +113,7 @@ class TextDataDecoder(data_decoder.DataDecoder):   # pylint: disable=too-many-in
         """Returns the list of item names that the decoder can produce.
 
         Returns:
-            A list of strings can be passed to `decode()`.
+            A list of strings can be passed to :meth:`decode()`.
         """
         return [self._text_tensor_name,
                 self._length_tensor_name,
@@ -120,18 +121,18 @@ class TextDataDecoder(data_decoder.DataDecoder):   # pylint: disable=too-many-in
 
     @property
     def text_tensor_name(self):
-        """Returns the name of text tensor
+        """The name of text tensor.
         """
         return self._text_tensor_name
 
     @property
     def length_tensor_name(self):
-        """Returns the name of length tensor
+        """The name of length tensor.
         """
         return self._length_tensor_name
 
     @property
     def text_id_tensor_name(self):
-        """Returns the name of text index tensor
+        """The name of text index tensor.
         """
         return self._text_id_tensor_name

@@ -43,7 +43,7 @@ class TextDatabaseTest(tf.test.TestCase):
         }
 
         text_database = database.TextDataBase(hparams)
-        text_data = text_database()
+        text_data_batch = text_database()
 
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
@@ -55,7 +55,7 @@ class TextDatabaseTest(tf.test.TestCase):
             try:
                 while not coord.should_stop():
                     # Run the logics
-                    data = sess.run(text_data)
+                    data = sess.run(text_data_batch)
 
                     self.assertEqual(set(data.keys()),
                                      set(text_database.list_items()))
