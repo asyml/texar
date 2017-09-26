@@ -218,9 +218,7 @@ class MLPTransformConnector(ConnectorBase):
 
         return output
 
-
-# TODO(zhiting): transform results into the same structure with the decoder
-# state
+#TODO(junxian): Customize reparameterize type
 class StochasticConnector(ConnectorBase):
     """Samples decoder initial state from a distribution defined by the inputs.
 
@@ -250,50 +248,28 @@ class StochasticConnector(ConnectorBase):
             ```
         """
         return {
-            "distribution": "txtgen.core.distributions.sample_gaussian"
+            "distribution": "tf.contrib.distributions.MultivariateNormalDiag"
         }
 
     def _build(self, inputs):  # pylint: disable=W0221
         """Samples from a distribution defined by the inputs.
 
         Args:
-            inputs: Result of encoder (e.g., encoder outputs or final
-                states) to be transformed and passed to the decoder. Must be a
-                Tensor of shape `[batch_size, ...]` or a (nested) tuple of such
-                Tensors.
-
-                gaussian_distribution only supports type encoder results. The
-                encoder results can either be (mu, logvar) or (mu, logvar,
-                context) with size `[batch_size, ...]` for tuple element. When
-                context is present, it will be concatenated with the sample
-                along the 1st axis.
+            inputs: Instance of tf.contrib.distributions
 
         Returns:
             A Tensor or a (nested) tuple of Tensors of the same structure of
             the decoder state.
         """
-        modules = ['txtgen.custom', 'txtgen.core.distributions']
-        sampler = get_function(self.hparams.distribution, modules)
 
-        if sampler is distributions.sample_gaussian:
-            if not isinstance(inputs, tuple):
-                raise ValueError(
-                    "Gaussian connector requires tuple input tensors.")
+        output = inputs.sample()
 
-            if len(inputs) == 2:
-                input_mu, input_log_var = inputs
-                output = sampler(input_mu, input_log_var)
-
-            elif len(inputs) == 3:
-                input_mu, input_log_var, context = inputs
-                sample = sampler(input_mu, input_log_var)
-                output = tf.concat([sample, context], axis=1)
-            else:
-                raise ValueError("Gaussian connector supports either "
-                                 "(mu, logvar) or (mu, logvar, context)")
-
-        else:
-            raise ValueError("Unsupported distribution")
+        try:
+            nest.assert_same_structure(inputs, self._decoder_state_size)
+        except (ValueError, TypeError):
+            flat_input = nest.flatten(inputs)
+            output = nest.pack_sequence_as(
+                self._decoder_state_size, flat_input)
 
         self._add_internal_trainable_variables()
         self._built = True
