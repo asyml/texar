@@ -25,6 +25,7 @@ def default_text_dataset_hparams():
     """Returns a dictionary of hyperparameters of a text dataset with default
     values.
     """
+    # TODO(zhiting): add more docs
     return {
         "name": "",
         "files": [],
@@ -87,6 +88,19 @@ class DataBaseBase(object):
         """
         raise NotImplementedError
 
+    @property
+    def batch_size(self):
+        """An integer representing the batch size.
+        """
+        return self._hparams.batch_size
+
+    @property
+    def hparams(self):
+        """A :class:`~txtgen.hyperparams.HParams` instance of the
+        database hyperparameters.
+        """
+        return self._hparams
+
 
 class TextDataBase(DataBaseBase):
     """Text data class that reads text files.
@@ -131,11 +145,10 @@ class TextDataBase(DataBaseBase):
             max_seq_length=proc_hparams["max_seq_length"],
             token_to_id_map=vocab.token_to_id_map)
 
-
         # Load embedding (optional)
         emb_hparams = dataset_hparams["embedding"]
         embedding = None
-        if emb_hparams["file"] is not None and len(emb_hparams["file"]) > 0:
+        if emb_hparams["file"] is not None and emb_hparams["file"] != "":
             embedding = Embedding(vocab.token_to_id_map_py, emb_hparams)
 
         # Create the dataset
@@ -205,12 +218,19 @@ class TextDataBase(DataBaseBase):
         """Returns the list of item names that the database can produce.
 
         Returns:
-            A list of strings..
+            A list of strings.
         """
         return self._dataset.decoder.list_items()   # pylint: disable=no-member
 
     @property
     def dataset(self):
-        """Returns the dataset.
+        """The dataset.
         """
         return self._dataset
+
+    @property
+    def vocab(self):
+        """The vocabulary defined in :class:`~txtgen.data.Vocab`.
+        """
+        return self.dataset.vocab   # pylint: disable=no-member
+

@@ -121,6 +121,7 @@ class ModuleBase(object):
 
     @property
     def hparams(self):
-        """The hyperparameters of the module.
+        """A :class:`~txtgen.hyperparams.HParams` instance. The hyperparameters
+        of the module.
         """
         return self._hparams

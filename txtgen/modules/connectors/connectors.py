@@ -62,7 +62,7 @@ class ConstantConnector(ConnectorBase):
     Args:
         decoder_state_size: Size of state of the decoder cell. Can be an
             Integer, a Tensorshape, or a tuple of Integers or TensorShapes.
-            This can typically be obtained by :attr:`decoder.cell.state_size`.
+            This can typically be obtained by :attr:`decoder.state_size`.
         hparams (dict): Hyperparameters of the connector.
         name (str): Name of connector.
     """

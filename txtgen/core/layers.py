@@ -153,7 +153,7 @@ def get_rnn_cell(hparams):
 
 
 def default_embedding_hparams():
-    """Returns default hyperparameters of embedding.
+    """Returns default hyperparameters of embedding used in modules.
 
     Returns:
         dict: A dictionary with the following structure and values:
@@ -186,7 +186,7 @@ def default_embedding_hparams():
     """
     return { #TODO(zhiting): allow more hparams like regularizer
         "name": "embedding",
-        "dim": 100,
+        "dim": 50,
         "initializer": {
             "type": "tensorflow.random_uniform_initializer",
             "kwargs": {
