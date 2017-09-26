@@ -16,6 +16,8 @@ from txtgen.modules.decoders.rnn_decoder_base import RNNDecoderBase
 
 class BasicRNNDecoder(RNNDecoderBase):
     """Basic RNN decoder that performs sampling at each step.
+
+    See :class:`~txtgen.modules.decoders.RNNDecoderBase` for the arguments.
     """
 
     def __init__(self,  # pylint: disable=too-many-arguments
