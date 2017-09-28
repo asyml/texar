@@ -42,7 +42,7 @@ class TextDatabaseTest(tf.test.TestCase):
             }
         }
 
-        text_database = database.TextDataBase(hparams)
+        text_database = database.MonoTextDataBase(hparams)
         text_data_batch = text_database()
 
         with self.test_session() as sess:

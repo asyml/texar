@@ -21,7 +21,7 @@ from txtgen.data.vocabulary import Vocab
 from txtgen.data.embedding import Embedding
 
 
-def default_text_dataset_hparams():
+def default_text_database_hparams():
     """Returns a dictionary of hyperparameters of a text dataset with default
     values.
     """
@@ -102,14 +102,27 @@ class DataBaseBase(object):
         return self._hparams
 
 
-class TextDataBase(DataBaseBase):
-    """Text data class that reads text files.
+class MonoTextDataBase(DataBaseBase):
+    """Text data base that reads single set of text files.
+
+    This is for the use of, e.g., language models, auto-encoders, etc. For
+    models that involve two sets of text files (`source` and `target`), use
+    :class:`~txtgen.data.database.PairedTextDataBase`.
+
+    Args:
+        hparams (dict): Hyperparameters. See
+            :meth:`~txgen.data.database.default_text_database_hparams` for
+            the defaults.
+        name (str): Name of the database.
     """
 
-    def __init__(self, hparams, name="text_database"):
+    def __init__(self, hparams, name="mono_text_database"):
         DataBaseBase.__init__(self, hparams, name)
-        self._dataset = self.make_dataset(self._hparams.dataset)
-        self._data_provider = self._make_data_provider(self._dataset)
+
+        # pylint: disable=not-context-manager
+        with tf.name_scope(name, "mono_text_database"):
+            self._dataset = self.make_dataset(self._hparams.dataset)
+            self._data_provider = self._make_data_provider(self._dataset)
 
     @staticmethod
     def default_hparams():
@@ -117,7 +130,7 @@ class TextDataBase(DataBaseBase):
         """
         hparams = copy.deepcopy(DataBaseBase.default_hparams())
         hparams.update({
-            "dataset": default_text_dataset_hparams()
+            "dataset": default_text_database_hparams()
         })
         return hparams
 
@@ -197,7 +210,7 @@ class TextDataBase(DataBaseBase):
                 enqueue_many=False,
                 dynamic_pad=True,
                 allow_smaller_final_batch=self._hparams.allow_smaller_final_batch,
-                name="text_data_batch")
+                name="%s/batch" % self.name)
         else:
             input_length = data[self._dataset.decoder.length_tensor_name] # pylint: disable=no-member
             _, data_batch = tf.contrib.training.bucket_by_sequence_length(
@@ -210,7 +223,7 @@ class TextDataBase(DataBaseBase):
                 dynamic_pad=True,
                 allow_smaller_final_batch=self._hparams.allow_smaller_final_batch,
                 keep_input=input_length > 0,
-                name="text_data_bucket_batch")
+                name="%s/bucket_batch" % self.name)
 
         return data_batch
 

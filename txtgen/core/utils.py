@@ -245,17 +245,17 @@ def transpose_batch_time(inputs):
 
 
 def default_string(str_, default_str):
-    """Returns `str_` if `str_` is not None or empty, otherwise returns
-    `default_str`.
+    """Returns :attr:`str_` if it is not `None` or empty, otherwise returns
+    :attr:`default_str`.
 
     Args:
         str_: A string.
         default_str: A string.
 
     Returns:
-        Either `str_` or `default_str`.
+        Either :attr:`str_` or :attr:`default_str`.
     """
-    if str_ is not None or len(str_) > 0:
+    if str_ is not None and str_ != "":
         return str_
     else:
         return default_str

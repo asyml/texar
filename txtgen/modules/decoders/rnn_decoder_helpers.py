@@ -136,7 +136,8 @@ class EmbeddingTrainingHelper(TFTrainingHelper):
 
     def __init__(self, inputs, # pylint: disable=too-many-arguments
                  sequence_length, embedding, time_major=False, name=None):
-        with tf.name_scope(name, "EmbeddingTrainingHelper", [embedding]): # pylint: disable=not-context-manager
+        # pylint: disable=not-context-manager
+        with tf.name_scope(name, "EmbeddingTrainingHelper", [embedding]):
             if callable(embedding):
                 self._embedding_fn = embedding
             else:
