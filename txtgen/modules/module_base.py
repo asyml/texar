@@ -19,16 +19,14 @@ class ModuleBase(object):
     configurable through hyperparameters.
 
     Args:
-        name (string): Name of the module.
         hparams (dict, optional): Hyperparameters of the module. See
-            :attr:`default_hparams` for the structure and default values.
+            :meth:`default_hparams` for the structure and default values.
     """
 
-    def __init__(self, name, hparams=None):
-        self.name = name
-        self._template = tf.make_template(name, self._build,
-                                          create_scope_now_=True)
+    def __init__(self, hparams=None):
         self._hparams = HParams(hparams, self.default_hparams())
+        self._template = tf.make_template(self.hparams.name, self._build,
+                                          create_scope_now_=True)
         self._unique_name = self.variable_scope.name.split("/")[-1]
         self._trainable_variables = []
         self._built = False
@@ -39,7 +37,9 @@ class ModuleBase(object):
         values. Used to replace the missing values of input :attr:`hparams`
         during module construction.
         """
-        raise NotImplementedError
+        return {
+            "name": "module"
+        }
 
     def _build(self, *args, **kwargs):
         """Subclass must implement this method to build the logic.
@@ -103,8 +103,8 @@ class ModuleBase(object):
         return self._template.variable_scope
 
     @property
-    def module_name(self):
-        """The name of the module.
+    def name(self):
+        """The unique name of the module.
         """
         return self._unique_name
 
@@ -116,7 +116,7 @@ class ModuleBase(object):
             raise ValueError(
                 "Attempting to access trainable_variables before module %s "
                 "was fully built. The module is built once it is called, "
-                "e.g., with `%s(...)`" % (self.module_name, self.module_name))
+                "e.g., with `%s(...)`" % (self.name, self.name))
         return self._trainable_variables
 
     @property

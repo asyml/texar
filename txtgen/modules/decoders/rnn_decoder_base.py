@@ -47,7 +47,6 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         hparams (dict, optional): Hyperparameters. If not specified, the default
             hyperparameter setting is used. See :attr:`default_hparams` for the
             structure and default values.
-        name (str): Name of the decoder.
     """
 
     def __init__(self,  # pylint: disable=too-many-arguments
@@ -55,9 +54,8 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                  embedding=None,
                  embedding_trainable=True,
                  vocab_size=None,
-                 hparams=None,
-                 name="rnn_decoder"):
-        ModuleBase.__init__(self, name, hparams)
+                 hparams=None):
+        ModuleBase.__init__(self, hparams)
 
         self._helper = None
         self._initial_state = None
@@ -117,7 +115,10 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 # (optional) An integer. Maximum allowed number of decoding
                 # steps at inference time. If `None` (default), decoding is
                 # performed until fully done, e.g., encountering the EOS token.
-                "max_decoding_length_infer": None
+                "max_decoding_length_infer": None,
+
+                # Name of the decoder.
+                "name": "rnn_decoder"
             }
         """
         return {
@@ -126,7 +127,8 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             "helper_train": rnn_decoder_helpers.default_helper_train_hparams(),
             "helper_infer": rnn_decoder_helpers.default_helper_infer_hparams(),
             "max_decoding_length_train": None,
-            "max_decoding_length_infer": None
+            "max_decoding_length_infer": None,
+            "name": "rnn_decoder"
         }
 
 
