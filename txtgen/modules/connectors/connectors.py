@@ -12,7 +12,6 @@ from tensorflow.python.util import nest    # pylint: disable=E0611
 
 from txtgen.modules.connectors.connector_base import ConnectorBase
 from txtgen.core.utils import get_function
-from txtgen.core import distributions
 
 
 def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
@@ -56,6 +55,7 @@ def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
 
     return output
 
+
 class ConstantConnector(ConnectorBase):
     """Creates decoder initial state that has a constant value.
 
@@ -64,11 +64,9 @@ class ConstantConnector(ConnectorBase):
             Integer, a Tensorshape, or a tuple of Integers or TensorShapes.
             This can typically be obtained by :attr:`decoder.state_size`.
         hparams (dict): Hyperparameters of the connector.
-        name (str): Name of connector.
     """
-    def __init__(self, decoder_state_size, hparams=None,
-                 name="constant_connector"):
-        ConnectorBase.__init__(self, decoder_state_size, hparams, name)
+    def __init__(self, decoder_state_size, hparams=None):
+        ConnectorBase.__init__(self, decoder_state_size, hparams)
 
     @staticmethod
     def default_hparams():
@@ -78,11 +76,14 @@ class ConstantConnector(ConnectorBase):
 
             {
                 # The constant value that the decoder initial state has.
-                "value": 0.
+                "value": 0.,
+                # The name of the connector.
+                "name": "constant_connector"
             }
         """
         return {
-            "value": 0.
+            "value": 0.,
+            "name": "constant_connector"
         }
 
     def _build(self, batch_size, value=None):   # pylint: disable=W0221
@@ -120,20 +121,24 @@ class ForwardConnector(ConnectorBase):
         decoder_state_size: Size of state of the decoder cell. Can be an
             Integer, a Tensorshape , or a tuple of Integers or TensorShapes.
             This can typically be obtained by :attr:`decoder.cell.state_size`.
-        name (str): Name of connector.
     """
 
-    def __init__(self, decoder_state_size, name="forward_connector"):
-        ConnectorBase.__init__(self, decoder_state_size, None, name)
+    def __init__(self, decoder_state_size):
+        ConnectorBase.__init__(self, decoder_state_size, None)
 
     @staticmethod
     def default_hparams():
         """Returns a dictionary of default hyperparameters.
 
-        The dictionary is empty since the connector does not have any
-        configurable hyperparameters.
+        .. code-block:: python
+
+            {
+                # The name of the connector.
+                "name": "forward_connector"
         """
-        return {}
+        return {
+            "name": "forward_connector"
+        }
 
     def _build(self, inputs):    # pylint: disable=W0221
         """Passes inputs to the initial states of decoder.
@@ -173,8 +178,8 @@ class MLPTransformConnector(ConnectorBase):
         name (str): Name of connector.
     """
 
-    def __init__(self, decoder_state_size, hparams=None, name="mlp_connector"):
-        ConnectorBase.__init__(self, decoder_state_size, hparams, name)
+    def __init__(self, decoder_state_size, hparams=None):
+        ConnectorBase.__init__(self, decoder_state_size, hparams)
 
     @staticmethod
     def default_hparams():
@@ -188,11 +193,15 @@ class MLPTransformConnector(ConnectorBase):
                 # functions defined in module `tensorflow` or `tensorflow.nn`,
                 # or user-defined functions defined in `user.custom`, or a
                 # full path like "my_module.my_activation_fn".
-                "activation_fn": "tensorflow.identity"
+                "activation_fn": "tensorflow.identity",
+
+                # Name of the connector.
+                "name": "mlp_connector"
             }
         """
         return {
-            "activation_fn": "tensorflow.identity"
+            "activation_fn": "tensorflow.identity",
+            "name": "mlp_connector"
         }
 
     def _build(self, inputs): #pylint: disable=W0221
@@ -218,6 +227,7 @@ class MLPTransformConnector(ConnectorBase):
 
         return output
 
+
 #TODO(junxian): Customize reparameterize type
 class StochasticConnector(ConnectorBase):
     """Samples decoder initial state from a distribution defined by the inputs.
@@ -226,10 +236,10 @@ class StochasticConnector(ConnectorBase):
     models.
     """
 
-    def __init__(self, decoder_state_size, hparams=None,
-                 name="stochastic_connector"):
-        ConnectorBase.__init__(self, decoder_state_size, hparams, name)
+    def __init__(self, decoder_state_size, hparams=None):
+        ConnectorBase.__init__(self, decoder_state_size, hparams)
 
+    #TODO(zhiting): add docs
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
@@ -237,18 +247,12 @@ class StochasticConnector(ConnectorBase):
         Returns:
             ```python
             {
-                # The name or full path of the activation function applied to
-                # the outputs of the MLP layer. E.g., the name of built-in
-                # functions defined in module `tensorflow` or `tensorflow.nn`,
-                # or user-defined functions defined in `user.custom`, or a
-                # full path like "my_module.my_activation_fn".
-
-                "activation_fn": "tensorflow.identity"
             }
             ```
         """
         return {
-            "distribution": "tf.contrib.distributions.MultivariateNormalDiag"
+            "distribution": "tf.contrib.distributions.MultivariateNormalDiag",
+            "name": "stochastic_connector"
         }
 
     def _build(self, inputs):  # pylint: disable=W0221

@@ -45,7 +45,6 @@ class RNNEncoderBase(EncoderBase):
         hparams (dict, optional): Encoder hyperparameters. If it is not
             specified, the default hyperparameter setting is used. See
             :attr:`default_hparams` for the sturcture and default values.
-        name (string): Name of the encoder.
     """
 
     def __init__(self,  # pylint: disable=too-many-arguments
@@ -53,9 +52,8 @@ class RNNEncoderBase(EncoderBase):
                  embedding=None,
                  embedding_trainable=True,
                  vocab_size=None,
-                 hparams=None,
-                 name="rnn_encoder"):
-        EncoderBase.__init__(self, hparams, name)
+                 hparams=None):
+        EncoderBase.__init__(self, hparams)
 
         # Make rnn cell
         with tf.variable_scope(self.variable_scope): # pylint: disable=not-context-manager
@@ -100,14 +98,16 @@ class RNNEncoderBase(EncoderBase):
                 # a tf.Variable when constructing the encoder. If `embedding`
                 # is given and is a Tensor or numpy array, the "dim" and
                 # "initializer" specs of embedding are ignored.
-                "embedding": txtgen.core.layers.default_embedding_hparams()
+                "embedding": txtgen.core.layers.default_embedding_hparams(),
+
+                # The name of the encoder.
+                "name": "rnn_encoder"
             }
         """
         return {
             "rnn_cell": layers.default_rnn_cell_hparams(),
             "embedding": layers.default_embedding_hparams(),
-            "minor_type": "rnn",
-            "minor_cell": layers.default_rnn_cell_hparams()
+            "name": "rnn_encoder"
         }
 
     def _build(self, inputs, *args, **kwargs):
@@ -148,9 +148,7 @@ class ForwardRNNEncoder(RNNEncoderBase):
     """One directional forward RNN encoder.
 
     See :class:`~txtgen.modules.encoders.rnn_encoders.RNNEncoderBase` for the
-    arguments, and
-    :class:`~txtgen.modules.encoders.rnn_encoders.RNNEncoderBase.`
-    `default_hparams` for the default hyperparameters.
+    arguments, and :meth:`default_hparams` for the default hyperparameters.
     """
 
     def __init__(self,  # pylint: disable=too-many-arguments
@@ -158,11 +156,21 @@ class ForwardRNNEncoder(RNNEncoderBase):
                  embedding=None,
                  embedding_trainable=True,
                  vocab_size=None,
-                 hparams=None,
-                 name="forward_rnn_encoder"):
+                 hparams=None):
         RNNEncoderBase.__init__(
-            self, cell, embedding, embedding_trainable,
-            vocab_size, hparams, name)
+            self, cell, embedding, embedding_trainable, vocab_size, hparams)
+
+    @staticmethod
+    def default_hparams():
+        """Returns a dictionary of hyperparameters with default values.
+
+        The dictionary have the same structure as in
+        :meth:`RNNEncoderBase.default_hparams`, except the "name" is default to
+        "forward_rnn_encoder".
+        """
+        hparams = RNNEncoderBase.default_hparams()
+        hparams["name"] = "forward_rnn_encoder"
+        return hparams
 
     def _build(self, inputs, **kwargs):
         """Encodes the inputs.
@@ -200,31 +208,30 @@ class ForwardRNNEncoder(RNNEncoderBase):
 
 
 class HierarchicalForwardRNNEncoder(RNNEncoderBase):
-    """One directional forward RNN encoder with 2 levels. Useful for encoding
-       structured long sequences, e.g. paragraphs, dialogs and etc.
-       Expect 3D tensor input [B, T, U] 
-       B: batch size T: the major seq len U:the minor seq len
-       The minor encoder encodes the inputs along the 2 axis
-       The major encoder encodes the inputs along the 1st axis
-       
-       the minor encoder supports various types: RNN, bi-RNN, CNN, CBOW etc.
+    """One directional forward RNN encoder with 2 levels.
 
-      See :class:`~txtgen.modules.encoders.rnn_encoders.RNNEncoderBase` for the
-      arguments, and
-      :class:`~txtgen.modules.encoders.rnn_encoders.RNNEncoderBase.`
-      `default_hparams` for the default hyperparameters.
-      """
+    Useful for encoding structured long sequences, e.g. paragraphs, dialogs,
+    etc.
+
+    Expect 3D tensor input [B, T, U]
+    B: batch size T: the major seq len U:the minor seq len
+    The minor encoder encodes the inputs along the 2 axis
+    The major encoder encodes the inputs along the 1st axis
+
+    the minor encoder supports various types: RNN, bi-RNN, CNN, CBOW etc.
+
+    See :class:`~txtgen.modules.encoders.rnn_encoders.RNNEncoderBase` for the
+    arguments, and :meth:`default_hparams` for the default hyperparameters.
+    """
 
     def __init__(self,  # pylint: disable=too-many-arguments
                  cell=None,
                  embedding=None,
                  embedding_trainable=True,
                  vocab_size=None,
-                 hparams=None,
-                 name="hierarhical_forward_rnn_encoder"):
+                 hparams=None):
         RNNEncoderBase.__init__(
-            self, cell, embedding, embedding_trainable,
-            vocab_size, hparams, name)
+            self, cell, embedding, embedding_trainable, vocab_size, hparams)
 
         if self._hparams.minor_type == 'rnn':
             # Make minor rnn cell
@@ -241,11 +248,49 @@ class HierarchicalForwardRNNEncoder(RNNEncoderBase):
             raise ValueError("Unknown minor type {}"
                              .format(self._hparams.minor_type))
 
+    #TODO(zhiting): docs for hparams `minor_type` and `minor_cell`.
+    @staticmethod
+    def default_hparams():
+        """Returns a dictionary of hyperparameters with default values.
+
+        The dictionary has the following structure and default values.
+
+        See :meth:`~txtgen.core.layers.default_rnn_cell_hparams` for the
+        default rnn cell hyperparameters, and
+        :meth:`~txtgen.core.layers.default_embedding_hparams` for the default
+        embedding hyperparameters.
+
+        .. code-block:: python
+
+            {
+                # A dictionary of rnn cell hyperparameters. Ignored if `cell`
+                # is given when constructing the encoder.
+                "rnn_cell": txtgen.core.layers.default_rnn_cell_hparams(),
+
+                # A dictionary of token embedding hyperparameters for embedding
+                # initialization. Ignored if `embedding` is given and is
+                # a tf.Variable when constructing the encoder. If `embedding`
+                # is given and is a Tensor or numpy array, the "dim" and
+                # "initializer" specs of embedding are ignored.
+                "embedding": txtgen.core.layers.default_embedding_hparams(),
+
+                # The name of the encoder
+                "name": "hierarchical_forward_rnn_encoder"
+            }
+        """
+        hparams = {
+            "minor_type": "rnn",
+            "minor_cell": layers.default_rnn_cell_hparams()
+        }
+        hparams.update(RNNEncoderBase.default_hparams())
+        hparams["name"] = "hierarchical_forward_rnn_encoder"
+        return hparams
+
     def _build(self, inputs, **kwargs):
         """Encodes the inputs.
 
         Args:
-            inputs:  3D tensor input [B, T, U] 
+            inputs: 3D tensor input [B, T, U]
             **kwargs: Optional keyword arguments of `tensorflow.nn.dynamic_rnn`,
                 such as `sequence_length`, `initial_state`, etc.
 
@@ -264,6 +309,7 @@ class HierarchicalForwardRNNEncoder(RNNEncoderBase):
         flat_embedded_inputs = tf.reshape(embedded_inputs,
                                           [-1, minor_len, embed_dim])
 
+        # pylint: disable=not-context-manager
         with tf.variable_scope("minor_rnn"):
             minor_outs, minor_states = tf.nn.dynamic_rnn(
                 cell=self._minor_cell,

@@ -9,8 +9,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import copy
-
 import tensorflow as tf
 import tensorflow.contrib.slim as tf_slim
 
@@ -21,13 +19,12 @@ from txtgen.data.vocabulary import Vocab
 from txtgen.data.embedding import Embedding
 
 
-def default_text_database_hparams():
+def default_text_dataset_hparams():
     """Returns a dictionary of hyperparameters of a text dataset with default
     values.
     """
     # TODO(zhiting): add more docs
     return {
-        "name": "",
         "files": [],
         "vocab.file": "",
         "vocab.share_with": "",
@@ -46,12 +43,17 @@ def default_text_database_hparams():
         }
     }
 
+def default_paired_text_dataset_hparams():  # pylint: disable=invalid-name
+    """Returns
+    """
+    return {
+    }
+
 class DataBaseBase(object):
     """Base class of all data classes.
     """
 
-    def __init__(self, hparams, name="database"):
-        self.name = name
+    def __init__(self, hparams):
         self._hparams = HParams(hparams, self.default_hparams())
 
     @staticmethod
@@ -59,6 +61,7 @@ class DataBaseBase(object):
         """Returns a dicitionary of default hyperparameters.
         """
         return {
+            "name": "database",
             "num_epochs": 1,
             "batch_size": 64,
             "allow_smaller_final_batch": False,
@@ -101,6 +104,12 @@ class DataBaseBase(object):
         """
         return self._hparams
 
+    @property
+    def name(self):
+        """The name of the data base.
+        """
+        return self.hparams.name
+
 
 class MonoTextDataBase(DataBaseBase):
     """Text data base that reads single set of text files.
@@ -110,17 +119,16 @@ class MonoTextDataBase(DataBaseBase):
     :class:`~txtgen.data.database.PairedTextDataBase`.
 
     Args:
-        hparams (dict): Hyperparameters. See
-            :meth:`~txgen.data.database.default_text_database_hparams` for
-            the defaults.
+        hparams (dict): Hyperparameters. See :meth:`default_hparams` for the
+            defaults.
         name (str): Name of the database.
     """
 
-    def __init__(self, hparams, name="mono_text_database"):
-        DataBaseBase.__init__(self, hparams, name)
+    def __init__(self, hparams):
+        DataBaseBase.__init__(self, hparams)
 
         # pylint: disable=not-context-manager
-        with tf.name_scope(name, "mono_text_database"):
+        with tf.name_scope(self.name, self.default_hparams["name"]):
             self._dataset = self.make_dataset(self._hparams.dataset)
             self._data_provider = self._make_data_provider(self._dataset)
 
@@ -128,9 +136,10 @@ class MonoTextDataBase(DataBaseBase):
     def default_hparams():
         """Returns a dicitionary of default hyperparameters.
         """
-        hparams = copy.deepcopy(DataBaseBase.default_hparams())
+        hparams = DataBaseBase.default_hparams()
+        hparams["name"] = "mono_text_database"
         hparams.update({
-            "dataset": default_text_database_hparams()
+            "dataset": default_text_dataset_hparams()
         })
         return hparams
 
@@ -172,8 +181,7 @@ class MonoTextDataBase(DataBaseBase):
             num_samples=None,
             items_to_descriptions=None,
             vocab=vocab,
-            embedding=embedding,
-            name=dataset_hparams["name"])
+            embedding=embedding)
 
         return dataset
 
