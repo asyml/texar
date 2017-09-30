@@ -8,6 +8,7 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+import tensorflow.contrib.distributions as tfds
 from tensorflow.python.util import nest    # pylint: disable=E0611
 
 from txtgen.modules.connectors.connector_base import ConnectorBase
@@ -228,9 +229,67 @@ class MLPTransformConnector(ConnectorBase):
         return output
 
 
-#TODO(junxian): Customize reparameterize type
+class ReparameterizeStochasticConnector(ConnectorBase):
+    """Samples decoder initial state using reparameterization trick
+    from a distribution defined by the inputs.
+
+    Used in, e.g., variational autoencoders, adversarial autoencoders, and other
+    models.
+    """
+
+    def __init__(self, decoder_state_size, hparams=None):
+        ConnectorBase.__init__(self, decoder_state_size, hparams)
+
+    #TODO(zhiting): add docs
+    @staticmethod
+    def default_hparams():
+        """Returns a dictionary of hyperparameters with default values.
+
+        Returns:
+            ```python
+            {
+            }
+            ```
+        """
+        return {
+            "distribution": "tf.contrib.distributions.MultivariateNormalDiag",
+            "name": "reparameterize_stochastic_connector"
+        }
+
+    def _build(self, inputs):  # pylint: disable=W0221
+        """Samples from a distribution defined by the inputs.
+
+        Args:
+            inputs: Instance of tf.contrib.distributions
+
+        Returns:
+            A Tensor or a (nested) tuple of Tensors of the same structure of
+            the decoder state.
+
+        Raises:
+            ValueError: An error occurred when the input distribution cannot be reparameterized
+        """
+
+        if inputs.reparameterization_type == tfds.NOT_REPARAMETERIZED:
+            raise ValueError("%s distribution is not reparameterized" % inputs.name)
+
+        output = inputs.sample()
+
+        try:
+            nest.assert_same_structure(inputs, self._decoder_state_size)
+        except (ValueError, TypeError):
+            flat_input = nest.flatten(inputs)
+            output = nest.pack_sequence_as(
+                self._decoder_state_size, flat_input)
+
+        self._add_internal_trainable_variables()
+        self._built = True
+
+        return output
+
 class StochasticConnector(ConnectorBase):
-    """Samples decoder initial state from a distribution defined by the inputs.
+    """Samples decoder initial state from a distribution
+    defined by the inputs. (disable reparameterize trick)
 
     Used in, e.g., variational autoencoders, adversarial autoencoders, and other
     models.
@@ -268,6 +327,9 @@ class StochasticConnector(ConnectorBase):
 
         output = inputs.sample()
 
+        # Disable gradients through samples
+        output = tf.stop_gradient(output)
+
         try:
             nest.assert_same_structure(inputs, self._decoder_state_size)
         except (ValueError, TypeError):
@@ -279,4 +341,3 @@ class StochasticConnector(ConnectorBase):
         self._built = True
 
         return output
-
