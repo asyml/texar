@@ -39,7 +39,7 @@ class TextDataBaseTest(tf.test.TestCase):
             "batch_size": 2,
             "dataset": {
                 "files": [text_file.name],
-                "vocab.file": vocab_file.name,
+                "vocab_file": vocab_file.name,
             }
         }
 
@@ -95,12 +95,12 @@ class TextDataBaseTest(tf.test.TestCase):
             "batch_size": 3,
             "source_dataset": {
                 "files": [src_text_file.name],
-                "vocab.file": vocab_file.name,
+                "vocab_file": vocab_file.name,
             },
             "target_dataset": {
                 "files": [tgt_text_file.name],
-                "vocab.share_with_source": True,
-                "reader.share_with_source": True,
+                "vocab_share": True,
+                "reader_share": True,
                 "processing": {
                     "eos_token": "<TARGET_EOS>"
                 }

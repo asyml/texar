@@ -13,6 +13,7 @@ import tensorflow.contrib.rnn as rnn
 from txtgen.hyperparams import HParams
 from txtgen.core.utils import get_instance, switch_dropout
 
+# pylint: disable=not-context-manager, redefined-variable-type
 
 def default_rnn_cell_hparams():
     """Returns default hyperparameters of an RNN cell.
@@ -138,14 +139,14 @@ def get_rnn_cell(hparams):
         # Optionally add residual and highway connections
         if layer_i > 0:
             if hparams["residual"]:
-                cell = rnn.ResidualWrapper(cell) # pylint: disable=redefined-variable-type
+                cell = rnn.ResidualWrapper(cell)
             if hparams["highway"]:
                 cell = rnn.HighwayWrapper(cell)
 
         cells.append(cell)
 
     if hparams["num_layers"] > 1:
-        cell = rnn.MultiRNNCell(cells) # pylint: disable=redefined-variable-type
+        cell = rnn.MultiRNNCell(cells)
     else:
         cell = cells[0]
 
@@ -181,7 +182,9 @@ def default_embedding_hparams():
                         "maxval": 0.1,
                         "seed": None
                     }
-                }
+                },
+                # (bool) Whether the embedding variable trainable.
+                "trainable": True,
             }
     """
     return { #TODO(zhiting): allow more hparams like regularizer
@@ -194,14 +197,14 @@ def default_embedding_hparams():
                 "maxval": 0.1,
                 "seed": None
             }
-        }
+        },
+        "trainable": True
     }
 
 
 def get_embedding(hparams,
                   init_values=None,
                   vocab_size=None,
-                  trainable=True,
                   variable_scope=None):
     """Creates embedding variable if not exists.
 
@@ -216,8 +219,6 @@ def get_embedding(hparams,
             specified in :attr:`hparams["initializer"]`.
         vocab_size (int, optional): The vocabulary size. Required if
             :attr:`init_values` is not provided.
-        trainable (bool): If `True` (default), the embedding variable is a
-            trainable variable.
         variable_scope (string or VariableScope, optional): Variable scope of
             the embedding variable.
 
@@ -225,7 +226,7 @@ def get_embedding(hparams,
         Variable: A 2D `Variable` of the same shape with :attr:`init_values`
         or of the shape [:attr:`vocab_size`, :attr:`hparams["dim"]`].
     """
-    with tf.variable_scope(variable_scope, "embedding"): # pylint: disable=not-context-manager
+    with tf.variable_scope(variable_scope, "embedding"):
         if init_values is None:
             kwargs = hparams["initializer"]["kwargs"]
             if isinstance(kwargs, HParams):
@@ -236,9 +237,9 @@ def get_embedding(hparams,
             return tf.get_variable(name=hparams["name"],
                                    shape=[vocab_size, hparams["dim"]],
                                    initializer=initializer,
-                                   trainable=trainable)
+                                   trainable=hparams["trainable"])
         else:
             return tf.get_variable(name=hparams["name"],
                                    initializer=init_values,
-                                   trainable=trainable)
+                                   trainable=hparams["trainable"])
 

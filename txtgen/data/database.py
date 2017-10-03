@@ -27,7 +27,7 @@ def _default_mono_text_dataset_hparams():
     # TODO(zhiting): add more docs
     return {
         "files": [],
-        "vocab.file": "",
+        "vocab_file": "",
         "embedding_init": Embedding.default_hparams(),
         "reader": {
             "type": "tensorflow.TextLineReader",
@@ -50,10 +50,10 @@ def _default_paired_text_dataset_hparams():
     target_hparams = _default_mono_text_dataset_hparams()
     target_hparams.update(
         {
-            "vocab.share_with_source": False,
-            "embedding_init.share_with_source": False,
-            "reader.share_with_source": False,
-            "processing.share_with_source": False
+            "vocab_share": False,
+            "embedding_init_share": False,
+            "reader_share": False,
+            "processing_share": False
         }
     )
     return {
@@ -168,7 +168,7 @@ class MonoTextDataBase(DataBaseBase):
         # Load vocabulary
         bos_token = utils.default_string(proc_hparams["bos_token"], "<BOS>")
         eos_token = utils.default_string(proc_hparams["eos_token"], "<EOS>")
-        vocab = Vocab(dataset_hparams["vocab.file"],
+        vocab = Vocab(dataset_hparams["vocab_file"],
                       bos_token=bos_token,
                       eos_token=eos_token)
 
@@ -318,7 +318,7 @@ class PairedTextDataBase(DataBaseBase):
         src_dataset.decoder.length_tensor_name = "source_length"
         src_dataset.decoder.text_id_tensor_name = "source_text_ids"
 
-        if tgt_hparams["processing.share_with_source"]:
+        if tgt_hparams["processing_share"]:
             tgt_proc_hparams = src_hparams["processing"]
         else:
             tgt_proc_hparams = tgt_hparams["processing"]
@@ -328,21 +328,21 @@ class PairedTextDataBase(DataBaseBase):
                                          "<BOS>")
         eos_token = utils.default_string(tgt_proc_hparams["eos_token"],
                                          "<EOS>")
-        if tgt_hparams["vocab.share_with_source"]:
+        if tgt_hparams["vocab_share"]:
             if bos_token == src_dataset.vocab.bos_token and \
                     eos_token == src_dataset.vocab.eos_token:
                 tgt_vocab = src_dataset.vocab
             else:
-                tgt_vocab = Vocab(src_hparams["vocab.file"],
+                tgt_vocab = Vocab(src_hparams["vocab_file"],
                                   bos_token=bos_token,
                                   eos_token=eos_token)
         else:
-            tgt_vocab = Vocab(tgt_hparams["vocab.file"],
+            tgt_vocab = Vocab(tgt_hparams["vocab_file"],
                               bos_token=bos_token,
                               eos_token=eos_token)
 
         # Get reader class.
-        if tgt_hparams["reader.share_with_source"]:
+        if tgt_hparams["reader_share"]:
             tgt_reader_class = utils.get_class(src_hparams["reader"]["type"],
                                                ["tensorflow"])
         else:
@@ -362,7 +362,7 @@ class PairedTextDataBase(DataBaseBase):
             text_id_tensor_name="target_text_ids")
 
         # Load embedding (optional)
-        if tgt_hparams["embedding_init.share_with_source"]:
+        if tgt_hparams["embedding_init_share"]:
             tgt_embedding = src_dataset.embedding
         else:
             emb_hparams = tgt_hparams["embedding_init"]
@@ -389,7 +389,7 @@ class PairedTextDataBase(DataBaseBase):
             src_reader_kwargs = \
                 self._hparams.source_dataset["reader"]["kwargs"].todict()
         tgt_reader_kwargs = None
-        if self._hparams.target_dataset["reader.share_with_source"]:
+        if self._hparams.target_dataset["reader_share"]:
             tgt_reader_kwargs = src_reader_kwargs
         elif len(self._hparams.target_dataset["reader"]["kwargs"]) > 0:
             tgt_reader_kwargs = \
