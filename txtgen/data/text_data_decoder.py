@@ -1,5 +1,6 @@
 #
-"""Helper functions and classes for decoding text data which are used after
+"""
+Helper functions and classes for decoding text data which are used after
 reading raw text data.
 """
 
@@ -126,14 +127,26 @@ class TextDataDecoder(data_decoder.DataDecoder):
         """
         return self._text_tensor_name
 
+    @text_tensor_name.setter
+    def text_tensor_name(self, name):
+        self._text_tensor_name = name
+
     @property
     def length_tensor_name(self):
         """The name of length tensor.
         """
         return self._length_tensor_name
 
+    @length_tensor_name.setter
+    def length_tensor_name(self, name):
+        self._length_tensor_name = name
+
     @property
     def text_id_tensor_name(self):
         """The name of text index tensor.
         """
         return self._text_id_tensor_name
+
+    @text_id_tensor_name.setter
+    def text_id_tensor_name(self, name):
+        self._text_id_tensor_name = name

@@ -10,6 +10,7 @@ from __future__ import division
 import importlib
 import inspect
 from pydoc import locate
+import copy
 import numpy as np
 
 import tensorflow as tf
@@ -260,4 +261,25 @@ def default_string(str_, default_str):
     else:
         return default_str
 
+def patch_dict(tgt_dict, src_dict):
+    """Recursively patch :attr:`tgt_dict` by adding items from :attr:`src_dict`
+    that do not exist in :attr:`tgt_dict`.
+
+    If respective items in :attr:`src_dict` and :attr:`tgt_dict` are both
+    `dict`, the :attr:`tgt_dict` item is patched recursively.
+
+    Args:
+        tgt_dict (dict): Target dictionary to patch.
+        src_dict (dict): Source dictionary.
+
+    Return:
+        dict: A patched dictionary.
+    """
+    patched_dict = copy.deepcopy(tgt_dict)
+    for key, value in src_dict.items():
+        if key not in patched_dict:
+            patched_dict[key] = copy.deepcopy(value)
+        elif isinstance(value, dict) and isinstance(patched_dict[key], dict):
+            patched_dict[key] = patch_dict(patched_dict[key], value)
+    return patched_dict
 
