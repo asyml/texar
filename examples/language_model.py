@@ -16,6 +16,7 @@ from txtgen.losses import mle_losses
 from txtgen.core import optimization as opt
 from txtgen import context
 
+# pylint: disable=invalid-name
 
 if __name__ == "__main__":
     ### Build data pipeline
@@ -28,7 +29,7 @@ if __name__ == "__main__":
         "seed": 123,
         "dataset": {
             "files": ['data/sent.txt'],
-            "vocab.file": 'data/vocab.txt'
+            "vocab_file": 'data/vocab.txt'
         }
     }
     # Construct the database
