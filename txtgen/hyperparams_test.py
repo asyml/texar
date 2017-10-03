@@ -46,6 +46,8 @@ class HParamsTest(tf.test.TestCase):
         self.assertEqual(hparams_.dict.key1, hparams["dict"]["key1"])   # pylint: disable=no-member
         self.assertEqual(hparams_.kwargs.arg2, hparams["kwargs"]["arg2"])
 
+        self.assertEqual(len(hparams_), len(default_hparams))
+
         new_hparams = copy.deepcopy(default_hparams)
         new_hparams["dict"]["key1"] = hparams["dict"]["key1"]
         new_hparams["kwargs"].update(hparams["kwargs"])
