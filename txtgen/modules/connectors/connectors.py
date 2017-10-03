@@ -229,7 +229,7 @@ class MLPTransformConnector(ConnectorBase):
         return output
 
 
-class ReparameterizeStochasticConnector(ConnectorBase):
+class ReparameterizedStochasticConnector(ConnectorBase):
     """Samples decoder initial state using reparameterization trick
     from a distribution defined by the inputs.
 
@@ -253,34 +253,38 @@ class ReparameterizeStochasticConnector(ConnectorBase):
         """
         return {
             "distribution": "tf.contrib.distributions.MultivariateNormalDiag",
-            "name": "reparameterize_stochastic_connector"
+            "name": "reparameterized_stochastic_connector"
         }
 
-    def _build(self, inputs):  # pylint: disable=W0221
+    def _build(self, distribution, batch_size):  # pylint: disable=W0221
         """Samples from a distribution defined by the inputs.
 
         Args:
-            inputs: Instance of tf.contrib.distributions
+            distribution: Instance of tf.contrib.distributions
+            batch_size (int or scalar int Tensor): The batch size.
 
         Returns:
             A Tensor or a (nested) tuple of Tensors of the same structure of
             the decoder state.
-
+inputs
         Raises:
             ValueError: An error occurred when the input distribution cannot be reparameterized
         """
 
-        if inputs.reparameterization_type == tfds.NOT_REPARAMETERIZED:
-            raise ValueError("%s distribution is not reparameterized" % inputs.name)
+        if distribution.reparameterization_type == tfds.NOT_REPARAMETERIZED:
+            raise ValueError("%s distribution is not reparameterized" % distribution.name)
 
-        output = inputs.sample()
+        output = distribution.sample(batch_size)
+        if len(output.get_shape()) == 1:
+            output = output.reshape([batch_size, 1])
 
-        try:
-            nest.assert_same_structure(inputs, self._decoder_state_size)
-        except (ValueError, TypeError):
-            flat_input = nest.flatten(inputs)
-            output = nest.pack_sequence_as(
-                self._decoder_state_size, flat_input)
+        # TODO(junxian): transform to decoder state size
+        # try:
+            # nest.assert_same_structure(output, self._decoder_state_size)
+        # except (ValueError, TypeError):
+            # flat_output = nest.flatten(output)
+            # output = nest.pack_sequence_as(
+                # self._decoder_state_size, flat_output)
 
         self._add_internal_trainable_variables()
         self._built = True
@@ -310,32 +314,87 @@ class StochasticConnector(ConnectorBase):
             ```
         """
         return {
-            "distribution": "tf.contrib.distributions.MultivariateNormalDiag",
+            "distribution": "tf.contrib.distributions.Categorical",
             "name": "stochastic_connector"
         }
 
-    def _build(self, inputs):  # pylint: disable=W0221
+    def _build(self, distribution, batch_size):  # pylint: disable=W0221
         """Samples from a distribution defined by the inputs.
 
         Args:
-            inputs: Instance of tf.contrib.distributions
+            distribution: Instance of tf.contrib.distributions
+            batch_size (int or scalar int Tensor): The batch size.
 
         Returns:
             A Tensor or a (nested) tuple of Tensors of the same structure of
             the decoder state.
         """
 
-        output = inputs.sample()
+        output = distribution.sample(batch_size)
+        if len(output.get_shape()) == 1:
+            output = tf.reshape(output, [batch_size, 1])
 
         # Disable gradients through samples
         output = tf.stop_gradient(output)
 
-        try:
-            nest.assert_same_structure(inputs, self._decoder_state_size)
-        except (ValueError, TypeError):
-            flat_input = nest.flatten(inputs)
-            output = nest.pack_sequence_as(
-                self._decoder_state_size, flat_input)
+        # TODO(junxian): transform to decoder size
+        # try:
+            # nest.assert_same_structure(output, self._decoder_state_size)
+        # except (ValueError, TypeError):
+            # flat_output = nest.flatten(output)
+            # output = nest.pack_sequence_as(
+                # self._decoder_state_size, flat_output)
+
+        self._add_internal_trainable_variables()
+        self._built = True
+
+        return output
+
+class ConcatConnector(ConnectorBase):
+    """ Concatenate multiple connectors into one connector.
+    Used in, e.g., semi-supervised variational autoencoders,
+    disentangled representation learning, and other
+    models.
+    """
+
+    def __init__(self, decoder_state_size, hparams=None):
+        ConnectorBase.__init__(self, decoder_state_size, hparams)
+
+    @staticmethod
+    def default_hparams():
+        """Returns a dictionary of hyperparameters with default values.
+
+        Returns:
+            ```python
+            {
+            }
+            ```
+        """
+        return {
+            "name": "concatconnector"
+        }
+
+    def _build(self, connector_inputs):  # pylint: disable=W0221
+        """ Concatenate multiple input connectors
+
+        Args:
+            connector_inputs: a list of connector states
+
+        Returns:
+            A Tensor or a (nested) tuple of Tensors of the same structure of
+            the decoder state.
+        """
+
+        connector_inputs = [tf.cast(connector, tf.float32) for connector in connector_inputs]
+        output = tf.concat(connector_inputs, axis=1)
+
+        # TODO(junxian): transform to decoder state size
+        # try:
+            # nest.assert_same_structure(concat_output, self._decoder_state_size)
+        # except (ValueError, TypeError):
+            # flat_output = nest.flatten(concat_output)
+            # output = nest.pack_sequence_as(
+                # self._decoder_state_size, flat_output)
 
         self._add_internal_trainable_variables()
         self._built = True
