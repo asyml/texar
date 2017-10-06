@@ -14,7 +14,7 @@ from tensorflow.python.util import nest    # pylint: disable=E0611
 from txtgen.modules.connectors.connector_base import ConnectorBase
 from txtgen.core.utils import get_function
 
-
+# pylint: disable=too-many-locals
 def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
     """Transforms inputs through a fully-connected layer that creates the output
     with specified size.
@@ -44,15 +44,20 @@ def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
     concat_input = tf.concat(flat_input, 1)
 
     # get output dimension
-    flat_output_size = nest.flatten(output_size)
-    sum_output_size = sum(flat_output_size)
+    iter_output_size = output_size if isinstance(output_size, (list, tuple)) else [output_size]
+    shape_list = [tf.TensorShape(shape) for shape in iter_output_size]
+    size_list = [0] * len(shape_list)
+    for (i, shape) in enumerate(shape_list):
+        size_list[i] = reduce(lambda x, y: x*y, [dim.value for dim in shape])
+    sum_output_size = sum(size_list)
 
     fc_output = tf.contrib.layers.fully_connected(
         concat_input, sum_output_size, activation_fn=activation_fn)
 
-    flat_output = tf.split(fc_output, flat_output_size, axis=1)
-    output = nest.pack_sequence_as(structure=output_size,
-                                   flat_sequence=flat_output)
+    flat_output = tf.split(fc_output, size_list, axis=1)
+    for (i, shape) in enumerate(shape_list):
+        flat_output[i] = tf.reshape(flat_output[i], tf.TensorShape(batch_size).concatenate(shape))
+    output = nest.pack_sequence_as(structure=output_size, flat_sequence=flat_output)
 
     return output
 
@@ -278,13 +283,8 @@ inputs
         if len(output.get_shape()) == 1:
             output = output.reshape([batch_size, 1])
 
-        # TODO(junxian): transform to decoder state size
-        # try:
-            # nest.assert_same_structure(output, self._decoder_state_size)
-        # except (ValueError, TypeError):
-            # flat_output = nest.flatten(output)
-            # output = nest.pack_sequence_as(
-                # self._decoder_state_size, flat_output)
+        output = tf.cast(output, tf.float32)
+        output = _mlp_transform(output, self._decoder_state_size)
 
         self._add_internal_trainable_variables()
         self._built = True
@@ -337,13 +337,8 @@ class StochasticConnector(ConnectorBase):
         # Disable gradients through samples
         output = tf.stop_gradient(output)
 
-        # TODO(junxian): transform to decoder size
-        # try:
-            # nest.assert_same_structure(output, self._decoder_state_size)
-        # except (ValueError, TypeError):
-            # flat_output = nest.flatten(output)
-            # output = nest.pack_sequence_as(
-                # self._decoder_state_size, flat_output)
+        output = tf.cast(output, tf.float32)
+        output = _mlp_transform(output, self._decoder_state_size)
 
         self._add_internal_trainable_variables()
         self._built = True
@@ -387,14 +382,7 @@ class ConcatConnector(ConnectorBase):
 
         connector_inputs = [tf.cast(connector, tf.float32) for connector in connector_inputs]
         output = tf.concat(connector_inputs, axis=1)
-
-        # TODO(junxian): transform to decoder state size
-        # try:
-            # nest.assert_same_structure(concat_output, self._decoder_state_size)
-        # except (ValueError, TypeError):
-            # flat_output = nest.flatten(concat_output)
-            # output = nest.pack_sequence_as(
-                # self._decoder_state_size, flat_output)
+        output = _mlp_transform(output, self._decoder_state_size)
 
         self._add_internal_trainable_variables()
         self._built = True
