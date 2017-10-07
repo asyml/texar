@@ -8,8 +8,6 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from tensorflow.python.ops import array_ops # pylint: disable=E0611
-from tensorflow.contrib.rnn import LSTMStateTuple
 
 from txtgen.modules.encoders.encoder_base import EncoderBase
 from txtgen.core import layers
@@ -22,21 +20,22 @@ class RNNEncoderBase(EncoderBase):
     Args:
         cell: (RNNCell, optional) If it is not specified,
             a cell is created as specified in :attr:`hparams["rnn_cell"]`.
-        embedding (optional): A `Variable` or a 2D `Tensor` (or `numpy array`)
+        embedding (optional): A `Variable` or a 2D `Tensor` (or `array`)
             of shape `[vocab_size, embedding_dim]` that contains the token
-            embeddings.
+            embeddings. Ignore if :attr:`hparams["embedding_enabled"]`
+            is `False`. If :attr:`hparams["embedding_enabled"]` is `True`:
 
             If a `Variable`, it is directly used in encoding, and
-            the hyperparameters in :attr:`hparams["embedding"]` is ignored.
+            hyperparameters in :attr:`hparams["embedding"]` are ignored.
 
-            If a `Tensor` or `numpy array`, a new `Variable` is created taking
-            :attr:`embedding` as initial value. The :attr:`"initializer"` and
-            :attr:`"dim"` hyperparameters in :attr:`hparams["embedding"]` are
-            ignored.
+            If a `Tensor` or `array`, it is used to initialize the token
+            embedding variable. The :attr:`"initializer"` and :attr:`"dim"`
+            hyperparameters in :attr:`hparams["embedding"]` are ignored.
 
             If not given, a new `Variable` is created as specified in
             :attr:`hparams["embedding"]`.
         vocab_size (int, optional): The vocabulary size. Required if
+            :attr:`hparams["embedding_enabled"]` is `True` (default) and
             :attr:`embedding` is not provided.
         hparams (dict, optional): Encoder hyperparameters. If it is not
             specified, the default hyperparameter setting is used. See
@@ -61,8 +60,9 @@ class RNNEncoderBase(EncoderBase):
         self._embedding = None
         if self._hparams.embedding_enabled:
             if embedding is None and vocab_size is None:
-                raise ValueError("If `embedding` is not provided, "
-                                 "`vocab_size` must be specified.")
+                raise ValueError(
+                    "`vocab_szie` is required if embedding is enabled and "
+                    "`embedding` is not provided")
             if isinstance(embedding, tf.Variable):
                 self._embedding = embedding
             else:

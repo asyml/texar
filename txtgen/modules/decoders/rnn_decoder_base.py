@@ -16,6 +16,7 @@ from txtgen.modules.decoders import rnn_decoder_helpers
 from txtgen.core import layers, utils
 from txtgen import context
 
+# pylint: disable=not-context-manager, too-many-arguments
 
 class RNNDecoderBase(ModuleBase, TFDecoder):
     """Base class inherited by all RNN decoder classes.
@@ -23,25 +24,20 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
     Args:
         cell (RNNCell, optional): If not specified, a cell is created as
             specified in :attr:`hparams["rnn_cell"]`.
-        embedding (optional): A `Variable` or a 2D `Tensor` (or `numpy array`)
+        embedding (optional): A `Variable` or a 2D `Tensor` (or `array`)
             of shape `[vocab_size, embedding_dim]` that contains the token
-            embeddings.
+            embeddings. Ignore if :attr:`hparams["embedding_enabled"]`
+            is `False`. If :attr:`hparams["embedding_enabled"]` is `True`:
 
-            If a `Variable`, it is directly used in decoding, and
-            the hyperparameters in :attr:`hparams["embedding"]` is ignored.
+            If a `Variable`, it is directly used in encoding, and
+            hyperparameters in :attr:`hparams["embedding"]` are ignored.
 
-            If a `Tensor` or `numpy array`, a new `Variable` is created taking
-            :attr:`embedding` as initial value. The :attr:`"initializer"` and
-            :attr:`"dim"` hyperparameters in :attr:`hparams["embedding"]` are
-            ignored.
+            If a `Tensor` or `array`, it is used to initialize the token
+            embedding variable. The :attr:`"initializer"` and :attr:`"dim"`
+            hyperparameters in :attr:`hparams["embedding"]` are ignored.
 
             If not given, a new `Variable` is created as specified in
             :attr:`hparams["embedding"]`.
-        embedding_trainable (bool): If `True` (default), the decoder
-            will update the embeddings during training. If `False`, the
-            embeddings are not updated in the decoder, but might be updated
-            elsewhere if they are created externally and used in other
-            modules.
         vocab_size (int, optional): The vocabulary size. Required if
             :attr:`embedding` is not provided.
         hparams (dict, optional): Hyperparameters. If not specified, the default
@@ -49,10 +45,9 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             structure and default values.
     """
 
-    def __init__(self,  # pylint: disable=too-many-arguments
+    def __init__(self,
                  cell=None,
                  embedding=None,
-                 embedding_trainable=True,
                  vocab_size=None,
                  hparams=None):
         ModuleBase.__init__(self, hparams)
@@ -61,24 +56,28 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         self._initial_state = None
 
         # Make rnn cell
-        with tf.variable_scope(self.variable_scope): # pylint: disable=not-context-manager
+        with tf.variable_scope(self.variable_scope):
             if cell is not None:
                 self._cell = cell
             else:
                 self._cell = layers.get_rnn_cell(self._hparams.rnn_cell)
 
         # Make embedding
-        if embedding is None and vocab_size is None:
-            raise ValueError("If `embedding` is not provided, `vocab_size` "
-                             "must be specified.")
-        if isinstance(embedding, tf.Variable):
-            self._embedding = embedding
-        else:
-            self._embedding = layers.get_embedding(
-                self._hparams.embedding, embedding, vocab_size,
-                embedding_trainable, self.variable_scope)
-        if embedding_trainable:
-            self._add_trainable_variable(self._embedding)
+        if vocab_size is None:
+            if self._hparams.embedding_enabled is False or embedding is None:
+                raise ValueError(
+                    "`vocab_size` is required if embedding is not enabled and ")
+
+        self._embedding = None
+        if self._hparams.embedding_enabled:
+            if isinstance(embedding, tf.Variable):
+                self._embedding = embedding
+            else:
+                self._embedding = layers.get_embedding(
+                    self._hparams.embedding, embedding, vocab_size,
+                    self.variable_scope)
+            if self._hparams.embedding.trainable:
+                self._add_trainable_variable(self._embedding)
 
         self._vocab_size = self._embedding.get_shape().as_list()[0]
 
@@ -233,3 +232,9 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         Same as :attr:`decoder.cell.state_size`.
         """
         return self.cell.state_size
+
+    @property
+    def vocab_size(self):
+        """The vocab size.
+        """
+        return self._vocab_size

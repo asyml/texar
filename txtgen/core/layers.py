@@ -92,15 +92,21 @@ def default_rnn_cell_hparams():
     }
 
 
-def get_rnn_cell(hparams):
+def get_rnn_cell(hparams=None):
     """Creates an RNN cell.
 
+    See :meth:`~txtgen.core.layers.default_rnn_cell_hparams` for all
+    hyperparameters and default values.
+
     Args:
-        hparams (dict or HParams): Cell hyperparameters.
+        hparams (dict or HParams, optional): Cell hyperparameters. Missing
+            hyperparameters are set to default values.
 
     Returns:
         An instance of `RNNCell`.
     """
+    if hparams is None or isinstance(hparams, dict):
+        hparams = HParams(hparams, default_rnn_cell_hparams())
 
     d_hp = hparams["dropout"]
     if d_hp["variational_recurrent"] and \
@@ -111,9 +117,7 @@ def get_rnn_cell(hparams):
             (hparams["num_layers"], len(d_hp["input_size"])))
 
     cells = []
-    cell_kwargs = hparams["cell"]["kwargs"]
-    if isinstance(cell_kwargs, HParams):
-        cell_kwargs = cell_kwargs.todict()
+    cell_kwargs = hparams["cell"]["kwargs"].todict()
     for layer_i in range(hparams["num_layers"]):
         # Create the basic cell
         cell_type = hparams["cell"]["type"]
@@ -202,18 +206,20 @@ def default_embedding_hparams():
     }
 
 
-def get_embedding(hparams,
+def get_embedding(hparams=None,
                   init_values=None,
                   vocab_size=None,
                   variable_scope=None):
     """Creates embedding variable if not exists.
 
     Args:
-        hparams (dict or HParams): Embedding hyperparameters. See
-            :meth:`~txtgen.core.layers.default_embedding_hparams` for the
-            default values. If :attr:`init_values` is given,
-            :attr:`hparams["initializer"]`, and :attr:`hparams["dim"]` are
-            ignored.
+        hparams (dict or HParams, optional): Embedding hyperparameters. Missing
+            hyperparameters are set to default values. See
+            :meth:`~txtgen.core.layers.default_embedding_hparams` for all
+            hyperparameters and default values.
+
+            If :attr:`init_values` is given, :attr:`hparams["initializer"]`,
+            and :attr:`hparams["dim"]` are ignored.
         init_values (Tensor or numpy array, optional): Initial values of the
             embedding variable. If not given, embedding is initialized as
             specified in :attr:`hparams["initializer"]`.
@@ -224,13 +230,13 @@ def get_embedding(hparams,
 
     Returns:
         Variable: A 2D `Variable` of the same shape with :attr:`init_values`
-        or of the shape [:attr:`vocab_size`, :attr:`hparams["dim"]`].
+        or of the shape :attr:`[vocab_size, hparams["dim"]]`.
     """
     with tf.variable_scope(variable_scope, "embedding"):
+        if hparams is None or isinstance(hparams, dict):
+            hparams = HParams(hparams, default_embedding_hparams())
         if init_values is None:
-            kwargs = hparams["initializer"]["kwargs"]
-            if isinstance(kwargs, HParams):
-                kwargs = kwargs.todict()
+            kwargs = hparams["initializer"]["kwargs"].todict()
             initializer = get_instance(hparams["initializer"]["type"],
                                        kwargs,
                                        ["txtgen.custom", "tensorflow"])
