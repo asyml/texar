@@ -9,7 +9,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import BasicDecoderOutput
-from tensorflow.python.framework import tensor_shape, dtypes    # pylint: disable=E0611
+from tensorflow.python.framework import tensor_shape, dtypes # pylint: disable=E0611
 
 from txtgen.modules.decoders.rnn_decoder_base import RNNDecoderBase
 

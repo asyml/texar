@@ -28,6 +28,7 @@ class TestConnectors(tf.test.TestCase):
     def setUp(self):
         tf.test.TestCase.setUp(self)
         self._batch_size = 100
+
         self._decoder_cell = layers.get_rnn_cell(
             layers.default_rnn_cell_hparams())
 
@@ -35,6 +36,7 @@ class TestConnectors(tf.test.TestCase):
         """Tests the logic of ConstantConnector.
         """
         connector = ConstantConnector(self._decoder_cell.state_size)
+
         decoder_initial_state_0 = connector(self._batch_size)
         decoder_initial_state_1 = connector(self._batch_size, value=1.)
         nest.assert_same_structure(decoder_initial_state_0,

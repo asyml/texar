@@ -370,7 +370,7 @@ class ConcatConnector(ConnectorBase):
         }
 
     def _build(self, connector_inputs):  # pylint: disable=W0221
-        """ Concatenate multiple input connectors
+        """Concatenate multiple input connectors
 
         Args:
             connector_inputs: a list of connector states
