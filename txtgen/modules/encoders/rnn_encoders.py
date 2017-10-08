@@ -90,7 +90,7 @@ class RNNEncoderBase(EncoderBase):
                 # is given when constructing the encoder.
                 "rnn_cell": txtgen.core.layers.default_rnn_cell_hparams(),
 
-                # (bool) Wether embedding is used in the encoder. If `True`
+                # (bool) Whether embedding is used in the encoder. If `True`
                 # (default), input to the encoder should contain integer
                 # indexes and will be used to look up the embedding vectors.
                 # If `False`, the input is directly fed into the RNN to encode.
