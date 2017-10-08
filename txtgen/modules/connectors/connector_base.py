@@ -20,12 +20,19 @@ class ConnectorBase(ModuleBase):
             Integer, a Tensorshape , or a tuple of Integers or TensorShapes.
             This can typically be obtained by `decoder.cell.state_size`.
         hparams (dict): Hyperparameters of connector.
-        name (str): Name of connector.
     """
 
-    def __init__(self, decoder_state_size, hparams=None, name="connector"):
-        ModuleBase.__init__(self, name, hparams)
+    def __init__(self, decoder_state_size, hparams=None):
+        ModuleBase.__init__(self, hparams)
         self._decoder_state_size = decoder_state_size
+
+    @staticmethod
+    def default_hparams():
+        """Returns a dictionary of hyperparameters with default values.
+        """
+        return {
+            "name": "connector"
+        }
 
     def _build(self, *args, **kwargs):
         """Transforms inputs to the decoder initial states.

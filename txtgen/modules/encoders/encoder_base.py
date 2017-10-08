@@ -14,8 +14,16 @@ class EncoderBase(ModuleBase):
     """Base class inherited by all encoder classes.
     """
 
-    def __init__(self, hparams=None, name="encoder"):
-        ModuleBase.__init__(self, name, hparams)
+    def __init__(self, hparams=None):
+        ModuleBase.__init__(self, hparams)
+
+    @staticmethod
+    def default_hparams():
+        """Returns a dictionary of hyperparameters with default values.
+        """
+        return {
+            "name": "encoder"
+        }
 
     def _build(self, inputs, *args, **kwargs):
         """Encodes the inputs.

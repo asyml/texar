@@ -51,23 +51,26 @@ def default_optimization_hparams():
     }
 
 # TODO(zhiting): add YellowFin optimizer
-def get_optimizer(hparams):
+def get_optimizer(hparams=None):
     """Creates an optimizer based on hyperparameters.
 
     See the :attr:"optimizer" field in
-    :meth:`~txtgen.core.optimization.default_optimization_hparams` for the
-    hyperparameters.
+    :meth:`~txtgen.core.optimization.default_optimization_hparams` for all
+    hyperparameters and default values.
 
     Args:
-        hparams (dict or HParams): hyperparameters.
+        hparams (dict or HParams, optional): hyperparameters. Missing
+            hyperparameters are set to default values automatically.
 
     Returns:
         An instance of :class:`~tensorflow.train.Optimizer`.
     """
+    if hparams is None or isinstance(hparams, dict):
+        hparams = HParams(
+            hparams, default_optimization_hparams()["optimizer"])
+
     opt_type = hparams["type"]
-    opt_kwargs = hparams["kwargs"]
-    if opt_kwargs is HParams:
-        opt_kwargs = opt_kwargs.todict()
+    opt_kwargs = hparams["kwargs"].todict()
     opt_modules = ['txtgen.custom',
                    'tensorflow.train',
                    'tensorflow.contrib.opt']
@@ -75,15 +78,16 @@ def get_optimizer(hparams):
 
     return opt
 
-def get_learning_rate_decay_fn(hparams):
+def get_learning_rate_decay_fn(hparams=None):
     """Creates learning rate decay function based on the hyperparameters.
 
     See the :attr:`learning_rate_decay` field in
-    :meth:`~txtgen.core.optimization.default_optimization_hparams` for the
-    hyperparameters.
+    :meth:`~txtgen.core.optimization.default_optimization_hparams` for all
+    hyperparameters and default values.
 
     Args:
-        hparams (dict or HParams): hyperparameters.
+        hparams (dict or HParams, optional): hyperparameters. Missing
+            hyperparameters are set to default values automatically.
 
     Returns:
         function or None: If :attr:`hparams["type"]` is specified, returns a
@@ -91,6 +95,10 @@ def get_learning_rate_decay_fn(hparams):
         returns a scalar Tensor representing the decayed learning rate. If
         :attr:`hparams["type"]` is empty, returns `None`.
     """
+    if hparams is None or isinstance(hparams, dict):
+        hparams = HParams(
+            hparams, default_optimization_hparams()["learning_rate_decay"])
+
     fn_type = hparams["type"]
     if fn_type is None or fn_type == "":
         return None
@@ -133,22 +141,26 @@ def get_learning_rate_decay_fn(hparams):
     return lr_decay_fn
 
 
-def get_gradient_clip_fn(hparams):
+def get_gradient_clip_fn(hparams=None):
     """Creates gradient clipping function based on the hyperparameters.
 
     See the :attr:`gradient_clip` field in
-    :meth:`~txtgen.core.optimization.default_optimization_hparams` for the
-    hyperparameters.
+    :meth:`~txtgen.core.optimization.default_optimization_hparams` for all
+    hyperparameters and default values.
 
     Args:
-        hparams (dict or HParams): hyperparameters.
+        hparams (dict or HParams, optional): hyperparameters. Missing
+            hyperparameters are set to default values automatically.
 
     Returns:
-        function or None: If :attr:`hparams["type"]` is specified, returns a
+        function or `None`: If :attr:`hparams["type"]` is specified, returns a
         function that takes a list of `(gradients, variables)` tuples and
         returns a list of `(clipped_gradients, variables)` tuples. If
         :attr:`hparams["type"]` is empty, returns `None`.
     """
+    if hparams is None or isinstance(hparams, dict):
+        hparams = HParams(
+            hparams, default_optimization_hparams()["gradient_clip"])
     fn_type = hparams["type"]
     if fn_type is None or fn_type == "":
         return None
@@ -198,18 +210,18 @@ def get_train_op(loss, variables=None, global_step=None,
             used in multiple training ops per training step (e.g. to optimize
             different parts of the model) to avoid incrementing
             :attr:`global_step` more times than necessary.
-        hparams (dict or HParams, optional): hyperparameters. If `None`, the
-            default hyperparameters
-            defined in :meth:`~txtgen.core.optimizatio.DeprecationWarning` are
-            used.
+        hparams (dict or HParams, optional): hyperparameters. Missing
+            hyperparameters are set to default values automatically. See
+            :meth:`~txtgen.core.optimization.default_optimization_hparams` for
+            all hyperparameters and default values.
 
     Returns:
         tuple: (train_op, global_step). If :attr:`global_step` is provided, the
         same :attr:`global_step` variable is returned, otherwise a new global
         step is created and returned.
     """
-    if hparams is None:
-        hparams = default_optimization_hparams()
+    if hparams is None or isinstance(hparams, dict):
+        hparams = HParams(hparams, default_optimization_hparams())
 
     if variables is None:
         variables = tf.trainable_variables()

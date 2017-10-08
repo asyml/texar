@@ -8,13 +8,13 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+import tensorflow.contrib.distributions as tfds
 from tensorflow.python.util import nest    # pylint: disable=E0611
 
 from txtgen.modules.connectors.connector_base import ConnectorBase
 from txtgen.core.utils import get_function
-from txtgen.core import distributions
 
-
+# pylint: disable=too-many-locals
 def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
     """Transforms inputs through a fully-connected layer that creates the output
     with specified size.
@@ -44,17 +44,23 @@ def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
     concat_input = tf.concat(flat_input, 1)
 
     # get output dimension
-    flat_output_size = nest.flatten(output_size)
-    sum_output_size = sum(flat_output_size)
+    iter_output_size = output_size if isinstance(output_size, (list, tuple)) else [output_size]
+    shape_list = [tf.TensorShape(shape) for shape in iter_output_size]
+    size_list = [0] * len(shape_list)
+    for (i, shape) in enumerate(shape_list):
+        size_list[i] = reduce(lambda x, y: x*y, [dim.value for dim in shape])
+    sum_output_size = sum(size_list)
 
     fc_output = tf.contrib.layers.fully_connected(
         concat_input, sum_output_size, activation_fn=activation_fn)
 
-    flat_output = tf.split(fc_output, flat_output_size, axis=1)
-    output = nest.pack_sequence_as(structure=output_size,
-                                   flat_sequence=flat_output)
+    flat_output = tf.split(fc_output, size_list, axis=1)
+    for (i, shape) in enumerate(shape_list):
+        flat_output[i] = tf.reshape(flat_output[i], tf.TensorShape(batch_size).concatenate(shape))
+    output = nest.pack_sequence_as(structure=output_size, flat_sequence=flat_output)
 
     return output
+
 
 class ConstantConnector(ConnectorBase):
     """Creates decoder initial state that has a constant value.
@@ -64,11 +70,9 @@ class ConstantConnector(ConnectorBase):
             Integer, a Tensorshape, or a tuple of Integers or TensorShapes.
             This can typically be obtained by :attr:`decoder.state_size`.
         hparams (dict): Hyperparameters of the connector.
-        name (str): Name of connector.
     """
-    def __init__(self, decoder_state_size, hparams=None,
-                 name="constant_connector"):
-        ConnectorBase.__init__(self, decoder_state_size, hparams, name)
+    def __init__(self, decoder_state_size, hparams=None):
+        ConnectorBase.__init__(self, decoder_state_size, hparams)
 
     @staticmethod
     def default_hparams():
@@ -78,11 +82,14 @@ class ConstantConnector(ConnectorBase):
 
             {
                 # The constant value that the decoder initial state has.
-                "value": 0.
+                "value": 0.,
+                # The name of the connector.
+                "name": "constant_connector"
             }
         """
         return {
-            "value": 0.
+            "value": 0.,
+            "name": "constant_connector"
         }
 
     def _build(self, batch_size, value=None):   # pylint: disable=W0221
@@ -120,20 +127,24 @@ class ForwardConnector(ConnectorBase):
         decoder_state_size: Size of state of the decoder cell. Can be an
             Integer, a Tensorshape , or a tuple of Integers or TensorShapes.
             This can typically be obtained by :attr:`decoder.cell.state_size`.
-        name (str): Name of connector.
     """
 
-    def __init__(self, decoder_state_size, name="forward_connector"):
-        ConnectorBase.__init__(self, decoder_state_size, None, name)
+    def __init__(self, decoder_state_size):
+        ConnectorBase.__init__(self, decoder_state_size, None)
 
     @staticmethod
     def default_hparams():
         """Returns a dictionary of default hyperparameters.
 
-        The dictionary is empty since the connector does not have any
-        configurable hyperparameters.
+        .. code-block:: python
+
+            {
+                # The name of the connector.
+                "name": "forward_connector"
         """
-        return {}
+        return {
+            "name": "forward_connector"
+        }
 
     def _build(self, inputs):    # pylint: disable=W0221
         """Passes inputs to the initial states of decoder.
@@ -173,8 +184,8 @@ class MLPTransformConnector(ConnectorBase):
         name (str): Name of connector.
     """
 
-    def __init__(self, decoder_state_size, hparams=None, name="mlp_connector"):
-        ConnectorBase.__init__(self, decoder_state_size, hparams, name)
+    def __init__(self, decoder_state_size, hparams=None):
+        ConnectorBase.__init__(self, decoder_state_size, hparams)
 
     @staticmethod
     def default_hparams():
@@ -188,11 +199,15 @@ class MLPTransformConnector(ConnectorBase):
                 # functions defined in module `tensorflow` or `tensorflow.nn`,
                 # or user-defined functions defined in `user.custom`, or a
                 # full path like "my_module.my_activation_fn".
-                "activation_fn": "tensorflow.identity"
+                "activation_fn": "tensorflow.identity",
+
+                # Name of the connector.
+                "name": "mlp_connector"
             }
         """
         return {
-            "activation_fn": "tensorflow.identity"
+            "activation_fn": "tensorflow.identity",
+            "name": "mlp_connector"
         }
 
     def _build(self, inputs): #pylint: disable=W0221
@@ -218,17 +233,127 @@ class MLPTransformConnector(ConnectorBase):
 
         return output
 
-#TODO(junxian): Customize reparameterize type
-class StochasticConnector(ConnectorBase):
-    """Samples decoder initial state from a distribution defined by the inputs.
+
+class ReparameterizedStochasticConnector(ConnectorBase):
+    """Samples decoder initial state using reparameterization trick
+    from a distribution defined by the inputs.
 
     Used in, e.g., variational autoencoders, adversarial autoencoders, and other
     models.
     """
 
-    def __init__(self, decoder_state_size, hparams=None,
-                 name="stochastic_connector"):
-        ConnectorBase.__init__(self, decoder_state_size, hparams, name)
+    def __init__(self, decoder_state_size, hparams=None):
+        ConnectorBase.__init__(self, decoder_state_size, hparams)
+
+    #TODO(zhiting): add docs
+    @staticmethod
+    def default_hparams():
+        """Returns a dictionary of hyperparameters with default values.
+
+        Returns:
+            ```python
+            {
+            }
+            ```
+        """
+        return {
+            "distribution": "tf.contrib.distributions.MultivariateNormalDiag",
+            "name": "reparameterized_stochastic_connector"
+        }
+
+    def _build(self, distribution, batch_size):  # pylint: disable=W0221
+        """Samples from a distribution defined by the inputs.
+
+        Args:
+            distribution: Instance of tf.contrib.distributions
+            batch_size (int or scalar int Tensor): The batch size.
+
+        Returns:
+            A Tensor or a (nested) tuple of Tensors of the same structure of
+            the decoder state.
+inputs
+        Raises:
+            ValueError: An error occurred when the input distribution cannot be reparameterized
+        """
+
+        if distribution.reparameterization_type == tfds.NOT_REPARAMETERIZED:
+            raise ValueError("%s distribution is not reparameterized" % distribution.name)
+
+        output = distribution.sample(batch_size)
+        if len(output.get_shape()) == 1:
+            output = output.reshape([batch_size, 1])
+
+        output = tf.cast(output, tf.float32)
+        output = _mlp_transform(output, self._decoder_state_size)
+
+        self._add_internal_trainable_variables()
+        self._built = True
+
+        return output
+
+class StochasticConnector(ConnectorBase):
+    """Samples decoder initial state from a distribution
+    defined by the inputs. (disable reparameterize trick)
+
+    Used in, e.g., variational autoencoders, adversarial autoencoders, and other
+    models.
+    """
+
+    def __init__(self, decoder_state_size, hparams=None):
+        ConnectorBase.__init__(self, decoder_state_size, hparams)
+
+    #TODO(zhiting): add docs
+    @staticmethod
+    def default_hparams():
+        """Returns a dictionary of hyperparameters with default values.
+
+        Returns:
+            ```python
+            {
+            }
+            ```
+        """
+        return {
+            "distribution": "tf.contrib.distributions.Categorical",
+            "name": "stochastic_connector"
+        }
+
+    def _build(self, distribution, batch_size):  # pylint: disable=W0221
+        """Samples from a distribution defined by the inputs.
+
+        Args:
+            distribution: Instance of tf.contrib.distributions
+            batch_size (int or scalar int Tensor): The batch size.
+
+        Returns:
+            A Tensor or a (nested) tuple of Tensors of the same structure of
+            the decoder state.
+        """
+
+        output = distribution.sample(batch_size)
+        if len(output.get_shape()) == 1:
+            output = tf.reshape(output, [batch_size, 1])
+
+        # Disable gradients through samples
+        output = tf.stop_gradient(output)
+
+        output = tf.cast(output, tf.float32)
+        output = _mlp_transform(output, self._decoder_state_size)
+
+        self._add_internal_trainable_variables()
+        self._built = True
+
+        return output
+
+class ConcatConnector(ConnectorBase):
+    """ Concatenate multiple connectors into one connector.
+    Used in, e.g., semi-supervised variational autoencoders,
+    disentangled representation learning, and other
+    models.
+    """
+
+    def __init__(self, decoder_state_size, hparams=None):
+        ConnectorBase.__init__(self, decoder_state_size, hparams)
 
     @staticmethod
     def default_hparams():
@@ -237,42 +362,29 @@ class StochasticConnector(ConnectorBase):
         Returns:
             ```python
             {
-                # The name or full path of the activation function applied to
-                # the outputs of the MLP layer. E.g., the name of built-in
-                # functions defined in module `tensorflow` or `tensorflow.nn`,
-                # or user-defined functions defined in `user.custom`, or a
-                # full path like "my_module.my_activation_fn".
-
-                "activation_fn": "tensorflow.identity"
             }
             ```
         """
         return {
-            "distribution": "tf.contrib.distributions.MultivariateNormalDiag"
+            "name": "concatconnector"
         }
 
-    def _build(self, inputs):  # pylint: disable=W0221
-        """Samples from a distribution defined by the inputs.
+    def _build(self, connector_inputs):  # pylint: disable=W0221
+        """Concatenate multiple input connectors
 
         Args:
-            inputs: Instance of tf.contrib.distributions
+            connector_inputs: a list of connector states
 
         Returns:
             A Tensor or a (nested) tuple of Tensors of the same structure of
             the decoder state.
         """
 
-        output = inputs.sample()
-
-        try:
-            nest.assert_same_structure(inputs, self._decoder_state_size)
-        except (ValueError, TypeError):
-            flat_input = nest.flatten(inputs)
-            output = nest.pack_sequence_as(
-                self._decoder_state_size, flat_input)
+        connector_inputs = [tf.cast(connector, tf.float32) for connector in connector_inputs]
+        output = tf.concat(connector_inputs, axis=1)
+        output = _mlp_transform(output, self._decoder_state_size)
 
         self._add_internal_trainable_variables()
         self._built = True
 
         return output
-
