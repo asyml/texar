@@ -38,8 +38,9 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
 
             If not given, a new `Variable` is created as specified in
             :attr:`hparams["embedding"]`.
-        vocab_size (int, optional): The vocabulary size. Required if
-            :attr:`embedding` is not provided.
+        vocab_size (int, optional): Vocabulary size. Required if
+            `hparams["embedding_enabled"]` is `False` or :attr:`embedding` is
+            not provided.
         hparams (dict, optional): Hyperparameters. If not specified, the default
             hyperparameter setting is used. See :attr:`default_hparams` for the
             structure and default values.
@@ -64,9 +65,10 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
 
         # Make embedding
         if vocab_size is None:
-            if self._hparams.embedding_enabled is False or embedding is None:
+            if not self._hparams.embedding_enabled or embedding is None:
                 raise ValueError(
-                    "`vocab_size` is required if embedding is not enabled and ")
+                    "`vocab_size` is required if embedding is not enabled or "
+                    "`embedding` is None.")
 
         self._embedding = None
         if self._hparams.embedding_enabled:
@@ -78,8 +80,9 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                     self.variable_scope)
             if self._hparams.embedding.trainable:
                 self._add_trainable_variable(self._embedding)
-
-        self._vocab_size = self._embedding.get_shape().as_list()[0]
+            self._vocab_size = self._embedding.get_shape().as_list()[0]
+        else:
+            self._vocab_size = vocab_size
 
     @staticmethod
     def default_hparams():
@@ -98,6 +101,9 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 # A dictionary of rnn cell hyperparameters. Ignored if `cell`
                 # is given when constructing the encoder.
                 "rnn_cell": txtgen.core.layers.default_rnn_cell_hparams(),
+
+                # (bool) Whether token embedding is used.
+                "embedding_enabled": True,
 
                 # A dictionary of token embedding hyperparameters for embedding
                 # initialization. Ignored if `embedding` is given and is
@@ -122,6 +128,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         """
         return {
             "rnn_cell": layers.default_rnn_cell_hparams(),
+            "embedding_enabled": True,
             "embedding": layers.default_embedding_hparams(),
             "helper_train": rnn_decoder_helpers.default_helper_train_hparams(),
             "helper_infer": rnn_decoder_helpers.default_helper_infer_hparams(),

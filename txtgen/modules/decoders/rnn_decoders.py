@@ -13,6 +13,7 @@ from tensorflow.python.framework import tensor_shape, dtypes # pylint: disable=E
 
 from txtgen.modules.decoders.rnn_decoder_base import RNNDecoderBase
 
+# pylint: disable=too-many-arguments
 
 class BasicRNNDecoder(RNNDecoderBase):
     """Basic RNN decoder that performs sampling at each step.
@@ -20,21 +21,19 @@ class BasicRNNDecoder(RNNDecoderBase):
     See :class:`~txtgen.modules.decoders.RNNDecoderBase` for the arguments.
     """
 
-    def __init__(self,  # pylint: disable=too-many-arguments
+    def __init__(self,
                  cell=None,
                  embedding=None,
-                 embedding_trainable=True,
                  vocab_size=None,
                  hparams=None):
-        RNNDecoderBase.__init__(self, cell, embedding, embedding_trainable,
-                                vocab_size, hparams)
+        RNNDecoderBase.__init__(self, cell, embedding, vocab_size, hparams)
 
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
         The hyperparameters have the same structure as in
-        :meth:`txtgen.modules.RNNDecoderBase.default_hparams`, except that
+        :meth:`~txtgen.modules.RNNDecoderBase.default_hparams`, except that
         the default "name" is "basic_rnn_decoder".
         """
         hparams = RNNDecoderBase.default_hparams()
