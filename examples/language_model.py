@@ -16,6 +16,7 @@ from txtgen.losses import mle_losses
 from txtgen.core import optimization as opt
 from txtgen import context
 
+# pylint: disable=invalid-name
 
 if __name__ == "__main__":
     ### Build data pipeline
@@ -28,11 +29,11 @@ if __name__ == "__main__":
         "seed": 123,
         "dataset": {
             "files": ['data/sent.txt'],
-            "vocab.file": 'data/vocab.txt'
+            "vocab_file": 'data/vocab.txt'
         }
     }
     # Construct the database
-    text_db = database.TextDataBase(data_hparams)
+    text_db = database.MonoTextDataBase(data_hparams)
     # Get data minibatch, which is a dictionary:
     # {
     #   "text": text_tensor,     # text string minibatch,
@@ -71,7 +72,6 @@ if __name__ == "__main__":
 
     # Build train op. Simply use default hyperparameter setting.
     train_op, global_step = opt.get_train_op(mle_loss)
-
 
     ### Graph is done. Now start running
 

@@ -13,6 +13,7 @@ import tensorflow.contrib.rnn as rnn
 from txtgen.hyperparams import HParams
 from txtgen.core.utils import get_instance, switch_dropout
 
+# pylint: disable=not-context-manager, redefined-variable-type
 
 def default_rnn_cell_hparams():
     """Returns default hyperparameters of an RNN cell.
@@ -91,15 +92,21 @@ def default_rnn_cell_hparams():
     }
 
 
-def get_rnn_cell(hparams):
+def get_rnn_cell(hparams=None):
     """Creates an RNN cell.
 
+    See :meth:`~txtgen.core.layers.default_rnn_cell_hparams` for all
+    hyperparameters and default values.
+
     Args:
-        hparams (dict or HParams): Cell hyperparameters.
+        hparams (dict or HParams, optional): Cell hyperparameters. Missing
+            hyperparameters are set to default values.
 
     Returns:
         An instance of `RNNCell`.
     """
+    if hparams is None or isinstance(hparams, dict):
+        hparams = HParams(hparams, default_rnn_cell_hparams())
 
     d_hp = hparams["dropout"]
     if d_hp["variational_recurrent"] and \
@@ -110,9 +117,7 @@ def get_rnn_cell(hparams):
             (hparams["num_layers"], len(d_hp["input_size"])))
 
     cells = []
-    cell_kwargs = hparams["cell"]["kwargs"]
-    if isinstance(cell_kwargs, HParams):
-        cell_kwargs = cell_kwargs.todict()
+    cell_kwargs = hparams["cell"]["kwargs"].todict()
     for layer_i in range(hparams["num_layers"]):
         # Create the basic cell
         cell_type = hparams["cell"]["type"]
@@ -138,14 +143,14 @@ def get_rnn_cell(hparams):
         # Optionally add residual and highway connections
         if layer_i > 0:
             if hparams["residual"]:
-                cell = rnn.ResidualWrapper(cell) # pylint: disable=redefined-variable-type
+                cell = rnn.ResidualWrapper(cell)
             if hparams["highway"]:
                 cell = rnn.HighwayWrapper(cell)
 
         cells.append(cell)
 
     if hparams["num_layers"] > 1:
-        cell = rnn.MultiRNNCell(cells) # pylint: disable=redefined-variable-type
+        cell = rnn.MultiRNNCell(cells)
     else:
         cell = cells[0]
 
@@ -181,7 +186,9 @@ def default_embedding_hparams():
                         "maxval": 0.1,
                         "seed": None
                     }
-                }
+                },
+                # (bool) Whether the embedding variable trainable.
+                "trainable": True,
             }
     """
     return { #TODO(zhiting): allow more hparams like regularizer
@@ -194,51 +201,51 @@ def default_embedding_hparams():
                 "maxval": 0.1,
                 "seed": None
             }
-        }
+        },
+        "trainable": True
     }
 
 
-def get_embedding(hparams,
+def get_embedding(hparams=None,
                   init_values=None,
                   vocab_size=None,
-                  trainable=True,
                   variable_scope=None):
     """Creates embedding variable if not exists.
 
     Args:
-        hparams (dict or HParams): Embedding hyperparameters. See
-            :meth:`~txtgen.core.layers.default_embedding_hparams` for the
-            default values. If :attr:`init_values` is given,
-            :attr:`hparams["initializer"]`, and :attr:`hparams["dim"]` are
-            ignored.
+        hparams (dict or HParams, optional): Embedding hyperparameters. Missing
+            hyperparameters are set to default values. See
+            :meth:`~txtgen.core.layers.default_embedding_hparams` for all
+            hyperparameters and default values.
+
+            If :attr:`init_values` is given, :attr:`hparams["initializer"]`,
+            and :attr:`hparams["dim"]` are ignored.
         init_values (Tensor or numpy array, optional): Initial values of the
             embedding variable. If not given, embedding is initialized as
             specified in :attr:`hparams["initializer"]`.
         vocab_size (int, optional): The vocabulary size. Required if
             :attr:`init_values` is not provided.
-        trainable (bool): If `True` (default), the embedding variable is a
-            trainable variable.
         variable_scope (string or VariableScope, optional): Variable scope of
             the embedding variable.
 
     Returns:
         Variable: A 2D `Variable` of the same shape with :attr:`init_values`
-        or of the shape [:attr:`vocab_size`, :attr:`hparams["dim"]`].
+        or of the shape :attr:`[vocab_size, hparams["dim"]]`.
     """
-    with tf.variable_scope(variable_scope, "embedding"): # pylint: disable=not-context-manager
+    with tf.variable_scope(variable_scope, "embedding"):
+        if hparams is None or isinstance(hparams, dict):
+            hparams = HParams(hparams, default_embedding_hparams())
         if init_values is None:
-            kwargs = hparams["initializer"]["kwargs"]
-            if isinstance(kwargs, HParams):
-                kwargs = kwargs.todict()
+            kwargs = hparams["initializer"]["kwargs"].todict()
             initializer = get_instance(hparams["initializer"]["type"],
                                        kwargs,
                                        ["txtgen.custom", "tensorflow"])
             return tf.get_variable(name=hparams["name"],
                                    shape=[vocab_size, hparams["dim"]],
                                    initializer=initializer,
-                                   trainable=trainable)
+                                   trainable=hparams["trainable"])
         else:
             return tf.get_variable(name=hparams["name"],
                                    initializer=init_values,
-                                   trainable=trainable)
+                                   trainable=hparams["trainable"])
 

@@ -12,6 +12,7 @@ from tensorflow.contrib.seq2seq import TrainingHelper as TFTrainingHelper
 
 from txtgen.core import utils
 
+# pylint: disable=not-context-manager, too-many-arguments
 
 def default_helper_train_hparams():
     """Returns default hyperparameters of an RNN decoder helper in the training
@@ -68,7 +69,7 @@ def default_helper_infer_hparams():
     }
 
 
-def get_helper(helper_type,    # pylint: disable=too-many-arguments
+def get_helper(helper_type,
                inputs=None,
                sequence_length=None,
                embedding=None,
@@ -134,9 +135,9 @@ class EmbeddingTrainingHelper(TFTrainingHelper):
         ValueError: if `sequence_length` is not a 1D tensor.
     """
 
-    def __init__(self, inputs, # pylint: disable=too-many-arguments
-                 sequence_length, embedding, time_major=False, name=None):
-        with tf.name_scope(name, "EmbeddingTrainingHelper", [embedding]): # pylint: disable=not-context-manager
+    def __init__(self, inputs, sequence_length, embedding,
+                 time_major=False, name=None):
+        with tf.name_scope(name, "EmbeddingTrainingHelper", [embedding]):
             if callable(embedding):
                 self._embedding_fn = embedding
             else:
