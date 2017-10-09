@@ -56,8 +56,8 @@ if __name__ == "__main__":
     # We shall probably improve the interface here.
     helper_train = rnn_decoder_helpers.get_helper(
         decoder.hparams.helper_train.type,
-        inputs=data_batch['text_ids'],
-        sequence_length=data_batch['length'],
+        inputs=data_batch['text_ids'][:, :-1],
+        sequence_length=data_batch['length'] - 1,
         embedding=decoder.embedding)
 
     # Decode
@@ -66,12 +66,22 @@ if __name__ == "__main__":
 
     # Build loss
     mle_loss = mle_losses.average_sequence_sparse_softmax_cross_entropy(
-        labels=data_batch['text_ids'],
+        labels=data_batch['text_ids'][:, 1:],
         logits=outputs.rnn_output,
-        sequence_length=sequence_lengths)
+        sequence_length=sequence_lengths - 1)
 
-    # Build train op. Simply use default hyperparameter setting.
-    train_op, global_step = opt.get_train_op(mle_loss)
+    # Build train op. Only config the optimizer while using default settings
+    # for other hyperparameters.
+    opt_hparams = {
+        "optimizer": {
+            "type": "MomentumOptimizer",
+            "kwargs": {
+                "learning_rate": 0.01,
+                "momentum": 0.9
+            }
+        }
+    }
+    train_op, global_step = opt.get_train_op(mle_loss, hparams=opt_hparams)
 
     ### Graph is done. Now start running
 
@@ -91,7 +101,7 @@ if __name__ == "__main__":
                     [train_op, global_step, mle_loss],
                     feed_dict={context.is_train(): True})
 
-                if step % 100 == 0:
+                if step % 10 == 0:
                     print("%d: %.6f" % (step, loss))
 
         except tf.errors.OutOfRangeError:

@@ -10,6 +10,7 @@ from __future__ import print_function
 import tensorflow as tf
 from tensorflow.python.ops import rnn          # pylint: disable=E0611
 
+# pylint: disable=invalid-name, not-context-manager, protected-access
 
 def _mask_sequences(sequence, sequence_length, time_major=False):
     """Masks out sequence entries that are beyond the respective sequence
@@ -33,17 +34,17 @@ def _mask_sequences(sequence, sequence_length, time_major=False):
         A Tensor of the same shape as `sequence` but with masked-out entries.
     """
     if time_major:
-        sequence = rnn._transpose_batch_time(sequence) # pylint: disable=protected-access
+        sequence = rnn._transpose_batch_time(sequence)
     max_time = tf.to_int32(tf.shape(sequence)[1])
     mask = tf.sequence_mask(
         tf.to_int32(sequence_length), max_time, tf.float32)
     sequence = sequence * mask
     if time_major:
-        sequence = rnn._transpose_batch_time(sequence) # pylint: disable=protected-access
+        sequence = rnn._transpose_batch_time(sequence)
     return sequence
 
 
-def sequence_softmax_cross_entropy(labels, # pylint: disable=invalid-name
+def sequence_softmax_cross_entropy(labels,
                                    logits,
                                    sequence_length,
                                    time_major=False,
@@ -78,14 +79,13 @@ def sequence_softmax_cross_entropy(labels, # pylint: disable=invalid-name
 
         If `time_major=True`, this is of shape: `[max_time, batch_size, (...)]`.
     """
-    # pylint: disable=not-context-manager
     with tf.name_scope(name, "sequence_softmax_cross_entropy"):
         losses = tf.nn.softmax_cross_entropy_with_logits(
             labels=labels, logits=logits)
         return _mask_sequences(losses, sequence_length, time_major)
 
 
-def average_sequence_softmax_cross_entropy(labels, # pylint: disable=invalid-name
+def average_sequence_softmax_cross_entropy(labels,
                                            logits,
                                            sequence_length,
                                            time_major=False,
@@ -98,7 +98,6 @@ def average_sequence_softmax_cross_entropy(labels, # pylint: disable=invalid-nam
     Returns:
         A single average loss.
     """
-    # pylint: disable=not-context-manager
     with tf.name_scope(name, "average_sequence_softmax_cross_entropy"):
         losses = tf.nn.softmax_cross_entropy_with_logits(
             labels=labels, logits=logits)
@@ -108,7 +107,7 @@ def average_sequence_softmax_cross_entropy(labels, # pylint: disable=invalid-nam
         return loss
 
 
-def sequence_sparse_softmax_cross_entropy(labels, # pylint: disable=invalid-name
+def sequence_sparse_softmax_cross_entropy(labels,
                                           logits,
                                           sequence_length,
                                           time_major=False,
@@ -145,13 +144,11 @@ def sequence_sparse_softmax_cross_entropy(labels, # pylint: disable=invalid-name
 
         If `time_major=True`, this is of shape: `[max_time, batch_size, (...)]`.
     """
-    # pylint: disable=not-context-manager
     with tf.name_scope(name, "sequence_sparse_softmax_cross_entropy"):
         losses = tf.nn.sparse_softmax_cross_entropy_with_logits(
             labels=labels, logits=logits)
         return _mask_sequences(losses, sequence_length, time_major)
 
-# pylint: disable=invalid-name
 def average_sequence_sparse_softmax_cross_entropy(labels,
                                                   logits,
                                                   sequence_length,
@@ -165,7 +162,6 @@ def average_sequence_sparse_softmax_cross_entropy(labels,
     Returns:
         A single average loss.
     """
-    # pylint: disable=not-context-manager
     with tf.name_scope(name, "average_sequence_sparse_softmax_cross_entropy"):
         losses = tf.nn.sparse_softmax_cross_entropy_with_logits(
             labels=labels, logits=logits)
