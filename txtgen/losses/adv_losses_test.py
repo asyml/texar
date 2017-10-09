@@ -16,20 +16,25 @@ class AdvLossesTest(tf.test.TestCase):
         vocab_size = 4
         max_time = 8
         batch_size = 16
-        true_inputs = tf.random_uniform([batch_size, max_time],
-                                   maxval=vocab_size,
-                                   dtype=tf.int32)
-        generate_inputs = tf.random_uniform([batch_size, max_time],
-                                        maxval=vocab_size,
-                                        dtype=tf.int32)
-        _, disc_global_step, generator_loss, disc_loss = adversarial_losses(true_inputs, generate_inputs, vocab_size=vocab_size)
+        #true_inputs = tf.random_uniform([batch_size, max_time],
+        #                           maxval=vocab_size,
+        #                           dtype=tf.int32)
+        true_inputs = np.zeros([batch_size, max_time], dtype="int32")
+        #generate_inputs = tf.random_uniform([batch_size, max_time + 3],
+        #                                maxval=vocab_size,
+        #                                dtype=tf.int32)
+        generate_inputs = np.ones([batch_size, max_time], dtype="int32")
+        true_inputs_ph = tf.placeholder(tf.int32, [batch_size, max_time])
+        generate_inputs_ph = tf.placeholder(tf.int32, [batch_size, max_time])
+        _, disc_global_step, generator_loss, disc_loss = adversarial_losses(true_inputs_ph, generate_inputs_ph, vocab_size=vocab_size)
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
             sess.run(tf.local_variables_initializer())
             for i in range(10000):
-                g_loss, d_loss, _ = sess.run([generator_loss, disc_loss, disc_global_step], feed_dict={context.is_train(): True})
+                g_loss, d_loss, _ = sess.run([generator_loss, disc_loss, disc_global_step], feed_dict={context.is_train(): True, true_inputs_ph: true_inputs, generate_inputs_ph: generate_inputs})
                 print("generator_loss", g_loss)
                 print("disc_loss", d_loss)
+                #print("true inputs", true_inputs)
 
 if __name__ == "__main__":
     tf.test.main()
