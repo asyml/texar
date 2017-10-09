@@ -74,7 +74,6 @@ if __name__ == "__main__":
     train_op, global_step = opt.get_train_op(mle_loss)
 
     ### Graph is done. Now start running
-
     # We shall wrap these environment setup codes
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
