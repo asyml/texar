@@ -26,12 +26,12 @@ class AdvLossesTest(tf.test.TestCase):
         generate_inputs = np.ones([batch_size, max_time], dtype="int32")
         true_inputs_ph = tf.placeholder(tf.int32, [batch_size, max_time])
         generate_inputs_ph = tf.placeholder(tf.int32, [batch_size, max_time])
-        _, disc_global_step, generator_loss, disc_loss = adversarial_losses(true_inputs_ph, generate_inputs_ph, vocab_size=vocab_size)
+        disc_train_op, disc_global_step, generator_loss, disc_loss = adversarial_losses(true_inputs_ph, generate_inputs_ph, vocab_size=vocab_size)
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
             sess.run(tf.local_variables_initializer())
             for i in range(10000):
-                g_loss, d_loss, _ = sess.run([generator_loss, disc_loss, disc_global_step], feed_dict={context.is_train(): True, true_inputs_ph: true_inputs, generate_inputs_ph: generate_inputs})
+                g_loss, d_loss, _, _ = sess.run([generator_loss, disc_loss, disc_global_step, disc_train_op], feed_dict={context.is_train(): True, true_inputs_ph: true_inputs, generate_inputs_ph: generate_inputs})
                 print("generator_loss", g_loss)
                 print("disc_loss", d_loss)
                 #print("true inputs", true_inputs)
