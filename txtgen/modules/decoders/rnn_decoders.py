@@ -85,7 +85,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
                  attention_values_length,
                  attention_fn,
                  reverse_scores_lengths=None,
-                 name = 'attention_rnn_decoder'
+                 name = 'attention_rnn_decoder',
                  cell=None,
                  embedding=None,
                  embedding_trainable=True,
