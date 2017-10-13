@@ -26,7 +26,8 @@ class AdvLossesTest(tf.test.TestCase):
         generate_inputs = np.ones([batch_size, max_time], dtype="int32")
         true_inputs_ph = tf.placeholder(tf.int32, [batch_size, max_time])
         generate_inputs_ph = tf.placeholder(tf.int32, [batch_size, max_time])
-        disc_train_op, disc_global_step, generator_loss, disc_loss = adversarial_losses(true_inputs_ph, generate_inputs_ph, vocab_size=vocab_size)
+        discriminator = ForwardRNNEncoder(embedding=embedding, vocab_size=vocab_size, hparams=hparams)
+        disc_train_op, disc_global_step, generator_loss, disc_loss = adversarial_losses(true_inputs_ph, generate_inputs_ph, discriminator)
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
             sess.run(tf.local_variables_initializer())
