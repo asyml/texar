@@ -219,7 +219,7 @@ class MonoTextDataBase(DataBaseBase):
         return data_provider
 
     def __call__(self):
-        data = self._data_provider.get(self._data_provider.list_items())
+        data = self._data_provider.get(list(self._data_provider.list_items()))
         data = dict(zip(self._data_provider.list_items(), data))
         # Discard extra tensors inserted by DatasetDataProvider
         if 'record_key' in data:
