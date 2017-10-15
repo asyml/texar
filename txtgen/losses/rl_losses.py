@@ -8,7 +8,6 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from tensorflow.python.ops import rnn  # pylint: disable=E0611
 
 from txtgen.losses.mle_losses import _mask_sequences
 
@@ -17,7 +16,7 @@ def reinforce_loss(sample_fn,
                    global_reward_fn,
                    local_reward_fn=None,
                    num_samples=1):
-    """Compute REINFORCE loss with global and local rewards.
+    """Computes REINFORCE loss with global and local rewards.
 
     Args:
         sample_fn: A callable that takes :attr:`num_samples` and returns
@@ -48,7 +47,7 @@ def reinforce_loss(sample_fn,
 
     # shape = [batch, length]
     sequences, probs, seq_lens = sample_fn(num_samples)
-    batch, length = tf.shape(sequences)
+    batch, _ = tf.shape(sequences)
     rewards_local = tf.constant(0., dtype=probs.dtype, shape=probs.shape)
     if local_reward_fn is not None:
         rewards_local = local_reward_fn(sequences, seq_lens)
@@ -60,15 +59,16 @@ def reinforce_loss(sample_fn,
 
     eps = 1e-12
     log_probs = _mask_sequences(tf.log(probs + eps), seq_lens)
-    loss = -tf.reduce_mean(tf.reduce_sum(log_probs * rewards, axis=1) / seq_lens)
+    loss = - tf.reduce_mean(
+        tf.reduce_sum(log_probs * rewards, axis=1) / seq_lens)
     return loss
 
 
-def reinforce_loss_with_MCtree(sample_fn,
+def reinforce_loss_with_MCtree(sample_fn,   # pylint: disable=invalid-name
                                global_reward_fn,
                                local_reward_fn=None,
                                num_samples=1):
-    """Compute REINFORCE loss with Monte Carlo tree search.
+    """Computes REINFORCE loss with Monte Carlo tree search.
 
     Args:
         sample_fn: A callable that takes :attr:`num_samples` and returns
