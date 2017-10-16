@@ -8,16 +8,15 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from tensorflow.python.ops import rnn  # pylint: disable=E0611
 
 from txtgen.losses.mle_losses import _mask_sequences
 
 
 def reinforce_loss(sample_fn,
-                   reward_global_fn,
-                   reward_local_fn=None,
+                   global_reward_fn,
+                   local_reward_fn=None,
                    num_samples=1):
-    """Compute REINFORCE loss with global and local rewards.
+    """Computes REINFORCE loss with global and local rewards.
 
     Args:
         sample_fn: A callable that takes :attr:`num_samples` and returns
@@ -33,10 +32,10 @@ def reinforce_loss(sample_fn,
 
             `sequence_lengths` is a Tensor of shape `[num_samples]` containing
             the length of each samples.
-        reward_global_fn: A callable that takes `(samples, sequence_lengths)`
+        global_reward_fn: A callable that takes `(samples, sequence_lengths)`
             and returns a Tensor of shape `[num_samples]` containing the reward
             of each of the samples.
-        reward_local_fn (optional): A callable that takes
+        local_reward_fn (optional): A callable that takes
             `(samples, sequence_lengths)` and returns a Tensor of shape
             `[num_samples, max_sequence_length]` containing the local reward
             at each time step of samples.
@@ -48,29 +47,28 @@ def reinforce_loss(sample_fn,
 
     # shape = [batch, length]
     sequences, probs, seq_lens = sample_fn(num_samples)
-    # TODO(zhiting): `batch` is just `num_samples` ?
-    batch, length = tf.shape(sequences)
-    local_rewards = tf.constant(0., dtype=probs.dtype, shape=probs.shape)
-    if reward_local_fn is not None:
-        local_rewards = reward_local_fn(sequences, seq_lens)
+    batch, _ = tf.shape(sequences)
+    rewards_local = tf.constant(0., dtype=probs.dtype, shape=probs.shape)
+    if local_reward_fn is not None:
+        rewards_local = local_reward_fn(sequences, seq_lens)
 
     # shape = [batch, ]
-    global_rewards = reward_global_fn(sequences, seq_lens)
-    # add broadcast to global_rewards to match the shape of local_rewards
-    rewards = local_rewards + tf.reshape(global_rewards, [batch, 1])
+    rewards_global = global_reward_fn(sequences, seq_lens)
+    # add broadcast to rewards_global to match the shape of rewards_local
+    rewards = rewards_local + tf.reshape(rewards_global, [batch, 1])
 
     eps = 1e-12
     log_probs = _mask_sequences(tf.log(probs + eps), seq_lens)
-    loss = -tf.reduce_mean(
+    loss = - tf.reduce_mean(
         tf.reduce_sum(log_probs * rewards, axis=1) / seq_lens)
     return loss
 
 
-def reinforce_loss_with_MCtree(sample_fn,
-                               reward_global_fn,
-                               reward_local_fn=None,
+def reinforce_loss_with_MCtree(sample_fn,   # pylint: disable=invalid-name
+                               global_reward_fn,
+                               local_reward_fn=None,
                                num_samples=1):
-    """Compute REINFORCE loss with Monte Carlo tree search.
+    """Computes REINFORCE loss with Monte Carlo tree search.
 
     Args:
         sample_fn: A callable that takes :attr:`num_samples` and returns
@@ -86,10 +84,10 @@ def reinforce_loss_with_MCtree(sample_fn,
 
             `sequence_lengths` is a Tensor of shape `[num_samples]` containing
             the length of each samples.
-        reward_global_fn: A callable that takes `(samples, sequence_lengths)`
+        global_reward_fn: A callable that takes `(samples, sequence_lengths)`
             and returns a Tensor of shape `[num_samples]` containing the reward
             of each of the samples.
-        reward_local_fn (optional): A callable that takes
+        local_reward_fn (optional): A callable that takes
             `(samples, sequence_lengths)` and returns a Tensor of shape
             `[num_samples, max_sequence_length]` containing the local reward
             at each time step of samples.
