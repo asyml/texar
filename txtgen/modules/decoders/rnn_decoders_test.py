@@ -177,7 +177,6 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
 
         outputs, final_state, sequence_lengths = decoder(
             helper_infer, decoder.cell.zero_state(self._batch_size, tf.float32))
-
         # 5 trainable variables: embedding, cell-kernel, cell-bias,
         # fc-layer-weights, fc-layer-bias
         self.assertEqual(len(decoder.trainable_variables), 5)

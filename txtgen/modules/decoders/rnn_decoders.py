@@ -8,13 +8,24 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from tensorflow.contrib.seq2seq import BasicDecoderOutput, AttentionWrapper
+import collections
+from tensorflow.contrib.seq2seq import BasicDecoderOutput, AttentionWrapperState
+
+from tensorflow.contrib.seq2seq import AttentionWrapper
 from tensorflow.python.framework import tensor_shape, dtypes # pylint: disable=E0611
 
 from txtgen.modules.decoders.rnn_decoder_base import RNNDecoderBase
 from txtgen.core.utils import get_instance
 
 # pylint: disable=too-many-arguments
+class AttentionDecoderOutput(
+    collections.namedtuple("DecoderOutput", [
+        "logits", "predicted_ids", "cell_output", "attention_scores",
+        "attention_context"
+    ])):
+  """Augmented decoder output that also includes the attention scores.
+  """
+  pass
 
 class BasicRNNDecoder(RNNDecoderBase):
     """Basic RNN decoder that performs sampling at each step.
@@ -56,6 +67,8 @@ class BasicRNNDecoder(RNNDecoderBase):
             state=cell_state,
             sample_ids=sample_ids)
         outputs = BasicDecoderOutput(logits, sample_ids)
+        #next_state should be cell_state directly,
+        #according to function next_inouts
         return (outputs, next_state, next_inputs, finished)
 
     def finalize(self, outputs, final_state, sequence_lengths):
@@ -132,12 +145,22 @@ class AttentionRNNDecoder(RNNDecoderBase):
             }
         }
         return hparams
-
+    def _setup(initial_state, helper):
+        self.initial_state = initial_state.cell_state
+        self.helper = helper
+    
     def initialize(self, name=None):
-        return self._helper.initialize() + (self._initial_state,)
+        return self._helper.initialize() + (self._initial_state)
 
     def step(self, time, inputs, state, name=None):
         cell_outputs, cell_state = self._cell(inputs, state)
+        wrapper_outputs, wrapper_state = self._cell(inputs, state)
+
+        #cell_state is AttentionWrapperState
+        cell_state = wrapper_state.cell_state
+        attention_scores = wrapper_state.alignments
+        attention_context = wrapper_state.attention
+
         logits = tf.contrib.layers.fully_connected(
             inputs=cell_outputs, num_outputs=self._vocab_size)
         sample_ids = self._helper.sample(
@@ -147,11 +170,13 @@ class AttentionRNNDecoder(RNNDecoderBase):
             outputs=logits,
             state=cell_state,
             sample_ids=sample_ids)
-        outputs = BasicDecoderOutput(logits, sample_ids)
+        # there should be some problem
+        outputs = AttentionDecoderOutput(logits, sample_ids, wrapper_outputs, attention_scores, attention_context)
         return (outputs, next_state, next_inputs, finished)
 
     def finalize(self, outputs, final_state, sequence_lengths):
         return outputs, final_state
+
 
     @property
     def output_size(self):
