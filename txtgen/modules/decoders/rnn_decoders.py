@@ -6,9 +6,8 @@ Various RNN decoders.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-import tensorflow as tf
 import collections
+import tensorflow as tf
 from tensorflow.contrib.seq2seq import BasicDecoderOutput, AttentionWrapperState
 
 from tensorflow.contrib.seq2seq import AttentionWrapper
@@ -18,14 +17,11 @@ from txtgen.modules.decoders.rnn_decoder_base import RNNDecoderBase
 from txtgen.core.utils import get_instance
 
 # pylint: disable=too-many-arguments
-class AttentionDecoderOutput(
-    collections.namedtuple("DecoderOutput", [
-        "logits", "predicted_ids", "cell_output", "attention_scores",
-        "attention_context"
-    ])):
-  """Augmented decoder output that also includes the attention scores.
-  """
-  pass
+class AttentionDecoderOutput(collections.namedtuple("DecoderOutput", \
+    ["logits", "predicted_ids", "cell_output", "attention_scores", "attention_context"])):
+    """Augmented decoder output that also includes the attention scores.
+    """
+    pass
 
 class BasicRNNDecoder(RNNDecoderBase):
     """Basic RNN decoder that performs sampling at each step.
@@ -98,7 +94,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
                  attention_values, #encoder_output,
                  attention_values_length,
                  reverse_scores_lengths=None,
-                 name = 'attention_rnn_decoder',
+                 name='attention_rnn_decoder',
                  cell=None,
                  embedding=None,
                  embedding_trainable=True,
@@ -114,7 +110,8 @@ class AttentionRNNDecoder(RNNDecoderBase):
         attention_mechanism = get_instance(attention_class, attention_kwargs, attention_modules)
 
         wrapper_params = hparams['attention']['wrapper_params']
-        attn_cell = AttentionWrapper(self._cell, attention_mechanism, **wrapper_params) # more parameters can be added here
+        attn_cell = AttentionWrapper(self._cell, attention_mechanism, **wrapper_params)
+        # more parameters can be added here
         self._cell = attn_cell
 
     @staticmethod
@@ -126,7 +123,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
         """
         hparams = RNNDecoderBase.default_hparams()
         hparams["name"] = "attention_rnn_decoder"
-        hparams['attention']={
+        hparams['attention'] = {
             'class':'LuongAttention',
             'alignment_history':False,
             'params':{
@@ -148,7 +145,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
     def _setup(initial_state, helper):
         self.initial_state = initial_state.cell_state
         self.helper = helper
-    
+
     def initialize(self, name=None):
         return self._helper.initialize() + (self._initial_state)
 
@@ -171,7 +168,8 @@ class AttentionRNNDecoder(RNNDecoderBase):
             state=cell_state,
             sample_ids=sample_ids)
         # there should be some problem
-        outputs = AttentionDecoderOutput(logits, sample_ids, wrapper_outputs, attention_scores, attention_context)
+        outputs = AttentionDecoderOutput(logits, sample_ids, \
+                wrapper_outputs, attention_scores, attention_context)
         return (outputs, next_state, next_inputs, finished)
 
     def finalize(self, outputs, final_state, sequence_lengths):
