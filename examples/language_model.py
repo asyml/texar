@@ -7,6 +7,7 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+from tensorflow.python.framework import ops
 
 # We shall wrap all these modules
 from txtgen.data import database
@@ -84,28 +85,41 @@ if __name__ == "__main__":
     train_op, global_step = opt.get_train_op(mle_loss, hparams=opt_hparams)
 
     ### Graph is done. Now start running
+
     # We shall wrap these environment setup codes
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-        try:
-            while not coord.should_stop():
-                # Run the logics
+        with tf.contrib.slim.queues.QueueRunners(sess):
+            _, step, loss = sess.run(
+                [train_op, global_step, mle_loss],
+                feed_dict={context.is_train(): True})
 
-                _, step, loss = sess.run(
-                    [train_op, global_step, mle_loss],
-                    feed_dict={context.is_train(): True})
+            if step % 10 == 0:
+                print("%d: %.6f" % (step, loss))
 
-                if step % 10 == 0:
-                    print("%d: %.6f" % (step, loss))
 
-        except tf.errors.OutOfRangeError:
-            print('Done -- epoch limit reached')
-        finally:
-            coord.request_stop()
-        coord.join(threads)
+        #coord = tf.train.Coordinator()
+        #threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+
+        #print(ops.get_collection(ops.GraphKeys.QUEUE_RUNNERS))
+
+        #try:
+        #    while not coord.should_stop():
+        #        # Run the logics
+
+        #        _, step, loss = sess.run(
+        #            [train_op, global_step, mle_loss],
+        #            feed_dict={context.is_train(): True})
+
+        #        if step % 10 == 0:
+        #            print("%d: %.6f" % (step, loss))
+
+        #except tf.errors.OutOfRangeError:
+        #    print('Done -- epoch limit reached')
+        #finally:
+        #    coord.request_stop()
+        #coord.join(threads)
 
