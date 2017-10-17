@@ -66,24 +66,27 @@ class TestConnectors(tf.test.TestCase):
     def test_reparameterized_stochastic_connector(self): # pylint: disable=too-many-locals
         """Tests the logic of ReparameterizedStochasticConnector.
         """
-        variable_size = 5
+        state_size = (10,10)
+        variable_size = 100
 
         # pylint: disable=invalid-name
-        mu = tf.zeros(variable_size)
-        var = tf.ones(variable_size)
-        gauss_connector = ReparameterizedStochasticConnector(variable_size)
-        gauss_ds = tfds.MultivariateNormalDiag(loc = mu, scale_diag = var)
+        mu = tf.zeros([self._batch_size,variable_size])
+        var = tf.ones([self._batch_size,variable_size])
+        gauss_ds = tfds.MultivariateNormalDiag(loc=mu, scale_diag=var)
+        gauss_connector = ReparameterizedStochasticConnector(state_size)
 
 
-        sample = gauss_connector(gauss_ds, self._batch_size)
+
+        sample1 = gauss_connector(gauss_ds)
+        sample2 = gauss_connector(ds_name="MultivariateNormalDiag", loc=mu, scale_diag=var)
 
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
-            sample_outputs = sess.run(sample)
+            sample_output1, sample_output2 = sess.run([sample1, sample2])
 
             # check the same size
-            self.assertEqual(sample_outputs.shape[0], self._batch_size)
-            self.assertEqual(sample_outputs.shape[1], variable_size)
+            self.assertEqual(sample_output1[0].shape, tf.TensorShape([self._batch_size, state_size[0]]))
+            self.assertEqual(sample_output2[0].shape, tf.TensorShape([self._batch_size, state_size[0]]))
 
             # sample_mu = np.mean(sample_outputs, axis=0)
             # # pylint: disable=no-member
@@ -103,38 +106,37 @@ class TestConnectors(tf.test.TestCase):
 
         decoder_size1 = 16
         decoder_size2 = (16, 32)
-        decoder_size3 = tf.TensorShape([16,32])
 
-        categorical_connector = StochasticConnector(1)
-        gauss_connector = ReparameterizedStochasticConnector(variable_size)
+        gauss_connector = StochasticConnector(3)
+        categorical_connector = StochasticConnector(3)
         constant_connector = ConstantConnector(constant_size)
         concat_connector1 = ConcatConnector(decoder_size1)
         concat_connector2 = ConcatConnector(decoder_size2)
-        concat_connector3 = ConcatConnector(decoder_size3)
 
 
         # pylint: disable=invalid-name
-        mu = tf.zeros(gauss_size)
-        var = tf.ones(gauss_size)
-        categorical_prob = [0.1, 0.2, 0.7]
+        mu = tf.zeros([self._batch_size, gauss_size])
+        var = tf.ones([self._batch_size, gauss_size])
+        categorical_prob = tf.constant([[0.1, 0.2, 0.7] for _ in xrange(self._batch_size)])
         categorical_ds = tfds.Categorical(probs = categorical_prob)
         gauss_ds = tfds.MultivariateNormalDiag(loc = mu, scale_diag = var)
 
-        gauss_state = gauss_connector(gauss_ds, self._batch_size)
-        categorical_state = categorical_connector(categorical_ds, self._batch_size)
+        gauss_state = gauss_connector(gauss_ds)
+        categorical_state = categorical_connector(categorical_ds)
         constant_state = constant_connector(self._batch_size, value=1.)
+        with tf.Session() as debug_sess:
+            debug_cater = debug_sess.run(categorical_state)
 
         state1 = concat_connector1([gauss_state, categorical_state, constant_state])
         state2 = concat_connector2([gauss_state, categorical_state, constant_state])
-        state3 = concat_connector3([gauss_state, categorical_state, constant_state])
 
 
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
-            [output1, output2, output3] = sess.run([state1, state2, state3])
+            [output1, output2] = sess.run([state1, state2])
 
             # check the same size
-            self.assertEqual(output1.shape, tf.TensorShape(self._batch_size).concatenate(tf.TensorShape(decoder_size1)))
-            self.assertEqual(output3.shape, tf.TensorShape(self._batch_size).concatenate(tf.TensorShape(decoder_size3)))
+            self.assertEqual(output1.shape[1], decoder_size1)
+            self.assertEqual(output2[1].shape[1], decoder_size2[1])
 if __name__ == "__main__":
     tf.test.main()
