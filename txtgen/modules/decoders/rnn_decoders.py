@@ -1,4 +1,3 @@
-#
 """
 Various RNN decoders.
 """
@@ -85,7 +84,6 @@ class AttentionRNNDecoder(RNNDecoderBase):
     """Basic RNN decoder that performs sampling at each step.
     See :class:`~txtgen.modules.decoders.RNNDecoderBase` for the arguments.
     """
-
     def __init__(self,  # pylint: disable=too-many-arguments
                  # mode, #mode, train/eval
                  vocab_size,
@@ -111,7 +109,6 @@ class AttentionRNNDecoder(RNNDecoderBase):
 
         wrapper_params = hparams['attention']['wrapper_params']
         attn_cell = AttentionWrapper(self._cell, attention_mechanism, **wrapper_params)
-        # more parameters can be added here
         self._cell = attn_cell
 
     @staticmethod
@@ -142,12 +139,9 @@ class AttentionRNNDecoder(RNNDecoderBase):
             }
         }
         return hparams
-    def _setup(initial_state, helper):
-        self.initial_state = initial_state.cell_state
-        self.helper = helper
-
     def initialize(self, name=None):
-        return self._helper.initialize() + (self._initial_state)
+        helper_init = self._helper.initialize()
+        return [helper_init[0], helper_init[1], self._initial_state]
 
     def step(self, time, inputs, state, name=None):
         cell_outputs, cell_state = self._cell(inputs, state)
@@ -165,11 +159,11 @@ class AttentionRNNDecoder(RNNDecoderBase):
         (finished, next_inputs, next_state) = self._helper.next_inputs(
             time=time,
             outputs=logits,
-            state=cell_state,
+            state=wrapper_state,
             sample_ids=sample_ids)
         # there should be some problem
         outputs = AttentionDecoderOutput(logits, sample_ids, \
-                wrapper_outputs, attention_scores, attention_context)
+                                         wrapper_outputs, attention_scores, attention_context)
         return (outputs, next_state, next_inputs, finished)
 
     def finalize(self, outputs, final_state, sequence_lengths):
@@ -178,11 +172,21 @@ class AttentionRNNDecoder(RNNDecoderBase):
 
     @property
     def output_size(self):
-        return BasicDecoderOutput(
-            rnn_output=self._vocab_size,
-            sample_id=tensor_shape.TensorShape([]))
+        statesize = self.cell.state_size
+        return AttentionDecoderOutput(
+            logits=self._vocab_size,
+            predicted_ids=tensor_shape.TensorShape([]),
+            cell_output=self.cell._cell.output_size,
+            attention_scores=statesize.alignments,
+            attention_context=statesize.attention
+            )
 
     @property
     def output_dtype(self):
-        return BasicDecoderOutput(
-            rnn_output=dtypes.float32, sample_id=dtypes.int32)
+        return AttentionDecoderOutput(
+            logits=dtypes.float32,
+            predicted_ids=dtypes.int32,
+            cell_output=dtypes.float32,
+            attention_scores=dtypes.float32,
+            attention_context=dtypes.float32,
+            )
