@@ -13,6 +13,7 @@ from tensorflow.python.util import nest    # pylint: disable=E0611
 
 from txtgen.modules.connectors.connector_base import ConnectorBase
 from txtgen.core.utils import get_function
+from txtgen.core.utils import get_instance
 
 # pylint: disable=too-many-locals
 def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
@@ -44,20 +45,27 @@ def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
     concat_input = tf.concat(flat_input, 1)
 
     # get output dimension
-    iter_output_size = output_size if isinstance(output_size, (list, tuple)) else [output_size]
-    shape_list = [tf.TensorShape(shape) for shape in iter_output_size]
-    size_list = [0] * len(shape_list)
-    for (i, shape) in enumerate(shape_list):
-        size_list[i] = reduce(lambda x, y: x*y, [dim.value for dim in shape])
+    flat_output_size = nest.flatten(output_size)
+    if isinstance(flat_output_size[0], tf.TensorShape):
+        size_list = [0] * len(flat_output_size)
+        for (i, shape) in enumerate(flat_output_size):
+            size_list[i] = reduce(lambda x, y: x*y,
+                                  [dim.value for dim in shape])
+    else:
+        size_list = flat_output_size
     sum_output_size = sum(size_list)
 
     fc_output = tf.contrib.layers.fully_connected(
         concat_input, sum_output_size, activation_fn=activation_fn)
 
     flat_output = tf.split(fc_output, size_list, axis=1)
-    for (i, shape) in enumerate(shape_list):
-        flat_output[i] = tf.reshape(flat_output[i], tf.TensorShape(batch_size).concatenate(shape))
-    output = nest.pack_sequence_as(structure=output_size, flat_sequence=flat_output)
+
+    if isinstance(flat_output_size[0], tf.TensorShape):
+        for (i, shape) in enumerate(flat_output_size):
+            new_shape = tf.TensorShape(batch_size).concatenate(shape)
+            flat_output[i] = tf.reshape(flat_output[i], new_shape)
+    output = nest.pack_sequence_as(structure=output_size,
+                                   flat_sequence=flat_output)
 
     return output
 
@@ -261,30 +269,53 @@ class ReparameterizedStochasticConnector(ConnectorBase):
             "name": "reparameterized_stochastic_connector"
         }
 
-    def _build(self, distribution, batch_size):  # pylint: disable=W0221
+    # pylint: disable=arguments-differ
+    def _build(self, distribution=None, batch_size=None,
+               trans=True, ds_name=None, **kwargs):
         """Samples from a distribution defined by the inputs.
 
         Args:
-            distribution: Instance of tf.contrib.distributions
             batch_size (int or scalar int Tensor): The batch size.
+            distribution: Instance of tf.contrib.distributions
+            ds_name: Name of distribution, supported tf.contrib.distributions
+            kwargs: Argument for distributions, must presented with ds_name
 
         Returns:
             A Tensor or a (nested) tuple of Tensors of the same structure of
             the decoder state.
-inputs
+
         Raises:
-            ValueError: An error occurred when the input distribution cannot be reparameterized
+            ValueError: An error occurred when the distribution
+            cannot be reparameterized
+
+            ValueError: If ds_name is not supported or
+            'kwargs' contains arguments that are
+            invalid for the distribution
         """
+        if distribution:
+            dist_instance = distribution
+        elif ds_name and kwargs:
+            dist_instance = get_instance(ds_name, kwargs,
+                                         ["tensorflow.contrib.distributions"])
+        else:
+            raise ValueError(
+                "Either distribution or (ds_name, kwargs) must be provided")
 
-        if distribution.reparameterization_type == tfds.NOT_REPARAMETERIZED:
-            raise ValueError("%s distribution is not reparameterized" % distribution.name)
+        if dist_instance.reparameterization_type == tfds.NOT_REPARAMETERIZED:
+            raise ValueError("%s distribution is not reparameterized" % dist_instance.name)
 
-        output = distribution.sample(batch_size)
-        if len(output.get_shape()) == 1:
-            output = output.reshape([batch_size, 1])
+        if batch_size:
+            output = dist_instance.sample(batch_size)
+        else:
+            output = dist_instance.sample()
+
+        if dist_instance.event_shape == []:
+            output = tf.reshape(output,
+                                output.shape.concatenate(tf.TensorShape(1)))
 
         output = tf.cast(output, tf.float32)
-        output = _mlp_transform(output, self._decoder_state_size)
+        if trans:
+            output = _mlp_transform(output, self._decoder_state_size)
 
         self._add_internal_trainable_variables()
         self._built = True
@@ -318,10 +349,13 @@ class StochasticConnector(ConnectorBase):
             "name": "stochastic_connector"
         }
 
-    def _build(self, distribution, batch_size):  # pylint: disable=W0221
+    # pylint: disable=arguments-differ
+    def _build(self, distribution=None, batch_size=None, trans=False,
+               ds_name=None, **kwargs):
         """Samples from a distribution defined by the inputs.
 
         Args:
+            batch_size (int or scalar int Tensor): The batch size.
             distribution: Instance of tf.contrib.distributions
             batch_size (int or scalar int Tensor): The batch size.
 
@@ -329,16 +363,31 @@ class StochasticConnector(ConnectorBase):
             A Tensor or a (nested) tuple of Tensors of the same structure of
             the decoder state.
         """
+        if distribution:
+            dist_instance = distribution
+        elif ds_name and kwargs:
+            dist_instance = get_instance(ds_name, kwargs,
+                                         ["tensorflow.contrib.distributions"])
+        else:
+            raise ValueError(
+                "Either distribution or (ds_name, kwargs) must be provided")
 
-        output = distribution.sample(batch_size)
-        if len(output.get_shape()) == 1:
-            output = tf.reshape(output, [batch_size, 1])
+        if batch_size:
+            output = dist_instance.sample(batch_size)
+        else:
+            output = dist_instance.sample()
+
+        if dist_instance.event_shape == []:
+            output = tf.reshape(output,
+                                output.shape.concatenate(tf.TensorShape(1)))
 
         # Disable gradients through samples
         output = tf.stop_gradient(output)
 
         output = tf.cast(output, tf.float32)
-        output = _mlp_transform(output, self._decoder_state_size)
+
+        if trans:
+            output = _mlp_transform(output, self._decoder_state_size)
 
         self._add_internal_trainable_variables()
         self._built = True
@@ -380,7 +429,8 @@ class ConcatConnector(ConnectorBase):
             the decoder state.
         """
 
-        connector_inputs = [tf.cast(connector, tf.float32) for connector in connector_inputs]
+        connector_inputs = [tf.cast(connector, tf.float32)
+                            for connector in connector_inputs]
         output = tf.concat(connector_inputs, axis=1)
         output = _mlp_transform(output, self._decoder_state_size)
 
