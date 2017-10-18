@@ -1,7 +1,6 @@
 #
 """
-Base class for connectors that transform results of other modules (e.g., the
-final state of an encoder) into decoder initial states.
+Base class for connectors that transform inputs into specified output shape.
 """
 
 from __future__ import absolute_import
@@ -13,18 +12,19 @@ from txtgen.modules.module_base import ModuleBase
 
 class ConnectorBase(ModuleBase):
     """Base class inherited by all connector classes. A connector is to
-    transform outputs of other modules into decoder initial states.
+    transform inputs into outputs with any specified shape, e.g., transforms
+    the final state of an encoder to the initial state of a decoder.
 
     Args:
-        decoder_state_size: Size of state of the decoder cell. Can be an
-            Integer, a Tensorshape , or a tuple of Integers or TensorShapes.
-            This can typically be obtained by `decoder.cell.state_size`.
+        output_size: Size of output. Can be an int, a tuple of int, a
+            Tensorshape, or a tuple of TensorShapes. For example, to transform
+            to decoder state size, set `output_size=decoder.cell.state_size`.
         hparams (dict): Hyperparameters of connector.
     """
 
-    def __init__(self, decoder_state_size, hparams=None):
+    def __init__(self, output_size, hparams=None):
         ModuleBase.__init__(self, hparams)
-        self._decoder_state_size = decoder_state_size
+        self._output_size = output_size
 
     @staticmethod
     def default_hparams():
@@ -35,6 +35,6 @@ class ConnectorBase(ModuleBase):
         }
 
     def _build(self, *args, **kwargs):
-        """Transforms inputs to the decoder initial states.
+        """Transforms inputs to outputs with specified shape.
         """
         raise NotImplementedError
