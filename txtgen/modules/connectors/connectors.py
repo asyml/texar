@@ -8,14 +8,14 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-import tensorflow.contrib.distributions as tfds
+import tensorflow.contrib.distributions as tf_dstr
 from tensorflow.python.util import nest    # pylint: disable=E0611
 
 from txtgen.modules.connectors.connector_base import ConnectorBase
 from txtgen.core.utils import get_function
 from txtgen.core.utils import get_instance
 
-# pylint: disable=too-many-locals
+# pylint: disable=too-many-locals, arguments-differ, too-many-arguments
 def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
     """Transforms inputs through a fully-connected layer that creates the output
     with specified size.
@@ -189,7 +189,6 @@ class MLPTransformConnector(ConnectorBase):
             Integer, a Tensorshape , or a tuple of Integers or TensorShapes.
             This can typically be obtained by :attr:`decoder.cell.state_size`.
         hparams (dict): Hyperparameters of the connector.
-        name (str): Name of connector.
     """
 
     def __init__(self, decoder_state_size, hparams=None):
@@ -243,79 +242,112 @@ class MLPTransformConnector(ConnectorBase):
 
 
 class ReparameterizedStochasticConnector(ConnectorBase):
-    """Samples decoder initial state using reparameterization trick
-    from a distribution defined by the inputs.
+    """Samples from a distribution with reparameterization trick and transforms
+    samples into specified size.
 
-    Used in, e.g., variational autoencoders, adversarial autoencoders, and other
-    models.
+    Reparameterization allows gradients to be propagated through the
+    stochastic samples. Used in, e.g., Variational Autoencoders (VAEs).
+
+    Args:
+        output_size: Size of output. Can be an int, a tuple of int, a
+            Tensorshape, or a tuple of TensorShapes. For example, to transform
+            to decoder state size, set `output_size=decoder.cell.state_size`.
+        hparams (dict): Hyperparameters of the connector.
     """
 
-    def __init__(self, decoder_state_size, hparams=None):
-        ConnectorBase.__init__(self, decoder_state_size, hparams)
+    def __init__(self, output_size, hparams=None):
+        ConnectorBase.__init__(self, output_size, hparams)
 
     #TODO(zhiting): add docs
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
-        Returns:
-            ```python
+        .. code-block:: python
+
             {
             }
-            ```
         """
         return {
-            "distribution": "tf.contrib.distributions.MultivariateNormalDiag",
+            "distribution": {
+                "type": "tf.contrib.distributions.MultivariateNormalDiag",
+                "kwargs": {}
+            },
+            "activation_fn": "tensorflow.identity",
             "name": "reparameterized_stochastic_connector"
         }
 
-    # pylint: disable=arguments-differ
-    def _build(self, distribution=None, batch_size=None,
-               trans=True, ds_name=None, **kwargs):
-        """Samples from a distribution defined by the inputs.
+    # TODO(zhiting): Is the docstring of returned value correct?
+    def _build(self,
+               distribution=None,
+               distribution_type=None,
+               distribution_kwargs=None,
+               transform=True,
+               num_samples=1):
+        """Samples from a distribution and optionally performs transformation.
+
+        The distribution must be reparameterizable, i.e.,
+        `distribution.reparameterization_type = FULLY_REPARAMETERIZED`.
 
         Args:
-            batch_size (int or scalar int Tensor): The batch size.
-            distribution: Instance of tf.contrib.distributions
-            ds_name: Name of distribution, supported tf.contrib.distributions
-            kwargs: Argument for distributions, must presented with ds_name
+            distribution (optional): An instance of
+                :class:`~tensorflow.contrib.distributions.Distribution`. If
+                `None` (default), distribution is constructed based on
+                :attr:`distribution_type` or
+                :attr:`hparams['distribution']['type']`.
+            distribution_type (str, optional): Name or path to the distribution
+                class which inherits
+                :class:`~tensorflow.contrib.distributions.Distribution`. Ignored
+                if :attr:`distribution` is specified.
+            distribution_kwargs (dict, optional): Keyword arguments of the
+                distribution class specified in :attr:`distribution_type`.
+            transform (bool): Whether to perform MLP transformation of the
+                samples. If `False`, the shape of a sample must match the
+                :attr:`output_size`.
+            num_samples (int or scalar int Tensor): Number of samples to
+                generate.
 
         Returns:
-            A Tensor or a (nested) tuple of Tensors of the same structure of
-            the decoder state.
+            If `num_samples`=1, returns a Tensor of shape `output_size`. If
+            `num_samples`>1, returns a Tensor of shape
+            `[num_samples x output_size]`.
 
         Raises:
-            ValueError: An error occurred when the distribution
-            cannot be reparameterized
-
-            ValueError: If ds_name is not supported or
-            'kwargs' contains arguments that are
-            invalid for the distribution
+            ValueError: If distribution cannot be reparametrized.
+            ValueError: The output does not match the :attr:`output_size`.
         """
         if distribution:
-            dist_instance = distribution
-        elif ds_name and kwargs:
-            dist_instance = get_instance(ds_name, kwargs,
-                                         ["tensorflow.contrib.distributions"])
+            dstr = distribution
+        elif distribution_type:
+            dstr = get_instance(
+                distribution_type, distribution_kwargs,
+                ["txtgen.custom", "tensorflow.contrib.distributions"])
         else:
+            dstr = get_instance(
+                self.hparams.distribution.type,
+                self.hparams.distribution.kwargs,
+                ["txtgen.custom", "tensorflow.contrib.distributions"])
+
+        if dstr.reparameterization_type == tf_dstr.NOT_REPARAMETERIZED:
             raise ValueError(
-                "Either distribution or (ds_name, kwargs) must be provided")
+                "Distribution is not reparameterized: %s" % dstr.name)
 
-        if dist_instance.reparameterization_type == tfds.NOT_REPARAMETERIZED:
-            raise ValueError("%s distribution is not reparameterized" % dist_instance.name)
+        if num_samples:
+            output = dstr.sample(num_samples)
 
-        if batch_size:
-            output = dist_instance.sample(batch_size)
-        else:
-            output = dist_instance.sample()
-
-        if dist_instance.event_shape == []:
+        if dstr.event_shape == []:
             output = tf.reshape(output,
                                 output.shape.concatenate(tf.TensorShape(1)))
 
         output = tf.cast(output, tf.float32)
-        if trans:
-            output = _mlp_transform(output, self._decoder_state_size)
+        if transform:
+            fn_modules = ['txtgen.custom', 'tensorflow', 'tensorflow.nn']
+            activation_fn = get_function(self.hparams.activation_fn, fn_modules)
+            output = _mlp_transform(output, self._output_size, activation_fn)
+        # TODO (zhiting): does self._output_size include batch_size as a
+        # dimension? If not, we also need to remove the num_samples dimension
+        # of `output` before this assert statement.
+        nest.assert_same_structure(output, self._output_size)
 
         self._add_internal_trainable_variables()
         self._built = True

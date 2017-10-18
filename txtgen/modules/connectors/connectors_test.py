@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# author: Tiancheng Zhao
+#
 """
 Unit tests for connectors.
 """
@@ -8,8 +7,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-
-import numpy as np
 
 import tensorflow as tf
 import tensorflow.contrib.distributions as tfds
@@ -21,10 +18,12 @@ from txtgen.modules.connectors.connectors import ReparameterizedStochasticConnec
 from txtgen.modules.connectors.connectors import StochasticConnector
 from txtgen.modules.connectors.connectors import ConcatConnector
 
+# pylint: disable=too-many-locals
 
 class TestConnectors(tf.test.TestCase):
     """Tests various connectors.
     """
+
     def setUp(self):
         tf.test.TestCase.setUp(self)
         self._batch_size = 100
@@ -33,7 +32,8 @@ class TestConnectors(tf.test.TestCase):
             layers.default_rnn_cell_hparams())
 
     def test_constant_connector(self):
-        """Tests the logic of ConstantConnector.
+        """Tests the logic of
+        :class:`~txtgen.modules.connectors.ConstantConnector`.
         """
         connector = ConstantConnector(self._decoder_cell.state_size)
 
@@ -52,21 +52,24 @@ class TestConnectors(tf.test.TestCase):
             self.assertEqual(nest.flatten(s_1)[0][0, 0], 1.)
 
     def test_forward_connector(self):
-        """Tests the logic of ForwardConnector.
+        """Tests the logic of
+        :class:`~txtgen.modules.connectors.ForwardConnector`.
         """
         # TODO(zhiting)
         pass
 
     def test_mlp_transform_connector(self):
-        """Tests the logic of MLPTransformConnector.
+        """Tests the logic of
+        :class:`~txtgen.modules.connectors.MLPTransformConnector`.
         """
         # TODO(zhiting)
         pass
 
-    def test_reparameterized_stochastic_connector(self): # pylint: disable=too-many-locals
-        """Tests the logic of ReparameterizedStochasticConnector.
+    def test_reparameterized_stochastic_connector(self):
+        """Tests the logic of
+        :class:`~txtgen.modules.connectors.ReparameterizedStochasticConnector`.
         """
-        state_size = (10,10)
+        state_size = (10, 10)
         variable_size = 100
 
         # pylint: disable=invalid-name
@@ -74,8 +77,6 @@ class TestConnectors(tf.test.TestCase):
         var = tf.ones([self._batch_size,variable_size])
         gauss_ds = tfds.MultivariateNormalDiag(loc=mu, scale_diag=var)
         gauss_connector = ReparameterizedStochasticConnector(state_size)
-
-
 
         sample1 = gauss_connector(gauss_ds)
         sample2 = gauss_connector(ds_name="MultivariateNormalDiag", loc=mu, scale_diag=var)
@@ -98,7 +99,8 @@ class TestConnectors(tf.test.TestCase):
                # self.assertAlmostEqual(1, sample_var[i], delta=0.2)
 
     def test_concat_connector(self): # pylint: disable=too-many-locals
-        """Tests the logic of ConcatConnector.
+        """Tests the logic of
+        :class:`~txtgen.modules.connectors.ConcatConnector`.
         """
         gauss_size = 5
         constant_size = 7
@@ -112,7 +114,6 @@ class TestConnectors(tf.test.TestCase):
         constant_connector = ConstantConnector(constant_size)
         concat_connector1 = ConcatConnector(decoder_size1)
         concat_connector2 = ConcatConnector(decoder_size2)
-
 
         # pylint: disable=invalid-name
         mu = tf.zeros([self._batch_size, gauss_size])
@@ -130,7 +131,6 @@ class TestConnectors(tf.test.TestCase):
         state1 = concat_connector1([gauss_state, categorical_state, constant_state])
         state2 = concat_connector2([gauss_state, categorical_state, constant_state])
 
-
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
             [output1, output2] = sess.run([state1, state2])
@@ -138,5 +138,6 @@ class TestConnectors(tf.test.TestCase):
             # check the same size
             self.assertEqual(output1.shape[1], decoder_size1)
             self.assertEqual(output2[1].shape[1], decoder_size2[1])
+
 if __name__ == "__main__":
     tf.test.main()
