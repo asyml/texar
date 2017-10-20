@@ -17,6 +17,7 @@ from txtgen.modules.connectors.connectors import ConstantConnector
 from txtgen.modules.connectors.connectors import ReparameterizedStochasticConnector
 from txtgen.modules.connectors.connectors import StochasticConnector
 from txtgen.modules.connectors.connectors import ConcatConnector
+from txtgen.modules.connectors.connectors import _assert_same_size
 
 # pylint: disable=too-many-locals
 
@@ -30,6 +31,12 @@ class TestConnectors(tf.test.TestCase):
 
         self._decoder_cell = layers.get_rnn_cell(
             layers.default_rnn_cell_hparams())
+
+    def assert_same_size(self, outputs, output_size):
+        """see :ref:`txtgen.modules.connectors.connectors._assert_same_size
+        """
+        _assert_same_size(outputs, output_size)
+
 
     def test_constant_connector(self):
         """Tests the logic of
@@ -71,23 +78,46 @@ class TestConnectors(tf.test.TestCase):
         """
         state_size = (10, 10)
         variable_size = 100
+        state_size_ts = (tf.TensorShape([10,10]), tf.TensorShape([2,3,4]))
+        sample_num = 10
 
         # pylint: disable=invalid-name
         mu = tf.zeros([self._batch_size,variable_size])
         var = tf.ones([self._batch_size,variable_size])
+        mu_vec = tf.zeros([variable_size])
+        var_vec = tf.ones([variable_size])
         gauss_ds = tfds.MultivariateNormalDiag(loc=mu, scale_diag=var)
+        gauss_ds_vec = tfds.MultivariateNormalDiag(loc=mu_vec, scale_diag=var_vec)
         gauss_connector = ReparameterizedStochasticConnector(state_size)
+        gauss_connector_ts = ReparameterizedStochasticConnector(state_size_ts)
 
         sample1 = gauss_connector(gauss_ds)
-        sample2 = gauss_connector(ds_name="MultivariateNormalDiag", loc=mu, scale_diag=var)
+        sample2 = gauss_connector(distribution_type="MultivariateNormalDiag", distribution_kwargs={"loc":mu, "scale_diag":var})
+        sample_ts = gauss_connector_ts(gauss_ds)
+
+        # specify sample num
+        sample_test_num = gauss_connector(gauss_ds_vec, num_samples=sample_num)
+
+        # test when :attr:`transform` is False
+        # sample_test_no_transform = gauss_connector(gauss_ds, transform=False)
+
+        # test_list = [sample1, sample2, sample_ts, sample_test_num, sample_test_no_transform]
+        test_list = [sample1, sample2, sample_ts, sample_test_num]
 
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
-            sample_output1, sample_output2 = sess.run([sample1, sample2])
+            out_list = sess.run(test_list)
+            out1 = out_list[0]
+            out2 = out_list[1]
+            out_ts = out_list[2]
+            out_test_num = out_list[3]
 
             # check the same size
-            self.assertEqual(sample_output1[0].shape, tf.TensorShape([self._batch_size, state_size[0]]))
-            self.assertEqual(sample_output2[0].shape, tf.TensorShape([self._batch_size, state_size[0]]))
+            self.assertEqual(out_test_num[0].shape, tf.TensorShape([sample_num, state_size[0]]))
+            self.assertEqual(out1[0].shape, tf.TensorShape([self._batch_size, state_size[0]]))
+            self.assertEqual(out2[0].shape, tf.TensorShape([self._batch_size, state_size[0]]))
+            self.assert_same_size(out_ts, state_size_ts)
+
 
             # sample_mu = np.mean(sample_outputs, axis=0)
             # # pylint: disable=no-member
@@ -109,8 +139,8 @@ class TestConnectors(tf.test.TestCase):
         decoder_size1 = 16
         decoder_size2 = (16, 32)
 
-        gauss_connector = StochasticConnector(3)
-        categorical_connector = StochasticConnector(3)
+        gauss_connector = StochasticConnector(gauss_size)
+        categorical_connector = StochasticConnector(1)
         constant_connector = ConstantConnector(constant_size)
         concat_connector1 = ConcatConnector(decoder_size1)
         concat_connector2 = ConcatConnector(decoder_size2)
