@@ -1,3 +1,6 @@
+.. role:: hidden
+    :class: hidden
+
 Modules
 *******
 
@@ -28,8 +31,33 @@ Encoders
 Decoders
 ========
 
-.. automodule:: txtgen.modules.decoders.rnn_decoder_base
+:hidden:`RNNDecoderBase`
+------------------------
+
+.. autoclass:: txtgen.modules.RNNDecoderBase
     :members:
 
-.. automodule:: txtgen.modules.decoders.rnn_decoders
+.. autoclass:: txtgen.modules.BasicRNNDecoder
     :members:
+
+.. autofunction:: txtgen.modules.default_helper_train_hparams
+
+.. autofunction:: txtgen.modules.default_helper_infer_hparams
+
+.. autofunction:: txtgen.modules.get_helper
+
+.. autoclass:: txtgen.modules.EmbeddingTrainingHelper
+    :members:
+
+.. autoclass:: txtgen.modules.BasicRNNDecoderOutput
+    :members:
+
+.. autoclass:: txtgen.modules.AttentionRNNDecoderOutput
+    :members:
+
+.. autoclass:: txtgen.modules.BasicRNNDecoder
+    :members:
+
+.. autoclass:: txtgen.modules.AttentionRNNDecoder
+    :members:
+

@@ -6,18 +6,18 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+# pylint: disable=invalid-name, no-name-in-module
+
 import tensorflow as tf
 from tensorflow.python.framework import ops
 
 # We shall wrap all these modules
 from txtgen.data import database
 from txtgen.modules.connectors import connectors
-from txtgen.modules.decoders import rnn_decoders, rnn_decoder_helpers
+from txtgen.modules import BasicRNNDecoder, get_helper
 from txtgen.losses import mle_losses
 from txtgen.core import optimization as opt
 from txtgen import context
-
-# pylint: disable=invalid-name
 
 if __name__ == "__main__":
     ### Build data pipeline
@@ -48,14 +48,15 @@ if __name__ == "__main__":
     ### Build model
 
     # Build decoder. Simply use the default hyperparameters.
-    decoder = rnn_decoders.BasicRNNDecoder(vocab_size=text_db.vocab.vocab_size)
+    #decoder = rnn_decoders.BasicRNNDecoder(vocab_size=text_db.vocab.vocab_size)
+    decoder = BasicRNNDecoder(vocab_size=text_db.vocab.vocab_size)
 
     # Build connector, which simply feeds zero state to decoder as initial state
     connector = connectors.ConstantConnector(decoder.state_size)
 
     # Build helper used in training.
     # We shall probably improve the interface here.
-    helper_train = rnn_decoder_helpers.get_helper(
+    helper_train = get_helper(
         decoder.hparams.helper_train.type,
         inputs=data_batch['text_ids'][:, :-1],
         sequence_length=data_batch['length'] - 1,
@@ -92,34 +93,34 @@ if __name__ == "__main__":
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
 
-        with tf.contrib.slim.queues.QueueRunners(sess):
-            _, step, loss = sess.run(
-                [train_op, global_step, mle_loss],
-                feed_dict={context.is_train(): True})
+        #with tf.contrib.slim.queues.QueueRunners(sess):
+        #    _, step, loss = sess.run(
+        #        [train_op, global_step, mle_loss],
+        #        feed_dict={context.is_train(): True})
 
-            if step % 10 == 0:
-                print("%d: %.6f" % (step, loss))
+        #    if step % 10 == 0:
+        #        print("%d: %.6f" % (step, loss))
 
 
-        #coord = tf.train.Coordinator()
-        #threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-        #print(ops.get_collection(ops.GraphKeys.QUEUE_RUNNERS))
+        print(ops.get_collection(ops.GraphKeys.QUEUE_RUNNERS))
 
-        #try:
-        #    while not coord.should_stop():
-        #        # Run the logics
+        try:
+            while not coord.should_stop():
+                # Run the logics
 
-        #        _, step, loss = sess.run(
-        #            [train_op, global_step, mle_loss],
-        #            feed_dict={context.is_train(): True})
+                _, step, loss = sess.run(
+                    [train_op, global_step, mle_loss],
+                    feed_dict={context.is_train(): True})
 
-        #        if step % 10 == 0:
-        #            print("%d: %.6f" % (step, loss))
+                if step % 10 == 0:
+                    print("%d: %.6f" % (step, loss))
 
-        #except tf.errors.OutOfRangeError:
-        #    print('Done -- epoch limit reached')
-        #finally:
-        #    coord.request_stop()
-        #coord.join(threads)
+        except tf.errors.OutOfRangeError:
+            print('Done -- epoch limit reached')
+        finally:
+            coord.request_stop()
+        coord.join(threads)
 

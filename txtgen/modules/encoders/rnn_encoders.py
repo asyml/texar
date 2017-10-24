@@ -22,8 +22,8 @@ class RNNEncoderBase(EncoderBase):
             a cell is created as specified in :attr:`hparams["rnn_cell"]`.
         embedding (optional): A `Variable` or a 2D `Tensor` (or `array`)
             of shape `[vocab_size, embedding_dim]` that contains the token
-            embeddings. Ignore if :attr:`hparams["embedding_enabled"]`
-            is `False`. If :attr:`hparams["embedding_enabled"]` is `True`:
+            embeddings. Ignore if :attr:`hparams["use_embedding"]`
+            is `False`. If :attr:`hparams["use_embedding"]` is `True`:
 
             If a `Variable`, it is directly used in encoding, and
             hyperparameters in :attr:`hparams["embedding"]` are ignored.
@@ -35,7 +35,7 @@ class RNNEncoderBase(EncoderBase):
             If not given, a new `Variable` is created as specified in
             :attr:`hparams["embedding"]`.
         vocab_size (int, optional): The vocabulary size. Required if
-            :attr:`hparams["embedding_enabled"]` is `True` (default) and
+            :attr:`hparams["use_embedding"]` is `True` (default) and
             :attr:`embedding` is not provided.
         hparams (dict, optional): Encoder hyperparameters. If it is not
             specified, the default hyperparameter setting is used. See
@@ -58,7 +58,7 @@ class RNNEncoderBase(EncoderBase):
 
         # Make embedding
         self._embedding = None
-        if self._hparams.embedding_enabled:
+        if self._hparams.use_embedding:
             if embedding is None and vocab_size is None:
                 raise ValueError(
                     "`vocab_szie` is required if embedding is enabled and "
@@ -94,12 +94,12 @@ class RNNEncoderBase(EncoderBase):
                 # (default), input to the encoder should contain integer
                 # indexes and will be used to look up the embedding vectors.
                 # If `False`, the input is directly fed into the RNN to encode.
-                "embedding_enabled": True,
+                "use_embedding": True,
 
                 # A dictionary of token embedding hyperparameters for embedding
                 # initialization.
                 #
-                # Ignored if "embedding_enabled" is `False`, or a tf.Variable
+                # Ignored if "use_embedding" is `False`, or a tf.Variable
                 # is given to `embedding` in the encoder constructor. Note that
                 # in the second case, the embedding variable might be updated
                 # outside the encoder even if "embedding.trainable" is set to
@@ -116,7 +116,7 @@ class RNNEncoderBase(EncoderBase):
         """
         return {
             "rnn_cell": layers.default_rnn_cell_hparams(),
-            "embedding_enabled": True,
+            "use_embedding": True,
             "embedding": layers.default_embedding_hparams(),
             "name": "rnn_encoder"
         }
