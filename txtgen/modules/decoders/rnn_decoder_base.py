@@ -18,32 +18,14 @@ from txtgen import context
 
 # pylint: disable=not-context-manager, too-many-arguments
 
+__all__ = [
+    "RNNDecoderBase"
+]
+
 class RNNDecoderBase(ModuleBase, TFDecoder):
     """Base class inherited by all RNN decoder classes.
 
-    Args:
-        cell (RNNCell, optional): If not specified, a cell is created as
-            specified in :attr:`hparams["rnn_cell"]`.
-        embedding (optional): A `Variable` or a 2D `Tensor` (or `array`)
-            of shape `[vocab_size, embedding_dim]` that contains the token
-            embeddings. Ignore if :attr:`hparams["embedding_enabled"]`
-            is `False`. If :attr:`hparams["embedding_enabled"]` is `True`:
-
-            If a `Variable`, it is directly used in encoding, and
-            hyperparameters in :attr:`hparams["embedding"]` are ignored.
-
-            If a `Tensor` or `array`, it is used to initialize the token
-            embedding variable. The :attr:`"initializer"` and :attr:`"dim"`
-            hyperparameters in :attr:`hparams["embedding"]` are ignored.
-
-            If not given, a new `Variable` is created as specified in
-            :attr:`hparams["embedding"]`.
-        vocab_size (int, optional): Vocabulary size. Required if
-            `hparams["embedding_enabled"]` is `False` or :attr:`embedding` is
-            not provided.
-        hparams (dict, optional): Hyperparameters. If not specified, the default
-            hyperparameter setting is used. See :attr:`default_hparams` for the
-            structure and default values.
+    See :class:`~txtgen.modules.BasicRNNDecoder` for the argumenrts.
     """
 
     def __init__(self,
@@ -65,13 +47,13 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
 
         # Make embedding
         if vocab_size is None:
-            if not self._hparams.embedding_enabled or embedding is None:
+            if not self._hparams.use_embedding or embedding is None:
                 raise ValueError(
                     "`vocab_size` is required if embedding is not enabled or "
                     "`embedding` is None.")
 
         self._embedding = None
-        if self._hparams.embedding_enabled:
+        if self._hparams.use_embedding:
             if isinstance(embedding, tf.Variable):
                 self._embedding = embedding
             else:
@@ -88,47 +70,14 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
-        The dictionary has the following structure and default values.
-
-        See :meth:`~txtgen.core.layers.default_rnn_cell_hparams` for the
-        default rnn cell hyperparameters, and
-        :meth:`~txtgen.core.layers.default_embedding_hparams` for the default
-        embedding hyperparameters.
-
-        .. code-block:: python
-
-            {
-                # A dictionary of rnn cell hyperparameters. Ignored if `cell`
-                # is given when constructing the encoder.
-                "rnn_cell": txtgen.core.layers.default_rnn_cell_hparams(),
-
-                # (bool) Whether token embedding is used.
-                "embedding_enabled": True,
-
-                # A dictionary of token embedding hyperparameters for embedding
-                # initialization. Ignored if `embedding` is given and is
-                # a tf.Variable when constructing the encoder. If `embedding`
-                # is given and is a Tensor or numpy array, the "dim" and
-                # "initializer" specs of embedding are ignored.
-                "embedding": txtgen.core.layers.default_embedding_hparams(),
-
-                # (optional) An integer. Maximum allowed number of decoding
-                # steps at training time. If `None` (default), decoding is
-                # performed until fully done, e.g., encountering the EOS token.
-                "max_decoding_length_train": None,
-
-                # (optional) An integer. Maximum allowed number of decoding
-                # steps at inference time. If `None` (default), decoding is
-                # performed until fully done, e.g., encountering the EOS token.
-                "max_decoding_length_infer": None,
-
-                # Name of the decoder.
-                "name": "rnn_decoder"
-            }
+        The hyperparameters have the same structure as in
+        :meth:`~txtgen.modules.BasicRNNDecoder.default_hparams` of
+        :class:`~txtgen.modules.BasicRNNDecoder`, except that the default
+        "name" here is "rnn_decoder".
         """
         return {
             "rnn_cell": layers.default_rnn_cell_hparams(),
-            "embedding_enabled": True,
+            "use_embedding": True,
             "embedding": layers.default_embedding_hparams(),
             "helper_train": rnn_decoder_helpers.default_helper_train_hparams(),
             "helper_infer": rnn_decoder_helpers.default_helper_infer_hparams(),
@@ -183,41 +132,18 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         return self._helper.batch_size
 
     def initialize(self, name=None):
-        """Called before any decoding iterations.
-
-        This methods must compute initial input values and initial state.
-
-        Args:
-            name (str, optional): Name scope for any created operations.
-
-        Returns:
-            `(finished, initial_inputs, initial_state)`: initial values of
-            'finished' flags, inputs and state.
-        """
+        # Inherits from TFDecoder
+        # All RNN decoder classes must implement this
         raise NotImplementedError
 
     def step(self, time, inputs, state, name=None):
-        """Called per step of decoding (but only once for dynamic decoding).
-
-        Args:
-            time: Scalar `int32` tensor. Current step number.
-            inputs: RNNCell input (possibly nested tuple of) tensor[s] for this
-                time step.
-            state: RNNCell state (possibly nested tuple of) tensor[s] from
-                previous time step.
-            name: Name scope for any created operations.
-
-        Returns:
-            `(outputs, next_state, next_inputs, finished)`: `outputs` is an
-            object containing the decoder output, `next_state` is a (structure
-            of) state tensors and TensorArrays, `next_inputs` is the tensor that
-            should be used as input for the next step, `finished` is a boolean
-            tensor telling whether the sequence is complete, for each sequence
-            in the batch.
-        """
+        # Inherits from TFDecoder
+        # All RNN decoder classes must implement this
         raise NotImplementedError
 
     def finalize(self, outputs, final_state, sequence_lengths):
+        # Inherits from TFDecoder
+        # All RNN decoder classes must implement this
         raise NotImplementedError
 
     @property

@@ -14,6 +14,11 @@ from txtgen.core import utils
 
 # pylint: disable=not-context-manager, too-many-arguments
 
+__all__ = [
+    "default_helper_train_hparams", "default_helper_infer_hparams",
+    "get_helper", "EmbeddingTrainingHelper"
+]
+
 def default_helper_train_hparams():
     """Returns default hyperparameters of an RNN decoder helper in the training
     phase.

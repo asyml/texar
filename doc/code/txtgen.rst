@@ -1,0 +1,4 @@
+Txtgen
+******
+
+.. automodule:: txtgen 

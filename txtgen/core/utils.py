@@ -13,15 +13,17 @@ from pydoc import locate
 import copy
 import numpy as np
 
+# pylint: disable=invalid-name, no-member, no-name-in-module
+
 import tensorflow as tf
-from tensorflow.python.framework import ops    # pylint: disable=E0611
-from tensorflow.python.util import nest        # pylint: disable=E0611
-from tensorflow.python.ops import rnn          # pylint: disable=E0611
+from tensorflow.python.framework import ops
+from tensorflow.python.util import nest
+from tensorflow.python.ops import rnn
 
 from txtgen import context
 
 
-MAX_SEQ_LENGTH = np.iinfo(np.int32).max # pylint: disable=no-member
+MAX_SEQ_LENGTH = np.iinfo(np.int32).max
 
 def get_class(class_name, module_paths=None):
     """Returns the class based on class name.
@@ -85,17 +87,17 @@ def get_instance(class_name, kwargs, module_paths=None):
     class_ = get_class(class_name, module_paths)
 
     # Check validity of arguments
-    class_args = set(inspect.getargspec(class_.__init__).args) # pylint: disable=E1101
+    class_args = set(inspect.getargspec(class_.__init__).args)
     for key in kwargs.keys():
         if key not in class_args:
             raise ValueError(
                 "Invalid argument for class %s.%s: %s" %
-                (class_.__module__, class_.__name__, key)) # pylint: disable=E1101
+                (class_.__module__, class_.__name__, key))
 
     return class_(**kwargs)
 
 
-def get_instance_with_redundant_kwargs( # pylint: disable=invalid-name
+def get_instance_with_redundant_kwargs(
         class_name, kwargs, module_paths=None):
     """Creates a class instance.
 
@@ -123,7 +125,7 @@ def get_instance_with_redundant_kwargs( # pylint: disable=invalid-name
 
     # Select valid arguments
     selected_kwargs = {}
-    class_args = set(inspect.getargspec(class_.__init__).args) # pylint: disable=E1101
+    class_args = set(inspect.getargspec(class_.__init__).args)
     for key, value in kwargs.items():
         if key in class_args:
             selected_kwargs[key] = value
@@ -144,18 +146,18 @@ def get_function(fn_name, module_paths=None):
     Returns:
         A function.
     """
-    fn = locate(fn_name)    # pylint: disable=invalid-name
+    fn = locate(fn_name)
     if (fn is None) and (module_paths is not None):
         for module_path in module_paths:
             # Special treatment for module 'tensorflow.train' as
             # `import tensorflow.train` fails.
             if module_path == 'tensorflow.train':
-                fn = locate('.'.join([module_path, fn_name])) # pylint: disable=invalid-name
+                fn = locate('.'.join([module_path, fn_name]))
                 if fn is not None:
                     break
             module = importlib.import_module(module_path)
             if fn_name in dir(module):
-                fn = getattr(module, fn_name) # pylint: disable=invalid-name
+                fn = getattr(module, fn_name)
                 break
 
     if fn is None:
@@ -165,7 +167,7 @@ def get_function(fn_name, module_paths=None):
     return fn
 
 
-def call_function_with_redundant_kwargs(fn, kwargs):  # pylint: disable=invalid-name
+def call_function_with_redundant_kwargs(fn, kwargs):
     """Calls a function and returns the results.
 
     Only those keyword arguments in :attr:`kwargs` that are included in the
@@ -189,7 +191,7 @@ def call_function_with_redundant_kwargs(fn, kwargs):  # pylint: disable=invalid-
     return fn(**selected_kwargs)
 
 
-def get_default_arg_values(fn): # pylint: disable=invalid-name
+def get_default_arg_values(fn):
     """Gets the arguments and respective default values of a function.
 
     Only arguments with default values are included in the output dictionary.
