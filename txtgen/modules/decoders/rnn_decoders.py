@@ -66,8 +66,8 @@ class AttentionRNNDecoderOutput(
         cell_output: The output states of RNN cell at each step. E.g., in
             :class:`~txtgen.modules.AttentionRNNDecoder`, this is a Tensor of
             shape `[batch_size, max_time, cell_output_size]`.
-        attention_scores:
-        attention_context:
+        attention_scores: TODO
+        attention_context: TODO
     """
     pass
 
@@ -223,7 +223,7 @@ class BasicRNNDecoder(RNNDecoderBase):
 
 #TODO(zhiting): complete the docstring
 class AttentionRNNDecoder(RNNDecoderBase):
-    """RNN decoder that performs sampling at each step.
+    """RNN decoder with attention mechanism.
 
     Common arguments are the same as in
     :class:`~txtgen.modules.BasicRNNDecoder`, such as
@@ -309,13 +309,14 @@ class AttentionRNNDecoder(RNNDecoderBase):
 
                 {
                     "attention": {
-                        'type': 'LuongAttention',
-                        'kwargs': {
-                            'num_units': 512,
+                        "type": "LuongAttention",
+                        "kwargs": {
+                            "num_units": 512,
+                            "probability_fn": "tensorflow.nn.softmax"
                         },
-                        'attention_layer_size': None,
-                        'alignment_history': False,
-                        'output_attention': True,
+                        "attention_layer_size": None,
+                        "alignment_history": False,
+                        "output_attention": True,
                     },
                     "rnn_cell": default_rnn_cell_hparams(),
                     "use_embedding": True,
@@ -329,21 +330,41 @@ class AttentionRNNDecoder(RNNDecoderBase):
 
             Here:
 
+            "attention" : dict
+                A dictionary of attention hyperparameters, which includes:
+
+                "type" : str
+                    Name or full path to the attention class which can be
+
+                    - Built-in attentions defined in \
+                `tensorflow.contrib.seq2seq`, including \
+                :class:`~tensorflow.contrib.seq2seq.LuongAttention`,\
+                :class:`~tensorflow.contrib.seq2seq.BahdanauAttention`,\
+                :class:`~tensorflow.contrib.seq2seq.BahdanauMonotonicAttention`\
+                and \
+                :class:`~tensorflow.contrib.seq2seq.LuongMonotonicAttention`.
+                    - User-defined attention classes in `txtgen.custom`.
+                    - External attention classes. Must provide the full path, \
+                      e.g., "my_module.MyAttentionClass".
+
+                    The default value is "LuongAttention".
+
+                "kwargs" : dict
+                    A dictionary of arguments for constructor of the attention
+                    class.
+
         """
         hparams = RNNDecoderBase.default_hparams()
         hparams["name"] = "attention_rnn_decoder"
         hparams["attention"] = {
-            'type': 'LuongAttention',
-            'kwargs': {
-                'num_units': 512,
-                'scale': False,
-                'probability_fn': "tensorflow.nn.softmax",
-                'score_mask_value': float('-inf'),
-                'name': 'LuongAttention'
+            "type": "LuongAttention",
+            "kwargs": {
+                "num_units": 512,
+                "probability_fn": "tensorflow.nn.softmax"
             },
-            'attention_layer_size': None,
-            'alignment_history': False,
-            'output_attention': True,
+            "attention_layer_size": None,
+            "alignment_history": False,
+            "output_attention": True,
         }
         return hparams
     def initialize(self, name=None):
