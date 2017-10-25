@@ -13,10 +13,46 @@ Module Base
 Connectors
 ==========
 
-.. automodule:: txtgen.modules.connectors.connector_base
+:hidden:`ConnectorBase`
+--------------------------------------
+
+.. autoclass:: txtgen.modules.ConnectorBase
     :members:
 
-.. automodule:: txtgen.modules.connectors.connectors
+:hidden:`ConstantConnector`
+--------------------------------------
+
+.. autoclass:: txtgen.modules.ConstantConnector
+    :members:
+
+:hidden:`ForwardConnector`
+--------------------------------------
+
+.. autoclass:: txtgen.modules.ForwardConnector
+    :members:
+
+:hidden:`MLPTransformConnector`
+--------------------------------------
+
+.. autoclass:: txtgen.modules.MLPTransformConnector
+    :members:
+
+:hidden:`ReparameterizedStochasticConnector`
+--------------------------------------
+
+.. autoclass:: txtgen.modules.ReparameterizedStochasticConnector
+    :members:
+
+:hidden:`StochasticConnector`
+--------------------------------------
+
+.. autoclass:: txtgen.modules.StochasticConnector
+    :members:
+
+:hidden:`ConcatConnector`
+--------------------------------------
+
+.. autoclass:: txtgen.modules.ConcatConnector
     :members:
 
 Encoders
@@ -37,27 +73,54 @@ Decoders
 .. autoclass:: txtgen.modules.RNNDecoderBase
     :members:
 
+:hidden:`BasicRNNDecoder`
+------------------------
+
 .. autoclass:: txtgen.modules.BasicRNNDecoder
     :members:
 
-.. autofunction:: txtgen.modules.default_helper_train_hparams
-
-.. autofunction:: txtgen.modules.default_helper_infer_hparams
-
-.. autofunction:: txtgen.modules.get_helper
-
-.. autoclass:: txtgen.modules.EmbeddingTrainingHelper
-    :members:
+:hidden:`BasicRNNDecoderOutput`
+-------------------------------
 
 .. autoclass:: txtgen.modules.BasicRNNDecoderOutput
     :members:
 
-.. autoclass:: txtgen.modules.AttentionRNNDecoderOutput
-    :members:
+:hidden:`BasicRNNDecoder`
+-------------------------
 
 .. autoclass:: txtgen.modules.BasicRNNDecoder
     :members:
 
+:hidden:`AttentionRNNDecoderOutput`
+-----------------------------------
+
+.. autoclass:: txtgen.modules.AttentionRNNDecoderOutput
+    :members:
+
+:hidden:`AttentionRNNDecoder`
+-----------------------------
+
 .. autoclass:: txtgen.modules.AttentionRNNDecoder
+    :members:
+
+:hidden:`default_helper_train_hparams`
+--------------------------------------
+
+.. autofunction:: txtgen.modules.default_helper_train_hparams
+
+:hidden:`default_helper_infer_hparams`
+--------------------------------------
+
+.. autofunction:: txtgen.modules.default_helper_infer_hparams
+
+:hidden:`get_helper`
+------------------------
+
+.. autofunction:: txtgen.modules.get_helper
+
+:hidden:`EmbeddingTrainingHelper`
+----------------------------------
+
+.. autoclass:: txtgen.modules.EmbeddingTrainingHelper
     :members:
 

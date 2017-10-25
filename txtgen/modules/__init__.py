@@ -12,7 +12,7 @@ from __future__ import print_function
 from txtgen.modules import encoders
 
 from txtgen.modules.decoders import *
+from txtgen.modules.connectors import *
 
-from txtgen.modules import connectors
 from txtgen.modules import predictors
 

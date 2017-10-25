@@ -15,6 +15,12 @@ from txtgen.modules.connectors.connector_base import ConnectorBase
 from txtgen.core.utils import get_function
 from txtgen.core.utils import get_instance
 
+__all__ = [
+    "ConstantConnector", "ForwardConnector", "MLPTransformConnector",
+    "ReparameterizedStochasticConnector", "StochasticConnector",
+    "ConcatConnector"
+]
+
 # pylint: disable=too-many-locals, arguments-differ, too-many-arguments
 def _assert_same_size(outputs, output_size):
     """Check if outputs match output_size
