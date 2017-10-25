@@ -15,13 +15,17 @@ from txtgen.modules.connectors.connector_base import ConnectorBase
 from txtgen.core.utils import get_function
 from txtgen.core.utils import get_instance
 
+# pylint: disable=too-many-locals, arguments-differ, too-many-arguments
+
+#TODO(zhiting): updates docs to not restrict to "output decoder state", but
+# instead output Tensors of any specified size
+
 __all__ = [
     "ConstantConnector", "ForwardConnector", "MLPTransformConnector",
     "ReparameterizedStochasticConnector", "StochasticConnector",
     "ConcatConnector"
 ]
 
-# pylint: disable=too-many-locals, arguments-differ, too-many-arguments
 def _assert_same_size(outputs, output_size):
     """Check if outputs match output_size
 
@@ -108,16 +112,27 @@ class ConstantConnector(ConnectorBase):
 
     @staticmethod
     def default_hparams():
-        """Returns a dictionary of default hyperparameters:
+        """Returns a dictionary of default hyperparameters.
 
-        .. code-block:: python
+        Returns:
+            .. code-block:: python
 
-            {
-                # The constant value that the decoder initial state has.
-                "value": 0.,
-                # The name of the connector.
-                "name": "constant_connector"
-            }
+                {
+                    "value": 0.,
+                    "name": "constant_connector"
+                }
+
+            Here:
+
+            "value": float
+                The constant value that the output tensor has.
+
+                The default value is `0.`.
+
+            "name": str
+                Name of the connector.
+
+                The default value is "constant_connector".
         """
         return {
             "value": 0.,
@@ -168,11 +183,19 @@ class ForwardConnector(ConnectorBase):
     def default_hparams():
         """Returns a dictionary of default hyperparameters.
 
-        .. code-block:: python
+        Returns:
+            .. code-block:: python
 
-            {
-                # The name of the connector.
-                "name": "forward_connector"
+                {
+                    "name": "forward_connector"
+                }
+
+            Here:
+
+            "name" : str
+                Name of the connector.
+
+                The default value is "forward_connector".
         """
         return {
             "name": "forward_connector"
@@ -220,21 +243,35 @@ class MLPTransformConnector(ConnectorBase):
 
     @staticmethod
     def default_hparams():
-        """Returns a dictionary of hyperparameters with default values:
+        """Returns a dictionary of hyperparameters with default values.
 
-        .. code-block:: python
+        Returns:
+            .. code-block:: python
 
-            {
-                # The name or full path of the activation function applied to
-                # the outputs of the MLP layer. E.g., the name of built-in
-                # functions defined in module `tensorflow` or `tensorflow.nn`,
-                # or user-defined functions defined in `user.custom`, or a
-                # full path like "my_module.my_activation_fn".
-                "activation_fn": "tensorflow.identity",
+                {
+                    "activation_fn": "tensorflow.identity",
+                    "name": "mlp_connector"
+                }
 
-                # Name of the connector.
-                "name": "mlp_connector"
-            }
+            Here:
+
+            "activation_fn" : str
+                The name or full path to the activation function applied to
+                the outputs of the MLP layer. The activation functions can be:
+
+                - Built-in activation functions defined in `tensorflow` or \
+                `tensorflow.nn`, e.g., :meth:`tensorflow.identity`.
+                - User-defined activation functions in `txtgen.custom`.
+                - External activation functions. Must provide the full path, \
+                  e.g., "my_module.my_activation_fn".
+
+                The default value is "tensorflow.identity", i.e., the MLP
+                transformation is linear.
+
+            "name" : str
+                Name of the connector.
+
+                The default value is "mlp_connector".
         """
         return {
             "activation_fn": "tensorflow.identity",
@@ -287,10 +324,15 @@ class ReparameterizedStochasticConnector(ConnectorBase):
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
-        .. code-block:: python
+        Returns:
+            .. code-block:: python
 
-            {
-            }
+                {
+                }
+
+            Here:
+
+
         """
         return {
             "distribution": {
@@ -394,10 +436,14 @@ class StochasticConnector(ConnectorBase):
         """Returns a dictionary of hyperparameters with default values.
 
         Returns:
-            ```python
-            {
-            }
-            ```
+            .. code-block:: python
+
+                {
+                }
+
+            Here:
+
+
         """
         return {
             "distribution": {
@@ -499,10 +545,14 @@ class ConcatConnector(ConnectorBase):
         """Returns a dictionary of hyperparameters with default values.
 
         Returns:
-            ```python
-            {
-            }
-            ```
+            .. code-block:: python
+
+                {
+                }
+
+            Here:
+
+
         """
         return {
             "activation_fn": "tensorflow.identity",
