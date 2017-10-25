@@ -465,7 +465,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
             outputs=logits,
             state=wrapper_state,
             sample_ids=sample_ids)
-        # there should be some problem
+        # there should be some problem #TODO(zhiting): ??
         outputs = AttentionRNNDecoderOutput(
             logits, sample_ids, wrapper_outputs,
             attention_scores, attention_context)
