@@ -13,5 +13,7 @@ from txtgen import modules
 from txtgen import core
 from txtgen import losses
 from txtgen import models
+from txtgen import data
+from txtgen import evals
 from txtgen import *
 

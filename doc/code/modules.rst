@@ -9,59 +9,16 @@ Module Base
 .. automodule:: txtgen.modules.module_base
     :members:
 
-
-Connectors
-==========
-
-:hidden:`ConnectorBase`
---------------------------------------
-
-.. autoclass:: txtgen.modules.ConnectorBase
-    :members:
-
-:hidden:`ConstantConnector`
---------------------------------------
-
-.. autoclass:: txtgen.modules.ConstantConnector
-    :members:
-
-:hidden:`ForwardConnector`
---------------------------------------
-
-.. autoclass:: txtgen.modules.ForwardConnector
-    :members:
-
-:hidden:`MLPTransformConnector`
---------------------------------------
-
-.. autoclass:: txtgen.modules.MLPTransformConnector
-    :members:
-
-:hidden:`ReparameterizedStochasticConnector`
---------------------------------------
-
-.. autoclass:: txtgen.modules.ReparameterizedStochasticConnector
-    :members:
-
-:hidden:`StochasticConnector`
---------------------------------------
-
-.. autoclass:: txtgen.modules.StochasticConnector
-    :members:
-
-:hidden:`ConcatConnector`
---------------------------------------
-
-.. autoclass:: txtgen.modules.ConcatConnector
-    :members:
-
 Encoders
 ========
 
-.. automodule:: txtgen.modules.encoders.encoder_base
+.. autoclass:: txtgen.modules.EncoderBase
     :members:
 
-.. automodule:: txtgen.modules.encoders.rnn_encoders
+.. autoclass:: txtgen.modules.RNNEncoderBase
+    :members:
+
+.. autoclass:: txtgen.modules.ForwardRNNEncoder
     :members:
 
 Decoders
@@ -124,3 +81,47 @@ Decoders
 .. autoclass:: txtgen.modules.EmbeddingTrainingHelper
     :members:
 
+Connectors
+==========
+
+:hidden:`ConnectorBase`
+--------------------------------------
+
+.. autoclass:: txtgen.modules.ConnectorBase
+    :members:
+
+:hidden:`ConstantConnector`
+--------------------------------------
+
+.. autoclass:: txtgen.modules.ConstantConnector
+    :members:
+
+:hidden:`ForwardConnector`
+--------------------------------------
+
+.. autoclass:: txtgen.modules.ForwardConnector
+    :members:
+
+:hidden:`MLPTransformConnector`
+--------------------------------------
+
+.. autoclass:: txtgen.modules.MLPTransformConnector
+    :members:
+
+:hidden:`ReparameterizedStochasticConnector`
+--------------------------------------
+
+.. autoclass:: txtgen.modules.ReparameterizedStochasticConnector
+    :members:
+
+:hidden:`StochasticConnector`
+--------------------------------------
+
+.. autoclass:: txtgen.modules.StochasticConnector
+    :members:
+
+:hidden:`ConcatConnector`
+--------------------------------------
+
+.. autoclass:: txtgen.modules.ConcatConnector
+    :members:

@@ -14,6 +14,10 @@ from txtgen.core import layers
 
 # pylint: disable=not-context-manager, too-many-arguments
 
+__all__ = [
+    "RNNEncoderBase", "ForwardRNNEncoder"
+]
+
 class RNNEncoderBase(EncoderBase):
     """Base class for all RNN encoder classes.
 
