@@ -1,5 +1,22 @@
 # Open library of text generation #
 
+# Install
+
+  * Run the following: 
+    ```bash
+    pip install [--user] -e .    
+    ```
+
+  * After installation, the library is ready to use. E.g., 
+    - Run the example code in `./examples`:
+      ```bash
+      python ./examples/language_model.py
+      ```
+    - Run unit tests, e.g.,
+      ```bash
+      python ./txtgen/modules/encoders/rnn_encoders_test.py
+      ```
+
 # Code style
 
   * Follow [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html)
