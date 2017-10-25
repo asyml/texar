@@ -7,6 +7,7 @@ from __future__ import division
 from __future__ import print_function
 
 # pylint: disable=no-name-in-module, too-many-arguments, too-many-locals
+# pylint: disable=not-context-manager
 
 import collections
 
@@ -122,8 +123,8 @@ class BasicRNNDecoder(RNNDecoderBase):
                     "use_embedding": True,
                     "embedding": default_embedding_hparams(),
                     "helper_train": default_helper_train_hparams(),
-                    "max_decoding_length_train": None,
                     "helper_infer": default_helper_infer_hparams(),
+                    "max_decoding_length_train": None,
                     "max_decoding_length_infer": None,
                     "name": "basic_rnn_decoder"
                 }
@@ -160,18 +161,18 @@ class BasicRNNDecoder(RNNDecoderBase):
                 The default value is defined in
                 :meth:`~txtgen.modules.default_helper_train_hparams`
 
-            "max_decoding_length_train": int or None
-                Maximum allowed number of decoding steps in training phase.
-
-                The default value is `None`, which means decoding is
-                performed until fully done, e.g., encountering the <EOS> token.
-
             "helper_infer": dict
                 A dictionary of :class:`Helper` hyperparameters. The
                 helper is used in inference phase.
 
                 The default value is defined in
                 :meth:`~txtgen.modules.default_helper_infer_hparams`
+
+            "max_decoding_length_train": int or None
+                Maximum allowed number of decoding steps in training phase.
+
+                The default value is `None`, which means decoding is
+                performed until fully done, e.g., encountering the <EOS> token.
 
             "max_decoding_length_infer" : int or None
                 Maximum allowed number of decoding steps in inference phase.
@@ -270,7 +271,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
                             # automatically, or manullay specified by users?
                             # If the latter, move this to hparams.
                  attention_keys, #TODO(zhiting): Please add docstring above
-                 attention_values,
+                 attention_values, #TODO(zhiting): this is not used?
                  attention_values_length,
                  reverse_scores_lengths=None, #TODO(zhiting): this is not used?
                  cell_input_fn=None,
@@ -280,19 +281,34 @@ class AttentionRNNDecoder(RNNDecoderBase):
                  hparams=None):
         RNNDecoderBase.__init__(self, cell, embedding, vocab_size, hparams)
 
-        #TODO(zhiting)
-        att_params = hparams['attention']
-        attention_class = hparams['attention']['class'] #LuongAttention
-        attention_kwargs = hparams['attention']['params']
-        attention_kwargs['num_units'] = n_hidden
-        attention_kwargs['memory_sequence_length'] = attention_values_length
-        attention_kwargs['memory'] = attention_keys
-        attention_modules = ['txtgen.custom', 'tensorflow.contrib.seq2seq']
-        attention_mechanism = get_instance(attention_class, attention_kwargs, attention_modules)
+        attn_hparams = hparams['attention']
+        attn_kwargs = attn_hparams['kwargs']
+        attn_kwargs.update({
+            "memory_sequence_length": attention_values_length,
+            "memory": attention_keys})
+        attn_modules = ['txtgen.custom', 'tensorflow.contrib.seq2seq']
+        # Use variable_scope to ensure all trainable variables created in
+        # the attention mechanism  are collected
+        with tf.variable_scope(self.variable_scope):
+            attention_mechanism = get_instance(
+                attn_hparams["type"], attn_kwargs, attn_modules)
 
-        wrapper_params = hparams['attention']['wrapper_params']
-        attn_cell = AttentionWrapper(self._cell, attention_mechanism, **wrapper_params)
-        self._cell = attn_cell
+        atten_cell_kwargs = {
+            "attention_layer_size": attn_hparams["attention_layer_size"],
+            "alignment_history": attn_hparams["alignment_history"],
+            "output_attention": attn_hparams["output_attention"],
+        }
+        # Use variable_scope to ensure all trainable variables created in
+        # AttentionWrapper are collected
+        with tf.variable_scope(self.variable_scope):
+            attn_cell = AttentionWrapper(
+                self._cell,
+                attention_mechanism,
+                cell_input_fn=cell_input_fn,
+                **atten_cell_kwargs)
+            self._cell = attn_cell
+
+        #TODO(zhiting): unit test on the number of trainable variables
 
     @staticmethod
     def default_hparams():
@@ -318,12 +334,14 @@ class AttentionRNNDecoder(RNNDecoderBase):
                         "alignment_history": False,
                         "output_attention": True,
                     },
+                    # The following hyperparameters are common with
+                    # `BasicRNNDecoder`
                     "rnn_cell": default_rnn_cell_hparams(),
                     "use_embedding": True,
                     "embedding": default_embedding_hparams(),
                     "helper_train": default_helper_train_hparams(),
-                    "max_decoding_length_train": None,
                     "helper_infer": default_helper_infer_hparams(),
+                    "max_decoding_length_train": None,
                     "max_decoding_length_infer": None,
                     "name": "attention_rnn_decoder"
                 }
@@ -351,7 +369,65 @@ class AttentionRNNDecoder(RNNDecoderBase):
 
                 "kwargs" : dict
                     A dictionary of arguments for constructor of the attention
-                    class.
+                    class. Any arguments besides the ones in the default
+                    value are allowed, except :attr:`memory` and
+                    :attr:`memory_sequence_length` (if exist) which are provided
+                    by :attr:`attention_keys` and
+                    :attr:`attention_values_length` in the decoder's
+                    constructor, respectively.
+
+                    The default value is:
+
+                        .. code-block:: python
+
+                            {
+                                "num_units": 512,
+                                "probability_fn": "tensorflow.nn.softmax"
+                            }
+
+                        - :attr:`"num_units"` is the depth of the attention \
+                        mechanism.
+
+                        - :attr:`"probability_fn"` is the name or full path to \
+                        a callable that converts the score to probabilities. \
+                        The default callable is :meth:`tf.nn.softmax`. Other \
+                        options include :meth:`tf.contrib.seq2seq.hardmax` \
+                        and :meth:`tf.contrib.sparsemax.sparsemax`. \
+                        Its signature should be: \
+                        `probabilities = probability_fn(score)`
+
+                    "attention_layer_size" : int or None
+                        The depth of the attention (output) layer. If `None`
+                        (default), use the context as attention at each time
+                        step. Otherwise, feed the context and cell output into
+                        the attention layer to generate attention at each time
+                        step.
+
+                        The default value is `None`.
+
+                        TODO(zhiting): what does this mean?
+
+                    "alignment_history": bool
+                        whether to store alignment history from all time steps
+                        in the final output state.
+
+                        The default value is `False`.
+
+                        TODO(zhiting): what does this mean?
+
+                    "output_attention": bool
+                        If `True` (default), the output at each time step is
+                        the attention value. This is the behavior of Luong-style
+                        attention mechanisms. If `False`, the output at each
+                        time step is the output of `cell`.  This is the
+                        beahvior of Bhadanau-style attention mechanisms.
+                        In both cases, the `attention` tensor is propagated to
+                        the next time step via the state and is used there.
+                        This flag only controls whether the attention mechanism
+                        is propagated up to the next cell in an RNN stack or to
+                        the top RNN output.
+
+                        The default value is `True`.
 
         """
         hparams = RNNDecoderBase.default_hparams()
@@ -401,13 +477,13 @@ class AttentionRNNDecoder(RNNDecoderBase):
 
     @property
     def output_size(self):
-        statesize = self.cell.state_size
+        state_size = self.cell.state_size
         return AttentionRNNDecoderOutput(
             rnn_output=self._vocab_size,
             sample_id=tensor_shape.TensorShape([]),
             cell_output=self.cell._cell.output_size,
-            attention_scores=statesize.alignments,
-            attention_context=statesize.attention)
+            attention_scores=state_size.alignments,
+            attention_context=state_size.attention)
 
     @property
     def output_dtype(self):
