@@ -13,7 +13,7 @@ from tensorflow.python.framework import ops
 
 # We shall wrap all these modules
 from txtgen.data import database
-from txtgen.modules.connectors import connectors
+from txtgen.modules import ConstantConnector
 from txtgen.modules import BasicRNNDecoder, get_helper
 from txtgen.losses import mle_losses
 from txtgen.core import optimization as opt
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     decoder = BasicRNNDecoder(vocab_size=text_db.vocab.vocab_size)
 
     # Build connector, which simply feeds zero state to decoder as initial state
-    connector = connectors.ConstantConnector(decoder.state_size)
+    connector = ConstantConnector(decoder.state_size)
 
     # Build helper used in training.
     # We shall probably improve the interface here.

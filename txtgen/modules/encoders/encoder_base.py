@@ -9,6 +9,9 @@ from __future__ import print_function
 
 from txtgen.modules.module_base import ModuleBase
 
+__all__ = [
+    "EncoderBase"
+]
 
 class EncoderBase(ModuleBase):
     """Base class inherited by all encoder classes.

@@ -14,8 +14,12 @@ from tensorflow.contrib.rnn import LSTMStateTuple
 from txtgen.modules.encoders.encoder_base import EncoderBase
 from txtgen.core import layers
 
+#TODO(zhiting): this is incomplete
+__all__ = [
+    #"HierarchicalEncoder"
+]
 
-class HierarchicalForwardRNNEncoder(RNNEncoderBase):
+class HierarchicalEncoder(EncoderBase):
     """One directional forward RNN encoder with 2 levels.
 
     Useful for encoding structured long sequences, e.g. paragraphs, dialogs,
