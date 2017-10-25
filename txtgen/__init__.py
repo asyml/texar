@@ -10,5 +10,8 @@ from __future__ import print_function
 # pylint: disable=wildcard-import
 
 from txtgen import modules
-
+from txtgen import core
+from txtgen import losses
+from txtgen import models
+from txtgen import *
 

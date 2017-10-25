@@ -9,6 +9,9 @@ from __future__ import print_function
 
 from txtgen.modules.module_base import ModuleBase
 
+__all__ = [
+    "ConnectorBase"
+]
 
 class ConnectorBase(ModuleBase):
     """Base class inherited by all connector classes. A connector is to
