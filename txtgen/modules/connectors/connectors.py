@@ -124,12 +124,12 @@ class ConstantConnector(ConnectorBase):
 
             Here:
 
-            "value": float
+            "value" : float
                 The constant value that the output tensor has.
 
                 The default value is `0.`.
 
-            "name": str
+            "name" : str
                 Name of the connector.
 
                 The default value is "constant_connector".
@@ -306,8 +306,8 @@ class ReparameterizedStochasticConnector(ConnectorBase):
     """Samples from a distribution with reparameterization trick and transforms
     samples into specified size.
 
-    Reparameterization allows gradients to be propagated through the
-    stochastic samples. Used in, e.g., Variational Autoencoders (VAEs).
+    Reparameterization allows gradients to be propagated through the stochastic
+    samples. Used in, e.g., Variational Autoencoders (VAEs).
 
     Args:
         output_size: Size of output. Can be an int, a tuple of int, a
@@ -328,9 +328,46 @@ class ReparameterizedStochasticConnector(ConnectorBase):
             .. code-block:: python
 
                 {
+                    "distribution": {
+                        "type": "MultivariateNormalDiag",
+                        "kwargs": {}
+                    },
+                    "activation_fn": "tensorflow.identity",
+                    "name": "reparameterized_stochastic_connector"
                 }
 
             Here:
+
+            "distribution" : dict
+                A dictionary of distribution parameters, which includes:
+                "type" : str
+                Name or path to the distribution.
+
+                The default value is "MultivariateNormalDiag"
+
+                "kwargs" : dict
+                Keyword arguments of the distribution class specified in
+                :attr:`distribution_type`.
+
+                The default value is {}
+
+            "activation_fn" : str
+                The name or full path to the activation function applied to
+                the outputs of the MLP layer. The activation functions can be:
+
+                - Built-in activation functions defined in `tensorflow` or \
+                `tensorflow.nn`, e.g., :meth:`tensorflow.identity`.
+                - User-defined activation functions in `txtgen.custom`.
+                - External activation functions. Must provide the full path, \
+                  e.g., "my_module.my_activation_fn".
+
+                The default value is "tensorflow.identity", i.e., the MLP
+                transformation is linear.
+
+            "name" : str
+                Name of the connector.
+
+                The default value is "reparameterized_stochastic_connector".
 
 
         """
@@ -369,8 +406,8 @@ class ReparameterizedStochasticConnector(ConnectorBase):
             transform (bool): Whether to perform MLP transformation of the
                 samples. If `False`, the shape of a sample must match the
                 :attr:`output_size`.
-            num_samples (int or scalar int Tensor, optional): Number of samples to
-                generate. `None` is required in training stage.
+            num_samples (int or scalar int Tensor, optional): Number of samples
+                to generate. `None` is required in training stage.
 
         Returns:
             If `num_samples`==None, returns a Tensor of shape `[batch_size x
@@ -420,11 +457,16 @@ class ReparameterizedStochasticConnector(ConnectorBase):
         return output
 
 class StochasticConnector(ConnectorBase):
-    """Samples decoder initial state from a distribution
-    defined by the inputs. (disable reparameterize trick)
+    """Samples from a distribution and transforms samples into specified size
 
-    Used in, e.g., variational autoencoders, adversarial autoencoders, and other
-    models.
+    Reparameterization is disabled, and thus the gradients cannot propagate
+    through the stochastic samples
+
+    Args:
+        output_size: Size of output. Can be an int, a tuple of int, a
+            Tensorshape, or a tuple of TensorShapes. For example, to transform
+            to decoder state size, set `output_size=decoder.cell.state_size`.
+        hparams (dict): Hyperparameters of the connector.
     """
 
     def __init__(self, output_size, hparams=None):
@@ -439,15 +481,51 @@ class StochasticConnector(ConnectorBase):
             .. code-block:: python
 
                 {
+                    "distribution": {
+                        "type": "tf.contrib.distribution.Categorical",
+                        "kwargs": {}
+                    },
+                    "activation_fn": "tensorflow.identity",
+                    "name": "stochastic_connector"
                 }
 
             Here:
 
+            "distribution" : dict
+                A disctionary of distribution parameters, which includes:
+                "type" : str
+                Name or path to the distribution.
+
+                The default value is "Categorical"
+
+                "kwargs" : dict
+                Keyword arguments of the distribution class specified in
+                :attr:`distribution_type`.
+
+                The default value is {}
+
+            "activation_fn" : str
+                The name or full path to the activation function applied to
+                the outputs of the MLP layer. The activation functions can be:
+
+                - Built-in activation functions defined in `tensorflow` or \
+                `tensorflow.nn`, e.g., :meth:`tensorflow.identity`.
+                - User-defined activation functions in `txtgen.custom`.
+                - External activation functions. Must provide the full path, \
+                  e.g., "my_module.my_activation_fn".
+
+                The default value is "tensorflow.identity", i.e., the MLP
+                transformation is linear.
+
+            "name" : str
+                Name of the connector.
+
+                The default value is "stochastic_connector".
 
         """
         return {
             "distribution": {
-                "type": "tf.contrib.distributions.Categorical",
+                "type": "Categorical",
                 "kwargs": {}
                 },
             "activation_fn": "tensorflow.identity",
@@ -531,10 +609,15 @@ class StochasticConnector(ConnectorBase):
         return output
 
 class ConcatConnector(ConnectorBase):
-    """ Concatenate multiple connectors into one connector.
-    Used in, e.g., semi-supervised variational autoencoders,
-    disentangled representation learning, and other
-    models.
+    """ Concatenate multiple connectors into one connector. Used in, e.g.,
+    semi-supervised variational autoencoders, disentangled representation
+    learning, and other models.
+
+    Args:
+        output_size: Size of output. Can be an int, a tuple of int, a
+            Tensorshape, or a tuple of TensorShapes. For example, to transform
+            to decoder state size, set `output_size=decoder.cell.state_size`.
+        hparams (dict): Hyperparameters of the connector.
     """
 
     def __init__(self, output_size, hparams=None):
@@ -548,9 +631,29 @@ class ConcatConnector(ConnectorBase):
             .. code-block:: python
 
                 {
+                    "activation_fn": "tensorflow.identity",
+                    "name": "concat_connector"
                 }
 
             Here:
+
+            "activation_fn" : str
+                The name or full path to the activation function applied to
+                the outputs of the MLP layer. The activation functions can be:
+
+                - Built-in activation functions defined in `tensorflow` or \
+                `tensorflow.nn`, e.g., :meth:`tensorflow.identity`.
+                - User-defined activation functions in `txtgen.custom`.
+                - External activation functions. Must provide the full path, \
+                  e.g., "my_module.my_activation_fn".
+
+                The default value is "tensorflow.identity", i.e., the MLP
+                transformation is linear.
+
+            "name" : str
+                Name of the connector.
+
+                The default value is "concat_connector".
 
 
         """
