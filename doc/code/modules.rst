@@ -30,12 +30,6 @@ Decoders
 .. autoclass:: txtgen.modules.RNNDecoderBase
     :members:
 
-:hidden:`BasicRNNDecoder`
-------------------------
-
-.. autoclass:: txtgen.modules.BasicRNNDecoder
-    :members:
-
 :hidden:`BasicRNNDecoderOutput`
 -------------------------------
 
@@ -109,7 +103,7 @@ Connectors
     :members:
 
 :hidden:`ReparameterizedStochasticConnector`
---------------------------------------
+--------------------------------------------
 
 .. autoclass:: txtgen.modules.ReparameterizedStochasticConnector
     :members:
