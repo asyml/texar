@@ -17,9 +17,6 @@ from txtgen.core.utils import get_instance
 
 # pylint: disable=too-many-locals, arguments-differ, too-many-arguments
 
-#TODO(zhiting): updates docs to not restrict to "output decoder state", but
-# instead output Tensors of any specified size
-
 __all__ = [
     "ConstantConnector", "ForwardConnector", "MLPTransformConnector",
     "ReparameterizedStochasticConnector", "StochasticConnector",
