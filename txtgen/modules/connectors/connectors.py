@@ -339,17 +339,37 @@ class ReparameterizedStochasticConnector(ConnectorBase):
             Here:
 
             "distribution" : dict
-                A dictionary of distribution parameters, which includes:
-                "type" : str
-                Name or path to the distribution.
+                A dictionary of distribution parameters. This is ignored if
+                which includes:
 
-                The default value is "MultivariateNormalDiag"
+                "type" : str
+                    Name or path to a
+                    :class:`~tensorflow.contrib.distributions.Distribution`
+                    class. The distribution must be reparameterizable, i.e.,
+                    `reparameterization_type = FULLY_REPARAMETERIZED`.
+                    The distribution class can be
+
+                    - Built-in class defined in \
+                      `tensorflow.contrib.distributions` or \
+                      `tensorflow.distributions`.
+                    - User-defined distribution classes in `txtgen.custom` that\
+                      inherit \
+                      :class:`~tensorflow.contrib.distributions.Distribution`.
+                    - External distribution classes that inherit
+                      :class:`~tensorflow.contrib.distributions.Distribution`. \
+                      Must provide the full path, \
+                      e.g., "my_module.MyDistributionClass".
+
+                    The default value is "MultivariateNormalDiag", which
+                    corresponds to the
+                    :class:`~tensorflow.contrib.distributions.MultivariateNormalDiag`
+                    class.
 
                 "kwargs" : dict
-                Keyword arguments of the distribution class specified in
-                :attr:`distribution_type`.
+                    A dictionary of arguments for constructor of the
+                    distribution class.
 
-                The default value is {}
+                    The default value is `{}`.
 
             "activation_fn" : str
                 The name or full path to the activation function applied to
@@ -372,7 +392,7 @@ class ReparameterizedStochasticConnector(ConnectorBase):
 
         """
         return {
-            "distribution": {
+            "distribution": { #TODO(zhiting): is this hparam necessary ?
                 "type": "MultivariateNormalDiag",
                 "kwargs": {}
             },
@@ -382,7 +402,7 @@ class ReparameterizedStochasticConnector(ConnectorBase):
 
     def _build(self,
                distribution=None,
-               distribution_type=None,
+               distribution_type=None, #TODO(zhiting): add default value?
                distribution_kwargs=None,
                transform=True,
                num_samples=None):
