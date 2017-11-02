@@ -99,12 +99,13 @@ def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
 
 
 class ConstantConnector(ConnectorBase):
-    """Creates decoder initial state that has a constant value.
+    """Creates a Tensor of (nested) tuple of Tensors that contains a constant
+    value.
 
     Args:
-        output_size: Size of state of the decoder cell. Can be an
-            Integer, a Tensorshape, or a tuple of Integers or TensorShapes.
-            This can typically be obtained by :attr:`decoder.state_size`.
+        output_size: Size of output. Can be an int, a tuple of int, a
+            Tensorshape, or a tuple of TensorShapes. For example, to transform
+            to decoder state size, set `output_size=decoder.cell.state_size`.
         hparams (dict): Hyperparameters of the connector.
     """
     def __init__(self, output_size, hparams=None):
@@ -125,7 +126,7 @@ class ConstantConnector(ConnectorBase):
             Here:
 
             "value" : float
-                The constant value that the output tensor has.
+                The constant value that the output tensor(s) has.
 
                 The default value is `0.`.
 
@@ -139,18 +140,19 @@ class ConstantConnector(ConnectorBase):
             "name": "constant_connector"
         }
 
-    def _build(self, batch_size, value=None):   # pylint: disable=W0221
-        """Creates decoder initial state that has the given value.
+    def _build(self, batch_size, value=None):
+        """Creates output tensor(s) that has the given value.
 
         Args:
             batch_size (int or scalar int Tensor): The batch size.
             value (python number or scalar Tensor, optional): The value that
-                the decoder initial state has. If `None` (default), the decoder
-                initial state is set to :attr:`hparams.value`.
+                the output tensor(s) has. If `None` (default), the decoder
+                initial state is set to :attr:`hparams["value"]`.
 
         Returns:
-            A (structure of) tensor with the same structure of the decoder
-            state, and with the given value.
+            A (structure of) tensor with the structure specified by
+            :attr:`output_size`, and with the value speicified by
+            :attr:`value` and :attr:`hparams["value"]`.
         """
         value_ = value
         if value_ is None:
@@ -162,18 +164,18 @@ class ConstantConnector(ConnectorBase):
 
 
 class ForwardConnector(ConnectorBase):
-    """Directly forwards input (structure of) tensors to decoder.
+    """Optionally transforms the structure of input tensor(s).
 
-    The input must have the same structure with the decoder state,
-    or must have the same number of elements and be re-packable into the decoder
-    state structure. Note that if input is or contains a `dict` instance, the
-    keys will be sorted to pack in deterministic order (See
+    The input must have the same structure with the :attr:`output_size`,
+    or must have the same number of elements and be re-packable into the
+    structure of :attr:`output_size`. Note that if input is or contains a
+    `dict` instance, the keys will be sorted to pack in deterministic order (See
     :meth:`~tensorflow.python.util.nest.pack_sequence_as` for more details).
 
     Args:
-        output_size: Size of state of the decoder cell. Can be an
-            Integer, a Tensorshape , or a tuple of Integers or TensorShapes.
-            This can typically be obtained by :attr:`decoder.cell.state_size`.
+        output_size: Size of output. Can be an int, a tuple of int, a
+            Tensorshape, or a tuple of TensorShapes. For example, to transform
+            to decoder state size, set `output_size=decoder.cell.state_size`.
     """
 
     def __init__(self, output_size):
@@ -228,13 +230,13 @@ class ForwardConnector(ConnectorBase):
 
 
 class MLPTransformConnector(ConnectorBase):
-    """Transforms inputs with an MLP layer. Takes the outputs as the decoder
-    initial state.
+    """Transforms inputs with an MLP layer and packs the results into the
+    structure as specified in :attr:`output_size`.
 
     Args:
-        output_size: Size of state of the decoder cell. Can be an
-            Integer, a Tensorshape , or a tuple of Integers or TensorShapes.
-            This can typically be obtained by :attr:`decoder.cell.state_size`.
+        output_size: Size of output. Can be an int, a tuple of int, a
+            Tensorshape, or a tuple of TensorShapes. For example, to transform
+            to decoder state size, set `output_size=decoder.cell.state_size`.
         hparams (dict): Hyperparameters of the connector.
     """
 
@@ -303,7 +305,7 @@ class MLPTransformConnector(ConnectorBase):
 
 
 class ReparameterizedStochasticConnector(ConnectorBase):
-    """Samples from a distribution with reparameterization trick and transforms
+    """Samples from a distribution with reparameterization trick, and transforms
     samples into specified size.
 
     Reparameterization allows gradients to be propagated through the stochastic
@@ -319,7 +321,6 @@ class ReparameterizedStochasticConnector(ConnectorBase):
     def __init__(self, output_size, hparams=None):
         ConnectorBase.__init__(self, output_size, hparams)
 
-    #TODO(zhiting): add docs
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
@@ -492,7 +493,6 @@ class StochasticConnector(ConnectorBase):
     def __init__(self, output_size, hparams=None):
         ConnectorBase.__init__(self, output_size, hparams)
 
-    #TODO(zhiting): add docs
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
@@ -551,8 +551,6 @@ class StochasticConnector(ConnectorBase):
             "activation_fn": "tensorflow.identity",
             "name": "stochastic_connector"
         }
-
-    # pylint: disable=arguments-differ
 
     def _build(self,
                distribution=None,
