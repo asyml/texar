@@ -16,7 +16,7 @@ from tensorflow.contrib.seq2seq import AttentionWrapper
 from tensorflow.python.framework import tensor_shape, dtypes
 
 from txtgen.modules.decoders.rnn_decoder_base import RNNDecoderBase
-from txtgen.core.utils import get_instance
+from txtgen.core.utils import get_instance, get_class
 
 __all__ = [
     "BasicRNNDecoderOutput", "AttentionRNNDecoderOutput",
@@ -67,8 +67,9 @@ class AttentionRNNDecoderOutput(
         cell_output: The output states of RNN cell at each step. E.g., in
             :class:`~txtgen.modules.AttentionRNNDecoder`, this is a Tensor of
             shape `[batch_size, max_time, cell_output_size]`.
-        attention_scores: TODO
-        attention_context: TODO
+        attention_scores: A single or tuple of `Tensor`(s) containing the alignments
+            emitted at the previous time step for each attention mechanism.
+        attention_context: The attention emitted at the previous time step.
     """
     pass
 
@@ -222,7 +223,6 @@ class BasicRNNDecoder(RNNDecoderBase):
         return BasicRNNDecoderOutput(
             rnn_output=dtypes.float32, sample_id=dtypes.int32)
 
-#TODO(zhiting): complete the docstring
 class AttentionRNNDecoder(RNNDecoderBase):
     """RNN decoder with attention mechanism.
 
@@ -231,10 +231,11 @@ class AttentionRNNDecoder(RNNDecoderBase):
     :attr:`cell`, :attr:`embedding`, and :attr:`vocab_size`.
 
     Args:
-        attention_keys (): TODO
-        attention_values (): TODO
-        attention_value_length (): TODO
-
+        memory: The memory to query; usually the output of an RNN encoder.  This
+            tensor should be shaped `[batch_size, max_time, ...]`.
+        memory_sequence_length (optional): Sequence lengths for the batch entries
+            in memory.  If provided, the memory tensor rows are masked with zeros
+            for values past the respective sequence lengths.
         cell_input_fn (callable, optional): A callable that produces RNN cell
             inputs. If `None` (default), the default is used:
             `lambda inputs, attention: tf.concat([inputs, attention], -1)`,
@@ -267,26 +268,26 @@ class AttentionRNNDecoder(RNNDecoderBase):
 
     """
     def __init__(self,
-                 n_hidden,  #TODO(zhiting): Is this typically inferred
-                            # automatically, or manullay specified by users?
-                            # If the latter, move this to hparams.
-                 attention_keys, #TODO(zhiting): Please add docstring above
-                 attention_values, #TODO(zhiting): this is not used?
-                 attention_values_length,
-                 reverse_scores_lengths=None, #TODO(zhiting): this is not used?
+                 memory,
+                 memory_sequence_length=None,
                  cell_input_fn=None,
                  cell=None,
                  embedding=None,
                  vocab_size=None,
                  hparams=None):
         RNNDecoderBase.__init__(self, cell, embedding, vocab_size, hparams)
-
-        attn_hparams = hparams['attention']
-        attn_kwargs = attn_hparams['kwargs']
+        print('self._hparams:{}'.format(self._hparams))
+        attn_hparams = self._hparams['attention']
+        attn_kwargs = attn_hparams['kwargs'].todict()
+        if not callable(attn_kwargs['probability_fn']):
+            print('not callable:{}'.format(attn_kwargs['probability_fn']))
+            attn_kwargs['probability_fn']=get_class(attn_kwargs['probability_fn'])
+        # cannot use update, since Hparams hasn't implemented the interface
         attn_kwargs.update({
-            "memory_sequence_length": attention_values_length,
-            "memory": attention_keys})
+            "memory_sequence_length": memory_sequence_length,
+            "memory": memory})
         attn_modules = ['txtgen.custom', 'tensorflow.contrib.seq2seq']
+        print('attn_kwargs:{}'.format(attn_kwargs))
         # Use variable_scope to ensure all trainable variables created in
         # the attention mechanism  are collected
         with tf.variable_scope(self.variable_scope):
@@ -309,6 +310,9 @@ class AttentionRNNDecoder(RNNDecoderBase):
             self._cell = attn_cell
 
         #TODO(zhiting): unit test on the number of trainable variables
+        # need to consider:
+        #  attention_mechanism: memory_layer
+        #  attention_wrapper: mecha_size, mecha_num
 
     @staticmethod
     def default_hparams():
@@ -327,7 +331,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
                     "attention": {
                         "type": "LuongAttention",
                         "kwargs": {
-                            "num_units": 512,
+                            "num_units": 64,
                             "probability_fn": "tensorflow.nn.softmax"
                         },
                         "attention_layer_size": None,
@@ -381,7 +385,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
                         .. code-block:: python
 
                             {
-                                "num_units": 512,
+                                "num_units": 64,
                                 "probability_fn": "tensorflow.nn.softmax"
                             }
 
@@ -435,29 +439,30 @@ class AttentionRNNDecoder(RNNDecoderBase):
         hparams["attention"] = {
             "type": "LuongAttention",
             "kwargs": {
-                "num_units": 512,
-                "probability_fn": "tensorflow.nn.softmax"
-            },
+                "num_units": 64,
+                "probability_fn": "tensorflow.nn.softmax", # a callable
+                "memory_sequence_length":None
+                },
             "attention_layer_size": None,
             "alignment_history": False,
             "output_attention": True,
         }
         return hparams
+
     def initialize(self, name=None):
         helper_init = self._helper.initialize()
         return [helper_init[0], helper_init[1], self._initial_state]
 
     def step(self, time, inputs, state, name=None):
-        cell_outputs, cell_state = self._cell(inputs, state)
         wrapper_outputs, wrapper_state = self._cell(inputs, state)
 
-        #cell_state is AttentionWrapperState
+        #wrapper_state is AttentionWrapperState
         cell_state = wrapper_state.cell_state
         attention_scores = wrapper_state.alignments
         attention_context = wrapper_state.attention
 
         logits = tf.contrib.layers.fully_connected(
-            inputs=cell_outputs, num_outputs=self._vocab_size)
+            inputs=wrapper_outputs, num_outputs=self._vocab_size)
         sample_ids = self._helper.sample(
             time=time, outputs=logits, state=cell_state)
         (finished, next_inputs, next_state) = self._helper.next_inputs(
@@ -465,7 +470,6 @@ class AttentionRNNDecoder(RNNDecoderBase):
             outputs=logits,
             state=wrapper_state,
             sample_ids=sample_ids)
-        # there should be some problem #TODO(zhiting): ??
         outputs = AttentionRNNDecoderOutput(
             logits, sample_ids, wrapper_outputs,
             attention_scores, attention_context)
@@ -488,8 +492,8 @@ class AttentionRNNDecoder(RNNDecoderBase):
     @property
     def output_dtype(self):
         return AttentionRNNDecoderOutput(
-            logits=dtypes.float32,
-            predicted_ids=dtypes.int32,
+            rnn_output=dtypes.float32,
+            sample_id=dtypes.int32,
             cell_output=dtypes.float32,
             attention_scores=dtypes.float32,
             attention_context=dtypes.float32)
