@@ -310,7 +310,8 @@ class AttentionRNNDecoder(RNNDecoderBase):
             self._cell = attn_cell
 
         #TODO(zhiting): unit test on the number of trainable variables
-        # need to consider:
+        #implemented in unit test
+        # if implemented here, need to consider:
         #  attention_mechanism: memory_layer
         #  attention_wrapper: mecha_size, mecha_num
 
