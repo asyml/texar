@@ -16,7 +16,7 @@ from tensorflow.contrib.seq2seq import AttentionWrapper
 from tensorflow.python.framework import tensor_shape, dtypes
 
 from txtgen.modules.decoders.rnn_decoder_base import RNNDecoderBase
-from txtgen.core.utils import get_instance
+from txtgen.core.utils import get_instance, get_class
 
 __all__ = [
     "BasicRNNDecoderOutput", "AttentionRNNDecoderOutput",
@@ -110,9 +110,7 @@ class BasicRNNDecoder(RNNDecoderBase):
                  embedding=None,
                  vocab_size=None,
                  hparams=None):
-        print('basicRNN hparams:{}'.format(hparams))
         RNNDecoderBase.__init__(self, cell, embedding, vocab_size, hparams)
-        print('basicRNN hparams:{}'.format(hparams))
 
     @staticmethod
     def default_hparams():
@@ -271,20 +269,25 @@ class AttentionRNNDecoder(RNNDecoderBase):
     """
     def __init__(self,
                  memory,
-                 memory_sequence_length,
+                 memory_sequence_length=None,
                  cell_input_fn=None,
                  cell=None,
                  embedding=None,
                  vocab_size=None,
                  hparams=None):
         RNNDecoderBase.__init__(self, cell, embedding, vocab_size, hparams)
-        print('hparams:{}'.format(hparams))
-        attn_hparams = hparams['attention']
-        attn_kwargs = attn_hparams['kwargs']
+        print('self._hparams:{}'.format(self._hparams))
+        attn_hparams = self._hparams['attention']
+        attn_kwargs = attn_hparams['kwargs'].todict()
+        if not callable(attn_kwargs['probability_fn']):
+            print('not callable:{}'.format(attn_kwargs['probability_fn']))
+            attn_kwargs['probability_fn']=get_class(attn_kwargs['probability_fn'])
+        # cannot use update, since Hparams hasn't implemented the interface
         attn_kwargs.update({
             "memory_sequence_length": memory_sequence_length,
             "memory": memory})
         attn_modules = ['txtgen.custom', 'tensorflow.contrib.seq2seq']
+        print('attn_kwargs:{}'.format(attn_kwargs))
         # Use variable_scope to ensure all trainable variables created in
         # the attention mechanism  are collected
         with tf.variable_scope(self.variable_scope):
@@ -307,6 +310,9 @@ class AttentionRNNDecoder(RNNDecoderBase):
             self._cell = attn_cell
 
         #TODO(zhiting): unit test on the number of trainable variables
+        # need to consider:
+        #  attention_mechanism: memory_layer
+        #  attention_wrapper: mecha_size, mecha_num
 
     @staticmethod
     def default_hparams():
@@ -325,7 +331,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
                     "attention": {
                         "type": "LuongAttention",
                         "kwargs": {
-                            "num_units": 512,
+                            "num_units": 64,
                             "probability_fn": "tensorflow.nn.softmax"
                         },
                         "attention_layer_size": None,
@@ -379,7 +385,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
                         .. code-block:: python
 
                             {
-                                "num_units": 512,
+                                "num_units": 64,
                                 "probability_fn": "tensorflow.nn.softmax"
                             }
 
@@ -433,9 +439,10 @@ class AttentionRNNDecoder(RNNDecoderBase):
         hparams["attention"] = {
             "type": "LuongAttention",
             "kwargs": {
-                "num_units": 512,
-                "probability_fn": "tensorflow.nn.softmax"
-            },
+                "num_units": 64,
+                "probability_fn": "tensorflow.nn.softmax", # a callable
+                "memory_sequence_length":None
+                },
             "attention_layer_size": None,
             "alignment_history": False,
             "output_attention": True,
@@ -485,8 +492,8 @@ class AttentionRNNDecoder(RNNDecoderBase):
     @property
     def output_dtype(self):
         return AttentionRNNDecoderOutput(
-            logits=dtypes.float32,
-            predicted_ids=dtypes.int32,
+            rnn_output=dtypes.float32,
+            sample_id=dtypes.int32,
             cell_output=dtypes.float32,
             attention_scores=dtypes.float32,
             attention_context=dtypes.float32)
