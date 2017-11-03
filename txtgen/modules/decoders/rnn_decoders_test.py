@@ -145,9 +145,6 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
         outputs, final_state, sequence_lengths = decoder(
             helper_train, decoder.cell.zero_state(self._batch_size, tf.float32))
 
-        # 5 trainable variables: embedding, cell-kernel, cell-bias,
-        # fc-layer-weights, fc-layer-bias
-        self.assertEqual(len(decoder.trainable_variables), 5)
 
         cell_dim = decoder.hparams.rnn_cell.cell.kwargs.num_units
         with self.test_session() as sess:
@@ -157,11 +154,11 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
                 feed_dict={context.is_train(): True})
             self.assertIsInstance(outputs_, AttentionRNNDecoderOutput)
             self.assertEqual(
-                outputs_.logits.shape,
+                outputs_.rnn_output.shape,
                 (self._batch_size, self._max_time, self._vocab_size))
             self.assertEqual(
-                outputs_.predicted_ids.shape, (self._batch_size, self._max_time))
-            self.assertEqual(final_state_[0].shape, (self._batch_size, cell_dim))
+                outputs_.sample_id.shape, (self._batch_size, self._max_time))
+            self.assertEqual(final_state_.cell_state[0].shape, (self._batch_size, cell_dim))
             np.testing.assert_array_equal(
                 sequence_lengths_,
                 [self._max_time]*self._batch_size)
@@ -187,9 +184,10 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
 
         outputs, final_state, sequence_lengths = decoder(
             helper_infer, decoder.cell.zero_state(self._batch_size, tf.float32))
-        # 5 trainable variables: embedding, cell-kernel, cell-bias,
-        # fc-layer-weights, fc-layer-bias
-        self.assertEqual(len(decoder.trainable_variables), 5)
+        # 5+1 trainable variables: embedding, cell-kernel, cell-bias, fc-weight, fc-bias
+        # memory_layer: For LuongAttention, we only transform the memory layer; thus
+        # num_units **must** match expected the query depth.
+        self.assertEqual(len(decoder.trainable_variables), 6)
         cell_dim = decoder.hparams.rnn_cell.cell.kwargs.num_units
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
@@ -199,11 +197,12 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
             self.assertIsInstance(outputs_, AttentionRNNDecoderOutput)
             max_length = max(sequence_lengths_)
             self.assertEqual(
-                outputs_.logits.shape,
+                outputs_.rnn_output.shape,
                 (self._batch_size, max_length, self._vocab_size))
             self.assertEqual(
-                outputs_.predicted_ids.shape, (self._batch_size, max_length))
-            self.assertEqual(final_state_[0].shape, (self._batch_size, cell_dim))
+                outputs_.sample_id.shape, (self._batch_size, max_length))
+            print('final_state:{}'.format(final_state_))
+            self.assertEqual(final_state_.cell_state[0].shape, (self._batch_size, cell_dim))
 
 if __name__ == "__main__":
     tf.test.main()
