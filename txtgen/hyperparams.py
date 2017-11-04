@@ -46,12 +46,22 @@ class HParams(object):
         For such hyperparameters only typecheck is performed.
 
         Args:
-            hparams: A dictionary of hyperparameters.
+            hparams: A dictionary of hyperparameters. If `None`, all
+                hyperparameters are set to default values.
             default_hparams: A dictionary of hyperparameters with default
                 values.
             allow_new_hparam: Boolean. If `False` (default), raise error if
                 hyperparameter name is not in `default_hparams`. If `True`,
                 new hyperparameters not in `default_hparams` are added.
+
+        Return:
+            A dictionary of parsed hyperparameters. Returns `None` if both
+            :attr:`hparams` and :attr:`default_hparams` are `None`.
+
+        Raises:
+            ValueError: If :attr:`hparams` is not `None` and
+                :attr:`default_hparams` is `None`.
+
         """
         if hparams is None and default_hparams is None:
             return None
@@ -59,7 +69,17 @@ class HParams(object):
         if hparams is None:
             return HParams._parse(default_hparams, default_hparams)
 
+        if default_hparams is None:
+            raise ValueError("`default_hparams` cannot be `None` if `hparams` "
+                             "is not `None`.")
+
         parsed_hparams = copy.deepcopy(default_hparams)
+
+        # Parse recursively for params of type dictionary that are missing
+        # in `hparams`.
+        for name, value in default_hparams.items():
+            if name not in hparams and isinstance(value, dict):
+                parsed_hparams[name] = HParams(value, value)
 
         for name, value in hparams.items():
             if name not in default_hparams:
@@ -68,9 +88,9 @@ class HParams(object):
                     continue
                 else:
                     raise ValueError(
-                        "Unknown hyperparameter: %s. Only the `kwargs` "
-                        "hyperparameters can contain new entries undefined "
-                        "in default hyperparameters." % name)
+                        "Unknown hyperparameter: %s. Only hyperparameters "
+                        "named 'kwargs' hyperparameters can contain new "
+                        "entries undefined in default hyperparameters." % name)
 
             if value is None:
                 parsed_hparams[name] = \
@@ -81,7 +101,7 @@ class HParams(object):
                 parsed_hparams[name] = HParams._parse_value(value)
                 continue
 
-            # Parse recursively for param of type dictionary
+            # Parse recursively for params of type dictionary.
             if isinstance(value, dict):
                 if not isinstance(default_value, dict):
                     raise ValueError(
@@ -91,7 +111,7 @@ class HParams(object):
                     parsed_hparams[name] = HParams(
                         value, default_value, allow_new_hparam)
                 else:
-                    # Allow new items for function keyword args
+                    # Allow new items for function keyword args (named "kwargs")
                     parsed_hparams[name] = HParams(
                         value, default_value, allow_new_hparam=True)
 
