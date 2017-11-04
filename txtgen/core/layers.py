@@ -13,7 +13,7 @@ import tensorflow.contrib.rnn as rnn
 from txtgen.hyperparams import HParams
 from txtgen.core.utils import get_instance, switch_dropout
 
-# pylint: disable=not-context-manager, redefined-variable-type
+# pylint: disable=not-context-manager, redefined-variable-type, invalid-name
 
 def default_rnn_cell_hparams():
     """Returns default hyperparameters of an RNN cell.
@@ -156,6 +156,24 @@ def get_rnn_cell(hparams=None):
 
     return cell
 
+def get_rnn_cell_trainable_variables(cell):
+    """Returns the list of trainable variables of an RNN cell.
+
+    Args:
+        cell: an instance of :class:`tensorflow.contrib.rnn.RNNCell`.
+
+    Returns:
+        list: trainable variables of the cell.
+    """
+    cell_ = cell
+    while True:
+        try:
+            return cell_.trainable_variables
+        except AttributeError:
+        # Cell wrappers (e.g., `DropoutWrapper`) cannot directly access to
+        # `trainable_variables` as they don't initialize superclass
+        # (tf==v1.3). So try to access through the cell in the wrapper.
+            cell_ = cell._cell
 
 def default_embedding_hparams():
     """Returns default hyperparameters of embedding used in modules.
