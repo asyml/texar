@@ -45,7 +45,6 @@ class BasicRNNDecoderOutput(
     """
     pass
 
-#TODO(zhiting): complete the docstring
 class AttentionRNNDecoderOutput(
         collections.namedtuple(
             "AttentionRNNDecoderOutput",
@@ -67,8 +66,9 @@ class AttentionRNNDecoderOutput(
         cell_output: The output states of RNN cell at each step. E.g., in
             :class:`~txtgen.modules.AttentionRNNDecoder`, this is a Tensor of
             shape `[batch_size, max_time, cell_output_size]`.
-        attention_scores: A single or tuple of `Tensor`(s) containing the alignments
-            emitted at the previous time step for each attention mechanism.
+        attention_scores: A single or tuple of `Tensor`(s) containing the
+            alignments emitted at the previous time step for each attention
+            mechanism.
         attention_context: The attention emitted at the previous time step.
     """
     pass
@@ -233,9 +233,9 @@ class AttentionRNNDecoder(RNNDecoderBase):
     Args:
         memory: The memory to query; usually the output of an RNN encoder.  This
             tensor should be shaped `[batch_size, max_time, ...]`.
-        memory_sequence_length (optional): Sequence lengths for the batch entries
-            in memory.  If provided, the memory tensor rows are masked with zeros
-            for values past the respective sequence lengths.
+        memory_sequence_length (optional): Sequence lengths for the batch
+            entries in memory.  If provided, the memory tensor rows are masked
+            with zeros for values past the respective sequence lengths.
         cell_input_fn (callable, optional): A callable that produces RNN cell
             inputs. If `None` (default), the default is used:
             `lambda inputs, attention: tf.concat([inputs, attention], -1)`,
@@ -267,6 +267,8 @@ class AttentionRNNDecoder(RNNDecoderBase):
             structure and default values.
 
     """
+    #TODO(zhiting): delete all `print` statements. Raise exceptions when
+    # necessary.
     def __init__(self,
                  memory,
                  memory_sequence_length=None,
@@ -281,7 +283,8 @@ class AttentionRNNDecoder(RNNDecoderBase):
         attn_kwargs = attn_hparams['kwargs'].todict()
         if not callable(attn_kwargs['probability_fn']):
             print('not callable:{}'.format(attn_kwargs['probability_fn']))
-            attn_kwargs['probability_fn']=get_class(attn_kwargs['probability_fn'])
+            attn_kwargs['probability_fn'] = get_class(
+                attn_kwargs['probability_fn'])
         # cannot use update, since Hparams hasn't implemented the interface
         attn_kwargs.update({
             "memory_sequence_length": memory_sequence_length,
@@ -309,12 +312,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
                 **atten_cell_kwargs)
             self._cell = attn_cell
 
-        #TODO(zhiting): unit test on the number of trainable variables
-        #implemented in unit test
-        # if implemented here, need to consider:
-        #  attention_mechanism: memory_layer
-        #  attention_wrapper: mecha_size, mecha_num
-
+    #TODO(zhiting): fix the TODOs in the docstring
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values:
@@ -366,7 +364,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
                 :class:`~tensorflow.contrib.seq2seq.BahdanauMonotonicAttention`\
                 and \
                 :class:`~tensorflow.contrib.seq2seq.LuongMonotonicAttention`.
-                    - User-defined attention classes in `txtgen.custom`.
+                    - User-defined attention classes in :mod:`txtgen.custom`.
                     - External attention classes. Must provide the full path, \
                       e.g., "my_module.MyAttentionClass".
 
@@ -486,6 +484,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
         return AttentionRNNDecoderOutput(
             rnn_output=self._vocab_size,
             sample_id=tensor_shape.TensorShape([]),
+            #TODO(zhiting): why access `_cell` ?
             cell_output=self.cell._cell.output_size,
             attention_scores=state_size.alignments,
             attention_context=state_size.attention)

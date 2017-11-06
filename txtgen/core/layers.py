@@ -176,44 +176,87 @@ def get_rnn_cell_trainable_variables(cell):
             cell_ = cell._cell
 
 def default_embedding_hparams():
-    """Returns default hyperparameters of embedding used in modules.
+    """Returns default hyperparameters of token embedding used in encoders,
+    decoders, and other modules.
 
     Returns:
-        dict: A dictionary with the following structure and values:
+        A dictionary with the following structure and values.
 
         .. code-block:: python
 
             {
-                "name": "embedding", # A string. Name of the embedding variable.
-                "dim": 100,          # An integer. Embedding dimension.
-                "initializer": {     # Initializer of embedding values.
-                    # A string. Name or full path to the initializer class.
-                    # An initializer is a class inheriting from
-                    # `tensorflow.Initializer`, which can be built-in
-                    # classes in module `tensorflow`, or user-defined
-                    # classes in `txtgen.custom`, or a full path like
-                    # `my_module.MyInitializer`.
-                    "type": "tensorflow.random_uniform_initializer",
-
-                    # A dictionary of arguments for constructor of the
-                    # initializer class. An initializer is created by
-                    # calling `initialzier_class(**kwargs)` where
-                    # `initializer_class` is specified in `type`.
+                "name": "embedding",
+                "dim": 100,
+                "initializer": {
+                    "type": "tensorflow.initializers.random_uniform",
                     "kwargs": {
                         "minval": -0.1,
                         "maxval": 0.1,
                         "seed": None
                     }
                 },
-                # (bool) Whether the embedding variable trainable.
                 "trainable": True,
             }
+
+        Here:
+
+        "name" : str
+            Name of the embedding variable.
+
+        "dim" : int
+            Embedding dimension.
+
+        "initializer" : dict
+            Hyperparameters of the initializer for the embedding values,
+            including:
+
+            "type" : str
+                Name or full path to the initializer class. The class
+                can be
+
+                - Built-in initializer defined in
+                  :tf_main:`tf.initializers <initializers>`, e.g.,
+                  :tf_main:`tf.initializers.random_uniform
+                  <random_uniform_initializer>` (a.k.a
+                  tf.random_uniform_initializer); or in
+                  :tf_r0.12:`tensorflow.contrib.layers
+                  <contrib.layers/initializers>`, e.g.,
+                  :tf_r0.12:`xavier_initializer
+                  <contrib.layers/initializers#xavier_initializer>`.
+                - User-defined initializer in :mod:`txtgen.custom`.
+                - External initializer. Must provide the full path, \
+                  e.g., :attr:`"my_module.MyInitializer"`.
+
+                The default value is
+                :attr:`"tensorflow.initializers.random_uniform"`.
+
+            "kwargs" : dict
+                A dictionary of arguments for constructor of the
+                initializer class. An initializer is created by
+                calling `initialzier_class(**kwargs)` where
+                :attr:`initializer_class` is specified in :attr:`"type"`.
+
+                The default value is:
+
+                    .. code-block:: python
+
+                        {
+                            "minval": -0.1,
+                            "maxval": 0.1,
+                            "seed": None
+                        }
+                which are the arguments of constructing
+                :tf_main:`tf.initializers.random_uniform
+                <random_uniform_initializer>`.
+
+        "trainable" : bool
+            Whether the embedding is trainable.
     """
     return { #TODO(zhiting): allow more hparams like regularizer
         "name": "embedding",
         "dim": 50,
         "initializer": {
-            "type": "tensorflow.random_uniform_initializer",
+            "type": "tensorflow.initializers.random_uniform",
             "kwargs": {
                 "minval": -0.1,
                 "maxval": 0.1,
