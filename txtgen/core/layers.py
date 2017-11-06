@@ -228,7 +228,7 @@ def default_embedding_hparams():
                   e.g., :attr:`"my_module.MyInitializer"`.
 
                 The default value is
-                :attr:`"tensorflow.initializers.random_uniform"`.
+                :attr:`"tensorflow.random_uniform_initializer"`.
 
             "kwargs" : dict
                 A dictionary of arguments for constructor of the
@@ -246,7 +246,7 @@ def default_embedding_hparams():
                             "seed": None
                         }
                 which are the arguments of constructing
-                :tf_main:`tf.initializers.random_uniform
+                :tf_main:`tf.random_uniform_initializer
                 <random_uniform_initializer>`.
 
         "trainable" : bool
@@ -256,7 +256,7 @@ def default_embedding_hparams():
         "name": "embedding",
         "dim": 50,
         "initializer": {
-            "type": "tensorflow.initializers.random_uniform",
+            "type": "tensorflow.random_uniform_initializer",
             "kwargs": {
                 "minval": -0.1,
                 "maxval": 0.1,
@@ -276,7 +276,7 @@ def get_embedding(hparams=None,
     Args:
         hparams (dict or HParams, optional): Embedding hyperparameters. Missing
             hyperparameters are set to default values. See
-            :meth:`~txtgen.core.layers.default_embedding_hparams` for all
+            :func:`~txtgen.core.layers.default_embedding_hparams` for all
             hyperparameters and default values.
 
             If :attr:`init_values` is given, :attr:`hparams["initializer"]`,
@@ -298,9 +298,9 @@ def get_embedding(hparams=None,
             hparams = HParams(hparams, default_embedding_hparams())
         if init_values is None:
             kwargs = hparams["initializer"]["kwargs"].todict()
-            initializer = get_instance(hparams["initializer"]["type"],
-                                       kwargs,
-                                       ["txtgen.custom", "tensorflow"])
+            initializer = get_instance(
+                hparams["initializer"]["type"], kwargs,
+                ["txtgen.custom", "tensorflow", "tensorflow.contrib.layers"])
             return tf.get_variable(name=hparams["name"],
                                    shape=[vocab_size, hparams["dim"]],
                                    initializer=initializer,
@@ -310,6 +310,14 @@ def get_embedding(hparams=None,
                                    initializer=init_values,
                                    trainable=hparams["trainable"])
 
+
+#def default_conv1d_kwargs():
+#    return {
+#
+#    }
+
+
+#TODO(zhiting): fix code style
 def sinuoid_positional_encoding(inputs,
                                 zero_pad=True,
                                 scale=True,
@@ -345,6 +353,7 @@ def sinuoid_positional_encoding(inputs,
         return outputs
 
 
+#TODO(zhiting): fix code style
 def multihead_attention(queries,
                         keys,
                         num_units= None,

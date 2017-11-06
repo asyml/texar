@@ -79,8 +79,19 @@ class HParams(object):
         # in `hparams`.
         for name, value in default_hparams.items():
             if name not in hparams and isinstance(value, dict):
+                if name == "kwargs":
+                    if "type" not in default_hparams:
+                        raise ValueError(
+                            "Ill-defined hyperparameter structure: 'kwargs' "
+                            "must accompany with 'type'.")
+                    # For params named "kwargs", only apply default values when
+                    # the respective "type" param takes default value.
+                    if "type" in hparams and \
+                            hparams["type"] != default_hparams["type"]:
+                        continue
                 parsed_hparams[name] = HParams(value, value)
 
+        # Parse hparams
         for name, value in hparams.items():
             if name not in default_hparams:
                 if allow_new_hparam:
@@ -111,10 +122,9 @@ class HParams(object):
                     parsed_hparams[name] = HParams(
                         value, default_value, allow_new_hparam)
                 else:
-                    # Allow new items for function keyword args (named "kwargs")
-                    parsed_hparams[name] = HParams(
-                        value, default_value, allow_new_hparam=True)
-
+                    # Do not check types or apply default values for function
+                    # keyword args (named "kwargs")
+                    parsed_hparams[name] = HParams(value, value)
                 continue
 
             try:
