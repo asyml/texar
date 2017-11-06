@@ -213,3 +213,7 @@ doc/_build
 
 ### IntelliJ ###
 *.iml
+
+
+### Project ###
+data/

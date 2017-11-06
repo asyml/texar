@@ -657,7 +657,7 @@ class ConcatConnector(ConnectorBase):
                 the outputs of the MLP layer. The activation functions can be:
 
                 - Built-in activation functions defined in `tensorflow` or \
-                `tensorflow.nn`, e.g., :meth:`tensorflow.identity`.
+                  `tensorflow.nn`, e.g., :meth:`tensorflow.identity`.
                 - User-defined activation functions in `txtgen.custom`.
                 - External activation functions. Must provide the full path, \
                   e.g., "my_module.my_activation_fn".
@@ -669,8 +669,6 @@ class ConcatConnector(ConnectorBase):
                 Name of the connector.
 
                 The default value is "concat_connector".
-
-
         """
         return {
             "activation_fn": "tensorflow.identity",
