@@ -101,19 +101,21 @@ class TransformerEncoder(EncoderBase):
             if self.scale:
                 embedded_inputs = embedded_inputs * tf.sqrt(dim)
             if self._hparams.sinusoid:
-                position_inputs = sinusoid_positional_encoding(embedded_inputs,
+                position_inputs = layers.sinusoid_positional_encoding(embedded_inputs,
                         scope="enc_pe")
             enc_output = tf.layers.dropout(embedded_inputs + position_inputs,
                     rate = self._hparams.encoder.dropout_rate,
                     training=True)
             for i in range(self._hparams.encoder.num_blocks):
                 with tf.variable_scope("num_blocks_{}".format(i)):
-                    enc_output = multihead_attention(queries=enc_output,
+                    enc_output = layers.multihead_attention(queries=enc_output,
                             keys= enc_output,
-                            num_heads = self._hparams.encoder.num_heads,
-                            dropout_rate = self._hparams.encoder.dropout_rate,
+                            num_heads = self._hparams.num_heads,
+                            dropout_rate = self._hparams.dropout_rate,
                             is_training = True,
                             causality=False)
-                    enc_output = feed_layer(enc_output,
-                            num_units=[4*hp.hidden_units, hp.hidden_units])
+                    enc_output = layers.normalize(enc_output)
+                    enc_output = layers.poswise_feedforward(enc_output,
+                            num_units=[4*self._hparams.hidden_units, self._hparams.hidden_units])
+                    enc_output = layers.normalize(enc_output)
             return enc_output
