@@ -1,4 +1,3 @@
-#
 """
 Various neural network layers
 """
@@ -9,7 +8,8 @@ from __future__ import division
 
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
-
+import numpy as np
+from txtgen import context
 from txtgen.hyperparams import HParams
 from txtgen.core.utils import get_instance, switch_dropout
 
@@ -309,7 +309,6 @@ def get_embedding(hparams=None,
                                    initializer=init_values,
                                    trainable=hparams["trainable"])
 
-
 def default_conv1d_kwargs():
     """Returns the default keyword argument values of 1D convolution layer(s)
     defined in :tf_main:`tf.layers.Conv1D <layers/Conv1D>`.
@@ -429,8 +428,7 @@ def default_conv1d_kwargs():
     }
 
 
-#TODO(zhiting): fix code style
-def sinuoid_positional_encoding(inputs,
+def sinusoid_positional_encoding(inputs,
                                 zero_pad=True,
                                 scale=True,
                                 reuse=None,
@@ -446,24 +444,24 @@ def sinuoid_positional_encoding(inputs,
         scope: [String], Optional scope for 'variable_scope'
         position_duration: [Int], default=10000
     """
+    batch_size, max_time, hidden_dim = inputs.get_shape().as_list()
     with tf.variable_scope(scope, reuse=reuse):
-        batch_size, max_time, hidden_dim = inputs.get_shape().as_list()
-        input_one = tf.tile(tf.expand_dims(tf.range(max_time), 0), [batch_size, 1]) #batch_size * max_time
-        position_block = tf.tile(tf.expand_dims(tf.range(max_time), 1), [1, num_units // 2])
-        unit_block = tf.tile(tf.expand_dims(tf.range(hidden_dim // 2), 0), [max_time, 1])
-        rad_block = tf.pow(tf.div(position_block, tf.multiply(position_duration, 1)), tf.div(unit_block, hidden_dim // 2))
+        position_idx = tf.tile(tf.expand_dims(tf.range(max_time), 0), [batch_size, 1]) #batch_size * max_time
+        position_enc = np.array([
+            [pos /np.power(10000, 2.*i/hidden_dim) for i in range(hidden_dim)]
+            for pos in range(max_time)])
 
-        sin_block = tf.sin(tf.cast(rad_block, tf.float32))
-        cos_block = tf.cos(tf.cast(rad_block, tf.float32))
-        lookup_table = tf.concat([sin_block, cos_block], axis = 1)
+        position_enc[:, 0::2] = np.sin(position_enc[:, 0::2])
+        position_enc[:, 1::2] = np.cos(position_enc[:, 1::2])
 
+        lookup_table = tf.convert_to_tensor(position_enc)
         if zero_pad:
-            lookup_table = tf.concat((tf.zeros(shape = [1, num_units]), lookup_table[1:, :]), 0)
-        outputs = tf.nn.embedding_lookup(lookup_table, input_one)
+            lookup_table = tf.concat((tf.zeros(shape=[1, hidden_dim]),
+                lookup_table[1:, :]), 0)
+        outputs = tf.nn.embedding_lookup(lookup_table, position_idx)
         if scale:
-            outputs = outputs * math.sqrt(hidden_dim)
+            outputs = outputs * hidden_dim**0.5
         return outputs
-
 
 #TODO(zhiting): fix code style
 def multihead_attention(queries,
@@ -471,7 +469,6 @@ def multihead_attention(queries,
                         num_units= None,
                         num_heads=8,
                         dropout_rate=0,
-                        is_training=True,
                         causality = False,
                         scope = 'multihead_attention',
                         reuse= None):
@@ -481,7 +478,6 @@ def multihead_attention(queries,
         keys: A 3d tensor with shape of [N, T_k, C_k].
         num_units: A scalar. Attention size.
         dropout_rate: A floating point number.
-        is_training: Boolean. Controller of mechanism for dropout.
         causality: Boolean. Should be true, units that reference the future are masked
         num_heads: An int. Number of heads.
         scope: Optional scope for `variable_scope`.
@@ -537,7 +533,7 @@ def multihead_attention(queries,
         outputs *= query_masks # broadcasting. (N, T_q, C)
 
         # Dropouts
-        outputs = tf.layers.dropout(outputs, rate=dropout_rate, training=tf.convert_to_tensor(is_training))
+        outputs = tf.layers.dropout(outputs, rate=dropout_rate, training=context.is_train())
 
         # Weighted sum
         outputs = tf.matmul(outputs, V_) # ( h*N, T_q, C/h)
@@ -549,6 +545,65 @@ def multihead_attention(queries,
         outputs += queries
 
         # Normalize
-        outputs = normalize(outputs) # (N, T_q, C)
 
     return outputs
+
+
+
+def poswise_feedforward(attended_dec, scope="multihead_attention", reuse=None):
+  '''Point-wise feed forward net.
+
+  Args:
+    inputs: A 3d tensor with shape of [N, T, C].
+    num_units: A list of two integers.
+    scope: Optional scope for `variable_scope`.
+    reuse: Boolean, whether to reuse the weights of a previous layer
+      by the same name.
+
+  Returns:
+    A 3d tensor with the same shape and dtype as inputs
+  '''
+  hidden_dim = attended_dec.shape().as_list()[-1]
+  with tf.variable_scope(scope, reuse=reuse):
+      outputs = tf.layers.conv1d(inputs = attended_dec,
+              filters=hidden_dim*4,
+              kernel_size=1,
+              activation=tf.nn.relu,
+              use_bias=True)
+      outputs = tf.layers.conv1d(inputs = outputs,
+              filters=hidden_dim,
+              kernel_size=1,
+              activation=None,
+              use_bias=True)
+      outputs += attended_dec #residual connection
+  return outputs
+
+def normalize(inputs,
+              epsilon = 1e-8,
+              scope="ln",
+              reuse=None):
+    '''Applies layer normalization.
+
+    Args:
+      inputs: A tensor with 2 or more dimensions, where the first dimension has
+        `batch_size`.
+      epsilon: A floating number. A very small number for preventing ZeroDivision Error.
+      scope: Optional scope for `variable_scope`.
+      reuse: Boolean, whether to reuse the weights of a previous layer
+        by the same name.
+
+    Returns:
+      A tensor with the same shape and data dtype as `inputs`.
+    '''
+    with tf.variable_scope(scope, reuse=reuse):
+        inputs_shape = inputs.get_shape()
+        params_shape = inputs_shape[-1:]
+
+        mean, variance = tf.nn.moments(inputs, [-1], keep_dims=True)
+        beta= tf.Variable(tf.zeros(params_shape))
+        gamma = tf.Variable(tf.ones(params_shape))
+        normalized = (inputs - mean) / ( (variance + epsilon) ** (.5) )
+        outputs = gamma * normalized + beta
+
+    return outputs
+
