@@ -1,4 +1,3 @@
-#
 """
 Various neural network layers
 """
