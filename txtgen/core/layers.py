@@ -551,32 +551,32 @@ def multihead_attention(queries,
 
 
 def poswise_feedforward(attended_dec, scope="multihead_attention", reuse=None):
-  '''Point-wise feed forward net.
+    '''Point-wise feed forward net.
 
-  Args:
-    inputs: A 3d tensor with shape of [N, T, C].
-    num_units: A list of two integers.
-    scope: Optional scope for `variable_scope`.
-    reuse: Boolean, whether to reuse the weights of a previous layer
-      by the same name.
+    Args:
+      inputs: A 3d tensor with shape of [N, T, C].
+      num_units: A list of two integers.
+      scope: Optional scope for `variable_scope`.
+      reuse: Boolean, whether to reuse the weights of a previous layer
+        by the same name.
 
-  Returns:
-    A 3d tensor with the same shape and dtype as inputs
-  '''
-  hidden_dim = attended_dec.shape().as_list()[-1]
-  with tf.variable_scope(scope, reuse=reuse):
-      outputs = tf.layers.conv1d(inputs = attended_dec,
-              filters=hidden_dim*4,
-              kernel_size=1,
-              activation=tf.nn.relu,
-              use_bias=True)
-      outputs = tf.layers.conv1d(inputs = outputs,
-              filters=hidden_dim,
-              kernel_size=1,
-              activation=None,
-              use_bias=True)
-      outputs += attended_dec #residual connection
-  return outputs
+    Returns:
+      A 3d tensor with the same shape and dtype as inputs
+    '''
+    hidden_dim = attended_dec.shape().as_list()[-1]
+    with tf.variable_scope(scope, reuse=reuse):
+        outputs = tf.layers.conv1d(inputs = attended_dec,
+                filters=hidden_dim*4,
+                kernel_size=1,
+                activation=tf.nn.relu,
+                use_bias=True)
+        outputs = tf.layers.conv1d(inputs = outputs,
+                filters=hidden_dim,
+                kernel_size=1,
+                activation=None,
+                use_bias=True)
+        outputs += attended_dec #residual connection
+    return outputs
 
 def normalize(inputs,
               epsilon = 1e-8,
