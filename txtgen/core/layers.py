@@ -188,7 +188,7 @@ def default_embedding_hparams():
                 "name": "embedding",
                 "dim": 100,
                 "initializer": {
-                    "type": "tensorflow.initializers.random_uniform",
+                    "type": "tensorflow.random_uniform_initializer",
                     "kwargs": {
                         "minval": -0.1,
                         "maxval": 0.1,
@@ -218,11 +218,10 @@ def default_embedding_hparams():
                   :tf_main:`tf.initializers <initializers>`, e.g.,
                   :tf_main:`tf.initializers.random_uniform
                   <random_uniform_initializer>` (a.k.a
-                  tf.random_uniform_initializer); or in
-                  :tf_r0.12:`tensorflow.contrib.layers
-                  <contrib.layers/initializers>`, e.g.,
-                  :tf_r0.12:`xavier_initializer
-                  <contrib.layers/initializers#xavier_initializer>`.
+                  tf.random_uniform_initializer) or in
+                  :mod:`tensorflow`, e.g.,
+                  :tf_main:`tf.glorot_uniform_initializer
+                  <glorot_uniform_initializer>`.
                 - User-defined initializer in :mod:`txtgen.custom`.
                 - External initializer. Must provide the full path, \
                   e.g., :attr:`"my_module.MyInitializer"`.
@@ -311,10 +310,123 @@ def get_embedding(hparams=None,
                                    trainable=hparams["trainable"])
 
 
-#def default_conv1d_kwargs():
-#    return {
-#
-#    }
+def default_conv1d_kwargs():
+    """Returns the default keyword argument values of 1D convolution layer(s)
+    defined in :tf_main:`tf.layers.Conv1D <layers/Conv1D>`.
+
+    Some of the keyword arguments allow extended values as detailed in the
+    following.
+
+    Returns:
+        .. code-block:: python
+
+            {
+                "kernel_size": [3,4,5],
+                "filters": 100,
+                "strides": 1,
+                "activation": "tensorflow.identity",
+                "kernel_initializer": {
+                    "type": "tensorflow.glorot_uniform_initializer",
+                    "kwargs": {}
+                },
+                "bias_initializer": {
+                    "type": "tensorflow.zeros_initializer",
+                    "kwargs": {}
+                },
+                "kernel_regularizer": None,
+                "bias_regularizer": None,
+                "activity_regularizer": None
+            }
+
+        Here:
+
+        "kernel_size" : int or a list of int
+            The length(s) of 1D convolution window(s). If a list, filters with
+            different window lengths as specified in the list are created.
+
+            The default value is `[3,4,5]`, which creates 3 sets of filters,
+            each of which are with lengths 3, 4, and 5.
+
+        "filters" : int or a list of int
+            The number of filters in the convolution. If an int, equal number of
+            filters with different window lengths are created. If a list,
+            the list must be of the same length as the list in
+            :attr:`"kernel_size"`, and each integer in the list is the number
+            of filters with respective window length.
+
+            The default value is `100`, which creates 100 filters for each
+            filter set.
+
+        "strides" : int or a list of int
+            The stride length of the convolution. If an int, the stride length
+            is shared across all filter sets. If a list, the list must be of
+            the same length as the list in :attr:`"kernel_size"`.
+
+            The default value is `1`.
+
+        "dilation_rate" : int or a list of int
+            The dilation rate to use for dilated convolution. If an int, the
+            dilation rate is shared across all filter sets. If a list, the list
+            must be of the same length as the list in :attr:`"kernel_size"`.
+
+            The default value is `1`.
+
+        "activation" : str
+            The name or full path to the activation function applied to the
+            outputs of the layer.
+
+            The default value is "tensorflow.identity", which is a linear
+            activation.
+
+        "kernel_initializer" : dict
+            Hyperparameters of the initializer for the filters, including
+            :attr:`"type"` (str) and :attr:`"kwargs"` (dict).
+
+            The default is :tf_main:`tf.glorot_uniform_initializer
+            <glorot_uniform_initializer>`.
+
+        "bias_initializer" : dict
+            Hyperparameters of the initializer for the bias, including
+            :attr:`"type"` (str) and :attr:`"kwargs"` (dict).
+
+            The default is :tf_main:`tf.zeros_initializer <zeros_initializer>`.
+
+        "kernel_regularizer" : dict
+            Optional hyperparameters of the regularizer for the convolution
+            filters, including :attr:`"type"` (str) and :attr:`"kwargs"` (dict).
+
+            The default value is `None`, i.e., no regularization is performed.
+
+        "bias_regularizer" : dict
+            Optional hyperparameters of the regularizer for the bias,
+            including :attr:`"type"` (str) and :attr:`"kwargs"` (dict).
+
+            The default value is `None`, i.e., no regularization is performed.
+
+        "activity_regularizer" : dict
+            Optional hyperparameters of the regularizer for the layer output,
+            including :attr:`"type"` (str) and :attr:`"kwargs"` (dict).
+
+            The default value is `None`, i.e., no regularization is performed.
+    """
+    return {
+        "kernel_size": [3,4,5],
+        "filters": 100,
+        "strides": 1,
+        "dilation_rate": 1,
+        "activation": "tensorflow.identity",
+        "kernel_initializer": {
+            "type": "tensorflow.glorot_uniform_initializer",
+            "kwargs": {}
+        },
+        "bias_initializer": {
+            "type": "tensorflow.zeros_initializer",
+            "kwargs": {}
+        },
+        "kernel_regularizer": None,
+        "bias_regularizer": None,
+        "activity_regularizer": None
+    }
 
 
 #TODO(zhiting): fix code style

@@ -200,7 +200,7 @@ class ForwardConnector(ConnectorBase):
             "name": "forward_connector"
         }
 
-    def _build(self, inputs):    # pylint: disable=W0221
+    def _build(self, inputs):
         """Passes inputs to the initial states of decoder.
 
         :attr:`inputs` must either have the same structure, or the same number
@@ -277,7 +277,7 @@ class MLPTransformConnector(ConnectorBase):
             "name": "mlp_connector"
         }
 
-    def _build(self, inputs): #pylint: disable=W0221
+    def _build(self, inputs):
         """Transforms the inputs with an MLP layer and packs the results to have
         the same structure with the decoder state.
 
@@ -675,7 +675,7 @@ class ConcatConnector(ConnectorBase):
             "name": "concat_connector"
         }
 
-    def _build(self, connector_inputs, transform=True):  # pylint: disable=W0221
+    def _build(self, connector_inputs, transform=True):
         """Concatenate multiple input connectors
 
         Args:
