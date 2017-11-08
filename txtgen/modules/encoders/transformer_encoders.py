@@ -46,7 +46,7 @@ class TransformerEncoder(EncoderBase):
                 self._embedding = layers.get_embedding(
                     self._hparams.embedding, embedding, vocab_size,
                     self.variable_scope)
-            embed_dim = self._embedding.shape()[1]
+            embed_dim = self._embedding.shape.as_list()[1]
             if self._hparams.zero_pad:
                 self._embedding = tf.concat((tf.zeros(shape=[1, embed_dim]),
                                             self._embedding[1:, :]), 0)
@@ -89,7 +89,8 @@ class TransformerEncoder(EncoderBase):
         return {
             "embedding_enabled": True,
             "embedding": layers.default_embedding_hparams(),
-            "name": "transformer_encoder"
+            "name": "transformer_encoder",
+            "zero_pad": True,
         }
 
         def _build(self, inputs, **kwargs):
