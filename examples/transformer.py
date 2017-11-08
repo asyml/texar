@@ -63,11 +63,15 @@ if __name__ == "__main__":
     decoder = TransformerDecoder(vocab_size=text_database.target_vocab.vocab_size)
 
     # Build connector, which simply feeds zero state to decoder as initial state
-    connector = ConstantConnector(decoder.state_size)
+    connector = ConstantConnector(output_size= decoder._hparams.embedding.dim)
     print('encoder decoder finished')
     src_text = text_data_batch['source_text']
     tgt_text = text_data_batch['target_text']
-
+    print('src_text:{}'.format(src_text))
+    sess = tf.Session()
+    src, tgt = sess.run([src_text, tgt_text])
+    print('src:{}'.format(src))
+    print('tgt:{}'.format(tgt))
     encoder_output = encoder(src_text['text_ids'][:, :-1],
             sequence_length=src_text['length']-1)
     # Decode
@@ -108,7 +112,6 @@ if __name__ == "__main__":
 
         #    if step % 10 == 0:
         #        print("%d: %.6f" % (step, loss))
-
 
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)

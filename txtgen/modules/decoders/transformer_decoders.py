@@ -10,7 +10,6 @@ import collections
 # pylint: disable=no-name-in-module, too-many-arguments, too-many-locals
 # pylint: disable=not-context-manager
 import tensorflow as tf
-from tensorflow.contrib.seq2seq import Decoder as TFDecoder
 from tensorflow.python.framework import tensor_shape, dtypes
 
 from txtgen.modules.module_base import ModuleBase
@@ -23,7 +22,7 @@ class TransformerDecoderOutput(
     """the output logits and sampled_ids"""
     pass
 
-class TransformerDecoder(ModuleBase, TFDecoder):
+class TransformerDecoder(ModuleBase):
     """decoder for transformer: Attention is all you need
     """
     def __init__(self,
@@ -40,9 +39,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 self._embedding = embedding
             else:
                 self._embedding = layers.get_embedding(
-                    self._hparams.target.embedding, embedding, vocab_size,
+                    self._hparams.embedding, embedding, vocab_size,
                     self.variable_scope)
-            embed_dim = self._embedding.shape()[1]
+            embed_dim = self._embedding.shape.as_list()[1]
             if self._hparams.zero_pad:
                 self._embedding = tf.concat((tf.zeros(shape=[1, embed_dim]),
                     self._embedding[1:, :]), 0)
@@ -57,6 +56,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             "name":"transformer_decoder",
             "num_heads":8,
             "num_units":64,
+            "zero_pad": True,
         }
 
     def initialize(self, name=None):

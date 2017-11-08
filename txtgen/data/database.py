@@ -264,7 +264,7 @@ class MonoTextDataBase(DataBaseBase):
         Returns:
             A list of strings.
         """
-        items = self._data_provider.list_items()
+        items = list(self._data_provider.list_items())
         if 'record_key' in items:
             items.remove('record_key')
         return items
@@ -409,8 +409,8 @@ class PairedTextDataBase(DataBaseBase):
         return data_provider
 
     def __call__(self):
-        data = self._data_provider.get(self._data_provider.list_items())
-        data = dict(zip(self._data_provider.list_items(), data))
+        data = self._data_provider.get(list(self._data_provider.list_items()))
+        data = dict(zip(list(self._data_provider.list_items()), data))
 
         num_threads = 1
         # Recommended capacity =

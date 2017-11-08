@@ -57,7 +57,6 @@ class TextDataBaseTest(tf.test.TestCase):
                 while not coord.should_stop():
                     # Run the logics
                     data = sess.run(text_data_batch)
-
                     self.assertEqual(set(data.keys()),
                                      set(text_database.list_items()))
                     self.assertEqual(len(data['text']), hparams['batch_size'])
