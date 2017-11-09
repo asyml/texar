@@ -277,9 +277,12 @@ class MultiSentenceTextDataDecoder(data_decoder.DataDecoder):
         # Get number of actual sentences.
         length = tf.shape(sentences)[0]
 
-        # Truncate.
+        # Truncate, since we may have already added the EOS token, we add one
+        # to compensate this.
+        max_length = self._max_seq_length + 1 if self._eos_token \
+            else self._max_seq_length
         split_sentences = tf.map_fn(
-            lambda x: x[:self._max_seq_length],
+            lambda x: x[:max_length],
             split_sentences, dtype=tf.string
         )
 
