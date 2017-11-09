@@ -11,6 +11,8 @@ from __future__ import unicode_literals
 
 import tensorflow as tf
 from tensorflow.contrib.slim.python.slim.data import data_decoder
+import numpy as np
+from txtgen.data.constants import PADDING_TOKEN
 
 
 # pylint: disable=too-many-instance-attributes
@@ -130,6 +132,227 @@ class TextDataDecoder(data_decoder.DataDecoder):
     @text_tensor_name.setter
     def text_tensor_name(self, name):
         self._text_tensor_name = name
+
+    @property
+    def length_tensor_name(self):
+        """The name of length tensor.
+        """
+        return self._length_tensor_name
+
+    @length_tensor_name.setter
+    def length_tensor_name(self, name):
+        self._length_tensor_name = name
+
+    @property
+    def text_id_tensor_name(self):
+        """The name of text index tensor.
+        """
+        return self._text_id_tensor_name
+
+    @text_id_tensor_name.setter
+    def text_id_tensor_name(self, name):
+        self._text_id_tensor_name = name
+
+
+# pylint: disable=too-many-instance-attributes
+class MultiSentenceTextDataDecoder(data_decoder.DataDecoder):
+    """A text data decoder that decodes raw text data. Each data is considered
+    to be multiple sentences concatenated by a delimiter.
+
+    Operations include splitting on word or character level, truncation,
+    inserting special tokens, mapping text units to indexes, etc.
+
+    Args:
+        split_level (str): The name of split level on which text sequence is
+            split. Either "word" or "char".
+        delimiter (str): The delimiter character used when splitting on word
+            level.
+        bos_token (str, optional): Special token added to the beginning of
+            sequences. If it is `None` (default) or an empty string, no
+            BOS token is added.
+        eos_token (str, optional): Special tokan added to the end of
+            sequences. If it is `None` (default) or an empty string, no EOS
+            token is added.
+        max_seq_length (int): Maximum length of each sequence.
+            Tokens exceed the maximum length will be truncated. Additional
+            padding will be done to ensure output sequence all reach this
+            number. The length does not include any added bos_token and eos_
+            token.
+        max_context_length (int): Maximum number of sequences.
+            Additional empty sentences will be add to the output sequence to
+            ensure the tensor have max_context_length dimension. The context
+            length tensor to be get from the return value will contain the
+            actual number of sentences before padding.
+        token_to_id_map (optional): A
+            :class:`~tensorflow.contrib.lookup.HashTable` instance that maps
+            token strings to integer indexes. If not given, the decoder will
+            not decode text into indexes. :attr:`bos_token` and
+            :attr:`eos_token` (if given) should have entries in the
+            :attr:`token_to_id_map` (if given).
+        text_tensor_name (str): Name of the text tensor results. Used as a
+            key to retrieve the text tensor.
+        length_tensor_name (str): Name of the text length tensor results.
+        text_id_tensor_name (str): Name of the text index tensor results.
+    """
+
+    def __init__(self,  # pylint: disable=too-many-arguments
+                 split_level="word",
+                 delimiter=" ",
+                 sentence_delimiter="|||",
+                 bos_token=None,
+                 eos_token=None,
+                 max_seq_length=None,
+                 max_context_length=None,
+                 token_to_id_map=None,
+                 text_tensor_name="text",
+                 length_tensor_name="length",
+                 text_id_tensor_name="text_ids",
+                 context_length_tensor_name="context_lengths"
+                 ):
+        self._split_level = split_level
+        self._delimiter = delimiter
+        self._bos_token = bos_token
+        self._eos_token = eos_token
+        self._max_seq_length = max_seq_length
+        self._token_to_id_map = token_to_id_map
+        self._text_tensor_name = text_tensor_name
+        self._text_id_tensor_name = text_id_tensor_name
+        self._length_tensor_name = length_tensor_name
+        self._context_length_tensor_name = context_length_tensor_name
+        self._sentence_delimiter = sentence_delimiter
+        self._max_context_length = max_context_length
+
+    def decode(self, data, items):
+        """Decodes the data to return the tensors specified by the list of
+        items.
+
+        Args:
+            data: The text data to decode.
+            items: A list of strings, each of which is the name of the resulting
+                tensors to retrieve.
+
+        Returns:
+            A list of tensors, each of which corresponds to each item. If
+            `token_to_id_map` is not given when constructing the decoder,
+            returns `None` for the token index item.
+        """
+
+        sentences = tf.string_split([data],
+                                    delimiter=self._sentence_delimiter).values
+
+        sent_length = self._max_seq_length
+        if self._eos_token:
+            sent_length += 1
+
+        if self._bos_token:
+            sent_length += 1
+
+        # Padding function.
+        def _pad_token(s, padding, pad_length):
+            while s.size < pad_length:
+                s = np.append(s, padding)
+            return s
+
+        # Split each sentence to tokens, and pad them to a same length.
+        # This is necessary to treat all sentences as a single tensor.
+        # Note that we have to pad the EOS symbol before the padding, if
+        # _eos_token is defined
+        split_sentences = tf.map_fn(
+            lambda s: tf.py_func(
+                _pad_token,
+                [
+                    tf.concat(
+                        [tf.string_split([s], delimiter=self._delimiter).values,
+                         [self._eos_token]], axis=0
+                    )
+                    if self._eos_token  # Add EOS above if defined.
+                    else tf.string_split([s], delimiter=self._delimiter).values,
+                    PADDING_TOKEN,
+                    sent_length
+                ],
+                tf.string),
+            sentences, dtype=tf.string
+        )
+
+        # Get number of actual sentences.
+        length = tf.shape(sentences)[0]
+
+        # Truncate.
+        split_sentences = tf.map_fn(
+            lambda x: x[:self._max_seq_length],
+            split_sentences, dtype=tf.string
+        )
+
+        # Add BOS tokens.
+        split_sentences = tf.map_fn(
+            lambda x: tf.concat([[self._bos_token], x],
+                                axis=0) if self._bos_token else x,
+            split_sentences,
+            dtype=tf.string
+        )
+
+        # Shape will be lost after py_func, remember it first.
+        origin_shape = split_sentences.shape
+
+        split_sentences = tf.map_fn(
+            lambda s: tf.py_func(_pad_token, [s, PADDING_TOKEN, sent_length],
+                                 tf.string),
+            split_sentences,
+            dtype=tf.string,
+        )
+        split_sentences.set_shape(origin_shape)
+
+        # Pad additional sentence.
+        def _pad_sentence(s, padding, pad_length):
+            while s.shape[0] < pad_length:
+                s = np.vstack([s, padding])
+            return s
+
+        sent_padding = tf.tile([PADDING_TOKEN], [sent_length])
+        split_sentences = tf.py_func(_pad_sentence,
+                                     [split_sentences, sent_padding,
+                                      self._max_context_length], [tf.string])[0]
+        split_sentences.set_shape((self._max_context_length, sent_length))
+
+        # Map to index
+        token_ids = None
+        if self._token_to_id_map is not None:
+            token_ids = self._token_to_id_map.lookup(split_sentences)
+
+        outputs = {
+            self._text_tensor_name: split_sentences,
+            self._length_tensor_name: tf.size(split_sentences),
+            self._context_length_tensor_name: length,
+            self._text_id_tensor_name: token_ids
+        }
+        return [outputs[item] for item in items]
+
+    def list_items(self):
+        """Returns the list of item names that the decoder can produce.
+
+        Returns:
+            A list of strings can be passed to :meth:`decode()`.
+        """
+        return [
+            self._text_tensor_name,
+            self._length_tensor_name,
+            self._text_id_tensor_name,
+            self._context_length_tensor_name
+        ]
+
+    @property
+    def text_tensor_name(self):
+        """The name of text tensor.
+        """
+        return self._text_tensor_name
+
+    @text_tensor_name.setter
+    def text_tensor_name(self, name):
+        self._text_tensor_name = name
+
+    @property
+    def context_length_tensor_name(self):
+        return self._context_length_tensor_name
 
     @property
     def length_tensor_name(self):
