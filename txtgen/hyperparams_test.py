@@ -14,6 +14,7 @@ import tensorflow as tf
 
 from txtgen.hyperparams import HParams
 
+# pylint: disable=no-member
 
 class HParamsTest(tf.test.TestCase):
     """Tests hyperparameter related operations.
@@ -29,6 +30,11 @@ class HParamsTest(tf.test.TestCase):
                 "key1": "value1",
                 "key2": "value2"
             },
+            "nested_dict": {
+                "dict_l2": {
+                    "key1_l2": "value1_l2"
+                }
+            },
             "kwargs": {
                 "arg1": "argv1"
             },
@@ -43,8 +49,10 @@ class HParamsTest(tf.test.TestCase):
         # Test HParams construction
         self.assertEqual(hparams_.str, default_hparams["str"])
         self.assertEqual(hparams_.list, default_hparams["list"])
-        self.assertEqual(hparams_.dict.key1, hparams["dict"]["key1"])   # pylint: disable=no-member
+        self.assertEqual(hparams_.dict.key1, hparams["dict"]["key1"])
         self.assertEqual(hparams_.kwargs.arg2, hparams["kwargs"]["arg2"])
+        self.assertEqual(hparams_.nested_dict.dict_l2.key1_l2,
+                         default_hparams["nested_dict"]["dict_l2"]["key1_l2"])
 
         self.assertEqual(len(hparams_), len(default_hparams))
 
@@ -62,7 +70,7 @@ class HParamsTest(tf.test.TestCase):
         hparams_.str = "new_str"
         hparams_.dict = {"key3": "value3"}
         self.assertEqual(hparams_.str, "new_str")
-        self.assertEqual(hparams_.dict.key3, "value3") # pylint: disable=no-member
+        self.assertEqual(hparams_.dict.key3, "value3")
 
         hparams_.add_hparam("added_str", "added_str")
         hparams_.add_hparam("added_dict", {"key4": "value4"})

@@ -1,4 +1,3 @@
-#
 """
 Various neural network layers
 """
@@ -9,11 +8,12 @@ from __future__ import division
 
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
-
+import numpy as np
+from txtgen import context
 from txtgen.hyperparams import HParams
 from txtgen.core.utils import get_instance, switch_dropout
 
-# pylint: disable=not-context-manager, redefined-variable-type
+# pylint: disable=not-context-manager, redefined-variable-type, invalid-name
 
 def default_rnn_cell_hparams():
     """Returns default hyperparameters of an RNN cell.
@@ -156,40 +156,100 @@ def get_rnn_cell(hparams=None):
 
     return cell
 
+def get_rnn_cell_trainable_variables(cell):
+    """Returns the list of trainable variables of an RNN cell.
 
-def default_embedding_hparams():
-    """Returns default hyperparameters of embedding used in modules.
+    Args:
+        cell: an instance of :class:`tensorflow.contrib.rnn.RNNCell`.
 
     Returns:
-        dict: A dictionary with the following structure and values:
+        list: trainable variables of the cell.
+    """
+    cell_ = cell
+    while True:
+        try:
+            return cell_.trainable_variables
+        except AttributeError:
+        # Cell wrappers (e.g., `DropoutWrapper`) cannot directly access to
+        # `trainable_variables` as they don't initialize superclass
+        # (tf==v1.3). So try to access through the cell in the wrapper.
+            cell_ = cell._cell
+
+def default_embedding_hparams():
+    """Returns default hyperparameters of token embedding used in encoders,
+    decoders, and other modules.
+
+    Returns:
+        A dictionary with the following structure and values.
 
         .. code-block:: python
 
             {
-                "name": "embedding", # A string. Name of the embedding variable.
-                "dim": 100,          # An integer. Embedding dimension.
-                "initializer": {     # Initializer of embedding values.
-                    # A string. Name or full path to the initializer class.
-                    # An initializer is a class inheriting from
-                    # `tensorflow.Initializer`, which can be built-in
-                    # classes in module `tensorflow`, or user-defined
-                    # classes in `txtgen.custom`, or a full path like
-                    # `my_module.MyInitializer`.
+                "name": "embedding",
+                "dim": 100,
+                "initializer": {
                     "type": "tensorflow.random_uniform_initializer",
-
-                    # A dictionary of arguments for constructor of the
-                    # initializer class. An initializer is created by
-                    # calling `initialzier_class(**kwargs)` where
-                    # `initializer_class` is specified in `type`.
                     "kwargs": {
                         "minval": -0.1,
                         "maxval": 0.1,
                         "seed": None
                     }
                 },
-                # (bool) Whether the embedding variable trainable.
                 "trainable": True,
             }
+
+        Here:
+
+        "name" : str
+            Name of the embedding variable.
+
+        "dim" : int
+            Embedding dimension.
+
+        "initializer" : dict
+            Hyperparameters of the initializer for the embedding values,
+            including:
+
+            "type" : str
+                Name or full path to the initializer class. The class
+                can be
+
+                - Built-in initializer defined in
+                  :tf_main:`tf.initializers <initializers>`, e.g.,
+                  :tf_main:`tf.initializers.random_uniform
+                  <random_uniform_initializer>` (a.k.a
+                  tf.random_uniform_initializer) or in
+                  :mod:`tensorflow`, e.g.,
+                  :tf_main:`tf.glorot_uniform_initializer
+                  <glorot_uniform_initializer>`.
+                - User-defined initializer in :mod:`txtgen.custom`.
+                - External initializer. Must provide the full path, \
+                  e.g., :attr:`"my_module.MyInitializer"`.
+
+                The default value is
+                :attr:`"tensorflow.random_uniform_initializer"`.
+
+            "kwargs" : dict
+                A dictionary of arguments for constructor of the
+                initializer class. An initializer is created by
+                calling `initialzier_class(**kwargs)` where
+                :attr:`initializer_class` is specified in :attr:`"type"`.
+
+                The default value is:
+
+                    .. code-block:: python
+
+                        {
+                            "minval": -0.1,
+                            "maxval": 0.1,
+                            "seed": None
+                        }
+                which are the arguments of constructing
+                :tf_main:`tf.random_uniform_initializer
+                <random_uniform_initializer>`.
+
+        "trainable" : bool
+            Whether the embedding is trainable.
     """
     return { #TODO(zhiting): allow more hparams like regularizer
         "name": "embedding",
@@ -215,7 +275,7 @@ def get_embedding(hparams=None,
     Args:
         hparams (dict or HParams, optional): Embedding hyperparameters. Missing
             hyperparameters are set to default values. See
-            :meth:`~txtgen.core.layers.default_embedding_hparams` for all
+            :func:`~txtgen.core.layers.default_embedding_hparams` for all
             hyperparameters and default values.
 
             If :attr:`init_values` is given, :attr:`hparams["initializer"]`,
@@ -237,9 +297,9 @@ def get_embedding(hparams=None,
             hparams = HParams(hparams, default_embedding_hparams())
         if init_values is None:
             kwargs = hparams["initializer"]["kwargs"].todict()
-            initializer = get_instance(hparams["initializer"]["type"],
-                                       kwargs,
-                                       ["txtgen.custom", "tensorflow"])
+            initializer = get_instance(
+                hparams["initializer"]["type"], kwargs,
+                ["txtgen.custom", "tensorflow", "tensorflow.contrib.layers"])
             return tf.get_variable(name=hparams["name"],
                                    shape=[vocab_size, hparams["dim"]],
                                    initializer=initializer,
@@ -249,7 +309,126 @@ def get_embedding(hparams=None,
                                    initializer=init_values,
                                    trainable=hparams["trainable"])
 
-def sinuoid_positional_encoding(inputs,
+def default_conv1d_kwargs():
+    """Returns the default keyword argument values of 1D convolution layer(s)
+    defined in :tf_main:`tf.layers.Conv1D <layers/Conv1D>`.
+
+    Some of the keyword arguments allow extended values as detailed in the
+    following.
+
+    Returns:
+        .. code-block:: python
+
+            {
+                "kernel_size": [3,4,5],
+                "filters": 100,
+                "strides": 1,
+                "activation": "tensorflow.identity",
+                "kernel_initializer": {
+                    "type": "tensorflow.glorot_uniform_initializer",
+                    "kwargs": {}
+                },
+                "bias_initializer": {
+                    "type": "tensorflow.zeros_initializer",
+                    "kwargs": {}
+                },
+                "kernel_regularizer": None,
+                "bias_regularizer": None,
+                "activity_regularizer": None
+            }
+
+        Here:
+
+        "kernel_size" : int or a list of int
+            The length(s) of 1D convolution window(s). If a list, filters with
+            different window lengths as specified in the list are created.
+
+            The default value is `[3,4,5]`, which creates 3 sets of filters,
+            each of which are with lengths 3, 4, and 5.
+
+        "filters" : int or a list of int
+            The number of filters in the convolution. If an int, equal number of
+            filters with different window lengths are created. If a list,
+            the list must be of the same length as the list in
+            :attr:`"kernel_size"`, and each integer in the list is the number
+            of filters with respective window length.
+
+            The default value is `100`, which creates 100 filters for each
+            filter set.
+
+        "strides" : int or a list of int
+            The stride length of the convolution. If an int, the stride length
+            is shared across all filter sets. If a list, the list must be of
+            the same length as the list in :attr:`"kernel_size"`.
+
+            The default value is `1`.
+
+        "dilation_rate" : int or a list of int
+            The dilation rate to use for dilated convolution. If an int, the
+            dilation rate is shared across all filter sets. If a list, the list
+            must be of the same length as the list in :attr:`"kernel_size"`.
+
+            The default value is `1`.
+
+        "activation" : str
+            The name or full path to the activation function applied to the
+            outputs of the layer.
+
+            The default value is "tensorflow.identity", which is a linear
+            activation.
+
+        "kernel_initializer" : dict
+            Hyperparameters of the initializer for the filters, including
+            :attr:`"type"` (str) and :attr:`"kwargs"` (dict).
+
+            The default is :tf_main:`tf.glorot_uniform_initializer
+            <glorot_uniform_initializer>`.
+
+        "bias_initializer" : dict
+            Hyperparameters of the initializer for the bias, including
+            :attr:`"type"` (str) and :attr:`"kwargs"` (dict).
+
+            The default is :tf_main:`tf.zeros_initializer <zeros_initializer>`.
+
+        "kernel_regularizer" : dict
+            Optional hyperparameters of the regularizer for the convolution
+            filters, including :attr:`"type"` (str) and :attr:`"kwargs"` (dict).
+
+            The default value is `None`, i.e., no regularization is performed.
+
+        "bias_regularizer" : dict
+            Optional hyperparameters of the regularizer for the bias,
+            including :attr:`"type"` (str) and :attr:`"kwargs"` (dict).
+
+            The default value is `None`, i.e., no regularization is performed.
+
+        "activity_regularizer" : dict
+            Optional hyperparameters of the regularizer for the layer output,
+            including :attr:`"type"` (str) and :attr:`"kwargs"` (dict).
+
+            The default value is `None`, i.e., no regularization is performed.
+    """
+    return {
+        "kernel_size": [3,4,5],
+        "filters": 100,
+        "strides": 1,
+        "dilation_rate": 1,
+        "activation": "tensorflow.identity",
+        "kernel_initializer": {
+            "type": "tensorflow.glorot_uniform_initializer",
+            "kwargs": {}
+        },
+        "bias_initializer": {
+            "type": "tensorflow.zeros_initializer",
+            "kwargs": {}
+        },
+        "kernel_regularizer": None,
+        "bias_regularizer": None,
+        "activity_regularizer": None
+    }
+
+
+def sinusoid_positional_encoding(inputs,
                                 zero_pad=True,
                                 scale=True,
                                 reuse=None,
@@ -265,31 +444,31 @@ def sinuoid_positional_encoding(inputs,
         scope: [String], Optional scope for 'variable_scope'
         position_duration: [Int], default=10000
     """
+    batch_size, max_time, hidden_dim = inputs.get_shape().as_list()
     with tf.variable_scope(scope, reuse=reuse):
-        batch_size, max_time, hidden_dim = inputs.get_shape().as_list()
-        input_one = tf.tile(tf.expand_dims(tf.range(max_time), 0), [batch_size, 1]) #batch_size * max_time
-        position_block = tf.tile(tf.expand_dims(tf.range(max_time), 1), [1, num_units // 2])
-        unit_block = tf.tile(tf.expand_dims(tf.range(hidden_dim // 2), 0), [max_time, 1])
-        rad_block = tf.pow(tf.div(position_block, tf.multiply(position_duration, 1)), tf.div(unit_block, hidden_dim // 2))
+        position_idx = tf.tile(tf.expand_dims(tf.range(max_time), 0), [batch_size, 1]) #batch_size * max_time
+        position_enc = np.array([
+            [pos /np.power(10000, 2.*i/hidden_dim) for i in range(hidden_dim)]
+            for pos in range(max_time)])
 
-        sin_block = tf.sin(tf.cast(rad_block, tf.float32))
-        cos_block = tf.cos(tf.cast(rad_block, tf.float32))
-        lookup_table = tf.concat([sin_block, cos_block], axis = 1)
+        position_enc[:, 0::2] = np.sin(position_enc[:, 0::2])
+        position_enc[:, 1::2] = np.cos(position_enc[:, 1::2])
 
+        lookup_table = tf.convert_to_tensor(position_enc)
         if zero_pad:
-            lookup_table = tf.concat((tf.zeros(shape = [1, num_units]), lookup_table[1:, :]), 0)
-        outputs = tf.nn.embedding_lookup(lookup_table, input_one)
+            lookup_table = tf.concat((tf.zeros(shape=[1, hidden_dim]),
+                lookup_table[1:, :]), 0)
+        outputs = tf.nn.embedding_lookup(lookup_table, position_idx)
         if scale:
-            outputs = outputs * math.sqrt(hidden_dim)
+            outputs = outputs * hidden_dim**0.5
         return outputs
 
-
+#TODO(zhiting): fix code style
 def multihead_attention(queries,
                         keys,
                         num_units= None,
                         num_heads=8,
                         dropout_rate=0,
-                        is_training=True,
                         causality = False,
                         scope = 'multihead_attention',
                         reuse= None):
@@ -299,7 +478,6 @@ def multihead_attention(queries,
         keys: A 3d tensor with shape of [N, T_k, C_k].
         num_units: A scalar. Attention size.
         dropout_rate: A floating point number.
-        is_training: Boolean. Controller of mechanism for dropout.
         causality: Boolean. Should be true, units that reference the future are masked
         num_heads: An int. Number of heads.
         scope: Optional scope for `variable_scope`.
@@ -355,7 +533,7 @@ def multihead_attention(queries,
         outputs *= query_masks # broadcasting. (N, T_q, C)
 
         # Dropouts
-        outputs = tf.layers.dropout(outputs, rate=dropout_rate, training=tf.convert_to_tensor(is_training))
+        outputs = tf.layers.dropout(outputs, rate=dropout_rate, training=context.is_train())
 
         # Weighted sum
         outputs = tf.matmul(outputs, V_) # ( h*N, T_q, C/h)
@@ -367,6 +545,65 @@ def multihead_attention(queries,
         outputs += queries
 
         # Normalize
-        outputs = normalize(outputs) # (N, T_q, C)
 
     return outputs
+
+
+
+def poswise_feedforward(attended_dec, scope="multihead_attention", reuse=None):
+    '''Point-wise feed forward net.
+
+    Args:
+      inputs: A 3d tensor with shape of [N, T, C].
+      num_units: A list of two integers.
+      scope: Optional scope for `variable_scope`.
+      reuse: Boolean, whether to reuse the weights of a previous layer
+        by the same name.
+
+    Returns:
+      A 3d tensor with the same shape and dtype as inputs
+    '''
+    hidden_dim = attended_dec.shape().as_list()[-1]
+    with tf.variable_scope(scope, reuse=reuse):
+        outputs = tf.layers.conv1d(inputs = attended_dec,
+                filters=hidden_dim*4,
+                kernel_size=1,
+                activation=tf.nn.relu,
+                use_bias=True)
+        outputs = tf.layers.conv1d(inputs = outputs,
+                filters=hidden_dim,
+                kernel_size=1,
+                activation=None,
+                use_bias=True)
+        outputs += attended_dec #residual connection
+    return outputs
+
+def normalize(inputs,
+              epsilon = 1e-8,
+              scope="ln",
+              reuse=None):
+    '''Applies layer normalization.
+
+    Args:
+      inputs: A tensor with 2 or more dimensions, where the first dimension has
+        `batch_size`.
+      epsilon: A floating number. A very small number for preventing ZeroDivision Error.
+      scope: Optional scope for `variable_scope`.
+      reuse: Boolean, whether to reuse the weights of a previous layer
+        by the same name.
+
+    Returns:
+      A tensor with the same shape and data dtype as `inputs`.
+    '''
+    with tf.variable_scope(scope, reuse=reuse):
+        inputs_shape = inputs.get_shape()
+        params_shape = inputs_shape[-1:]
+
+        mean, variance = tf.nn.moments(inputs, [-1], keep_dims=True)
+        beta= tf.Variable(tf.zeros(params_shape))
+        gamma = tf.Variable(tf.ones(params_shape))
+        normalized = (inputs - mean) / ( (variance + epsilon) ** (.5) )
+        outputs = gamma * normalized + beta
+
+    return outputs
+

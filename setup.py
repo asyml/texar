@@ -19,8 +19,8 @@ setuptools.setup(
         'numpy'
     ],
     extras_require={
-        'tensorflow': ['tensorflow'],
-        'tensorflow with gpu': ['tensorflow-gpu']
+        'tensorflow': ['tensorflow>=1.4.0'],
+        'tensorflow with gpu': ['tensorflow-gpu>=1.4.0']
     },
     classifiers=[
         'Intended Audience :: Developers',

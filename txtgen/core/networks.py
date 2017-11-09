@@ -1,6 +1,6 @@
 #
 """
-Various neural networks
+Various neural networks.
 """
 
 from __future__ import absolute_import
