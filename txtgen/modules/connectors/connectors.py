@@ -200,7 +200,7 @@ class ForwardConnector(ConnectorBase):
             "name": "forward_connector"
         }
 
-    def _build(self, inputs):    # pylint: disable=W0221
+    def _build(self, inputs):
         """Passes inputs to the initial states of decoder.
 
         :attr:`inputs` must either have the same structure, or the same number
@@ -277,7 +277,7 @@ class MLPTransformConnector(ConnectorBase):
             "name": "mlp_connector"
         }
 
-    def _build(self, inputs): #pylint: disable=W0221
+    def _build(self, inputs):
         """Transforms the inputs with an MLP layer and packs the results to have
         the same structure with the decoder state.
 
@@ -326,48 +326,11 @@ class ReparameterizedStochasticConnector(ConnectorBase):
             .. code-block:: python
 
                 {
-                    "distribution": {
-                        "type": "MultivariateNormalDiag",
-                        "kwargs": {}
-                    },
                     "activation_fn": "tensorflow.identity",
                     "name": "reparameterized_stochastic_connector"
                 }
 
             Here:
-
-            "distribution" : dict
-                A dictionary of distribution parameters. This is ignored if
-                which includes:
-
-                "type" : str
-                    Name or path to a
-                    :class:`~tensorflow.contrib.distributions.Distribution`
-                    class. The distribution must be reparameterizable, i.e.,
-                    `reparameterization_type = FULLY_REPARAMETERIZED`.
-                    The distribution class can be
-
-                    - Built-in class defined in \
-                      `tensorflow.contrib.distributions` or \
-                      `tensorflow.distributions`.
-                    - User-defined distribution classes in `txtgen.custom` that\
-                      inherit \
-                      :class:`~tensorflow.contrib.distributions.Distribution`.
-                    - External distribution classes that inherit
-                      :class:`~tensorflow.contrib.distributions.Distribution`. \
-                      Must provide the full path, \
-                      e.g., "my_module.MyDistributionClass".
-
-                    The default value is "MultivariateNormalDiag", which
-                    corresponds to the
-                    :class:`~tensorflow.contrib.distributions.MultivariateNormalDiag`
-                    class.
-
-                "kwargs" : dict
-                    A dictionary of arguments for constructor of the
-                    distribution class.
-
-                    The default value is `{}`.
 
             "activation_fn" : str
                 The name or full path to the activation function applied to
@@ -390,17 +353,13 @@ class ReparameterizedStochasticConnector(ConnectorBase):
 
         """
         return {
-            "distribution": { #TODO(zhiting): is this hparam necessary ?
-                "type": "MultivariateNormalDiag",
-                "kwargs": {}
-            },
             "activation_fn": "tensorflow.identity",
             "name": "reparameterized_stochastic_connector"
         }
 
     def _build(self,
                distribution=None,
-               distribution_type=None, #TODO(zhiting): add default value?
+               distribution_type='MultivariateNormalDiag',
                distribution_kwargs=None,
                transform=True,
                num_samples=None):
@@ -442,11 +401,6 @@ class ReparameterizedStochasticConnector(ConnectorBase):
         elif distribution_type and distribution_kwargs:
             dstr = get_instance(
                 distribution_type, distribution_kwargs,
-                ["txtgen.custom", "tensorflow.contrib.distributions"])
-        else:
-            dstr = get_instance(
-                self.hparams.distribution.type,
-                self.hparams.distribution.kwargs,
                 ["txtgen.custom", "tensorflow.contrib.distributions"])
 
         if dstr.reparameterization_type == tf_dstr.NOT_REPARAMETERIZED:
@@ -498,28 +452,11 @@ class StochasticConnector(ConnectorBase):
             .. code-block:: python
 
                 {
-                    "distribution": {
-                        "type": "tf.contrib.distribution.Categorical",
-                        "kwargs": {}
-                    },
                     "activation_fn": "tensorflow.identity",
                     "name": "stochastic_connector"
                 }
 
             Here:
-
-            "distribution" : dict
-                A disctionary of distribution parameters, which includes:
-                "type" : str
-                Name or path to the distribution.
-
-                The default value is "Categorical"
-
-                "kwargs" : dict
-                Keyword arguments of the distribution class specified in
-                :attr:`distribution_type`.
-
-                The default value is {}
 
             "activation_fn" : str
                 The name or full path to the activation function applied to
@@ -541,17 +478,13 @@ class StochasticConnector(ConnectorBase):
 
         """
         return {
-            "distribution": {
-                "type": "Categorical",
-                "kwargs": {}
-                },
             "activation_fn": "tensorflow.identity",
             "name": "stochastic_connector"
         }
 
     def _build(self,
                distribution=None,
-               distribution_type=None,
+               distribution_type='MultivariateNormalDiag',
                distribution_kwargs=None,
                transform=False,
                num_samples=None):
@@ -563,8 +496,7 @@ class StochasticConnector(ConnectorBase):
             distribution (optional): An instance of
                 :class:`~tensorflow.contrib.distributions.Distribution`. If
                 `None` (default), distribution is constructed based on
-                :attr:`distribution_type` or
-                :attr:`hparams['distribution']['type']`.
+                :attr:`distribution_type`
             distribution_type (str, optional): Name or path to the distribution
                 class which inherits
                 :class:`~tensorflow.contrib.distributions.Distribution`. Ignored
@@ -592,11 +524,7 @@ class StochasticConnector(ConnectorBase):
             dstr = get_instance(
                 distribution_type, distribution_kwargs,
                 ["txtgen.custom", "tensorflow.contrib.distributions"])
-        else:
-            dstr = get_instance(
-                self.hparams.distribution.type,
-                self.hparams.distribution.kwargs,
-                ["txtgen.custom", "tensorflow.contrib.distributions"])
+
 
         if num_samples:
             output = dstr.sample(num_samples)
@@ -657,7 +585,7 @@ class ConcatConnector(ConnectorBase):
                 the outputs of the MLP layer. The activation functions can be:
 
                 - Built-in activation functions defined in `tensorflow` or \
-                `tensorflow.nn`, e.g., :meth:`tensorflow.identity`.
+                  `tensorflow.nn`, e.g., :meth:`tensorflow.identity`.
                 - User-defined activation functions in `txtgen.custom`.
                 - External activation functions. Must provide the full path, \
                   e.g., "my_module.my_activation_fn".
@@ -669,15 +597,13 @@ class ConcatConnector(ConnectorBase):
                 Name of the connector.
 
                 The default value is "concat_connector".
-
-
         """
         return {
             "activation_fn": "tensorflow.identity",
             "name": "concat_connector"
         }
 
-    def _build(self, connector_inputs, transform=True):  # pylint: disable=W0221
+    def _build(self, connector_inputs, transform=True):
         """Concatenate multiple input connectors
 
         Args:

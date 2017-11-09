@@ -33,6 +33,8 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.extlinks',
     'sphinxcontrib.napoleon',
 ]
 
@@ -302,3 +304,16 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
+
+# Example configuration for intersphinx: refer to the Python standard library.
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/2.7/', None),
+    'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+}
+
+extlinks = {'tf_main': (
+                'https://www.tensorflow.org/api_docs/python/tf/%s',
+                None),
+            'tf_r0.12': (
+                'https://www.tensorflow.org/versions/r0.12/api_docs/python/%s',
+                None)}

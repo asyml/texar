@@ -120,8 +120,9 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
 
         self._add_internal_trainable_variables()
         # Add trainable variables of `self._cell` which may be constructed
-        # externally
-        self._add_trainable_variable(self._cell.trainable_variables)
+        # externally.
+        self._add_trainable_variable(
+            layers.get_rnn_cell_trainable_variables(self._cell))
         self._built = True
 
         return outputs, final_state, sequence_lengths

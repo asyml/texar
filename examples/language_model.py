@@ -105,8 +105,6 @@ if __name__ == "__main__":
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-        print(ops.get_collection(ops.GraphKeys.QUEUE_RUNNERS))
-
         try:
             while not coord.should_stop():
                 # Run the logics
