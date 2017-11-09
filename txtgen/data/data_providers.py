@@ -9,9 +9,10 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from tensorflow.python.training import queue_runner # pylint: disable=E0611
+from tensorflow.python.training import queue_runner  # pylint: disable=E0611
 import tensorflow.contrib.slim as tf_slim
 from tensorflow.contrib.slim.python.slim.data import parallel_reader
+
 
 # pylint: disable=too-many-arguments, too-many-locals
 class PairedDataProvider(tf_slim.data_provider.DataProvider):
@@ -45,14 +46,14 @@ class PairedDataProvider(tf_slim.data_provider.DataProvider):
                  common_queue_min=526,
                  seed=None,
                  scope=None):
-
         scope = scope or "paired_data_provider"
 
         _, data1 = parallel_reader.parallel_read(
             dataset1.data_sources,
             reader_class=dataset1.reader,
             num_epochs=num_epochs,
-            num_readers=1, # Use one reader to ensure aligned source-target data
+            num_readers=1,
+            # Use one reader to ensure aligned source-target data
             reader_kwargs=reader_kwargs1,
             shuffle=False,
             capacity=common_queue_capacity,
@@ -63,7 +64,8 @@ class PairedDataProvider(tf_slim.data_provider.DataProvider):
             dataset2.data_sources,
             reader_class=dataset2.reader,
             num_epochs=num_epochs,
-            num_readers=1, # Use one reader to ensure aligned source-target data
+            num_readers=1,
+            # Use one reader to ensure aligned source-target data
             reader_kwargs=reader_kwargs2,
             shuffle=False,
             capacity=common_queue_capacity,

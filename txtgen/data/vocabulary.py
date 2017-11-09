@@ -13,6 +13,7 @@ from collections import defaultdict
 import tensorflow as tf
 from tensorflow import gfile
 import numpy as np
+from txtgen.data.constants import BOS_TOKEN, EOS_TOKEN, PADDING_TOKEN, UNK_TOKEN
 
 
 def _make_defaultdict(keys, values, default_value):
@@ -33,7 +34,8 @@ def _make_defaultdict(keys, values, default_value):
 
     return dict_
 
-class Vocab(object):    # pylint: disable=too-many-instance-attributes
+
+class Vocab(object):  # pylint: disable=too-many-instance-attributes
     """Vocabulary class that loads vocabulary from file, and maintains mapping
     tables between token strings and indexes.
 
@@ -46,17 +48,20 @@ class Vocab(object):    # pylint: disable=too-many-instance-attributes
         eos_token (str): A special token that will be added to the end of
             sequences.
         unk_token (str): A special token that will replace all unknown tokens.
+        padding_token (str): A special token that is used to do padding,
+                                default to be a empty string.
     """
 
-    def __init__(self, filename, bos_token="<BOS>", eos_token="<EOS>",
-                 unk_token="<UNK>"):
+    def __init__(self, filename, bos_token=BOS_TOKEN, eos_token=EOS_TOKEN,
+                 unk_token=UNK_TOKEN, padding_token=PADDING_TOKEN):
         self._filename = filename
         self._bos_token = bos_token
         self._eos_token = eos_token
         self._unk_token = unk_token
+        self._padding_token = padding_token
 
         self._id_to_token_map, self._token_to_id_map, \
-            self._id_to_token_map_py, self._token_to_id_map_py = \
+        self._id_to_token_map_py, self._token_to_id_map_py = \
             self.load(self._filename)
 
     def load(self, filename):
@@ -85,8 +90,14 @@ class Vocab(object):    # pylint: disable=too-many-instance-attributes
         if self._unk_token in vocab:
             raise ValueError("Special token already exists in the "
                              "vocabulary %s" % self._unk_token)
+        if self._padding_token in vocab:
+            raise ValueError("Special padding token already exists in the "
+                             "vocabulary %s, it is an empty token by default"
+                             % self._padding_token)
 
-        vocab += [self._bos_token, self._eos_token, self._unk_token]
+        # Placing _padding_token at the beginning to make sure it take index 0.
+        vocab = [self._padding_token, self._bos_token, self._eos_token,
+                 self._unk_token] + vocab
         vocab_size = len(vocab)
         vocab_idx = np.arange(vocab_size)
         unk_token_idx = vocab_size - 1
