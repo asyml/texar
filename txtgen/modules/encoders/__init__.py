@@ -12,4 +12,4 @@ from __future__ import print_function
 from txtgen.modules.encoders.encoder_base import *
 from txtgen.modules.encoders.rnn_encoders import *
 from txtgen.modules.encoders.hierarchical_encoders import *
-
+from txtgen.modules.encoders.transformer_encoders import *

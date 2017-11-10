@@ -14,7 +14,7 @@ from tensorflow.python.framework import ops
 # We shall wrap all these modules
 from txtgen.data import database
 from txtgen.modules import ConstantConnector
-from txtgen.modules import BasicRNNDecoder, get_helper
+from txtgen.modules import TransformerEncoder, TransformerDecoder
 from txtgen.losses import mle_losses
 from txtgen.core import optimization as opt
 from txtgen import context
@@ -28,13 +28,26 @@ if __name__ == "__main__":
     data_hparams = {
         "num_epochs": 10,
         "seed": 123,
-        "dataset": {
+        "batch_size":3,
+        "source_dataset": {
             "files": ['data/sent.txt'],
             "vocab_file": 'data/vocab.txt'
+        },
+        "target_dataset": {
+            "files": ['data/sent.txt'],
+            "vocab_share": True,
+            "reader_share": True,
+            "processing":{
+                "eos_token": "<TARGET_EOS>"
+            }
         }
     }
     # Construct the database
-    src_db, tgt_db = database.PairedTextDataBase(data_hparams)
+    text_database = database.PairedTextDataBase(data_hparams)
+    print('database finished')
+
+    ##TODO(haoran) bug: the text_database cannot be called here
+    text_data_batch = text_database()
     # Get data minibatch, which is a dictionary:
     # {
     #   "text": text_tensor,     # text string minibatch,
@@ -43,34 +56,33 @@ if __name__ == "__main__":
     #   "text_ids": text_id_tensor, # a 2D int tensor of token ids with shape
     #                               # `[batch_size, max_seq_length]`
     # }
-    src_data_batch, tgt_data_batch = src_db(), tgt_db
-    ### Build model
 
     # Build decoder. Simply use the default hyperparameters.
     #decoder = rnn_decoders.BasicRNNDecoder(vocab_size=text_db.vocab.vocab_size)
-    encoder = BasicRNNEncoder(vocab_size = src_db.vovab.vocab_size)
-    decoder = BasicRNNDecoder(vocab_size=tgt_db.vocab.vocab_size)
+    encoder = TransformerEncoder(vocab_size=text_database.source_vocab.vocab_size)
+    decoder = TransformerDecoder(vocab_size=text_database.target_vocab.vocab_size)
 
     # Build connector, which simply feeds zero state to decoder as initial state
-    connector = ConstantConnector(decoder.state_size)
-
-    # Build helper used in training.
-    # We shall probably improve the interface here.
-    helper_train = get_helper(
-        decoder.hparams.helper_train.type,
-        inputs=data_batch['text_ids'][:, :-1],
-        sequence_length=data_batch['length'] - 1,
-        embedding=decoder.embedding)
-
+    connector = ConstantConnector(output_size= decoder._hparams.embedding.dim)
+    print('encoder decoder finished')
+    src_text = text_data_batch['source_text']
+    tgt_text = text_data_batch['target_text']
+    print('src_text:{}'.format(src_text))
+    sess = tf.Session()
+    src, tgt = sess.run([src_text, tgt_text])
+    print('src:{}'.format(src))
+    print('tgt:{}'.format(tgt))
+    encoder_output = encoder(src_text['text_ids'][:, :-1],
+            sequence_length=src_text['length']-1)
     # Decode
     outputs, final_state, sequence_lengths = decoder(
-        helper=helper_train, initial_state=connector(text_db.batch_size))
+        initial_state=connector(text_database._hparams.batch_size))
 
     # Build loss
     mle_loss = mle_losses.average_sequence_sparse_softmax_cross_entropy(
-        labels=data_batch['text_ids'][:, 1:],
-        logits=outputs.rnn_output,
-        sequence_length=sequence_lengths - 1)
+        labels=tgt_text['text_ids'][:, 1:],
+        logits=outputs.output_logits,
+        sequence_length=sequence_lengths-1)
 
     # Build train op. Only config the optimizer while using default settings
     # for other hyperparameters.
@@ -100,7 +112,6 @@ if __name__ == "__main__":
 
         #    if step % 10 == 0:
         #        print("%d: %.6f" % (step, loss))
-
 
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
