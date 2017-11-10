@@ -11,7 +11,7 @@ import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
 
 from txtgen.hyperparams import HParams
-from txtgen.core.utils import get_instance, switch_dropout
+from txtgen.core import utils
 
 # pylint: disable=not-context-manager, redefined-variable-type, invalid-name
 
@@ -122,7 +122,7 @@ def get_rnn_cell(hparams=None):
         # Create the basic cell
         cell_type = hparams["cell"]["type"]
         cell_modules = ['txtgen.custom', 'tensorflow.contrib.rnn']
-        cell = get_instance(cell_type, cell_kwargs, cell_modules)
+        cell = utils.get_instance(cell_type, cell_kwargs, cell_modules)
 
         # Optionally add dropout
         if d_hp["input_keep_prob"] < 1.0 or \
@@ -135,9 +135,9 @@ def get_rnn_cell(hparams=None):
                              "dtype": tf.float32}
             cell = rnn.DropoutWrapper(
                 cell=cell,
-                input_keep_prob=switch_dropout(d_hp["input_keep_prob"]),
-                output_keep_prob=switch_dropout(d_hp["output_keep_prob"]),
-                state_keep_prob=switch_dropout(d_hp["state_keep_prob"]),
+                input_keep_prob=utils.switch_dropout(d_hp["input_keep_prob"]),
+                output_keep_prob=utils.switch_dropout(d_hp["output_keep_prob"]),
+                state_keep_prob=utils.switch_dropout(d_hp["state_keep_prob"]),
                 **vr_kwargs)
 
         # Optionally add residual and highway connections
@@ -173,7 +173,46 @@ def get_rnn_cell_trainable_variables(cell):
         # Cell wrappers (e.g., `DropoutWrapper`) cannot directly access to
         # `trainable_variables` as they don't initialize superclass
         # (tf==v1.3). So try to access through the cell in the wrapper.
-            cell_ = cell._cell
+            cell_ = cell._cell  # pylint: disable=protected-access
+
+def _default_regularizer_hparams():
+    """Returns the hyperparameters and their default values of a variable
+    regularizer.
+
+    The default value corresponds to :tf_main:`L1L2 <keras/regularizers/L1L2>`
+    and, with `(l1=0, l2=0)`, disables regularization.
+    """
+    return {
+        "type": "tensorflow.keras.regularizers.L1L2",
+        "kwargs": {
+            "l1": 0.,
+            "l2": 0.
+        }
+    }
+
+def _get_regularizer(hparams=None):
+    """Returns a variable regularizer instance.
+
+    See :meth:`~txtgen.core.layers.default_regularizer_hparams` for all
+    hyperparameters and default values.
+
+    Args:
+        hparams (dict or HParams, optional): Hyperparameters. Missing
+            hyperparameters are set to default values.
+
+    Returns:
+        A regularizer instance. `None` if :attr:`hparams` takes the default
+        value.
+    """
+    if hparams is None:
+        return None
+    if isinstance(hparams, dict):
+        hparams = HParams(hparams, _default_regularizer_hparams())
+    rgl = utils.get_instance(hparams.type, hparams.kwargs.todict())
+    if isinstance(rgl, tf.keras.regularizers.L1L2) and \
+            rgl.l1 == 0. and rgl.l2 == 0.:
+        return None
+    return rgl
 
 def default_embedding_hparams():
     """Returns default hyperparameters of token embedding used in encoders,
@@ -188,13 +227,20 @@ def default_embedding_hparams():
                 "name": "embedding",
                 "dim": 100,
                 "initializer": {
-                    "type": "tensorflow.random_uniform_initializer",
+                    "type": "random_uniform_initializer",
                     "kwargs": {
                         "minval": -0.1,
                         "maxval": 0.1,
                         "seed": None
                     }
                 },
+                "regularizer": {
+                    "type": "L1L2",
+                    "kwargs": {
+                        "l1": 0.,
+                        "l2": 0.
+                    }
+                }
                 "trainable": True,
             }
 
@@ -216,18 +262,13 @@ def default_embedding_hparams():
 
                 - Built-in initializer defined in
                   :tf_main:`tf.initializers <initializers>`, e.g.,
-                  :tf_main:`tf.initializers.random_uniform
-                  <random_uniform_initializer>` (a.k.a
+                  :tf_main:`random_uniform <random_uniform_initializer>` (a.k.a
                   tf.random_uniform_initializer) or in
-                  :mod:`tensorflow`, e.g.,
-                  :tf_main:`tf.glorot_uniform_initializer
+                  :mod:`tf`, e.g., :tf_main:`glorot_uniform_initializer
                   <glorot_uniform_initializer>`.
                 - User-defined initializer in :mod:`txtgen.custom`.
                 - External initializer. Must provide the full path, \
                   e.g., :attr:`"my_module.MyInitializer"`.
-
-                The default value is
-                :attr:`"tensorflow.random_uniform_initializer"`.
 
             "kwargs" : dict
                 A dictionary of arguments for constructor of the
@@ -235,23 +276,41 @@ def default_embedding_hparams():
                 calling `initialzier_class(**kwargs)` where
                 :attr:`initializer_class` is specified in :attr:`"type"`.
 
-                The default value is:
+            The default value corresponds to the initializer
+            :tf_main:`tf.random_uniform_initializer
+            <random_uniform_initializer>`.
 
-                    .. code-block:: python
+        "regularizer" : dict
+            Hyperparameters of the regularizer for the embedding values,
+            including:
 
-                        {
-                            "minval": -0.1,
-                            "maxval": 0.1,
-                            "seed": None
-                        }
-                which are the arguments of constructing
-                :tf_main:`tf.random_uniform_initializer
-                <random_uniform_initializer>`.
+            "type" : str
+                Name or full path to the regularizer class. The class
+                can be
+
+                - Built-in regularizer defined in
+                  :tf_main:`tf.keras.regularizers <keras/regularizers>`, e.g.,
+                  :tf_main:`L1L2 <keras/regularizers/L1L2>`.
+                - User-defined regularizer in :mod:`txtgen.custom`. The
+                  regularizer class should inherit the base class
+                  :tf_main:`Regularizer <keras/regularizers/Regularizer>`.
+                - External regularizer. Must provide the full path, \
+                  e.g., :attr:`"my_module.MyRegularizer"`.
+
+            "kwargs" : dict
+                A dictionary of arguments for constructor of the
+                regularizer class. A regularizer is created by
+                calling `regularizer_class(**kwargs)` where
+                :attr:`regularizer_class` is specified in :attr:`"type"`.
+
+            The default value corresponds to
+            :tf_main:`L1L2 <keras/regularizers/L1L2>` with `(l1=0, l2=0)`, which
+            disables regularization.
 
         "trainable" : bool
             Whether the embedding is trainable.
     """
-    return { #TODO(zhiting): allow more hparams like regularizer
+    return {
         "name": "embedding",
         "dim": 50,
         "initializer": {
@@ -262,6 +321,7 @@ def default_embedding_hparams():
                 "seed": None
             }
         },
+        "regularizer": _default_regularizer_hparams(),
         "trainable": True
     }
 
@@ -292,14 +352,15 @@ def get_embedding(hparams=None,
         Variable: A 2D `Variable` of the same shape with :attr:`init_values`
         or of the shape :attr:`[vocab_size, hparams["dim"]]`.
     """
+    #TODO(zhiting): add regularization
     with tf.variable_scope(variable_scope, "embedding"):
         if hparams is None or isinstance(hparams, dict):
             hparams = HParams(hparams, default_embedding_hparams())
         if init_values is None:
             kwargs = hparams["initializer"]["kwargs"].todict()
-            initializer = get_instance(
+            initializer = utils.get_instance(
                 hparams["initializer"]["type"], kwargs,
-                ["txtgen.custom", "tensorflow", "tensorflow.contrib.layers"])
+                ["txtgen.custom", "tensorflow.initializers", "tensorflow"])
             return tf.get_variable(name=hparams["name"],
                                    shape=[vocab_size, hparams["dim"]],
                                    initializer=initializer,
@@ -309,6 +370,25 @@ def get_embedding(hparams=None,
                                    initializer=init_values,
                                    trainable=hparams["trainable"])
 
+
+def _common_default_conv_kwargs():
+    """Returns the default keyword argument values that are common to
+    convolution layers.
+    """
+    return {
+        "activation": "identity",
+        "kernel_initializer": {
+            "type": "glorot_uniform_initializer",
+            "kwargs": {}
+        },
+        "bias_initializer": {
+            "type": "zeros_initializer",
+            "kwargs": {}
+        },
+        "kernel_regularizer": _default_regularizer_hparams(),
+        "bias_regularizer": _default_regularizer_hparams(),
+        "activity_regularizer": _default_regularizer_hparams()
+    }
 
 def default_conv1d_kwargs():
     """Returns the default keyword argument values of 1D convolution layer(s)
@@ -324,13 +404,13 @@ def default_conv1d_kwargs():
                 "kernel_size": [3,4,5],
                 "filters": 100,
                 "strides": 1,
-                "activation": "tensorflow.identity",
+                "activation": "identity",
                 "kernel_initializer": {
-                    "type": "tensorflow.glorot_uniform_initializer",
+                    "type": "glorot_uniform_initializer",
                     "kwargs": {}
                 },
                 "bias_initializer": {
-                    "type": "tensorflow.zeros_initializer",
+                    "type": "zeros_initializer",
                     "kwargs": {}
                 },
                 "kernel_regularizer": None,
@@ -375,8 +455,8 @@ def default_conv1d_kwargs():
             The name or full path to the activation function applied to the
             outputs of the layer.
 
-            The default value is "tensorflow.identity", which is a linear
-            activation.
+            The default value is "identity", which corr. to
+            :tf_main:`tf.identity <identity>`.
 
         "kernel_initializer" : dict
             Hyperparameters of the initializer for the filters, including
@@ -410,23 +490,80 @@ def default_conv1d_kwargs():
             The default value is `None`, i.e., no regularization is performed.
     """
     return {
-        "kernel_size": [3,4,5],
+        "kernel_size": [3, 4, 5],
         "filters": 100,
         "strides": 1,
         "dilation_rate": 1,
-        "activation": "tensorflow.identity",
-        "kernel_initializer": {
-            "type": "tensorflow.glorot_uniform_initializer",
-            "kwargs": {}
-        },
-        "bias_initializer": {
-            "type": "tensorflow.zeros_initializer",
-            "kwargs": {}
-        },
-        "kernel_regularizer": None,
-        "bias_regularizer": None,
-        "activity_regularizer": None
     }
+
+def default_conv2d_kwargs():
+    raise NotImplementedError
+def default_conv3d_kwargs():
+    raise NotImplementedError
+def default_conv2d_transpose_kwargs():
+    raise NotImplementedError
+def default_conv3d_transpose_kwargs():
+    raise NotImplementedError
+def default_dense_kwargs():
+    raise NotImplementedError
+def default_dropout_kwargs():
+    raise NotImplementedError
+def default_flatten_kwargs():
+    raise NotImplementedError
+def default_max_pooling1d_kwargs():
+    raise NotImplementedError
+def default_max_pooling2d_kwargs():
+    raise NotImplementedError
+def default_max_pooling3d_kwargs():
+    raise NotImplementedError
+def default_separable_conv2d_kwargs():
+    raise NotImplementedError
+def default_batch_normalization_kwargs():
+    raise NotImplementedError
+def default_average_pooling1d_kwargs():
+    raise NotImplementedError
+def default_average_pooling2d_kwargs():
+    raise NotImplementedError
+def default_average_pooling3d_kwargs():
+    raise NotImplementedError
+
+_layer_class_to_default_kwargs_map = {
+    tf.layers.Conv1D: default_conv1d_kwargs(),
+    tf.layers.Conv2D: default_conv2d_kwargs(),
+    tf.layers.Conv3D: default_conv3d_kwargs(),
+    tf.layers.Conv2DTranspose: default_conv2d_transpose_kwargs(),
+    tf.layers.Conv3DTranspose: default_conv3d_transpose_kwargs(),
+    tf.layers.Dense: default_dense_kwargs(),
+    tf.layers.Dropout: default_dropout_kwargs(),
+    tf.layers.Flatten: default_flatten_kwargs(),
+    tf.layers.MaxPooling1D: default_max_pooling1d_kwargs(),
+    tf.layers.MaxPooling2D: default_max_pooling2d_kwargs(),
+    tf.layers.MaxPooling3D: default_max_pooling3d_kwargs(),
+    tf.layers.SeparableConv2D: default_separable_conv2d_kwargs(),
+    tf.layers.BatchNormalization: default_batch_normalization_kwargs(),
+    tf.layers.AveragePooling1D: default_average_pooling1d_kwargs(),
+    tf.layers.AveragePooling2D: default_average_pooling2d_kwargs(),
+    tf.layers.AveragePooling3D: default_average_pooling3d_kwargs(),
+}
+
+
+def get_layer(hparams):
+    """
+    """
+    if hparams is None:
+        raise ValueError("`hparams` must not be `None`.")
+
+    layer_type = hparams["type"]
+    layer_class = utils.get_class(
+        layer_type, ["txtgen.costum", "tensorflow.layers"])
+
+    if isinstance(hparams, dict):
+        default_kwargs = {}
+        if layer_class in _layer_class_to_default_kwargs_map:
+            default_kwargs = _layer_class_to_default_kwargs_map[layer_class]
+        default_hparams = {"type": layer_type, "kwargs": default_kwargs}
+        hparams = HParams(hparams, default_hparams)
+
 
 
 #TODO(zhiting): fix code style
