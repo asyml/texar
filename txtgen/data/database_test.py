@@ -57,12 +57,11 @@ class TextDataBaseTest(tf.test.TestCase):
                 while not coord.should_stop():
                     # Run the logics
                     data = sess.run(text_data_batch)
-
                     self.assertEqual(set(data.keys()),
                                      set(text_database.list_items()))
                     self.assertEqual(len(data['text']), hparams['batch_size'])
                     self.assertEqual(text_database.vocab.vocab_size,
-                                     len(vocab_list) + 3)
+                                     len(vocab_list) + 4)
 
             except tf.errors.OutOfRangeError:
                 print('Done -- epoch limit reached')
@@ -129,9 +128,9 @@ class TextDataBaseTest(tf.test.TestCase):
                     self.assertEqual(len(data['target_text']),
                                      hparams['batch_size'])
                     self.assertEqual(text_database.source_vocab.vocab_size,
-                                     len(vocab_list) + 3)
+                                     len(vocab_list) + 4)
                     self.assertEqual(text_database.target_vocab.vocab_size,
-                                     len(vocab_list) + 3)
+                                     len(vocab_list) + 4)
 
             except tf.errors.OutOfRangeError:
                 print('Done -- epoch limit reached')
@@ -139,6 +138,83 @@ class TextDataBaseTest(tf.test.TestCase):
                 coord.request_stop()
             coord.join(threads)
 
+    def test_multi_source_text_database(self):
+        # Create test data
+        vocab_list = ['word', 'sentence', '词', 'response', 'dialog', '1', '2']
+        vocab_file = tempfile.NamedTemporaryFile()
+        vocab_file.write('\n'.join(vocab_list).encode("utf-8"))
+        vocab_file.flush()
+
+        source_text = [
+            'This is a dialog 1 sentence . ||| This is a dialog 1 sentence . '
+            '||| This is yet another dialog 1 sentence .',
+            'This is a dialog 2 sentence . ||| '
+            'This is also a dialog 2 sentence . '
+        ]
+        src_text_file = tempfile.NamedTemporaryFile()
+        src_text_file.write('\n'.join(source_text).encode("utf-8"))
+        src_text_file.flush()
+
+        target_text = [
+            'dialog 1 response', 'dialog 2 response 词'
+        ]
+        tgt_text_file = tempfile.NamedTemporaryFile()
+        tgt_text_file.write('\n'.join(target_text).encode("utf-8"))
+        tgt_text_file.flush()
+
+        # Construct database
+        hparams = {
+            "num_epochs": 3,
+            "batch_size": 3,
+            "source_dataset": {
+                "files": [src_text_file.name],
+                "vocab_file": vocab_file.name,
+                "processing": {
+                    "max_seq_length": 10,
+                    "max_context_length": 3
+                }
+            },
+            "target_dataset": {
+                "files": [tgt_text_file.name],
+                "vocab_share": True,
+                "reader_share": True,
+                "processing": {
+                    "eos_token": "<TARGET_EOS>"
+                }
+            }
+        }
+
+        text_database = database.MultiSourceTextDataBase(hparams)
+        text_data_batch = text_database()
+
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            sess.run(tf.local_variables_initializer())
+            sess.run(tf.tables_initializer())
+            coord = tf.train.Coordinator()
+            threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+
+            try:
+                while not coord.should_stop():
+                    # Run the logics
+                    data = sess.run(text_data_batch)
+                    self.assertEqual(set(data.keys()),
+                                     set(text_database.list_items()))
+                    self.assertEqual(len(data['source_text']),
+                                     hparams['batch_size'])
+                    self.assertEqual(len(data['target_text']),
+                                     hparams['batch_size'])
+                    self.assertEqual(text_database.source_vocab.vocab_size,
+                                     len(vocab_list) + 4)
+                    self.assertEqual(text_database.target_vocab.vocab_size,
+                                     len(vocab_list) + 4)
+
+            except tf.errors.OutOfRangeError:
+                print('Done -- epoch limit reached')
+            finally:
+                coord.request_stop()
+            coord.join(threads)
+
+
 if __name__ == "__main__":
     tf.test.main()
-
