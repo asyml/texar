@@ -10,24 +10,60 @@ from __future__ import division
 import copy
 
 
+__all__ = [
+    "HParams"
+]
+
 def _type_name(value):
     return type(value).__name__
 
 
 class HParams(object):
-    """hyperparameters to configure modules
+    """Hyperparameters.
+
+    Type check is performed to make sure the value types of hyperparameters in
+    :attr:`hparams` are consistent with their default value types in
+    :attr:`default_hparams`.
+    Missing hyperparameters are set to default values. The only exception
+    happens when :attr:`default_hparams` has the structure:
+
+    .. code-block:: python
+
+        {
+            "type": "<some type>",
+            "kwargs": { ... }
+            # Other hyperparameters
+            # ...
+        }
+
+    Here :attr:`"type"` is the name or full path to a function or a class,
+    and :attr:`"kwargs"` is the arguments for the function or the
+    constructor of the class.
+
+    - The default hyperparameters in :attr:`"kwargs"` are used (for typecheck \
+    and complementing missing hyperparameters) only when :attr:`"type"` \
+    takes default value (i.e., missing in :attr:`hparams` or set to \
+    the same value with the default). In this case :attr:`kwargs` allows to \
+    contain new keys not included in :attr:`default_hparams["kwargs"]`.
+    - If :attr:`"type"` is set to an other \
+    value and :attr:`"kwargs"` is missing in :attr:`hparams`, \
+    :attr:`"kwargs"` is set to an empty dictionary.
+    - :attr:`"type"` in :attr:`hparams` is not type-checked. Typically it \
+    can be a string as with the default value, or directly the function or \
+    the class instance (rather than the name or path). In the latter case, \
+    :attr:`"kwargs"` is typically ignored in usage.
+
+    Args:
+        hparams (dict): Hyperparameters. If `None`, all hyperparameters are
+            set to default values.
+        default_hparams (dict): Hyperparameters with default values. If `None`,
+            Hyperparameters are fully defined by :attr:`hparams`.
+        allow_new_hparam (bool): If `False` (default), :attr:`hparams` cannot
+            contain hyperparameters that are not included in
+            :attr:`default_hparams`, except the case as below.
     """
 
     def __init__(self, hparams, default_hparams, allow_new_hparam=False):
-        """
-        Args:
-            hparams: A dictionary of hyperparameters.
-            default_hparams: A dictionary of hyperparameters with default
-                values.
-            allow_new_hparam: Boolean. If `False` (default), raise error if
-                hyperparameter name is not in `default_hparams`. If `True`,
-                new hyperparameters not in `default_hparams` are added.
-        """
         if default_hparams is not None:
             parsed_hparams = self._parse(
                 hparams, default_hparams, allow_new_hparam)
@@ -41,37 +77,14 @@ class HParams(object):
                allow_new_hparam=False):
         """Parses hyperparameters.
 
-        Type check is performed to make sure the value types of hyperparameters
-        are consistent with their default value types. Missing hyperparameters
-        are set to default values. The only exception happens when
-        :attr:`default_hparams` has the structure:
-
-        .. code-block:: python
-
-            {
-                "type": "<some type>",
-                "kwargs": { ... }
-                # Other hyperparameters
-                # ...
-            }
-
-        Here :attr:`"type"` is the name or full path to a function or a class,
-        and :attr:`"kwargs"` is the arguments of the function or the constructor
-        of the class. If :attr:`hparams` contains both :attr:`"type"` and
-        :attr:`"kwargs"`, the parser will leave the values of :attr:`"type"` and
-        :attr:`kwargs` as-is and will not perform typecheck.
-
-        :attr:`"type"` can also be set to the
-        function or the class (rather than the name or path).
-
         Args:
-            hparams: A dictionary of hyperparameters. If `None`, all
-                hyperparameters are set to default values.
-            default_hparams: A dictionary of hyperparameters with default
-                values.
-            allow_new_hparam: Boolean. If `False` (default), raise error if
-                hyperparameter name is not in `default_hparams`. If `True`,
-                new hyperparameters not in `default_hparams` are added.
+            hparams (dict): Hyperparameters. If `None`, all hyperparameters are
+                set to default values.
+            default_hparams (dict): Hyperparameters with default values.
+                If `None`,Hyperparameters are fully defined by :attr:`hparams`.
+            allow_new_hparam (bool): If `False` (default), :attr:`hparams`
+                cannot contain hyperparameters that are not included in
+                :attr:`default_hparams`, except the case as below.
 
         Return:
             A dictionary of parsed hyperparameters. Returns `None` if both
@@ -80,7 +93,8 @@ class HParams(object):
         Raises:
             ValueError: If :attr:`hparams` is not `None` and
                 :attr:`default_hparams` is `None`.
-
+            ValueError: If :attr:`default_hparams` contains "kwargs" not does
+                not contains "type".
         """
         if hparams is None and default_hparams is None:
             return None
@@ -92,23 +106,23 @@ class HParams(object):
             raise ValueError("`default_hparams` cannot be `None` if `hparams` "
                              "is not `None`.")
 
+        if "kwargs" in default_hparams and "type" not in default_hparams:
+            raise ValueError("Ill-defined hyperparameter structure: 'kwargs' "
+                             "must accompany with 'type'.")
+
         parsed_hparams = copy.deepcopy(default_hparams)
 
         # Parse recursively for params of type dictionary that are missing
         # in `hparams`.
         for name, value in default_hparams.items():
             if name not in hparams and isinstance(value, dict):
-                if name == "kwargs":
-                    if "type" not in default_hparams:
-                        raise ValueError(
-                            "Ill-defined hyperparameter structure: 'kwargs' "
-                            "must accompany with 'type'.")
-                    # For params named "kwargs", only apply default values when
-                    # the respective "type" param takes default value.
-                    if "type" in hparams and \
-                            hparams["type"] != default_hparams["type"]:
-                        continue
-                parsed_hparams[name] = HParams(value, value)
+                if name == "kwargs" and "type" in hparams and \
+                        hparams["type"] != default_hparams["type"]:
+                    # Set params named "kwargs" to empty dictionary if "type"
+                    # takes value other than default.
+                    parsed_hparams[name] = HParams({}, {})
+                else:
+                    parsed_hparams[name] = HParams(value, value)
 
         # Parse hparams
         for name, value in hparams.items():
@@ -137,13 +151,26 @@ class HParams(object):
                     raise ValueError(
                         "Hyperparameter '%s' must have type %s, got %s" %
                         (name, _type_name(default_value), _type_name(value)))
-                if name != "kwargs":
+                if name == "kwargs":
+                    if "type" in hparams and \
+                            hparams["type"] != default_hparams["type"]:
+                        # Leave "kwargs" as-is if "type" takes value
+                        # other than default.
+                        parsed_hparams[name] = HParams(value, value)
+                    else:
+                        # Allow new hyperparameters if "type" takes default
+                        # value
+                        parsed_hparams[name] = HParams(
+                            value, default_value, allow_new_hparam=True)
+                else:
                     parsed_hparams[name] = HParams(
                         value, default_value, allow_new_hparam)
-                else:
-                    # Do not check types or apply default values for function
-                    # keyword args (named "kwargs")
-                    parsed_hparams[name] = HParams(value, value)
+                continue
+
+            # Do not type-check hyperparameter named "type" and accompanied
+            # with "kwargs"
+            if name == "type" and "kwargs" in default_hparams:
+                parsed_hparams[name] = value
                 continue
 
             try:

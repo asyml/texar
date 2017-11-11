@@ -35,6 +35,7 @@ class HParamsTest(tf.test.TestCase):
                     "key1_l2": "value1_l2"
                 }
             },
+            "type": "type",
             "kwargs": {
                 "arg1": "argv1"
             },
@@ -85,6 +86,59 @@ class HParamsTest(tf.test.TestCase):
         with open(hparams_file.name, 'rb') as hparams_file:
             hparams_loaded = pickle.load(hparams_file)
         self.assertEqual(hparams_loaded.todict(), hparams_.todict())
+
+
+    def test_type_kwargs(self):
+        """The the special cases involving "type" and "kwargs"
+        hyperparameters.
+        """
+        default_hparams = {
+            "type": "type_name",
+            "kwargs": {
+                "arg1": "argv1"
+            }
+        }
+
+        hparams = {
+            "type": "type_name"
+        }
+        hparams_ = HParams(hparams, default_hparams)
+        self.assertEqual(hparams_.kwargs.todict(), default_hparams["kwargs"])
+
+        hparams = {
+            "type": "type_name",
+            "kwargs": {
+                "arg2": "argv2"
+            }
+        }
+        hparams_ = HParams(hparams, default_hparams)
+        full_kwargs = {}
+        full_kwargs.update(default_hparams["kwargs"])
+        full_kwargs.update(hparams["kwargs"])
+        self.assertEqual(hparams_.kwargs.todict(), full_kwargs)
+
+        hparams = {
+            "kwargs": {
+                "arg2": "argv2"
+            }
+        }
+        hparams_ = HParams(hparams, default_hparams)
+        self.assertEqual(hparams_.kwargs.todict(), full_kwargs)
+
+        hparams = {
+            "type": "type_name2"
+        }
+        hparams_ = HParams(hparams, default_hparams)
+        self.assertEqual(hparams_.kwargs.todict(), {})
+
+        hparams = {
+            "type": "type_name2",
+            "kwargs": {
+                "arg3": "argv3"
+            }
+        }
+        hparams_ = HParams(hparams, default_hparams)
+        self.assertEqual(hparams_.kwargs.todict(), hparams["kwargs"])
 
 
 if __name__ == "__main__":

@@ -15,5 +15,5 @@ from txtgen import losses
 from txtgen import models
 from txtgen import data
 from txtgen import evals
-from txtgen import *
-
+from txtgen.hyperparams import *
+from txtgen.context import *
