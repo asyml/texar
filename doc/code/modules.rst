@@ -6,7 +6,8 @@ Modules
 
 Module Base
 ===========
-.. automodule:: txtgen.modules.module_base
+
+.. autoclass:: txtgen.modules.ModuleBase
     :members:
 
 Encoders

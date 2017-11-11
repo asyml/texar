@@ -11,10 +11,10 @@ TxtGen is a flexible TensorFlow library to generate text.
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    tutorial.rst
+   code/hyperparams.rst
    code/core.rst
    code/losses.rst
    code/modules.rst
-
