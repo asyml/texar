@@ -352,10 +352,10 @@ def get_embedding(hparams=None,
         Variable: A 2D `Variable` of the same shape with :attr:`init_values`
         or of the shape :attr:`[vocab_size, hparams["dim"]]`.
     """
-    #TODO(zhiting): add regularization
     with tf.variable_scope(variable_scope, "embedding"):
         if hparams is None or isinstance(hparams, dict):
             hparams = HParams(hparams, default_embedding_hparams())
+        regularizer = _get_regularizer(hparams["regularizer"])
         if init_values is None:
             kwargs = hparams["initializer"]["kwargs"].todict()
             initializer = utils.get_instance(
@@ -364,10 +364,12 @@ def get_embedding(hparams=None,
             return tf.get_variable(name=hparams["name"],
                                    shape=[vocab_size, hparams["dim"]],
                                    initializer=initializer,
+                                   regularizer=regularizer,
                                    trainable=hparams["trainable"])
         else:
             return tf.get_variable(name=hparams["name"],
                                    initializer=init_values,
+                                   regularizer=regularizer,
                                    trainable=hparams["trainable"])
 
 def _common_default_conv_kwargs():
@@ -496,35 +498,50 @@ def default_conv1d_kwargs():
     }
 
 def default_conv2d_kwargs():
-    raise NotImplementedError
+    return {}
+    #raise NotImplementedError
 def default_conv3d_kwargs():
-    raise NotImplementedError
+    return {}
+    #raise NotImplementedError
 def default_conv2d_transpose_kwargs():
-    raise NotImplementedError
+    return {}
+    #raise NotImplementedError
 def default_conv3d_transpose_kwargs():
-    raise NotImplementedError
+    return {}
+    #raise NotImplementedError
 def default_dense_kwargs():
-    raise NotImplementedError
+    return {}
+    #raise NotImplementedError
 def default_dropout_kwargs():
-    raise NotImplementedError
+    return {}
+    #raise NotImplementedError
 def default_flatten_kwargs():
-    raise NotImplementedError
+    return {}
+    #raise NotImplementedError
 def default_max_pooling1d_kwargs():
-    raise NotImplementedError
+    return {}
+    #raise NotImplementedError
 def default_max_pooling2d_kwargs():
-    raise NotImplementedError
+    return {}
+    #raise NotImplementedError
 def default_max_pooling3d_kwargs():
-    raise NotImplementedError
+    return {}
+    #raise NotImplementedError
 def default_separable_conv2d_kwargs():
-    raise NotImplementedError
+    return {}
+    #raise NotImplementedError
 def default_batch_normalization_kwargs():
-    raise NotImplementedError
+    return {}
+    #raise NotImplementedError
 def default_average_pooling1d_kwargs():
-    raise NotImplementedError
+    return {}
+    #raise NotImplementedError
 def default_average_pooling2d_kwargs():
-    raise NotImplementedError
+    return {}
+    #raise NotImplementedError
 def default_average_pooling3d_kwargs():
-    raise NotImplementedError
+    return {}
+    #raise NotImplementedError
 
 _layer_class_to_default_kwargs_map = {
     tf.layers.Conv1D: default_conv1d_kwargs(),

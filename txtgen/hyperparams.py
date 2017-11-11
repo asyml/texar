@@ -41,9 +41,28 @@ class HParams(object):
                allow_new_hparam=False):
         """Parses hyperparameters.
 
-        Replaces missing values with default values, and checks the types of
-        values. Hyperparameter named "kwargs" is the arguments of a function.
-        For such hyperparameters only typecheck is performed.
+        Type check is performed to make sure the value types of hyperparameters
+        are consistent with their default value types. Missing hyperparameters
+        are set to default values. The only exception happens when
+        :attr:`default_hparams` has the structure:
+
+        .. code-block:: python
+
+            {
+                "type": "<some type>",
+                "kwargs": { ... }
+                # Other hyperparameters
+                # ...
+            }
+
+        Here :attr:`"type"` is the name or full path to a function or a class,
+        and :attr:`"kwargs"` is the arguments of the function or the constructor
+        of the class. If :attr:`hparams` contains both :attr:`"type"` and
+        :attr:`"kwargs"`, the parser will leave the values of :attr:`"type"` and
+        :attr:`kwargs` as-is and will not perform typecheck.
+
+        :attr:`"type"` can also be set to the
+        function or the class (rather than the name or path).
 
         Args:
             hparams: A dictionary of hyperparameters. If `None`, all
