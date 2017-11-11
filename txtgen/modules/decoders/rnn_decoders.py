@@ -440,8 +440,8 @@ class AttentionRNNDecoder(RNNDecoderBase):
             "kwargs": {
                 "num_units": 64,
                 "probability_fn": "tensorflow.nn.softmax", # a callable
-                "memory_sequence_length":None
-                },
+                "memory_sequence_length": None
+            },
             "attention_layer_size": None,
             "alignment_history": False,
             "output_attention": True,
