@@ -65,8 +65,10 @@ def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
     """
     # flatten inputs
     flat_input = nest.flatten(inputs)
-    batch_size = flat_input[0].shape[0].value
-    flat_input = [tf.reshape(input_, [batch_size, -1]) for input_ in flat_input]
+    # batch_size = flat_input[0].shape[0].value
+    shape = inputs.get_shape().as_list()
+    dim = reduce(lambda x, y: x*y, shape[1:])
+    flat_input = [tf.reshape(input_, ([-1, dim])) for input_ in flat_input]
     concat_input = tf.concat(flat_input, 1)
 
     # get output dimension
@@ -87,8 +89,7 @@ def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
 
     if isinstance(flat_output_size[0], tf.TensorShape):
         for (i, shape) in enumerate(flat_output_size):
-            new_shape = tf.TensorShape(batch_size).concatenate(shape)
-            flat_output[i] = tf.reshape(flat_output[i], new_shape)
+            flat_output[i] = tf.reshape(flat_output[i], [-1] + shape.as_list())
     output = nest.pack_sequence_as(structure=output_size,
                                    flat_sequence=flat_output)
 
@@ -100,9 +101,11 @@ class ConstantConnector(ConnectorBase):
     value.
 
     Args:
-        output_size: Size of output. Can be an int, a tuple of int, a
-            Tensorshape, or a tuple of TensorShapes. For example, to transform
-            to decoder state size, set `output_size=decoder.cell.state_size`.
+        output_size: Size of output excluding the batch dimension (eg.
+            :attr:`output_size = p` if :attr:`output.shape` is :attr:`[N, p]`).
+            Can be an int, a tuple of int, a Tensorshape, or a tuple of TensorShapes.
+            For example, to transform to decoder state size, set
+            `output_size=decoder.cell.state_size`.
         hparams (dict): Hyperparameters of the connector.
     """
     def __init__(self, output_size, hparams=None):
@@ -170,9 +173,11 @@ class ForwardConnector(ConnectorBase):
     :meth:`~tensorflow.python.util.nest.pack_sequence_as` for more details).
 
     Args:
-        output_size: Size of output. Can be an int, a tuple of int, a
-            Tensorshape, or a tuple of TensorShapes. For example, to transform
-            to decoder state size, set `output_size=decoder.cell.state_size`.
+        output_size: Size of output excluding the batch dimension (eg.
+            :attr:`output_size = p` if :attr:`output.shape` is :attr:`[N, p]`).
+            Can be an int, a tuple of int, a Tensorshape, or a tuple of TensorShapes.
+            For example, to transform to decoder state size, set
+            `output_size=decoder.cell.state_size`.
     """
 
     def __init__(self, output_size):
@@ -231,9 +236,11 @@ class MLPTransformConnector(ConnectorBase):
     structure as specified in :attr:`output_size`.
 
     Args:
-        output_size: Size of output. Can be an int, a tuple of int, a
-            Tensorshape, or a tuple of TensorShapes. For example, to transform
-            to decoder state size, set `output_size=decoder.cell.state_size`.
+        output_size: Size of output excluding the batch dimension (eg.
+            :attr:`output_size = p` if :attr:`output.shape` is :attr:`[N, p]`).
+            Can be an int, a tuple of int, a Tensorshape, or a tuple of TensorShapes.
+            For example, to transform to decoder state size, set
+            `output_size=decoder.cell.state_size`.
         hparams (dict): Hyperparameters of the connector.
     """
 
@@ -309,9 +316,11 @@ class ReparameterizedStochasticConnector(ConnectorBase):
     samples. Used in, e.g., Variational Autoencoders (VAEs).
 
     Args:
-        output_size: Size of output. Can be an int, a tuple of int, a
-            Tensorshape, or a tuple of TensorShapes. For example, to transform
-            to decoder state size, set `output_size=decoder.cell.state_size`.
+        output_size: Size of output excluding the batch dimension (eg.
+            :attr:`output_size = p` if :attr:`output.shape` is :attr:`[N, p]`).
+            Can be an int, a tuple of int, a Tensorshape, or a tuple of TensorShapes.
+            For example, to transform to decoder state size, set
+            `output_size=decoder.cell.state_size`.
         hparams (dict): Hyperparameters of the connector.
     """
 
@@ -435,9 +444,11 @@ class StochasticConnector(ConnectorBase):
     through the stochastic samples
 
     Args:
-        output_size: Size of output. Can be an int, a tuple of int, a
-            Tensorshape, or a tuple of TensorShapes. For example, to transform
-            to decoder state size, set `output_size=decoder.cell.state_size`.
+        output_size: Size of output excluding the batch dimension (eg.
+            :attr:`output_size = p` if :attr:`output.shape` is :attr:`[N, p]`).
+            Can be an int, a tuple of int, a Tensorshape, or a tuple of TensorShapes.
+            For example, to transform to decoder state size, set
+            `output_size=decoder.cell.state_size`.
         hparams (dict): Hyperparameters of the connector.
     """
 
@@ -557,9 +568,11 @@ class ConcatConnector(ConnectorBase):
     learning, and other models.
 
     Args:
-        output_size: Size of output. Can be an int, a tuple of int, a
-            Tensorshape, or a tuple of TensorShapes. For example, to transform
-            to decoder state size, set `output_size=decoder.cell.state_size`.
+        output_size: Size of output excluding the batch dimension (eg.
+            :attr:`output_size = p` if :attr:`output.shape` is :attr:`[N, p]`).
+            Can be an int, a tuple of int, a Tensorshape, or a tuple of TensorShapes.
+            For example, to transform to decoder state size, set
+            `output_size=decoder.cell.state_size`.
         hparams (dict): Hyperparameters of the connector.
     """
 
