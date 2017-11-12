@@ -14,12 +14,13 @@ from txtgen.hyperparams import HParams
 from txtgen.core import utils
 
 # pylint: disable=not-context-manager, redefined-variable-type, invalid-name
+# pylint: disable=too-many-branches
 
 def default_rnn_cell_hparams():
     """Returns default hyperparameters of an RNN cell.
 
     Returns:
-        dict: A dictionary with the following structure and values:
+        A dictionary with the following structure and values:
 
         .. code-block:: python
 
@@ -100,10 +101,19 @@ def get_rnn_cell(hparams=None):
 
     Args:
         hparams (dict or HParams, optional): Cell hyperparameters. Missing
-            hyperparameters are set to default values.
+            hyperparameters are set to default values. If
+            :attr:`hparams["cell"]["type"]` is a cell instance (rather
+            than the name or path to the cell class), then
+            :attr:`hparams["num_layers"]` must be 1.
 
     Returns:
-        An instance of `RNNCell`.
+        An instance of :tf_main:`RNNCell <contrib/rnn/RNNCell>`.
+
+    Raise:
+        ValueError: If :attr:`hparams["num_layers"]` > 1 and
+            :attr:`hparams["cell"]["type"]` is not of type string.
+        ValueError: The cell is not an
+            :tf_main:`RNNCell <contrib/rnn/RNNCell>` instance.
     """
     if hparams is None or isinstance(hparams, dict):
         hparams = HParams(hparams, default_rnn_cell_hparams())
@@ -118,11 +128,22 @@ def get_rnn_cell(hparams=None):
 
     cells = []
     cell_kwargs = hparams["cell"]["kwargs"].todict()
-    for layer_i in range(hparams["num_layers"]):
+    num_layers = hparams["num_layers"]
+    for layer_i in range(num_layers):
         # Create the basic cell
         cell_type = hparams["cell"]["type"]
-        cell_modules = ['txtgen.custom', 'tensorflow.contrib.rnn']
-        cell = utils.get_instance(cell_type, cell_kwargs, cell_modules)
+        if utils.is_str_or_unicode(cell_type):
+            cell_modules = ['tensorflow.contrib.rnn', 'txtgen.custom']
+            cell = utils.get_instance(cell_type, cell_kwargs, cell_modules)
+        else:
+            if num_layers > 1:
+                raise ValueError(
+                    "If `hparams['num_layers']`>1, then "
+                    "`hparams['cell']['type']` must be a string name or path "
+                    "to the class.")
+            cell = cell_type
+        if not isinstance(cell, rnn.RNNCell):
+            raise ValueError("cell must be an instance of RNNCell.")
 
         # Optionally add dropout
         if d_hp["input_keep_prob"] < 1.0 or \
@@ -177,13 +198,23 @@ def get_rnn_cell_trainable_variables(cell):
 
 def _default_regularizer_hparams():
     """Returns the hyperparameters and their default values of a variable
-    regularizer.
+    regularizer:
+
+    .. code-block:: python
+
+        {
+            "type": "L1L2",
+            "kwargs": {
+                "l1": 0.,
+                "l2": 0.
+            }
+        }
 
     The default value corresponds to :tf_main:`L1L2 <keras/regularizers/L1L2>`
     and, with `(l1=0, l2=0)`, disables regularization.
     """
     return {
-        "type": "tensorflow.keras.regularizers.L1L2",
+        "type": "L1L2",
         "kwargs": {
             "l1": 0.,
             "l2": 0.
@@ -201,18 +232,52 @@ def _get_regularizer(hparams=None):
             hyperparameters are set to default values.
 
     Returns:
-        A regularizer instance. `None` if :attr:`hparams` takes the default
-        value.
+        A :tf_main:`Regularizer <keras/regularizers/Regularizer>` instance.
+        `None` if :attr:`hparams` takes the default value.
+
+    Raise:
+        ValueError: The resulting regularizer is not an instance of
+            :tf_main:`Regularizer <keras/regularizers/Regularizer>`.
     """
     if hparams is None:
         return None
     if isinstance(hparams, dict):
         hparams = HParams(hparams, _default_regularizer_hparams())
-    rgl = utils.get_instance(hparams.type, hparams.kwargs.todict())
+    if utils.is_str_or_unicode(hparams.type):
+        rgl = utils.get_instance(
+            hparams.type, hparams.kwargs.todict(),
+            ["tensorflow.keras.regularizers", "txtgen.custom"])
+    else:
+        rgl = hparams.type
+    if not isinstance(rgl, tf.keras.regularizers.Regularizer):
+        raise ValueError("The regularizer must be an instance of "
+                         "tf.keras.regularizers.Regularizer.")
     if isinstance(rgl, tf.keras.regularizers.L1L2) and \
             rgl.l1 == 0. and rgl.l2 == 0.:
         return None
     return rgl
+
+def _get_initializer(hparams=None):
+    """Returns an initializer instance.
+
+    Args:
+        hparams (dict or HParams, optional): Hyperparameters.
+
+    Returns:
+        An initializer instance. `None` if :attr:`hparams` is `None`.
+    """
+    if hparams is None:
+        return None
+    if utils.is_str_or_unicode(hparams["type"]):
+        kwargs = hparams["kwargs"]
+        if isinstance(kwargs, HParams):
+            kwargs = kwargs.todict()
+        initializer = utils.get_instance(
+            hparams["type"], kwargs,
+            ["tensorflow.initializers", "tensorflow", "txtgen.custom"])
+    else:
+        initializer = hparams["type"]
+    return initializer
 
 def default_embedding_hparams():
     """Returns default hyperparameters of token embedding used in encoders,
@@ -256,9 +321,9 @@ def default_embedding_hparams():
             Hyperparameters of the initializer for the embedding values,
             including:
 
-            "type" : str
-                Name or full path to the initializer class. The class
-                can be
+            "type" : str or initializer instance
+                Name, full path, or instance of the initializer class. The
+                class can be
 
                 - Built-in initializer defined in
                   :tf_main:`tf.initializers <initializers>`, e.g.,
@@ -268,25 +333,28 @@ def default_embedding_hparams():
                   <glorot_uniform_initializer>`.
                 - User-defined initializer in :mod:`txtgen.custom`.
                 - External initializer. Must provide the full path, \
-                  e.g., :attr:`"my_module.MyInitializer"`.
+                  e.g., :attr:`"my_module.MyInitializer"`, or the instance.
 
             "kwargs" : dict
                 A dictionary of arguments for constructor of the
                 initializer class. An initializer is created by
                 calling `initialzier_class(**kwargs)` where
                 :attr:`initializer_class` is specified in :attr:`"type"`.
+                Ignored if :attr:`"type"` is an initializer instance.
 
             The default value corresponds to the initializer
             :tf_main:`tf.random_uniform_initializer
             <random_uniform_initializer>`.
 
         "regularizer" : dict
-            Hyperparameters of the regularizer for the embedding values,
-            including:
+            Hyperparameters of the regularizer for the embedding values. The
+            regularizer must be an instance of
+            the base :tf_main:`Regularizer <keras/regularizers/Regularizer>`
+            class. The hyperparameters include:
 
-            "type" : str
-                Name or full path to the regularizer class. The class
-                can be
+            "type" : str or Regularizer instance
+                Name, full path, or instance of the regularizer class. The
+                class can be
 
                 - Built-in regularizer defined in
                   :tf_main:`tf.keras.regularizers <keras/regularizers>`, e.g.,
@@ -295,17 +363,18 @@ def default_embedding_hparams():
                   regularizer class should inherit the base class
                   :tf_main:`Regularizer <keras/regularizers/Regularizer>`.
                 - External regularizer. Must provide the full path, \
-                  e.g., :attr:`"my_module.MyRegularizer"`.
+                  e.g., :attr:`"my_module.MyRegularizer"`, or the instance.
 
             "kwargs" : dict
                 A dictionary of arguments for constructor of the
                 regularizer class. A regularizer is created by
                 calling `regularizer_class(**kwargs)` where
                 :attr:`regularizer_class` is specified in :attr:`"type"`.
+                Ignored if :attr:`"type"` is a Regularizer instance.
 
             The default value corresponds to
-            :tf_main:`L1L2 <keras/regularizers/L1L2>` with `(l1=0, l2=0)`, which
-            disables regularization.
+            :tf_main:`L1L2 <keras/regularizers/L1L2>` with `(l1=0, l2=0)`,
+            which disables regularization.
 
         "trainable" : bool
             Whether the embedding is trainable.
@@ -314,7 +383,7 @@ def default_embedding_hparams():
         "name": "embedding",
         "dim": 50,
         "initializer": {
-            "type": "tensorflow.random_uniform_initializer",
+            "type": "random_uniform_initializer",
             "kwargs": {
                 "minval": -0.1,
                 "maxval": 0.1,
@@ -357,10 +426,7 @@ def get_embedding(hparams=None,
             hparams = HParams(hparams, default_embedding_hparams())
         regularizer = _get_regularizer(hparams["regularizer"])
         if init_values is None:
-            kwargs = hparams["initializer"]["kwargs"].todict()
-            initializer = utils.get_instance(
-                hparams["initializer"]["type"], kwargs,
-                ["txtgen.custom", "tensorflow.initializers", "tensorflow"])
+            initializer = _get_initializer(hparams["initializer"])
             return tf.get_variable(name=hparams["name"],
                                    shape=[vocab_size, hparams["dim"]],
                                    initializer=initializer,
@@ -414,9 +480,21 @@ def default_conv1d_kwargs():
                     "type": "zeros_initializer",
                     "kwargs": {}
                 },
-                "kernel_regularizer": None,
-                "bias_regularizer": None,
-                "activity_regularizer": None
+                "kernel_regularizer": {
+                    "type": "L1L2",
+                    "kwargs": {
+                        "l1": 0.,
+                        "l2": 0.
+                    }
+                }
+                "bias_regularizer": {
+                    # same as in "kernel_regularizer"
+                    # ...
+                },
+                "activity_regularizer": {
+                    # same as in "kernel_regularizer"
+                    # ...
+                }
             }
 
         Here:
@@ -461,34 +539,38 @@ def default_conv1d_kwargs():
 
         "kernel_initializer" : dict
             Hyperparameters of the initializer for the filters, including
-            :attr:`"type"` (str) and :attr:`"kwargs"` (dict).
+            :attr:`"type"` (str or object) and :attr:`"kwargs"` (dict).
 
-            The default is :tf_main:`tf.glorot_uniform_initializer
+            The default corr. to :tf_main:`tf.glorot_uniform_initializer
             <glorot_uniform_initializer>`.
 
         "bias_initializer" : dict
             Hyperparameters of the initializer for the bias, including
-            :attr:`"type"` (str) and :attr:`"kwargs"` (dict).
+            :attr:`"type"` (str or object) and :attr:`"kwargs"` (dict).
 
-            The default is :tf_main:`tf.zeros_initializer <zeros_initializer>`.
+            The default corr. to
+            :tf_main:`tf.zeros_initializer <zeros_initializer>`.
 
         "kernel_regularizer" : dict
             Optional hyperparameters of the regularizer for the convolution
-            filters, including :attr:`"type"` (str) and :attr:`"kwargs"` (dict).
+            filters, including :attr:`"type"` (str or object) and
+            :attr:`"kwargs"` (dict).
 
-            The default value is `None`, i.e., no regularization is performed.
+            The default value disables regularization.
 
         "bias_regularizer" : dict
             Optional hyperparameters of the regularizer for the bias,
-            including :attr:`"type"` (str) and :attr:`"kwargs"` (dict).
+            including :attr:`"type"` (str or object) and
+            :attr:`"kwargs"` (dict).
 
-            The default value is `None`, i.e., no regularization is performed.
+            The default value disables regularization.
 
         "activity_regularizer" : dict
             Optional hyperparameters of the regularizer for the layer output,
-            including :attr:`"type"` (str) and :attr:`"kwargs"` (dict).
+            including :attr:`"type"` (str or object) and
+            :attr:`"kwargs"` (dict).
 
-            The default value is `None`, i.e., no regularization is performed.
+            The default value disables regularization.
     """
     return {
         "kernel_size": [3, 4, 5],
@@ -571,23 +653,22 @@ def get_layer(hparams):
 
     layer_type = hparams["type"]
     layer_class = utils.get_class(
-        layer_type, ["txtgen.costum", "tensorflow.layers"])
+        layer_type, ["tensorflow.layers", "txtgen.costum"])
 
     if isinstance(hparams, dict):
-        default_kwargs = {}
-        if layer_class in _layer_class_to_default_kwargs_map:
-            default_kwargs = _layer_class_to_default_kwargs_map[layer_class]
+        default_kwargs = _layer_class_to_default_kwargs_map.get(layer_class, {})
         default_hparams = {"type": layer_type, "kwargs": default_kwargs}
         hparams = HParams(hparams, default_hparams)
 
 
 
+
 def sinusoid_positional_encoding(inputs,
-                                zero_pad=True,
-                                scale=True,
-                                reuse=None,
-                                position_duration=10000,
-                                scope='sinuoid_positional_embedding'):
+                                 zero_pad=True,
+                                 scale=True,
+                                 reuse=None,
+                                 position_duration=10000,
+                                 scope='sinuoid_positional_embedding'):
     """obtain a positional encoding of inputs
     Args:
         inputs: [Tensor] A Tensor of shape `[batch_size, max_time, hidden_dim]`

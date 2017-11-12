@@ -23,9 +23,8 @@ class HParams(object):
 
     Type check is performed to make sure the value types of hyperparameters in
     :attr:`hparams` are consistent with their default value types in
-    :attr:`default_hparams`.
-    Missing hyperparameters are set to default values. The only exception
-    happens when :attr:`default_hparams` has the structure:
+    :attr:`default_hparams`. Missing hyperparameters are set to default values.
+    The only exception happens when :attr:`default_hparams` has the structure:
 
     .. code-block:: python
 

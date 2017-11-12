@@ -9,6 +9,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import tensorflow as tf
+import tensorflow.contrib.rnn as rnn
 
 from txtgen import context
 from txtgen.hyperparams import HParams
@@ -20,10 +21,19 @@ class GetRNNCellTest(tf.test.TestCase):
     """
 
     def test_get_rnn_cell(self):
-        """Tests get_rnn_cell.
+        """Tests :func:`txtgen.core.layers.get_rnn_cell`.
         """
         emb_dim = 4
         num_units = 64
+
+        hparams = {
+            "cell": {
+                "type": rnn.BasicLSTMCell(num_units)
+            }
+        }
+        cell = layers.get_rnn_cell(hparams)
+        self.assertTrue(isinstance(cell, rnn.BasicLSTMCell))
+
         hparams = {
             "cell": {
                 "type": "tensorflow.contrib.rnn.GRUCell",
@@ -62,6 +72,27 @@ class GetRNNCellTest(tf.test.TestCase):
                 self.assertEqual(state_.shape[1],
                                  hparams_.cell.kwargs.num_units)
 
+    def test_get_embedding(self):
+        """Tests :func:`txtgen.core.layers.get_embedding`.
+        """
+        vocab_size = 100
+        emb = layers.get_embedding(vocab_size=vocab_size)
+        self.assertEqual(emb.shape[0].value, vocab_size)
+        self.assertEqual(emb.shape[1].value,
+                         layers.default_embedding_hparams()["dim"])
+
+        hparams = {
+            "initializer": {
+                "type": tf.random_uniform_initializer(minval=-0.1, maxval=0.1)
+            },
+            "regularizer": {
+                "type": tf.keras.regularizers.L1L2(0.1, 0.1)
+            }
+        }
+        emb = layers.get_embedding(hparams=hparams, vocab_size=vocab_size)
+        self.assertEqual(emb.shape[0].value, vocab_size)
+        self.assertEqual(emb.shape[1].value,
+                         layers.default_embedding_hparams()["dim"])
 
 if __name__ == "__main__":
     tf.test.main()
