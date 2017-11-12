@@ -25,6 +25,12 @@ from txtgen import context
 
 MAX_SEQ_LENGTH = np.iinfo(np.int32).max
 
+## Some modules can be imported directly, e.g., `import tensorflow.train` fails.
+## Such modules are treated in a special way in utils like `get_class` as below.
+#_unimportable_modules = {
+#    'tensorflow.train', 'tensorflow.keras.regularizers'
+#}
+
 def get_class(class_name, module_paths=None):
     """Returns the class based on class name.
 
@@ -45,16 +51,17 @@ def get_class(class_name, module_paths=None):
     class_ = locate(class_name)
     if (class_ is None) and (module_paths is not None):
         for module_path in module_paths:
-            # Special treatment for module 'tensorflow.train' as
-            # `import tensorflow.train` fails.
-            if module_path == 'tensorflow.train':
-                class_ = locate('.'.join([module_path, class_name]))
-                if class_ is not None:
-                    break
-            module = importlib.import_module(module_path)
-            if class_name in dir(module):
-                class_ = getattr(module, class_name)
+            #if module_path in _unimportable_modules:
+            # Special treatment for unimportable modules by directly
+            # accessing the class
+            class_ = locate('.'.join([module_path, class_name]))
+            if class_ is not None:
                 break
+            #else:
+            #    module = importlib.import_module(module_path)
+            #    if class_name in dir(module):
+            #        class_ = getattr(module, class_name)
+            #        break
 
     if class_ is None:
         raise ValueError(
@@ -149,16 +156,14 @@ def get_function(fn_name, module_paths=None):
     fn = locate(fn_name)
     if (fn is None) and (module_paths is not None):
         for module_path in module_paths:
-            # Special treatment for module 'tensorflow.train' as
-            # `import tensorflow.train` fails.
-            if module_path == 'tensorflow.train':
-                fn = locate('.'.join([module_path, fn_name]))
-                if fn is not None:
-                    break
-            module = importlib.import_module(module_path)
-            if fn_name in dir(module):
-                fn = getattr(module, fn_name)
+            #if module_path in _unimportable_modules:
+            fn = locate('.'.join([module_path, fn_name]))
+            if fn is not None:
                 break
+            #module = importlib.import_module(module_path)
+            #if fn_name in dir(module):
+            #    fn = getattr(module, fn_name)
+            #    break
 
     if fn is None:
         raise ValueError(
@@ -285,3 +290,8 @@ def patch_dict(tgt_dict, src_dict):
             patched_dict[key] = patch_dict(patched_dict[key], value)
     return patched_dict
 
+def is_str_or_unicode(x):
+    """Returns `True` if :attr:`x` is either a str or unicode. Returns `False`
+    otherwise.
+    """
+    return isinstance(x, str) or isinstance(x, unicode)
