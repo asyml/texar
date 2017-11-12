@@ -40,6 +40,14 @@ class HParamsTest(tf.test.TestCase):
                 "arg1": "argv1"
             },
         }
+
+        # Test HParams.items() function
+        hparams_ = HParams(None, default_hparams)
+        names = []
+        for name, _ in hparams_.items():
+            names.append(name)
+        self.assertEqual(names, default_hparams.keys())
+
         hparams = {
             "dict": {"key1": "new_value"},
             "kwargs": {"arg2": "argv2"}

@@ -221,7 +221,7 @@ def _default_regularizer_hparams():
         }
     }
 
-def _get_regularizer(hparams=None):
+def get_regularizer(hparams=None):
     """Returns a variable regularizer instance.
 
     See :meth:`~txtgen.core.layers.default_regularizer_hparams` for all
@@ -257,7 +257,7 @@ def _get_regularizer(hparams=None):
         return None
     return rgl
 
-def _get_initializer(hparams=None):
+def get_initializer(hparams=None):
     """Returns an initializer instance.
 
     Args:
@@ -278,6 +278,28 @@ def _get_initializer(hparams=None):
     else:
         initializer = hparams["type"]
     return initializer
+
+def get_activation_fn(fn_name="identity"):
+    """Returns an activation function based on its name or full path.
+
+    Args:
+        fn_name (str): The name or full path to the activation function.
+            The function can be:
+
+            - Built-in function defined in :mod:`tf` or \
+              :mod:`tf.nn`, e.g., :tf_main:`identity <identity>`.
+            - User-defined activation functions in `txtgen.custom`.
+            - External activation functions. Must provide the full path, \
+              e.g., "my_module.my_activation_fn".
+
+            The default value is "identity".
+
+    Returns:
+        The activation function.
+    """
+    fn_modules = ['tensorflow', 'tensorflow.nn', 'txtgen.custom']
+    activation_fn = utils.get_function(fn_name, fn_modules)
+    return activation_fn
 
 def default_embedding_hparams():
     """Returns default hyperparameters of token embedding used in encoders,
@@ -424,9 +446,9 @@ def get_embedding(hparams=None,
     with tf.variable_scope(variable_scope, "embedding"):
         if hparams is None or isinstance(hparams, dict):
             hparams = HParams(hparams, default_embedding_hparams())
-        regularizer = _get_regularizer(hparams["regularizer"])
+        regularizer = get_regularizer(hparams["regularizer"])
         if init_values is None:
-            initializer = _get_initializer(hparams["initializer"])
+            initializer = get_initializer(hparams["initializer"])
             return tf.get_variable(name=hparams["name"],
                                    shape=[vocab_size, hparams["dim"]],
                                    initializer=initializer,
@@ -644,24 +666,94 @@ _layer_class_to_default_kwargs_map = {
     tf.layers.AveragePooling3D: default_average_pooling3d_kwargs(),
 }
 
-
+#TODO(zhiting): allow extended definition of layer arguments, e.g.,
+# `kernel_size`
 def get_layer(hparams):
-    """
+    """Makes a layer instance.
+
+    The layer must be an instance of :tf_main:`Layer <layers/Layer>`.
+
+    Args:
+        hparams (dict or HParams): Hyperparameters of the layer, with structure
+
+        .. code-block:: python
+
+            {
+                "type": "layer_class",
+                "kwargs": {
+                    # Keyword arguments of the layer class
+                    # ...
+                }
+            }
+
+        Here:
+
+        "type" : str or layer instance
+            Name, full path, or instance of the layer class. The
+            class can be
+
+            - Built-in layer defined in \
+              :tf_main:`tf.layers <layers>`, e.g., \
+              :tf_main:`tf.layers.Conv2D <layers/Conv2D>`. \
+            - User-defined layer class in :mod:`txtgen.custom`. The class \
+              must inherit :tf_main:`Layer <layers/Layer>`.
+            - External layer. Must provide the full path, \
+              e.g., :attr:`"my_module.MyInitializer"`, or the instance.
+
+        "kwargs" : dict
+            A dictionary of arguments for constructor of the
+            layer class. Ignored if :attr:`"type"` is a layer instance.
+
+            - Arguments named "*_regularizer" and "*_initializer" \
+            have values of type `dict` that specifiy hyperparameters of \
+            respective regularizers and initializers. Regularizer and \
+            initializer instances will be created accordingly and used for \
+            making the layer.
+            - Arguments named "activation" have values of type `str` that \
+            specify the name or full path to the activation function. \
+            The activation function will be used for making the layer.
+
+    Returns:
+        A layer instance. If :attr:`hparams["type"]` is already a layer
+        instance, returns it directly.
+
+    Raise:
+        ValueError: If :attr:`hparams` is `None`.
+        ValueError: If the resulting layer is not an instance of
+            :tf_main:`Layer <layers/Layer>`.
     """
     if hparams is None:
         raise ValueError("`hparams` must not be `None`.")
 
     layer_type = hparams["type"]
-    layer_class = utils.get_class(
-        layer_type, ["tensorflow.layers", "txtgen.costum"])
+    if not utils.is_str_or_unicode(layer_type):
+        layer = layer_type
+    else:
+        layer_modules = ["tensorflow.layers", "txtgen.costum"]
+        layer_class = utils.get_class(layer_type, layer_modules)
+        if isinstance(hparams, dict):
+            default_kwargs = _layer_class_to_default_kwargs_map.get(layer_class,
+                                                                    {})
+            default_hparams = {"type": layer_type, "kwargs": default_kwargs}
+            hparams = HParams(hparams, default_hparams)
 
-    if isinstance(hparams, dict):
-        default_kwargs = _layer_class_to_default_kwargs_map.get(layer_class, {})
-        default_hparams = {"type": layer_type, "kwargs": default_kwargs}
-        hparams = HParams(hparams, default_hparams)
+        kwargs = {}
+        for k, v in hparams.kwargs.items():
+            if k.endswith('_regularizer'):
+                kwargs[k] = get_regularizer(v)
+            elif k.endswith('_initializer'):
+                kwargs[k] = get_initializer(v)
+            elif k.endswith('activation'):
+                kwargs[k] = get_activation_fn(v)
+            else:
+                kwargs[k] = v
 
+        layer = utils.get_instance(layer_type, kwargs, layer_modules)
 
+    if not isinstance(layer, tf.layers.Layer):
+        raise ValueError("layer must be an instance of `tf.layers.Layer`.")
 
+    return layer
 
 def sinusoid_positional_encoding(inputs,
                                  zero_pad=True,

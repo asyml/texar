@@ -12,8 +12,8 @@ import tensorflow.contrib.distributions as tf_dstr
 from tensorflow.python.util import nest    # pylint: disable=E0611
 
 from txtgen.modules.connectors.connector_base import ConnectorBase
-from txtgen.core.utils import get_function
-from txtgen.core.utils import get_instance
+from txtgen.core import layers
+from txtgen.core.utils import get_function, get_instance
 
 # pylint: disable=too-many-locals, arguments-differ, too-many-arguments
 
@@ -255,7 +255,7 @@ class MLPTransformConnector(ConnectorBase):
             .. code-block:: python
 
                 {
-                    "activation_fn": "tensorflow.identity",
+                    "activation_fn": "identity",
                     "name": "mlp_connector"
                 }
 
@@ -265,13 +265,13 @@ class MLPTransformConnector(ConnectorBase):
                 The name or full path to the activation function applied to
                 the outputs of the MLP layer. The activation functions can be:
 
-                - Built-in activation functions defined in `tensorflow` or \
-                `tensorflow.nn`, e.g., :meth:`tensorflow.identity`.
+                - Built-in activation functions defined in :mod:`tf` or \
+                  :mod:`tf.nn`, e.g., :tf_main:`identity <identity>`.
                 - User-defined activation functions in `txtgen.custom`.
                 - External activation functions. Must provide the full path, \
                   e.g., "my_module.my_activation_fn".
 
-                The default value is "tensorflow.identity", i.e., the MLP
+                The default value is :attr:`"identity"`, i.e., the MLP
                 transformation is linear.
 
             "name" : str
@@ -280,7 +280,7 @@ class MLPTransformConnector(ConnectorBase):
                 The default value is "mlp_connector".
         """
         return {
-            "activation_fn": "tensorflow.identity",
+            "activation_fn": "identity",
             "name": "mlp_connector"
         }
 
@@ -297,8 +297,7 @@ class MLPTransformConnector(ConnectorBase):
             A Tensor or a (nested) tuple of Tensors of the same structure of
             the decoder state.
         """
-        fn_modules = ['txtgen.custom', 'tensorflow', 'tensorflow.nn']
-        activation_fn = get_function(self.hparams.activation_fn, fn_modules)
+        activation_fn = layers.get_activation_fn(self.hparams.activation_fn)
 
         output = _mlp_transform(inputs, self._output_size, activation_fn)
 
@@ -335,7 +334,7 @@ class ReparameterizedStochasticConnector(ConnectorBase):
             .. code-block:: python
 
                 {
-                    "activation_fn": "tensorflow.identity",
+                    "activation_fn": "identity",
                     "name": "reparameterized_stochastic_connector"
                 }
 
@@ -345,13 +344,13 @@ class ReparameterizedStochasticConnector(ConnectorBase):
                 The name or full path to the activation function applied to
                 the outputs of the MLP layer. The activation functions can be:
 
-                - Built-in activation functions defined in `tensorflow` or \
-                `tensorflow.nn`, e.g., :meth:`tensorflow.identity`.
+                - Built-in activation functions defined in :mod:`tf` or \
+                  :mod:`tf.nn`, e.g., :tf_main:`identity <identity>`.
                 - User-defined activation functions in `txtgen.custom`.
                 - External activation functions. Must provide the full path, \
                   e.g., "my_module.my_activation_fn".
 
-                The default value is "tensorflow.identity", i.e., the MLP
+                The default value is :attr:`"identity"`, i.e., the MLP
                 transformation is linear.
 
             "name" : str
@@ -473,13 +472,13 @@ class StochasticConnector(ConnectorBase):
                 The name or full path to the activation function applied to
                 the outputs of the MLP layer. The activation functions can be:
 
-                - Built-in activation functions defined in `tensorflow` or \
-                `tensorflow.nn`, e.g., :meth:`tensorflow.identity`.
+                - Built-in activation functions defined in :mod:`tf` or \
+                  :mod:`tf.nn`, e.g., :tf_main:`identity <identity>`.
                 - User-defined activation functions in `txtgen.custom`.
                 - External activation functions. Must provide the full path, \
                   e.g., "my_module.my_activation_fn".
 
-                The default value is "tensorflow.identity", i.e., the MLP
+                The default value is :attr:`"identity"`, i.e., the MLP
                 transformation is linear.
 
             "name" : str
@@ -597,13 +596,13 @@ class ConcatConnector(ConnectorBase):
                 The name or full path to the activation function applied to
                 the outputs of the MLP layer. The activation functions can be:
 
-                - Built-in activation functions defined in `tensorflow` or \
-                  `tensorflow.nn`, e.g., :meth:`tensorflow.identity`.
+                - Built-in activation functions defined in :mod:`tf` or \
+                  :mod:`tf.nn`, e.g., :tf_main:`identity <identity>`.
                 - User-defined activation functions in `txtgen.custom`.
                 - External activation functions. Must provide the full path, \
                   e.g., "my_module.my_activation_fn".
 
-                The default value is "tensorflow.identity", i.e., the MLP
+                The default value is :attr:`"identity"`, i.e., the MLP
                 transformation is linear.
 
             "name" : str
