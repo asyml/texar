@@ -13,8 +13,9 @@ from tensorflow.python.framework import ops
 
 # We shall wrap all these modules
 from txtgen.data import database
-from txtgen.modules import ConstantConnector
+from txtgen.modules import ForwardConnector
 from txtgen.modules import BasicRNNDecoder, get_helper
+from txtgen.modules import HierarchicalEncoder
 from txtgen.losses import mle_losses
 from txtgen.core import optimization as opt
 from txtgen import context
@@ -51,14 +52,19 @@ if __name__ == "__main__":
     dialog_db = database.MultiSourceTextDataBase(data_hparams)
     data_batch = dialog_db()
 
-    # Build decoder. Simply use the default hyperparameters.\
+    # builder encoder
+    encoder = HierarchicalEncoder(vocab_size=dialog_db.source_vocab.vocab_size)
 
+    # Build decoder. Simply use the default hyperparameters.\
     decoder = BasicRNNDecoder(vocab_size=dialog_db.target_vocab.vocab_size)
 
-    # Build connector, which simply feeds zero state to decoder as initial state
-    connector = ConstantConnector(decoder.state_size)
-
     # Build helper used in training.
+    enc_outputs, enc_last = encoder(inputs=data_batch['source_text_ids'])
+
+    # Build connector, which simply feeds zero state to decoder as initial state
+    connector = ForwardConnector(decoder.state_size)
+
+
     # We shall probably improve the interface here.
     helper_train = get_helper(
         decoder.hparams.helper_train.type,
@@ -68,7 +74,7 @@ if __name__ == "__main__":
 
     # Decode
     outputs, final_state, sequence_lengths = decoder(
-        helper=helper_train, initial_state=connector(dialog_db.batch_size))
+        helper=helper_train, initial_state=connector(enc_last))
 
     # Build loss
     mle_loss = mle_losses.average_sequence_sparse_softmax_cross_entropy(
