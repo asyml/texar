@@ -58,12 +58,12 @@ if __name__ == "__main__":
     # Build decoder. Simply use the default hyperparameters.\
     decoder = BasicRNNDecoder(vocab_size=dialog_db.target_vocab.vocab_size)
 
-    # Build helper used in training.
-    enc_outputs, enc_last = encoder(inputs=data_batch['source_text_ids'])
-
     # Build connector, which simply feeds zero state to decoder as initial state
     connector = ForwardConnector(decoder.state_size)
 
+
+    # Build helper used in training.
+    enc_outputs, enc_last = encoder(inputs=data_batch['source_text_ids'])
 
     # We shall probably improve the interface here.
     helper_train = get_helper(
