@@ -15,6 +15,7 @@ from txtgen import context
 from txtgen.hyperparams import HParams
 from txtgen.core import layers
 
+# pylint: disable=no-member
 
 class GetRNNCellTest(tf.test.TestCase):
     """Tests RNN cell creator.
@@ -93,6 +94,15 @@ class GetRNNCellTest(tf.test.TestCase):
         self.assertEqual(emb.shape[0].value, vocab_size)
         self.assertEqual(emb.shape[1].value,
                          layers.default_embedding_hparams()["dim"])
+
+    def test_get_layer(self):
+        """Tests :func:`txtgen.core.layers.get_layer`.
+        """
+        hparams = {
+            "type": "Conv1D"
+        }
+        layer = layers.get_layer(hparams)
+        self.asserTrue(isinstance(layer, tf.layers.Conv1D))
 
 if __name__ == "__main__":
     tf.test.main()
