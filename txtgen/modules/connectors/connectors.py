@@ -436,6 +436,7 @@ class ReparameterizedStochasticConnector(ConnectorBase):
 
         return output
 
+
 class StochasticConnector(ConnectorBase):
     """Samples from a distribution and transforms samples into specified size
 
@@ -560,6 +561,7 @@ class StochasticConnector(ConnectorBase):
         self._built = True
 
         return output
+
 
 class ConcatConnector(ConnectorBase):
     """ Concatenate multiple connectors into one connector. Used in, e.g.,
