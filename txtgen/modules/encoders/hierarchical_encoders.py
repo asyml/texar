@@ -16,7 +16,7 @@ from txtgen.core import layers
 
 #TODO(zhiting): this is incomplete
 __all__ = [
-    #"HierarchicalEncoder"
+    "HierarchicalEncoder"
 ]
 
 class HierarchicalEncoder(EncoderBase):
@@ -27,8 +27,8 @@ class HierarchicalEncoder(EncoderBase):
 
     Expect 3D tensor input [B, T, U]
     B: batch size T: the major seq len U:the minor seq len
-    The minor encoder encodes the inputs along the 2 axis
     The major encoder encodes the inputs along the 1st axis
+    The minor encoder encodes the inputs along the 2nd axis
 
     the minor encoder supports various types: RNN, bi-RNN, CNN, CBOW etc.
 
@@ -36,12 +36,34 @@ class HierarchicalEncoder(EncoderBase):
     arguments, and :meth:`default_hparams` for the default hyperparameters.
     """
 
-    def __init__(self,
-                 cell=None,
+    def __init__(self, cell=None,
                  embedding=None,
                  vocab_size=None,
                  hparams=None):
-        RNNEncoderBase.__init__(self, cell, embedding, vocab_size, hparams)
+        EncoderBase.__init__(self, hparams)
+
+        # Make embedding
+        self._embedding = None
+        if self._hparams.use_embedding:
+            if embedding is None and vocab_size is None:
+                raise ValueError(
+                    "`vocab_szie` is required if embedding is enabled and "
+                    "`embedding` is not provided")
+            if isinstance(embedding, tf.Variable):
+                self._embedding = embedding
+            else:
+                self._embedding = layers.get_embedding(
+                    self._hparams.embedding, embedding, vocab_size,
+                    self.variable_scope)
+            if self._hparams.embedding.trainable:
+                self._add_trainable_variable(self._embedding)
+
+        # Make RNN cell
+        with tf.variable_scope(self.variable_scope):
+            if cell is not None:
+                self._major_cell = cell
+            else:
+                self._major_cell = layers.get_rnn_cell(self._hparams.major_cell)
 
         if self._hparams.minor_type == 'rnn':
             # Make minor rnn cell
@@ -89,10 +111,13 @@ class HierarchicalEncoder(EncoderBase):
             }
         """
         hparams = {
+            "use_embedding": True,
+            "embedding": layers.default_embedding_hparams(),
             "minor_type": "rnn",
-            "minor_cell": layers.default_rnn_cell_hparams()
+            "minor_cell": layers.default_rnn_cell_hparams(),
+            "major_cell": layers.default_rnn_cell_hparams(),
         }
-        hparams.update(RNNEncoderBase.default_hparams())
+        hparams.update(EncoderBase.default_hparams())
         hparams["name"] = "hierarchical_forward_rnn_encoder"
         return hparams
 
@@ -135,13 +160,13 @@ class HierarchicalEncoder(EncoderBase):
         with tf.variable_scope("major_rnn"):
             if ('dtype' not in kwargs) and ('initial_state' not in kwargs):
                 results = tf.nn.dynamic_rnn(
-                    cell=self._cell,
+                    cell=self._major_cell,
                     inputs=major_inputs,
                     dtype=tf.float32,
                     **kwargs)
             else:
                 results = tf.nn.dynamic_rnn(
-                    cell=self._cell,
+                    cell=self._major_cell,
                     inputs=major_inputs,
                     **kwargs)
 
@@ -149,7 +174,7 @@ class HierarchicalEncoder(EncoderBase):
         # Add trainable variables of `self._cell` which may be constructed
         # externally
         self._add_trainable_variable(
-            layers.get_rnn_cell_trainable_variables(self._cell))
+            layers.get_rnn_cell_trainable_variables(self._major_cell))
         self._built = True
 
         return results
