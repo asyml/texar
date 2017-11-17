@@ -9,6 +9,7 @@ from __future__ import print_function
 import tensorflow as tf
 from txtgen.modules.encoders.encoder_base import EncoderBase
 from txtgen.core import layers
+from txtgen import context
 
 class TransformerEncoder(EncoderBase):
     """Base class for all encoder classes.
@@ -52,7 +53,6 @@ class TransformerEncoder(EncoderBase):
                                             self._embedding[1:, :]), 0)
             if self._hparams.embedding.trainable:
                 self._add_trainable_variable(self._embedding)
-
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
@@ -88,35 +88,41 @@ class TransformerEncoder(EncoderBase):
         """
         return {
             "embedding_enabled": True,
-            "embedding": layers.default_embedding_hparams(),
-            "name": "transformer_encoder",
-            "zero_pad": True,
+            "embedding":layers.default_embedding_hparams(),
+            "name":"transformer_encoder",
+            "zero_pad":True,
+            "max_seq_length":100,
+            'scale':True,
+            'sinusoid':True,
+            'dropout':0.9,
+            'num_blocks':2,
+            'num_heads':5,
         }
 
-        def _build(self, inputs, **kwargs):
-            if self._embedding is not None:
-                embedded_inputs = tf.nn.embedding_lookup(self._embedding, inputs)
-            else:
-                embedded_inputs = inputs
-            dim = tf.shape(embedded_inputs)[2]
-            if self.scale:
-                embedded_inputs = embedded_inputs * tf.sqrt(dim)
-            if self._hparams.sinusoid:
-                position_inputs = layers.sinusoid_positional_encoding(embedded_inputs,
-                        scope="enc_pe")
-            enc_output = tf.layers.dropout(embedded_inputs + position_inputs,
-                    rate = self._hparams.encoder.dropout_rate,
-                    training=True)
-            for i in range(self._hparams.encoder.num_blocks):
-                with tf.variable_scope("num_blocks_{}".format(i)):
-                    enc_output = layers.multihead_attention(queries=enc_output,
-                            keys= enc_output,
-                            num_heads = self._hparams.num_heads,
-                            dropout_rate = self._hparams.dropout_rate,
-                            is_training = True,
-                            causality=False)
-                    enc_output = layers.normalize(enc_output)
-                    enc_output = layers.poswise_feedforward(enc_output,
-                            num_units=[4*self._hparams.hidden_units, self._hparams.hidden_units])
-                    enc_output = layers.normalize(enc_output)
-            return enc_output
+    def _build(self, inputs, **kwargs):
+        if self._embedding is not None:
+            embedded_inputs = tf.nn.embedding_lookup(self._embedding, inputs)
+        else:
+            embedded_inputs = inputs
+        dim = embedded_inputs.shape.as_list()[2]
+        if self._hparams.scale:
+            embedded_inputs = embedded_inputs*(dim**0.5)
+        if self._hparams.sinusoid:
+            position_inputs = layers.sinusoid_positional_encoding(embedded_inputs,
+                    max_time=self._hparams.max_seq_length,
+                    scope="enc_pe")
+        enc_output = tf.layers.dropout(embedded_inputs+position_inputs,
+                rate=self._hparams.dropout,
+                training=context.is_train())
+        print('enc_output:{}'.format(enc_output.get_shape()))
+        for i in range(self._hparams.num_blocks):
+            with tf.variable_scope("num_blocks_{}".format(i)):
+                enc_output = layers.multihead_attention(queries=enc_output,
+                        keys=enc_output,
+                        num_heads=self._hparams.num_heads,
+                        dropout_rate=self._hparams.dropout,
+                        causality=False)
+                enc_output = layers.normalize(enc_output)
+                enc_output = layers.poswise_feedforward(enc_output)
+                enc_output = layers.normalize(enc_output)
+        return enc_output
