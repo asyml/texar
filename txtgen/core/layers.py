@@ -433,6 +433,7 @@ def sinusoid_positional_encoding(inputs,
                                 scale=True,
                                 reuse=None,
                                 position_duration=10000,
+                                max_time=None,
                                 scope='sinuoid_positional_embedding'):
     """obtain a positional encoding of inputs
     Args:
@@ -444,7 +445,8 @@ def sinusoid_positional_encoding(inputs,
         scope: [String], Optional scope for 'variable_scope'
         position_duration: [Int], default=10000
     """
-    batch_size, max_time, hidden_dim = inputs.get_shape().as_list()
+    print('inputs:shape{}'.format(inputs.get_shape())) #[3, None, 50]
+    batch_size, _, hidden_dim = inputs.get_shape().as_list()
     with tf.variable_scope(scope, reuse=reuse):
         position_idx = tf.tile(tf.expand_dims(tf.range(max_time), 0), [batch_size, 1]) #batch_size * max_time
         position_enc = np.array([
@@ -454,22 +456,23 @@ def sinusoid_positional_encoding(inputs,
         position_enc[:, 0::2] = np.sin(position_enc[:, 0::2])
         position_enc[:, 1::2] = np.cos(position_enc[:, 1::2])
 
-        lookup_table = tf.convert_to_tensor(position_enc)
+        lookup_table = tf.convert_to_tensor(position_enc, dtype=tf.float32)
+        print('lookup_table:{}'.format(lookup_table))
         if zero_pad:
             lookup_table = tf.concat((tf.zeros(shape=[1, hidden_dim]),
                 lookup_table[1:, :]), 0)
         outputs = tf.nn.embedding_lookup(lookup_table, position_idx)
         if scale:
             outputs = outputs * hidden_dim**0.5
+        print('outputs:{}'.format(outputs.shape))
         return outputs
 
 #TODO(zhiting): fix code style
 def multihead_attention(queries,
                         keys,
-                        num_units= None,
                         num_heads=8,
                         dropout_rate=0,
-                        causality = False,
+                        causality=False,
                         scope = 'multihead_attention',
                         reuse= None):
     """perform multihead attention
@@ -487,10 +490,12 @@ def multihead_attention(queries,
     """
     with tf.variable_scope(scope, reuse=reuse):
         # Set the fall back option for num_units
-        if num_units is None:
-            num_units = queries.get_shape().as_list[-1]
+        num_units = queries.get_shape().as_list()[-1]
 
         # Linear projections
+        print('keys:{}'.format(keys))
+        print('queries:{}'.format(queries))
+        print('num_units:{}'.format(num_units))
         Q = tf.layers.dense(queries, num_units, activation=tf.nn.relu) # (N, T_q, C)
         K = tf.layers.dense(keys, num_units, activation=tf.nn.relu) # (N, T_k, C)
         V = tf.layers.dense(keys, num_units, activation=tf.nn.relu) # (N, T_k, C)
@@ -563,7 +568,7 @@ def poswise_feedforward(attended_dec, scope="multihead_attention", reuse=None):
     Returns:
       A 3d tensor with the same shape and dtype as inputs
     '''
-    hidden_dim = attended_dec.shape().as_list()[-1]
+    hidden_dim = attended_dec.shape.as_list()[-1]
     with tf.variable_scope(scope, reuse=reuse):
         outputs = tf.layers.conv1d(inputs = attended_dec,
                 filters=hidden_dim*4,

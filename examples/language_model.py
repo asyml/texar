@@ -9,7 +9,6 @@ from __future__ import print_function
 # pylint: disable=invalid-name, no-name-in-module
 
 import tensorflow as tf
-from tensorflow.python.framework import ops
 
 # We shall wrap all these modules
 from txtgen.data import database
@@ -46,7 +45,7 @@ if __name__ == "__main__":
     data_batch = text_db()
 
     ### Build model
-
+    inputs = data_batch['text_ids'][:, -1]
     # Build decoder. Simply use the default hyperparameters.
     #decoder = rnn_decoders.BasicRNNDecoder(vocab_size=text_db.vocab.vocab_size)
     decoder = BasicRNNDecoder(vocab_size=text_db.vocab.vocab_size)

@@ -1,4 +1,3 @@
-#
 """
 Example pipeline. This is a minimal example of basic RNN language model.
 """
@@ -39,14 +38,18 @@ if __name__ == "__main__":
             "reader_share": True,
             "processing":{
                 "eos_token": "<TARGET_EOS>"
-            }
+            },
         }
+    }
+    extra_hparams = {
+        'max_seq_length':100,
+        'scale':100,
+        'sinusoid':True,
     }
     # Construct the database
     text_database = database.PairedTextDataBase(data_hparams)
     print('database finished')
 
-    ##TODO(haoran) bug: the text_database cannot be called here
     text_data_batch = text_database()
     # Get data minibatch, which is a dictionary:
     # {
@@ -59,34 +62,37 @@ if __name__ == "__main__":
 
     # Build decoder. Simply use the default hyperparameters.
     #decoder = rnn_decoders.BasicRNNDecoder(vocab_size=text_db.vocab.vocab_size)
-    encoder = TransformerEncoder(vocab_size=text_database.source_vocab.vocab_size)
-    decoder = TransformerDecoder(vocab_size=text_database.target_vocab.vocab_size)
+    encoder = TransformerEncoder(vocab_size=text_database.source_vocab.vocab_size,
+            hparams=extra_hparams)
+    decoder = TransformerDecoder(vocab_size=text_database.target_vocab.vocab_size,
+            hparams=extra_hparams)
 
     # Build connector, which simply feeds zero state to decoder as initial state
-    connector = ConstantConnector(output_size= decoder._hparams.embedding.dim)
+    connector = ConstantConnector(output_size=decoder._hparams.embedding.dim)
     print('encoder decoder finished')
-    src_text = text_data_batch['source_text']
-    tgt_text = text_data_batch['target_text']
-    print('src_text:{}'.format(src_text))
-    sess = tf.Session()
-    src, tgt = sess.run([src_text, tgt_text])
-    print('src:{}'.format(src))
-    print('tgt:{}'.format(tgt))
-    encoder_output = encoder(src_text['text_ids'][:, :-1],
-            sequence_length=src_text['length']-1)
-    # Decode
-    outputs, final_state, sequence_lengths = decoder(
-        initial_state=connector(text_database._hparams.batch_size))
+    src_text = text_data_batch['source_text_ids']
+    tgt_text = text_data_batch['target_text_ids']
 
+    decoder_inputs = tf.concat((tf.ones_like(tgt_text[:, :1]), tgt_text[:, :-1]), -1)
+
+    print('src_text:{}'.format(src_text))
+    encoder_output = encoder(src_text,
+            sequence_length=text_data_batch['source_length'])
+    # Decode
+    print('encoder_output:{}'.format(encoder_output.shape))
+    logits, preds = decoder(decoder_inputs, encoder_output)
+    print('logits:{}'.format(logits.shape))
+    #istarget = tf.to_float(tf.not_equal(y, 0))
+    # acc = tf.reduce_sum(tf.to_float(tf.equal(preds,
     # Build loss
     mle_loss = mle_losses.average_sequence_sparse_softmax_cross_entropy(
-        labels=tgt_text['text_ids'][:, 1:],
-        logits=outputs.output_logits,
-        sequence_length=sequence_lengths-1)
+        labels=text_data_batch['target_text_ids'][:, 1:],
+        logits=logits,
+        sequence_length=text_data_batch['target_length']-1)
 
     # Build train op. Only config the optimizer while using default settings
     # for other hyperparameters.
-    opt_hparams = {
+    opt_hparams={
         "optimizer": {
             "type": "MomentumOptimizer",
             "kwargs": {
