@@ -9,6 +9,7 @@ from __future__ import division
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
 import numpy as np
+
 from txtgen import context
 from txtgen.hyperparams import HParams
 from txtgen.core import utils
@@ -109,7 +110,7 @@ def get_rnn_cell(hparams=None):
     Returns:
         An instance of :tf_main:`RNNCell <contrib/rnn/RNNCell>`.
 
-    Raise:
+    Raises:
         ValueError: If :attr:`hparams["num_layers"]` > 1 and
             :attr:`hparams["cell"]["type"]` is not of type string.
         ValueError: The cell is not an
@@ -235,7 +236,7 @@ def get_regularizer(hparams=None):
         A :tf_main:`Regularizer <keras/regularizers/Regularizer>` instance.
         `None` if :attr:`hparams` takes the default value.
 
-    Raise:
+    Raises:
         ValueError: The resulting regularizer is not an instance of
             :tf_main:`Regularizer <keras/regularizers/Regularizer>`.
     """
@@ -460,6 +461,14 @@ def get_embedding(hparams=None,
                                    regularizer=regularizer,
                                    trainable=hparams["trainable"])
 
+#TODO(zhiting): checkout
+# https://github.com/Lasagne/Lasagne/blob/master/lasagne/layers/merge.py#L243
+class MergeLayer(tf.layers.Layer):
+    """A layer that consists of multiple layers in parallel. Input is feed to
+    each of the sub-layers, and the outputs are merged with a specified mode.
+    """
+    raise NotImplementedError
+
 def _common_default_conv_kwargs():
     """Returns the default keyword argument values that are common to
     convolution layers.
@@ -479,6 +488,7 @@ def _common_default_conv_kwargs():
         "activity_regularizer": _default_regularizer_hparams()
     }
 
+#TODO(zhiting): fix the docstring
 def default_conv1d_kwargs():
     """Returns the default keyword argument values of 1D convolution layer(s)
     defined in :tf_main:`tf.layers.Conv1D <layers/Conv1D>`.
@@ -490,7 +500,7 @@ def default_conv1d_kwargs():
         .. code-block:: python
 
             {
-                "kernel_size": [3,4,5],
+                "kernel_size": 3,
                 "filters": 100,
                 "strides": 1,
                 "activation": "identity",
@@ -595,7 +605,7 @@ def default_conv1d_kwargs():
             The default value disables regularization.
     """
     return {
-        "kernel_size": [3, 4, 5],
+        "kernel_size": 3,
         "filters": 100,
         "strides": 1,
         "dilation_rate": 1,
@@ -666,58 +676,57 @@ _layer_class_to_default_kwargs_map = {
     tf.layers.AveragePooling3D: default_average_pooling3d_kwargs(),
 }
 
-#TODO(zhiting): allow extended definition of layer arguments, e.g.,
-# `kernel_size`
 def get_layer(hparams):
     """Makes a layer instance.
 
     The layer must be an instance of :tf_main:`Layer <layers/Layer>`.
 
     Args:
-        hparams (dict or HParams): Hyperparameters of the layer, with structure
+        hparams (dict or HParams): Hyperparameters of the layer, with
+            structure:
 
-        .. code-block:: python
+            .. code-block:: python
 
-            {
-                "type": "layer_class",
-                "kwargs": {
-                    # Keyword arguments of the layer class
-                    # ...
+                {
+                    "type": "layer_class",
+                    "kwargs": {
+                        # Keyword arguments of the layer class
+                        # ...
+                    }
                 }
-            }
 
-        Here:
+            Here:
 
-        "type" : str or layer instance
-            Name, full path, or instance of the layer class. The
-            class can be
+            "type" : str or layer instance
+                Name, full path, or instance of the layer class. The
+                class can be
 
-            - Built-in layer defined in \
-              :tf_main:`tf.layers <layers>`, e.g., \
-              :tf_main:`tf.layers.Conv2D <layers/Conv2D>`. \
-            - User-defined layer class in :mod:`txtgen.custom`. The class \
-              must inherit :tf_main:`Layer <layers/Layer>`.
-            - External layer. Must provide the full path, \
-              e.g., :attr:`"my_module.MyInitializer"`, or the instance.
+                - Built-in layer defined in \
+                  :tf_main:`tf.layers <layers>`, e.g., \
+                  :tf_main:`tf.layers.Conv2D <layers/Conv2D>`. \
+                - User-defined layer class in :mod:`txtgen.custom`. The class \
+                  must inherit :tf_main:`Layer <layers/Layer>`.
+                - External layer. Must provide the full path, \
+                  e.g., :attr:`"my_module.MyInitializer"`, or the instance.
 
-        "kwargs" : dict
-            A dictionary of arguments for constructor of the
-            layer class. Ignored if :attr:`"type"` is a layer instance.
+            "kwargs" : dict
+                A dictionary of arguments for constructor of the
+                layer class. Ignored if :attr:`"type"` is a layer instance.
 
-            - Arguments named "*_regularizer" and "*_initializer" \
-            have values of type `dict` that specifiy hyperparameters of \
-            respective regularizers and initializers. Regularizer and \
-            initializer instances will be created accordingly and used for \
-            making the layer.
-            - Arguments named "activation" have values of type `str` that \
-            specify the name or full path to the activation function. \
-            The activation function will be used for making the layer.
+                - Arguments named "*_regularizer" and "*_initializer" \
+                have values of type `dict` that specifiy hyperparameters of \
+                respective regularizers and initializers. Regularizer and \
+                initializer instances will be created accordingly and used for \
+                making the layer.
+                - Arguments named "activation" have values of type `str` that \
+                specify the name or full path to the activation function. \
+                The activation function will be used for making the layer.
 
     Returns:
         A layer instance. If :attr:`hparams["type"]` is already a layer
         instance, returns it directly.
 
-    Raise:
+    Raises:
         ValueError: If :attr:`hparams` is `None`.
         ValueError: If the resulting layer is not an instance of
             :tf_main:`Layer <layers/Layer>`.
@@ -755,6 +764,8 @@ def get_layer(hparams):
 
     return layer
 
+
+#TODO(zhiting): fix code style
 def sinusoid_positional_encoding(inputs,
                                  zero_pad=True,
                                  scale=True,
