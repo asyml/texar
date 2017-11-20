@@ -102,7 +102,7 @@ class GetRNNCellTest(tf.test.TestCase):
             "type": "Conv1D"
         }
         layer = layers.get_layer(hparams)
-        self.asserTrue(isinstance(layer, tf.layers.Conv1D))
+        self.assertTrue(isinstance(layer, tf.layers.Conv1D))
 
 if __name__ == "__main__":
     tf.test.main()
