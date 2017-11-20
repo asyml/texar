@@ -7,7 +7,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
-import importlib
+#import importlib
 import inspect
 from pydoc import locate
 import copy
@@ -213,6 +213,48 @@ def get_default_arg_values(fn):
         return {}
     num_defaults = len(argspec.defaults)
     return dict(zip(argspec.args[-num_defaults:], argspec.defaults))
+
+
+#TODO(zhiting): support more modes.
+# checkout: http://tflearn.org/layers/merge_ops/
+def merge(values, mode, axis=0, name='merge'):
+    """Merges tensors in a manner specified in :attr:`mode`.
+
+    Args:
+        values (list): A list of `Tensor` to merge.
+        mode (str): Mode of the merge op. This can be:
+
+            - :attr:`'concat'`: Concatenates tensors along one axis. \
+              Tensors must have the same shape except for the dimension \
+              specified in axis, which can have different sizes.
+            - :attr:`'elemwise_sum'`: Outputs element-wise sum. \
+              Tensors must have the same shape.
+            - TODO ...
+        axis (int): The axis to use in merging. Ignored in modes
+            :attr:`"elemwise_sum"` ...
+
+    Returns:
+        The merged tensor.
+
+    Raises:
+        ValueError: If :attr:`values` is not a list of tensor or contains less
+            than one tensor.
+        ValueError: If :attr:`mode` is not one in the above list.
+    """
+    if not isinstance(values, list) or len(values) < 1:
+        raise ValueError("`values` must be a list of Tensors.")
+
+    with tf.name_scope(name):
+        if mode == 'concat':
+            output = tf.concat(values=values, axis=axis)
+        elif mode == 'elemwise_sum':
+            output = values[0]
+            for v in values[1:]:
+                output = tf.add(output, v)
+        else:
+            raise ValueError("Unkown merge mode: %s." % str(mode))
+
+    return output
 
 
 def switch_dropout(dropout_keep_prob, is_train=None):

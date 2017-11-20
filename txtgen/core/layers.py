@@ -467,7 +467,8 @@ class MergeLayer(tf.layers.Layer):
     """A layer that consists of multiple layers in parallel. Input is feed to
     each of the sub-layers, and the outputs are merged with a specified mode.
     """
-    raise NotImplementedError
+    #raise NotImplementedError
+    pass
 
 def _common_default_conv_kwargs():
     """Returns the default keyword argument values that are common to

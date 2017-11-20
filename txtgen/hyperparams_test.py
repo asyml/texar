@@ -96,6 +96,26 @@ class HParamsTest(tf.test.TestCase):
         self.assertEqual(hparams_loaded.todict(), hparams_.todict())
 
 
+    def test_typecheck(self):
+        """Tests type-check functionality.
+        """
+        def _foo():
+            pass
+        def _bar():
+            pass
+
+        default_hparams = {
+            "fn": _foo,
+            "fn_2": _foo
+        }
+        hparams = {
+            "fn": _foo,
+            "fn_2": _bar
+        }
+        hparams_ = HParams(hparams, default_hparams)
+        self.assertEqual(hparams_.fn, default_hparams["fn"])
+
+
     def test_type_kwargs(self):
         """The the special cases involving "type" and "kwargs"
         hyperparameters.
