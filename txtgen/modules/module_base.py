@@ -45,11 +45,11 @@ class ModuleBase(object):
         """Subclass must implement this method to build the logic.
 
         Args:
-          *args: Arguments.
-          **kwargs: Keyword arguments.
+            *args: Arguments.
+            **kwargs: Keyword arguments.
 
         Returns:
-          Output Tensor(s).
+            Output Tensor(s).
         """
         raise NotImplementedError
 
@@ -57,11 +57,11 @@ class ModuleBase(object):
         """Executes the module logic defined in _build method
 
         Args:
-          *args: Arguments of _build method.
-          **kwargs: Keyword arguments of _build method.
+            *args: Arguments of _build method.
+            **kwargs: Keyword arguments of _build method.
 
         Returns:
-          The output of _build method.
+            The output of _build method.
         """
         return self._template(*args, **kwargs)
 
@@ -104,7 +104,7 @@ class ModuleBase(object):
 
     @property
     def name(self):
-        """The unique name of the module.
+        """The uniquified name of the module.
         """
         return self._unique_name
 
