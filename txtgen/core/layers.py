@@ -15,7 +15,7 @@ from txtgen.hyperparams import HParams
 from txtgen.core import utils
 
 # pylint: disable=not-context-manager, redefined-variable-type, invalid-name
-# pylint: disable=too-many-branches
+# pylint: disable=too-many-branches, too-many-arguments
 
 def default_rnn_cell_hparams():
     """Returns default hyperparameters of an RNN cell.
@@ -464,11 +464,54 @@ def get_embedding(hparams=None,
 #TODO(zhiting): checkout
 # https://github.com/Lasagne/Lasagne/blob/master/lasagne/layers/merge.py#L243
 class MergeLayer(tf.layers.Layer):
-    """A layer that consists of multiple layers in parallel. Input is feed to
+    """A layer that consists of multiple layers in parallel. Input is fed to
     each of the sub-layers, and the outputs are merged with a specified mode.
+
+    Args:
+        layers (list):
     """
-    #raise NotImplementedError
-    pass
+
+    def __init__(self,
+                 layers,
+                 mode='concat',
+                 axis=0,
+                 trainable=True,
+                 name=None,
+                 **kwargs):
+        super(MergeLayer, self).__init__(
+            trainable=trainable, name=name, **kwargs)
+        self._layers = layers
+        self._mode = mode
+        self._axis = axis
+
+    def build(self, input_shape):
+        """Creates the variables of the layer.
+
+        Overloads the base class :tf_main:`tf.layers.Layer <layers/Layer>`.
+        """
+        #input_shape = tensor_shape.TensorShape(input_shape)
+        #if input_shape[-1].value is None:
+        #  raise ValueError('The last dimension of the inputs to `Dense` '
+        #                   'should be defined. Found `None`.')
+        #self.input_spec = base.InputSpec(min_ndim=2,
+        #                                 axes={-1: input_shape[-1].value})
+        #self.kernel = self.add_variable('kernel',
+        #                                shape=[input_shape[-1].value, self.units],
+        #                                initializer=self.kernel_initializer,
+        #                                regularizer=self.kernel_regularizer,
+        #                                dtype=self.dtype,
+        #                                trainable=True)
+        #if self.use_bias:
+        #  self.bias = self.add_variable('bias',
+        #                                shape=[self.units,],
+        #                                initializer=self.bias_initializer,
+        #                                regularizer=self.bias_regularizer,
+        #                                dtype=self.dtype,
+        #                                trainable=True)
+        #else:
+        #  self.bias = None
+        self.built = True
+
 
 def _common_default_conv_kwargs():
     """Returns the default keyword argument values that are common to
@@ -922,6 +965,8 @@ def poswise_feedforward(attended_dec, scope="multihead_attention", reuse=None):
         outputs += attended_dec #residual connection
     return outputs
 
+
+#TODO(zhiting): Is there TF built-in function for this?
 def normalize(inputs,
               epsilon = 1e-8,
               scope="ln",
