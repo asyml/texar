@@ -13,4 +13,5 @@ from txtgen.modules.encoders import *
 from txtgen.modules.decoders import *
 from txtgen.modules.connectors import *
 from txtgen.modules.predictors import *
-
+from txtgen.modules.replay_memories import *
+from txtgen.modules.q_networks import *
