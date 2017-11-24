@@ -29,25 +29,13 @@ class FeedForwardNetwork(ModuleBase):
     def __init__(self, layers=None, hparams=None):
         ModuleBase.__init__(self, hparams)
 
-        with tf.variable_scope(self.variable_scope):
-            if layers is not None:
-                self._layers = layers
-            else:
-                self._layers = []
-                for layer_id in range(len(self._hparams.layers)):
-                    self._layers.append(
-                        get_layer(self._hparams.layers[layer_id]))
-
+        self._layers = []
         self._layer_names = []
         self._layers_by_name = {}
-        for layer in self._layers:
-            layer_name = uniquify_str(layer.name, self._layer_names)
-            self._layer_names.append(layer_name)
-            self.layers_by_name[layer_name] = layer
-
         self._layer_outputs = []
         self._layer_outputs_by_name = {}
 
+        self._build_layers(layers)
 
     @staticmethod
     def default_hparams():
@@ -57,6 +45,23 @@ class FeedForwardNetwork(ModuleBase):
             "layers": [],
             "name": "NN"
         }
+
+    def _build_layers(self, layers):
+        """Builds layers.
+        """
+        with tf.variable_scope(self.variable_scope):
+            if layers is not None:
+                self._layers = layers
+            else:
+                self._layers = []
+                for layer_id in range(len(self._hparams.layers)):
+                    self._layers.append(
+                        get_layer(self._hparams.layers[layer_id]))
+
+        for layer in self._layers:
+            layer_name = uniquify_str(layer.name, self._layer_names)
+            self._layer_names.append(layer_name)
+            self.layers_by_name[layer_name] = layer
 
     def _build(self, inputs):
         """
