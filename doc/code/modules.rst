@@ -10,6 +10,12 @@ Module Base
 .. autoclass:: txtgen.modules.ModuleBase
     :members:
 
+Networks
+========
+
+.. autoclass:: txtgen.modules.FeedForwardNetwork
+    :members:
+
 Encoders
 ========
 
