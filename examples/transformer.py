@@ -27,17 +27,22 @@ if __name__ == "__main__":
     data_hparams = {
         "num_epochs": 10,
         "seed": 123,
-        "batch_size":3,
+        "batch_size":32,
         "source_dataset": {
-            "files": ['data/sent.txt'],
-            "vocab_file": 'data/vocab.txt'
+            "files": ['data/translation/de-en/de_sentences.txt'],
+            "vocab_file": 'data/translation/de-en/de.vocab.txt',
+            "processing":{
+                "bos_token": "<SOURCE_BOS>",
+                "eos_token": "<SOURCE_EOS>",
+                }
         },
         "target_dataset": {
-            "files": ['data/sent.txt'],
-            "vocab_share": True,
-            "reader_share": True,
+            "files": ['data/translation/de-en/en_sentences.txt'],
+            "vocab_file": 'data/translation/de-en/en.vocab.txt',
+            # "reader_share": True,
             "processing":{
-                "eos_token": "<TARGET_EOS>"
+                "bos_token": "<TARGET_BOS>",
+                "eos_token": "<TARGET_EOS>",
             },
         }
     }
@@ -45,6 +50,11 @@ if __name__ == "__main__":
         'max_seq_length':100,
         'scale':100,
         'sinusoid':True,
+        'embedding': {
+            'dim': 512,
+        },
+        'num_blocks': 6,
+        'num_heads': 8,
     }
     # Construct the database
     text_database = database.PairedTextDataBase(data_hparams)
@@ -73,20 +83,27 @@ if __name__ == "__main__":
     src_text = text_data_batch['source_text_ids']
     tgt_text = text_data_batch['target_text_ids']
 
+    # shifted right
     decoder_inputs = tf.concat((tf.ones_like(tgt_text[:, :1]), tgt_text[:, :-1]), -1)
 
-    print('src_text:{}'.format(src_text))
+    # print('src_text:{}'.format(src_text))
     encoder_output = encoder(src_text,
             sequence_length=text_data_batch['source_length'])
     # Decode
-    print('encoder_output:{}'.format(encoder_output.shape))
+    # print('encoder_output:{}'.format(encoder_output.shape))
     logits, preds = decoder(decoder_inputs, encoder_output)
-    print('logits:{}'.format(logits.shape))
+    labels = text_data_batch['target_text_ids']
+
+    # logits_shape = tf.shape(logits)
+    # labels_shape = tf.shape(labels)
+    lengths = text_data_batch['target_length']-1
+    # src_length =tf.shape(text_data_batch['source_length'])
+    # target_length = tf.shape(lengths)
     #istarget = tf.to_float(tf.not_equal(y, 0))
     # acc = tf.reduce_sum(tf.to_float(tf.equal(preds,
     # Build loss
     mle_loss = mle_losses.average_sequence_sparse_softmax_cross_entropy(
-        labels=text_data_batch['target_text_ids'][:, 1:],
+        labels=labels,
         logits=logits,
         sequence_length=text_data_batch['target_length']-1)
 
@@ -96,7 +113,7 @@ if __name__ == "__main__":
         "optimizer": {
             "type": "MomentumOptimizer",
             "kwargs": {
-                "learning_rate": 0.01,
+                "learning_rate": 0.0001,
                 "momentum": 0.9
             }
         }
@@ -110,15 +127,6 @@ if __name__ == "__main__":
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
-
-        #with tf.contrib.slim.queues.QueueRunners(sess):
-        #    _, step, loss = sess.run(
-        #        [train_op, global_step, mle_loss],
-        #        feed_dict={context.is_train(): True})
-
-        #    if step % 10 == 0:
-        #        print("%d: %.6f" % (step, loss))
-
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
@@ -126,12 +134,13 @@ if __name__ == "__main__":
 
         try:
             while not coord.should_stop():
-                # Run the logics
 
+                # logit_sp, label_sp= sess.run(
+                #     [logits_shape, labels_shape],
+                #     feed_dict={context.is_train(): True})
                 _, step, loss = sess.run(
-                    [train_op, global_step, mle_loss],
-                    feed_dict={context.is_train(): True})
-
+                        [train_op, global_step, mle_loss],
+                        feed_dict={context.is_train():True})
                 if step % 10 == 0:
                     print("%d: %.6f" % (step, loss))
 

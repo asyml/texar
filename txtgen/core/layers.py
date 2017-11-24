@@ -829,6 +829,9 @@ def sinusoid_positional_encoding(inputs,
     """
     print('inputs:shape{}'.format(inputs.get_shape())) #[3, None, 50]
     batch_size, _, hidden_dim = inputs.get_shape().as_list()
+    input_shape = tf.shape(inputs)
+    _, dynamic_max_time, _ = input_shape[0], input_shape[1], input_shape[2]
+    print('dynamic shape obtained')
     with tf.variable_scope(scope, reuse=reuse):
         position_idx = tf.tile(tf.expand_dims(tf.range(max_time), 0), [batch_size, 1]) #batch_size * max_time
         position_enc = np.array([
@@ -846,6 +849,8 @@ def sinusoid_positional_encoding(inputs,
         outputs = tf.nn.embedding_lookup(lookup_table, position_idx)
         if scale:
             outputs = outputs * hidden_dim**0.5
+        print('outputs:{}'.format(outputs.shape))
+        outputs = outputs[:, :dynamic_max_time, :]
         print('outputs:{}'.format(outputs.shape))
         return outputs
 
