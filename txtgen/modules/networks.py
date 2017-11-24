@@ -9,11 +9,17 @@ from __future__ import division
 
 import tensorflow as tf
 
-from txtgen import HParams
+from txtgen.modules.module_base import ModuleBase
 from txtgen.core.layers import get_layer
+from txtgen.core.utils import uniquify_str
 
+# pylint: disable=too-many-instance-attributes, arguments-differ
 
-class FeedForwardNetwork(object): # pylint: disable=too-many-instance-attributes
+__all__ = [
+    "FeedForwardNetwork"
+]
+
+class FeedForwardNetwork(ModuleBase):
     """Feed forward neural network that consists of a sequence of layers.
 
     Args:
@@ -21,24 +27,27 @@ class FeedForwardNetwork(object): # pylint: disable=too-many-instance-attributes
     """
 
     def __init__(self, layers=None, hparams=None):
-        self._hparams = HParams(hparams, self.default_hparams())
-        self._template = tf.make_template(self.hparams.name, self._build,
-                                          create_scope_now_=True)
-        self._unique_name = self.variable_scope.name.split("/")[-1]
+        ModuleBase.__init__(self, hparams)
 
-        if layers is not None:
-            self._layers = layers
-        else:
-            self._layers = []
-            for layer_id in range(self._hparams.layers):
-                self._layers.append(
-                    get_layer(self._hparams.layers[layer_id]))
+        with tf.variable_scope(self.variable_scope):
+            if layers is not None:
+                self._layers = layers
+            else:
+                self._layers = []
+                for layer_id in range(len(self._hparams.layers)):
+                    self._layers.append(
+                        get_layer(self._hparams.layers[layer_id]))
 
         self._layer_names = []
         self._layers_by_name = {}
-        self._layers_outputs_by_name = {}
-        self._trainable_variables = []
-        self._built = False
+        for layer in self._layers:
+            layer_name = uniquify_str(layer.name, self._layer_names)
+            self._layer_names.append(layer_name)
+            self.layers_by_name[layer_name] = layer
+
+        self._layer_outputs = []
+        self._layer_outputs_by_name = {}
+
 
     @staticmethod
     def default_hparams():
@@ -57,49 +66,72 @@ class FeedForwardNetwork(object): # pylint: disable=too-many-instance-attributes
 
         Returns:
         """
+        prev_outputs = inputs
+        for layer_id, layer in enumerate(self._layers):
+            outputs = layer(prev_outputs)
+            self._layer_outputs.append(outputs)
+            self._layer_outputs_by_name[self._layer_names[layer_id]] = outputs
+            prev_outputs = outputs
 
-        #for layer in self._layers:
-        #    if layer.scope_name in self._layers_by_name:
+        if not self._built:
+            self._add_internal_trainable_variables()
+            # Add trainable variables of `self._layers` which may be constructed
+            # externally.
+            for layer in self._layers:
+                self._add_trainable_variable(layer.trainable_variables)
+            self._built = True
 
-        raise NotImplementedError
+        return outputs
 
-    def __call__(self, inputs):
-        """
+
+    def has_layer(self, layer_name):
+        """Returns `True` if the network with the name exists. Returns `False`
+        otherwise.
 
         Args:
-
-        Returns:
+            layer_name (str): Name of the layer.
         """
-        raise NotImplementedError
+        return layer_name in self._layers_by_name
+
+    def layer_by_name(self, layer_name):
+        """Returns the layer with the name. Returns 'None' if the layer name
+        does not exist.
+
+        Args:
+            layer_name (str): Name of the layer.
+        """
+        return self._layers_by_name.get(layer_name, None)
 
     @property
-    def variable_scope(self):
-        """The variable scope of the network.
+    def layers_by_name(self):
+        """A dictionary mapping layer names to the layers.
         """
-        return self._template.variable_scope
+        return self._layers_by_name
 
     @property
-    def name(self):
-        """The uniquified name of the network.
+    def layers(self):
+        """A list of the layers.
         """
-        return self._unique_name
-
-    #@property
-    #def trainable_variables(self):
-    #    """The list of trainable variables of the module.
-    #    """
-    #    if not self._built:
-    #        raise ValueError(
-    #            "Attempting to access trainable_variables before module %s "
-    #            "was fully built. The module is built once it is called, "
-    #            "e.g., with `%s(...)`" % (self.name, self.name))
-    #    return self._trainable_variables
+        return self._layers
 
     @property
-    def hparams(self):
-        """The hyperparameters of the network.
-
-        Returns:
-            A :class:`~txtgen.hyperparams.HParams` instance.
+    def layer_names(self):
+        """A list of uniquified layer names.
         """
-        return self._hparams
+        return self._layer_names
+
+    def layer_outputs_by_name(self, layer_name):
+        """Returns the output tensors of the layer with the specified name.
+        Returns `None` if the layer name does not exist.
+
+        Args:
+            layer_name (str): Name of the layer.
+        """
+        return self._layer_outputs_by_name.get(layer_name, None)
+
+    @property
+    def layer_outputs(self):
+        """A list containing output tensors of each layer.
+        """
+        return self._layer_outputs
+
