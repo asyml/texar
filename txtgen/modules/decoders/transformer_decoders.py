@@ -112,7 +112,7 @@ class TransformerDecoder(ModuleBase):
                     attended_dec = layers.normalize(attended_dec)
                     #[batch, seq_len, hidden_units]
         self.logits = tf.layers.dense(attended_dec, self._vocab_size)
-        self.preds = tf.to_int32(tf.arg_max(self.logits, dimension=-1))
+        self.preds = tf.to_int32(tf.argmax(self.logits, axis=-1))
         #[batch, seq_len]
         print('self.preds:{}'.format(self.preds.shape))
         return self.logits, self.preds
