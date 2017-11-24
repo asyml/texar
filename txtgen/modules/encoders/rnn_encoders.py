@@ -218,12 +218,13 @@ class ForwardRNNEncoder(RNNEncoderBase):
                 inputs=embedded_inputs,
                 **kwargs)
 
-        self._add_internal_trainable_variables()
-        # Add trainable variables of `self._cell` which may be constructed
-        # externally.
-        self._add_trainable_variable(
-            layers.get_rnn_cell_trainable_variables(self._cell))
-        self._built = True
+        if not self._built:
+            self._add_internal_trainable_variables()
+            # Add trainable variables of `self._cell` which may be constructed
+            # externally.
+            self._add_trainable_variable(
+                layers.get_rnn_cell_trainable_variables(self._cell))
+            self._built = True
 
         return results
 
