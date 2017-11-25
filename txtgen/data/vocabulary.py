@@ -15,6 +15,9 @@ from tensorflow import gfile
 import numpy as np
 from txtgen.data.constants import BOS_TOKEN, EOS_TOKEN, PADDING_TOKEN, UNK_TOKEN
 
+__all__ = [
+    "Vocab"
+]
 
 def _make_defaultdict(keys, values, default_value):
     """Creates a python defaultdict.
@@ -72,8 +75,8 @@ class Vocab(object):  # pylint: disable=too-many-instance-attributes
 
         Returns:
             A tuple of TF and python mapping tables between word string and
-            index, `(:attr:`id_to_token_map`, :attr:`token_to_id_map`,
-            :attr:`id_to_token_map_py`, :attr:`token_to_id_map_py`)`, where
+            index, (:attr:`id_to_token_map`, :attr:`token_to_id_map`,
+            :attr:`id_to_token_map_py`, :attr:`token_to_id_map_py`), where
             :attr:`id_to_token_map` and :attr:`token_to_id_map` are
             TF `HashTable` instances, and :attr:`id_to_token_map_py` and
             :attr:`token_to_id_map_py` are python `defaultdict` instances.
