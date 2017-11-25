@@ -103,7 +103,8 @@ class ConstantConnector(ConnectorBase):
     Args:
         output_size: Size of output excluding the batch dimension (eg.
             :attr:`output_size = p` if :attr:`output.shape` is :attr:`[N, p]`).
-            Can be an int, a tuple of int, a Tensorshape, or a tuple of TensorShapes.
+            Can be an int, a tuple of int, a Tensorshape, or a tuple of
+            TensorShapes.
             For example, to transform to decoder state size, set
             `output_size=decoder.cell.state_size`.
         hparams (dict): Hyperparameters of the connector.
@@ -175,7 +176,8 @@ class ForwardConnector(ConnectorBase):
     Args:
         output_size: Size of output excluding the batch dimension (eg.
             :attr:`output_size = p` if :attr:`output.shape` is :attr:`[N, p]`).
-            Can be an int, a tuple of int, a Tensorshape, or a tuple of TensorShapes.
+            Can be an int, a tuple of int, a Tensorshape, or a tuple of
+            TensorShapes.
             For example, to transform to decoder state size, set
             `output_size=decoder.cell.state_size`.
     """
@@ -238,8 +240,8 @@ class MLPTransformConnector(ConnectorBase):
     Args:
         output_size: Size of output excluding the batch dimension (eg.
             :attr:`output_size = p` if :attr:`output.shape` is :attr:`[N, p]`).
-            Can be an int, a tuple of int, a Tensorshape, or a tuple of TensorShapes.
-            For example, to transform to decoder state size, set
+            Can be an int, a tuple of int, a Tensorshape, or a tuple of
+            TensorShapes. For example, to transform to decoder state size, set
             `output_size=decoder.cell.state_size`.
         hparams (dict): Hyperparameters of the connector.
     """
@@ -317,7 +319,8 @@ class ReparameterizedStochasticConnector(ConnectorBase):
     Args:
         output_size: Size of output excluding the batch dimension (eg.
             :attr:`output_size = p` if :attr:`output.shape` is :attr:`[N, p]`).
-            Can be an int, a tuple of int, a Tensorshape, or a tuple of TensorShapes.
+            Can be an int, a tuple of int, a Tensorshape, or a tuple of
+            TensorShapes.
             For example, to transform to decoder state size, set
             `output_size=decoder.cell.state_size`.
         hparams (dict): Hyperparameters of the connector.
@@ -446,7 +449,8 @@ class StochasticConnector(ConnectorBase):
     Args:
         output_size: Size of output excluding the batch dimension (eg.
             :attr:`output_size = p` if :attr:`output.shape` is :attr:`[N, p]`).
-            Can be an int, a tuple of int, a Tensorshape, or a tuple of TensorShapes.
+            Can be an int, a tuple of int, a Tensorshape, or a tuple of
+            TensorShapes.
             For example, to transform to decoder state size, set
             `output_size=decoder.cell.state_size`.
         hparams (dict): Hyperparameters of the connector.
@@ -571,7 +575,8 @@ class ConcatConnector(ConnectorBase):
     Args:
         output_size: Size of output excluding the batch dimension (eg.
             :attr:`output_size = p` if :attr:`output.shape` is :attr:`[N, p]`).
-            Can be an int, a tuple of int, a Tensorshape, or a tuple of TensorShapes.
+            Can be an int, a tuple of int, a Tensorshape, or a tuple of
+            TensorShapes.
             For example, to transform to decoder state size, set
             `output_size=decoder.cell.state_size`.
         hparams (dict): Hyperparameters of the connector.
