@@ -11,7 +11,7 @@ import tensorflow as tf
 from tensorflow.python.framework import ops
 
 # We shall wrap all these modules
-from txtgen.data import database
+from txtgen.data import PairedTextDataBase
 from txtgen.modules import ConstantConnector
 from txtgen.modules import TransformerEncoder, TransformerDecoder
 from txtgen.losses import mle_losses
@@ -57,7 +57,7 @@ if __name__ == "__main__":
         'num_heads': 8,
     }
     # Construct the database
-    text_database = database.PairedTextDataBase(data_hparams)
+    text_database = PairedTextDataBase(data_hparams)
     print('database finished')
 
     text_data_batch = text_database()

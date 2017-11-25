@@ -11,7 +11,7 @@ from __future__ import print_function
 import tensorflow as tf
 
 # We shall wrap all these modules
-from txtgen.data import database
+from txtgen.data import MonoTextDataBase
 from txtgen.modules import ConstantConnector
 from txtgen.modules import BasicRNNDecoder, get_helper
 from txtgen.losses import mle_losses
@@ -33,7 +33,7 @@ if __name__ == "__main__":
         }
     }
     # Construct the database
-    text_db = database.MonoTextDataBase(data_hparams)
+    text_db = MonoTextDataBase(data_hparams)
     # Get data minibatch, which is a dictionary:
     # {
     #   "text": text_tensor,     # text string minibatch,
