@@ -10,12 +10,16 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import tempfile
+import numpy as np
+
 import tensorflow as tf
 
 from txtgen.data.databases.mono_text_database import MonoTextDataBase
 from txtgen.data.databases.paired_text_database import PairedTextDataBase
 from txtgen.data.databases.multi_source_text_database import \
         MultiSourceTextDataBase
+
+# pylint: disable=too-many-locals
 
 class TextDataBaseTest(tf.test.TestCase):
     """Tests text database class.
@@ -37,8 +41,8 @@ class TextDataBaseTest(tf.test.TestCase):
 
         # Construct database
         hparams = {
-            "num_epochs": 2,
-            "batch_size": 2,
+            "num_epochs": 5,
+            "batch_size": 3,
             "dataset": {
                 "files": [text_file.name],
                 "vocab_file": vocab_file.name,
@@ -75,24 +79,24 @@ class TextDataBaseTest(tf.test.TestCase):
         """Tests the logics of PairedTextDataBase.
         """
         # Create test data
-        vocab_list = ['word', '词']
+        vocab_list = ['This', 'is', 'a', 'word', '词']
         vocab_file = tempfile.NamedTemporaryFile()
         vocab_file.write('\n'.join(vocab_list).encode("utf-8"))
         vocab_file.flush()
 
-        src_text = ['This is a source sentence .', 'source: 词 词 。']
+        src_text = ['This is a sentence from source .', '词 词 。 source']
         src_text_file = tempfile.NamedTemporaryFile()
         src_text_file.write('\n'.join(src_text).encode("utf-8"))
         src_text_file.flush()
 
-        tgt_text = ['This is a target sentence .', 'target: 词 词 。']
+        tgt_text = ['This is a sentence from target .', '词 词 。 target']
         tgt_text_file = tempfile.NamedTemporaryFile()
         tgt_text_file.write('\n'.join(tgt_text).encode("utf-8"))
         tgt_text_file.flush()
 
         # Construct database
         hparams = {
-            "num_epochs": 3,
+            "num_epochs": 100,
             "batch_size": 3,
             "source_dataset": {
                 "files": [src_text_file.name],
@@ -133,6 +137,12 @@ class TextDataBaseTest(tf.test.TestCase):
                                      len(vocab_list) + 4)
                     self.assertEqual(text_database.target_vocab.vocab_size,
                                      len(vocab_list) + 4)
+
+                    src_text = data['source_text']
+                    tgt_text = data['target_text']
+                    for src, tgt in zip(src_text, tgt_text):
+                        np.testing.assert_array_equal(
+                            src[:3], tgt[1:4])
 
             except tf.errors.OutOfRangeError:
                 print('Done -- epoch limit reached')

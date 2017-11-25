@@ -16,7 +16,7 @@ from txtgen.core import utils
 from txtgen.data.databases.database_base import DataBaseBase
 from txtgen.data.databases import mono_text_database
 from txtgen.data.databases.text_data_decoder import TextDataDecoder
-from txtgen.data.databases.data_providers import PairedDataProvider
+from txtgen.data.databases.data_providers import ParallelDataProvider
 from txtgen.data.vocabulary import Vocab
 from txtgen.data.embedding import Embedding
 
@@ -162,11 +162,9 @@ class PairedTextDataBase(DataBaseBase):
             tgt_reader_kwargs = \
                 self._hparams.target_dataset["reader"]["kwargs"].todict()
 
-        data_provider = PairedDataProvider(
-            dataset1=src_dataset,
-            dataset2=tgt_dataset,
-            reader_kwargs1=src_reader_kwargs,
-            reader_kwargs2=tgt_reader_kwargs,
+        data_provider = ParallelDataProvider(
+            datasets=[src_dataset, tgt_dataset],
+            reader_kwargs=[src_reader_kwargs, tgt_reader_kwargs],
             shuffle=self._hparams.shuffle,
             num_epochs=self._hparams.num_epochs,
             common_queue_capacity=1024,

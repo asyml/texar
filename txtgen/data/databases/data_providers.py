@@ -13,19 +13,27 @@ from tensorflow.python.training import queue_runner  # pylint: disable=E0611
 import tensorflow.contrib.slim as tf_slim
 from tensorflow.contrib.slim.python.slim.data import parallel_reader
 
+# pylint: disable=too-many-arguments, too-many-locals
+
 __all__ = [
-    "PairedDataProvider"
+    "ParallelDataProvider"
 ]
 
-# pylint: disable=too-many-arguments, too-many-locals
-class PairedDataProvider(tf_slim.data_provider.DataProvider):
-    """A DataProvider that reads two aligned datasets.
+class ParallelDataProvider(tf_slim.data_provider.DataProvider):
+    """A DataProvider that reads multiple aligned datasets.
 
     Args:
-        dataset1 (Dataset): The first dataset.
-        dataset2 (Dataset): The second dataset.
-        reader_kwargs1 (dict, optional): Keyword args for dataset1 reader.
-        reader_kwargs2 (dict, optional): Keyword args for dataset2 reader.
+        datasets: A list of :class:`Dataset` instances. The provider reads
+            one element from each of the datasets every time.
+        reader_kwargs (optional): A list of dictionaries or `None`. Each
+            dictionary contains keyword arguments for the reader of respective
+            dataset in :attr:`datatsets`. If not `None`,
+            :attr:`reader_kwargs` must have the same length with
+            :attr:`datasets`.
+        dtypes (list, optional): Types of the data in each of the datasets.
+            If `None` (default), types of all datasets are assumed to be
+            `tf.string`. If not `None`, :attr:`dtypes` must have the same length
+            with :attr:`datasets`.
         shuffle (bool): Whether to shuffle the data sources and common queue
             when reading.
         num_epochs (int, optional): The number of times each data source is
@@ -39,64 +47,71 @@ class PairedDataProvider(tf_slim.data_provider.DataProvider):
     """
 
     def __init__(self,
-                 dataset1,
-                 dataset2,
-                 reader_kwargs1=None,
-                 reader_kwargs2=None,
+                 datasets,
+                 reader_kwargs=None,
+                 dtypes=None,
                  shuffle=True,
                  num_epochs=None,
                  common_queue_capacity=1024,
                  common_queue_min=526,
                  seed=None,
                  scope=None):
-        scope = scope or "paired_data_provider"
+        scope = scope or "parallel_data_provider"
 
-        _, data1 = parallel_reader.parallel_read(
-            dataset1.data_sources,
-            reader_class=dataset1.reader,
-            num_epochs=num_epochs,
-            num_readers=1,
-            # Use one reader to ensure aligned source-target data
-            reader_kwargs=reader_kwargs1,
-            shuffle=False,
-            capacity=common_queue_capacity,
-            min_after_dequeue=common_queue_min,
-            scope=scope)
+        if not isinstance(datasets, list) or len(datasets) < 2:
+            raise ValueError("`datasets` must be a list of length >= 2.")
 
-        _, data2 = parallel_reader.parallel_read(
-            dataset2.data_sources,
-            reader_class=dataset2.reader,
-            num_epochs=num_epochs,
-            num_readers=1,
-            # Use one reader to ensure aligned source-target data
-            reader_kwargs=reader_kwargs2,
-            shuffle=False,
-            capacity=common_queue_capacity,
-            min_after_dequeue=common_queue_min,
-            scope=scope)
+        if reader_kwargs is None:
+            reader_kwargs = [None for _ in range(len(datasets))]
+        elif not isinstance(reader_kwargs, list) or \
+                len(reader_kwargs) != len(datasets):
+            raise ValueError(
+                "If `reader_kwargs` is not `None`, it must be a list of the "
+                "same length with `datasets`.")
+
+        if dtypes is None:
+            dtypes = [tf.string for _ in range(len(datasets))]
+        elif not isinstance(dtypes, list) or len(dtypes) != len(datasets):
+            raise ValueError(
+                "If `dtypes` is not `None`, it must be a list of the "
+                "same length with `datasets`.")
+
+        data_list = []
+        for dataset, reader_kwargs in zip(datasets, reader_kwargs):
+            _, data = parallel_reader.parallel_read(
+                dataset.data_sources,
+                reader_class=dataset.reader,
+                num_epochs=num_epochs,
+                num_readers=1,
+                # Use one reader to ensure aligned source-target data
+                reader_kwargs=reader_kwargs,
+                shuffle=False,
+                capacity=common_queue_capacity,
+                min_after_dequeue=common_queue_min,
+                scope=scope)
+            data_list.append(data)
 
         if shuffle:
             with tf.name_scope(scope):  # pylint: disable=not-context-manager
                 random_shuffle_queue = tf.RandomShuffleQueue(
                     capacity=common_queue_capacity,
                     min_after_dequeue=common_queue_min,
-                    dtypes=[tf.string, tf.string],
+                    dtypes=dtypes,
                     seed=seed,
                     name="shuffle_queue")
-                enqueue_ops = [random_shuffle_queue.enqueue([data1, data2])]
+                enqueue_ops = [random_shuffle_queue.enqueue(data_list)]
                 queue_runner.add_queue_runner(
                     queue_runner.QueueRunner(random_shuffle_queue, enqueue_ops))
-                data1, data2 = random_shuffle_queue.dequeue()
+                data_list = random_shuffle_queue.dequeue()
 
-        items1 = dataset1.decoder.list_items()
-        tensors1 = dataset1.decoder.decode(data1, items1)
+        items_list = []
+        tensors_list = []
+        for dataset, data in zip(datasets, data_list):
+            items = dataset.decoder.list_items()
+            tensors = dataset.decoder.decode(data, items)
+            items_list += items
+            tensors_list += tensors
 
-        items2 = dataset2.decoder.list_items()
-        tensors2 = dataset2.decoder.decode(data2, items2)
-
-        items = items1 + items2
-        tensors = tensors1 + tensors2
-
-        super(PairedDataProvider, self).__init__(
-            items_to_tensors=dict(zip(items, tensors)),
-            num_samples=dataset1.num_samples)
+        super(ParallelDataProvider, self).__init__(
+            items_to_tensors=dict(zip(items_list, tensors_list)),
+            num_samples=datasets[0].num_samples)
