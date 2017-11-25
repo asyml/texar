@@ -185,7 +185,8 @@ class ForwardRNNEncoder(RNNEncoderBase):
         hparams["name"] = "forward_rnn_encoder"
         return hparams
 
-    def _build(self, inputs, **kwargs):
+    def _build(self, inputs, sequence_length=None, initial_state=None,
+               **kwargs):
         """Encodes the inputs.
 
         Args:
@@ -195,8 +196,13 @@ class ForwardRNNEncoder(RNNEncoderBase):
                 `[batch_size, max_time, dim]`. The first two dimensions
                 `batch_size` and `max_time` may be exchanged if
                 `time_major=True` is specified.
-            **kwargs: Optional keyword arguments of `tensorflow.nn.dynamic_rnn`,
-                such as `sequence_length`, `initial_state`, etc.
+            sequence_length (int list or 1D Tensor, optional): Sequence lengths
+                of the batch inputs. Used to copy-through state and zero-out
+                outputs when past a batch element's sequence length.
+            initial_state (optional): Initial state of the RNN.
+            **kwargs: Optional keyword arguments of
+                :tf_main:`tf.nn.dynamic_rnn <nn/dynamic_rnn>`,
+                such as `time_major`, `dtype`, etc.
 
         Returns:
             Outputs and final state of the encoder.
@@ -210,12 +216,16 @@ class ForwardRNNEncoder(RNNEncoderBase):
             results = tf.nn.dynamic_rnn(
                 cell=self._cell,
                 inputs=embedded_inputs,
+                sequence_length=sequence_length,
+                initial_state=initial_state,
                 dtype=tf.float32,
                 **kwargs)
         else:
             results = tf.nn.dynamic_rnn(
                 cell=self._cell,
                 inputs=embedded_inputs,
+                sequence_length=sequence_length,
+                initial_state=initial_state,
                 **kwargs)
 
         if not self._built:
