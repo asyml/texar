@@ -25,7 +25,7 @@ Encoders
 .. autoclass:: txtgen.modules.RNNEncoderBase
     :members:
 
-.. autoclass:: txtgen.modules.ForwardRNNEncoder
+.. autoclass:: txtgen.modules.UnidirectionalRNNEncoder
     :members:
 
 Decoders

@@ -142,6 +142,8 @@ class BasicRNNDecoder(RNNDecoderBase):
             "use_embedding" : bool
                 Whether token embedding is used.
 
+                The default value is `True`.
+
             "embedding" : dict
                 A dictionary of token embedding hyperparameters for
                 embedding initialization.
@@ -206,7 +208,7 @@ class BasicRNNDecoder(RNNDecoderBase):
             sample_ids=sample_ids)
         outputs = BasicRNNDecoderOutput(logits, sample_ids)
         #next_state should be cell_state directly,
-        #according to function next_inouts
+        #according to function next_inputs
         return (outputs, next_state, next_inputs, finished)
 
     def finalize(self, outputs, final_state, sequence_lengths):
