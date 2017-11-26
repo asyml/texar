@@ -28,6 +28,9 @@ Encoders
 .. autoclass:: txtgen.modules.UnidirectionalRNNEncoder
     :members:
 
+.. autoclass:: txtgen.modules.BidirectionalRNNEncoder
+    :members:
+
 Decoders
 ========
 
