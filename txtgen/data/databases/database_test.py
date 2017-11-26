@@ -14,10 +14,7 @@ import numpy as np
 
 import tensorflow as tf
 
-from txtgen.data.databases.mono_text_database import MonoTextDataBase
-from txtgen.data.databases.paired_text_database import PairedTextDataBase
-from txtgen.data.databases.multi_source_text_database import \
-        MultiSourceTextDataBase
+import txtgen.data
 
 # pylint: disable=too-many-locals
 
@@ -49,7 +46,7 @@ class TextDataBaseTest(tf.test.TestCase):
             }
         }
 
-        text_database = MonoTextDataBase(hparams)
+        text_database = txtgen.data.MonoTextDataBase(hparams)
         text_data_batch = text_database()
 
         with self.test_session() as sess:
@@ -112,7 +109,7 @@ class TextDataBaseTest(tf.test.TestCase):
             }
         }
 
-        text_database = PairedTextDataBase(hparams)
+        text_database = txtgen.data.PairedTextDataBase(hparams)
         text_data_batch = text_database()
 
         with self.test_session() as sess:
@@ -149,6 +146,103 @@ class TextDataBaseTest(tf.test.TestCase):
             finally:
                 coord.request_stop()
             coord.join(threads)
+
+    def test_multi_aligned_database(self):
+        """Tests the logics of MultiAlignedDataBase.
+        """
+        # Create test data
+        vocab_list = ['This', 'is', 'a', 'word', '词']
+        vocab_file = tempfile.NamedTemporaryFile()
+        vocab_file.write('\n'.join(vocab_list).encode("utf-8"))
+        vocab_file.flush()
+
+        text_0 = ['This is a sentence from source .', '词 词 。 source']
+        text_0_file = tempfile.NamedTemporaryFile()
+        text_0_file.write('\n'.join(text_0).encode("utf-8"))
+        text_0_file.flush()
+
+        text_1 = ['This is a sentence from target .', '词 词 。 target']
+        text_1_file = tempfile.NamedTemporaryFile()
+        text_1_file.write('\n'.join(text_1).encode("utf-8"))
+        text_1_file.flush()
+
+        int_2 = [0, 1]
+        int_2_file = tempfile.NamedTemporaryFile()
+        int_2_file.write('\n'.join([str(_) for _ in int_2]))
+        int_2_file.flush()
+
+        # Construct database
+        hparams = {
+            "num_epochs": 123,
+            "batch_size": 64,
+            "datasets": [
+                { # dataset 0
+                    "files": [text_0_file.name],
+                    "vocab_file": vocab_file.name,
+                },
+                { # dataset 1
+                    "files": [text_1_file.name],
+                    "vocab_share_with": 0,
+                    "reader_share_with": 0,
+                    "processing": {
+                        "eos_token": "<TARGET_EOS>"
+                    }
+                },
+                { # dataset 2
+                    "files": [int_2_file.name],
+                    "data_type": "int",
+                    "data_name_prefix": "label"
+                }
+            ]
+        }
+
+        database = txtgen.data.MultiAlignedDataBase(hparams)
+        data_batch = database()
+
+        self.assertEqual(len(database.datasets), len(hparams["datasets"]))
+
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            sess.run(tf.local_variables_initializer())
+            sess.run(tf.tables_initializer())
+            coord = tf.train.Coordinator()
+            threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+
+            try:
+                while not coord.should_stop():
+                    # Run the logics
+                    data = sess.run(data_batch)
+
+                    self.assertEqual(set(data.keys()),
+                                     set(database.list_items()))
+                    self.assertEqual(len(data['0_text']),
+                                     hparams['batch_size'])
+                    self.assertEqual(len(data['1_text']),
+                                     hparams['batch_size'])
+                    self.assertEqual(len(data['2_label']),
+                                     hparams['batch_size'])
+                    self.assertEqual(database.datasets[0].vocab.vocab_size,
+                                     len(vocab_list) + 4)
+                    self.assertEqual(database.datasets[1].vocab.vocab_size,
+                                     len(vocab_list) + 4)
+
+                    text_0 = data['0_text']
+                    text_1 = data['1_text']
+                    int_2 = data['2_label']
+                    for t_0, t_1, i_2 in zip(text_0, text_1, int_2):
+                        np.testing.assert_array_equal(
+                            t_0[:4], t_1[:4])
+                        if t_0[1].startswith(b'This'):
+                            self.assertEqual(i_2, 0)
+                        else:
+                            self.assertEqual(i_2, 1)
+
+            except tf.errors.OutOfRangeError:
+                print('Done -- epoch limit reached')
+            finally:
+                coord.request_stop()
+            coord.join(threads)
+
 
     def test_multi_source_text_database(self):
         """Tests the logics of MultiSourceTextDataBase.
@@ -198,7 +292,7 @@ class TextDataBaseTest(tf.test.TestCase):
             }
         }
 
-        text_database = MultiSourceTextDataBase(hparams)
+        text_database = txtgen.data.MultiSourceTextDataBase(hparams)
         text_data_batch = text_database()
 
         with tf.Session() as sess:

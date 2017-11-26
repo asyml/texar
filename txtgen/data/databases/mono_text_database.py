@@ -14,7 +14,7 @@ import tensorflow.contrib.slim as tf_slim
 
 from txtgen.core import utils
 from txtgen.data.databases.database_base import DataBaseBase
-from txtgen.data.databases.text_data_decoder import TextDataDecoder
+from txtgen.data.databases.data_decoders import TextDataDecoder
 from txtgen.data.vocabulary import Vocab
 from txtgen.data.embedding import Embedding
 
@@ -31,12 +31,12 @@ def _default_mono_text_dataset_hparams():
     # TODO(zhiting): add more docs
     return {
         "files": [],
-        "vocab_file": "",
-        "embedding_init": Embedding.default_hparams(),
         "reader": {
             "type": "tensorflow.TextLineReader",
             "kwargs": {}
         },
+        "vocab_file": "",
+        "embedding_init": Embedding.default_hparams(),
         "processing": {
             "split_level": "word",
             "delimiter": " ",
