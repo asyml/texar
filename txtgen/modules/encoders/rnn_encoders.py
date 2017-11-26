@@ -15,7 +15,8 @@ from txtgen.core import layers
 # pylint: disable=not-context-manager, too-many-arguments
 
 __all__ = [
-    "RNNEncoderBase", "UnidirectionalRNNEncoder"
+    "RNNEncoderBase", "UnidirectionalRNNEncoder",
+    "BidirectionalRNNEncoder"
 ]
 
 class RNNEncoderBase(EncoderBase):
@@ -359,7 +360,7 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
                     "rnn_cell_share_config": True
                     "use_embedding": True,
                     "embedding": default_embedding_hparams(),
-                    "name": "unidirectional_rnn_encoder"
+                    "name": "bidirectional_rnn_encoder"
                 }
 
             Here:
