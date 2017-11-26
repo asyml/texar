@@ -15,10 +15,11 @@ import tensorflow.contrib.slim as tf_slim
 from txtgen.core import utils
 from txtgen.data.databases.database_base import DataBaseBase
 from txtgen.data.databases import mono_text_database
-from txtgen.data.databases.text_data_decoder import TextDataDecoder
+from txtgen.data.databases.data_decoders import TextDataDecoder
 from txtgen.data.databases.data_providers import ParallelDataProvider
 from txtgen.data.vocabulary import Vocab
 from txtgen.data.embedding import Embedding
+from txtgen.data import constants
 
 # pylint: disable=invalid-name, arguments-differ, not-context-manager
 # pylint: disable=protected-access, no-member
@@ -92,9 +93,9 @@ class PairedTextDataBase(DataBaseBase):
 
         # Make vocabulary
         bos_token = utils.default_string(tgt_proc_hparams["bos_token"],
-                                         "<BOS>")
+                                         constants.BOS_TOKEN)
         eos_token = utils.default_string(tgt_proc_hparams["eos_token"],
-                                         "<EOS>")
+                                         constants.EOS_TOKEN)
         if tgt_hparams["vocab_share"]:
             if bos_token == src_dataset.vocab.bos_token and \
                             eos_token == src_dataset.vocab.eos_token:
@@ -155,6 +156,7 @@ class PairedTextDataBase(DataBaseBase):
         if len(self._hparams.source_dataset["reader"]["kwargs"]) > 0:
             src_reader_kwargs = \
                 self._hparams.source_dataset["reader"]["kwargs"].todict()
+
         tgt_reader_kwargs = None
         if self._hparams.target_dataset["reader_share"]:
             tgt_reader_kwargs = src_reader_kwargs

@@ -16,8 +16,8 @@ from txtgen.core import utils
 from txtgen.data.databases import mono_text_database
 from txtgen.data.databases.database_base import DataBaseBase
 from txtgen.data.databases.paired_text_database import PairedTextDataBase
-from txtgen.data.databases.text_data_decoder import TextDataDecoder
-from txtgen.data.databases.text_data_decoder import MultiSentenceTextDataDecoder
+from txtgen.data.databases.data_decoders import TextDataDecoder
+from txtgen.data.databases.data_decoders import MultiSentenceTextDataDecoder
 from txtgen.data.vocabulary import Vocab
 from txtgen.data.embedding import Embedding
 
