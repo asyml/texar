@@ -7,6 +7,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import numpy as np
+
 import tensorflow as tf
 import tensorflow.contrib.distributions as tf_dstr
 from tensorflow.python.util import nest    # pylint: disable=E0611
@@ -40,6 +42,14 @@ def _assert_same_size(outputs, output_size):
             raise ValueError(
                 "The output size does not match the the required output_size")
 
+def _get_tensor_depth(x):
+    """Returns the size of a tensor excluding the first dimension
+    (typically the batch dimension).
+
+    Args:
+        x: A tensor.
+    """
+    return np.prod(x.get_shape().as_list()[1:])
 
 def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
     """Transforms inputs through a fully-connected layer that creates the output
@@ -66,9 +76,12 @@ def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
     # flatten inputs
     flat_input = nest.flatten(inputs)
     # batch_size = flat_input[0].shape[0].value
-    shape = inputs.get_shape().as_list()
-    dim = reduce(lambda x, y: x*y, shape[1:])
-    flat_input = [tf.reshape(input_, ([-1, dim])) for input_ in flat_input]
+    # TODO(zhiting): correct ?
+    dims = [_get_tensor_depth(x) for x in flat_input]
+    flat_input = [tf.reshape(x, ([-1, d])) for x, d in zip(flat_input, dims)]
+    #shape = inputs.get_shape().as_list()
+    #dim = reduce(lambda x, y: x*y, shape[1:])
+    #flat_input = [tf.reshape(input_, ([-1, dim])) for input_ in flat_input]
     concat_input = tf.concat(flat_input, 1)
 
     # get output dimension
