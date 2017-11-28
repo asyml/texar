@@ -107,22 +107,25 @@ class TransformerEncoder(EncoderBase):
         dim = embedded_inputs.shape.as_list()[2]
         if self._hparams.scale:
             embedded_inputs = embedded_inputs*(dim**0.5)
-        if self._hparams.sinusoid:
-            position_inputs = layers.sinusoid_positional_encoding(embedded_inputs,
-                    max_time=self._hparams.max_seq_length,
-                    scope="enc_pe")
-        enc_output = tf.layers.dropout(embedded_inputs+position_inputs,
-                rate=self._hparams.dropout,
-                training=context.is_train())
-        print('enc_output:{}'.format(enc_output.get_shape()))
-        for i in range(self._hparams.num_blocks):
-            with tf.variable_scope("num_blocks_{}".format(i)):
-                enc_output = layers.multihead_attention(queries=enc_output,
-                        keys=enc_output,
-                        num_heads=self._hparams.num_heads,
-                        dropout_rate=self._hparams.dropout,
-                        causality=False)
-                enc_output = layers.normalize(enc_output)
-                enc_output = layers.poswise_feedforward(enc_output)
-                enc_output = layers.normalize(enc_output)
+        with tf.variable_scope(self.variable.scope):
+            if self._hparams.sinusoid:
+                position_inputs = layers.sinusoid_positional_encoding(embedded_inputs,
+                        max_time=self._hparams.max_seq_length,
+                        scope="enc_pe")
+            enc_output = tf.layers.dropout(embedded_inputs+position_inputs,
+                    rate=self._hparams.dropout,
+                    training=context.is_train())
+            print('enc_output:{}'.format(enc_output.get_shape()))
+            for i in range(self._hparams.num_blocks):
+                with tf.variable_scope("num_blocks_{}".format(i)):
+                    enc_output = layers.multihead_attention(queries=enc_output,
+                            keys=enc_output,
+                            num_heads=self._hparams.num_heads,
+                            dropout_rate=self._hparams.dropout,
+                            causality=False)
+                    enc_output = layers.normalize(enc_output)
+                    enc_output = layers.poswise_feedforward(enc_output)
+                    enc_output = layers.normalize(enc_output)
+        self._add_internal_trainable_variables()
+        self._built=True
         return enc_output
