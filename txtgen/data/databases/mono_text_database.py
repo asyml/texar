@@ -106,7 +106,7 @@ class MonoTextDataBase(DataBaseBase):
         # Load embedding (optional)
         emb_hparams = dataset_hparams["embedding_init"]
         embedding = None
-        if emb_hparams["file"] is not None and emb_hparams["file"] != "":
+        if emb_hparams["file"] is not None and len(emb_hparams["file"]) > 0:
             embedding = Embedding(vocab.token_to_id_map_py, emb_hparams)
 
         # Create the dataset

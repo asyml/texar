@@ -497,7 +497,7 @@ def get_embedding(hparams=None,
                                    trainable=hparams["trainable"])
         else:
             return tf.get_variable(name=hparams["name"],
-                                   initializer=init_values,
+                                   initializer=tf.to_float(init_values),
                                    regularizer=regularizer,
                                    trainable=hparams["trainable"])
 
