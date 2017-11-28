@@ -69,7 +69,7 @@ if __name__ == "__main__":
     mle_loss = mle_losses.average_sequence_sparse_softmax_cross_entropy(
         labels=data_batch['text_ids'][:, 1:],
         logits=outputs.rnn_output,
-        sequence_length=sequence_lengths - 1)
+        sequence_length=sequence_lengths)
 
     # Build train op. Only config the optimizer while using default settings
     # for other hyperparameters.
@@ -110,6 +110,10 @@ if __name__ == "__main__":
 
                 _, step, loss = sess.run(
                     [train_op, global_step, mle_loss],
+                    feed_dict={context.is_train(): True})
+
+                sequence_length_, seq_len = sess.run(
+                    [sequence_lengths, data_batch['length']],
                     feed_dict={context.is_train(): True})
 
                 if step % 10 == 0:
