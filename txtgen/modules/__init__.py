@@ -9,6 +9,7 @@ from __future__ import print_function
 
 # pylint: disable=wildcard-import
 
+from txtgen.modules.networks import *
 from txtgen.modules.encoders import *
 from txtgen.modules.decoders import *
 from txtgen.modules.connectors import *

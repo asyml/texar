@@ -15,6 +15,9 @@ from tensorflow import gfile
 import numpy as np
 from txtgen.data.constants import BOS_TOKEN, EOS_TOKEN, PADDING_TOKEN, UNK_TOKEN
 
+__all__ = [
+    "Vocab"
+]
 
 def _make_defaultdict(keys, values, default_value):
     """Creates a python defaultdict.
@@ -72,8 +75,8 @@ class Vocab(object):  # pylint: disable=too-many-instance-attributes
 
         Returns:
             A tuple of TF and python mapping tables between word string and
-            index, `(:attr:`id_to_token_map`, :attr:`token_to_id_map`,
-            :attr:`id_to_token_map_py`, :attr:`token_to_id_map_py`)`, where
+            index, (:attr:`id_to_token_map`, :attr:`token_to_id_map`,
+            :attr:`id_to_token_map_py`, :attr:`token_to_id_map_py`), where
             :attr:`id_to_token_map` and :attr:`token_to_id_map` are
             TF `HashTable` instances, and :attr:`id_to_token_map_py` and
             :attr:`token_to_id_map_py` are python `defaultdict` instances.
@@ -82,25 +85,26 @@ class Vocab(object):  # pylint: disable=too-many-instance-attributes
             vocab = list(line.strip() for line in vocab_file)
 
         if self._bos_token in vocab:
-            raise ValueError("Special token already exists in the "
-                             "vocabulary %s" % self._bos_token)
+            raise ValueError("Special begin-of-seq token already exists in the "
+                             "vocabulary: '%s'" % self._bos_token)
         if self._eos_token in vocab:
-            raise ValueError("Special token already exists in the "
-                             "vocabulary %s" % self._eos_token)
+            raise ValueError("Special end-of-seq token already exists in the "
+                             "vocabulary: '%s'" % self._eos_token)
         if self._unk_token in vocab:
-            raise ValueError("Special token already exists in the "
-                             "vocabulary %s" % self._unk_token)
+            raise ValueError("Special UNK token already exists in the "
+                             "vocabulary: '%s'" % self._unk_token)
         if self._padding_token in vocab:
             raise ValueError("Special padding token already exists in the "
-                             "vocabulary %s, it is an empty token by default"
+                             "vocabulary: '%s', it is an empty token by default"
                              % self._padding_token)
 
-        # Placing _padding_token at the beginning to make sure it take index 0.
+        # Places _padding_token at the beginning to make sure it take index 0.
         vocab = [self._padding_token, self._bos_token, self._eos_token,
                  self._unk_token] + vocab
+        # Must make sure this is consistent with the above line
+        unk_token_idx = 3
         vocab_size = len(vocab)
         vocab_idx = np.arange(vocab_size)
-        unk_token_idx = vocab_size - 1
 
         # Creates TF maps
         id_to_token_map = tf.contrib.lookup.HashTable(
@@ -175,7 +179,16 @@ class Vocab(object):  # pylint: disable=too-many-instance-attributes
         return self._unk_token
 
     @property
-    def special_tokens(self):
-        """The list of special tokens :attr:`[bos_token, eos_token, unk_token]`.
+    def padding_token(self):
+        """A string of the special token indicating padding token. The
+        default padding token is an empty string.
         """
-        return [self._bos_token, self._eos_token, self._unk_token]
+        return self._padding_token
+
+    @property
+    def special_tokens(self):
+        """The list of special tokens
+        :attr:`[padding_token, bos_token, eos_token, unk_token]`.
+        """
+        return [self._padding_token, self._bos_token, self._eos_token,
+                self._unk_token]

@@ -10,8 +10,9 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import tempfile
-import tensorflow as tf
 import numpy as np
+
+import tensorflow as tf
 
 from txtgen.data import embedding
 
