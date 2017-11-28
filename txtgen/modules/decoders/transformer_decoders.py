@@ -55,12 +55,12 @@ class TransformerDecoder(ModuleBase):
             "embedding_enabled": True,
             "embedding": layers.default_embedding_hparams(),
             "name":"transformer_decoder",
-            "num_heads":5,
-            "num_blocks":2,
+            "num_heads":8,
+            "num_blocks":6,
             "zero_pad": True,
-            "max_seq_length":100,
+            "max_seq_length":10,
             "scale":True,
-            "dropout":0.9,
+            "dropout":0.1,
             "sinusoid":True,
             }
 
@@ -81,15 +81,20 @@ class TransformerDecoder(ModuleBase):
         num_units = tgt_embedding.shape.as_list()[2]
         if self._hparams.scale:
             tgt_embedding = tgt_embedding * (num_units**0.5)
-        if self._hparams.sinusoid:
-            position_dec_embeds = layers.sinusoid_positional_encoding(tgt_embedding,
-                    max_time=self._hparams.max_seq_length,
-                    scope = "dec_pe")
-        dec_input = tf.layers.dropout(tgt_embedding + position_dec_embeds,
-                rate = self._hparams.dropout,
-                training = context.is_train())
         hparams = self._hparams
         with tf.variable_scope(self.variable_scope):
+            if self._hparams.sinusoid:
+                position_dec_embeds = layers.sinusoid_positional_encoding(tgt_embedding,
+                        max_time=self._hparams.max_seq_length,
+                        scope ="dec_pe")
+            else:
+                position_dec_embeds = layers.get_embedding(
+                        vocab_size=self._hparams.max_seq_length,
+                        num_units=self._hparams.embedding.dim,
+                        scope='dec_pe')
+            dec_input = tf.layers.dropout(tgt_embedding + position_dec_embeds,
+                    rate = self._hparams.dropout,
+                    training = context.is_train())
             for i in range(self._hparams.num_blocks):
                 with tf.variable_scope("num_blocks_{}".format(i)):
                     attended_dec = layers.multihead_attention(queries = dec_input,
@@ -110,11 +115,13 @@ class TransformerDecoder(ModuleBase):
 
                     attended_dec = layers.poswise_feedforward(attended_dec)
                     attended_dec = layers.normalize(attended_dec)
-                    #[batch, seq_len, hidden_units]
+
         self.logits = tf.layers.dense(attended_dec, self._vocab_size)
-        self.preds = tf.to_int32(tf.arg_max(self.logits, dimension=-1))
-        #[batch, seq_len]
-        print('self.preds:{}'.format(self.preds.shape))
+        self.preds = tf.to_int32(tf.argmax(self.logits, axis=-1))
+
+        self._add_internal_trainable_variables()
+        self._built = True
+
         return self.logits, self.preds
 
     @property

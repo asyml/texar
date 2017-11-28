@@ -13,6 +13,10 @@ import numpy as np
 from txtgen.core import utils
 from txtgen.hyperparams import HParams
 
+__all__ = [
+    "load_word2vec", "load_glove", "Embedding"
+]
+
 def load_word2vec(filename, vocab, word_vecs):
     """Loads embeddings in the word2vec binary format which has a header line
     containing the number of vectors and their dimensionality (two integers),

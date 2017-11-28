@@ -14,8 +14,61 @@ from tensorflow.contrib.slim.python.slim.data import data_decoder
 import numpy as np
 from txtgen.data.constants import PADDING_TOKEN
 
+# pylint: disable=too-many-instance-attributes, too-many-arguments,
+# pylint: disable=no-member, invalid-name
 
-# pylint: disable=too-many-instance-attributes
+__all__ = [
+    "ScalarDataDecoder",
+    "TextDataDecoder",
+    "MultiSentenceTextDataDecoder"
+]
+
+class ScalarDataDecoder(data_decoder.DataDecoder):
+    """A data decoder that decodes a scalar, e.g., int label or float number.
+
+    The only operation is to cast the data into a specified data type.
+
+    Args:
+        dtype: A :tf_main:`tf DType <DType>` that data is cast into. Can be
+            `tf.int32` or `tf.float32`.
+        data_name (str): Name of the decoded data.
+    """
+
+    def __init__(self, dtype=tf.int32, data_name="data"):
+        self._dtype = dtype
+        self._data_name = data_name
+
+    def decode(self, data, items):
+        """Decodes the data to return the tensors specified by the list of
+        items.
+
+        Args:
+            data: The scalar data to decode.
+            items: A list of strings, each of which is the name of the resulting
+                tensors to retrieve.
+
+        Returns:
+            A list of tensors, each of which corresponds to each item.
+        """
+        data = tf.reshape(data, shape=[])
+        if data.dtype is tf.string:
+            decoded_data = tf.string_to_number(data, out_type=self._dtype)
+        else:
+            decoded_data = tf.cast(data, self._dtype),
+        outputs = {
+            self._data_name: decoded_data
+        }
+        return [outputs[item] for item in items]
+
+    def list_items(self):
+        """Returns the list of item names that the decoder can produce.
+
+        Returns:
+            A list of strings can be passed to :meth:`decode()`.
+        """
+        return [self._data_name]
+
+
 class TextDataDecoder(data_decoder.DataDecoder):
     """A text data decoder that decodes raw text data.
 
@@ -49,7 +102,7 @@ class TextDataDecoder(data_decoder.DataDecoder):
         text_id_tensor_name (str): Name of the text index tensor results.
     """
 
-    def __init__(self,  # pylint: disable=too-many-arguments
+    def __init__(self,
                  split_level="word",
                  delimiter=" ",
                  bos_token=None,
@@ -154,7 +207,6 @@ class TextDataDecoder(data_decoder.DataDecoder):
         self._text_id_tensor_name = name
 
 
-# pylint: disable=too-many-instance-attributes
 class MultiSentenceTextDataDecoder(data_decoder.DataDecoder):
     """A text data decoder that decodes raw text data. Each data is considered
     to be multiple sentences concatenated by a delimiter.
@@ -195,7 +247,7 @@ class MultiSentenceTextDataDecoder(data_decoder.DataDecoder):
         text_id_tensor_name (str): Name of the text index tensor results.
     """
 
-    def __init__(self,  # pylint: disable=too-many-arguments
+    def __init__(self,
                  split_level="word",
                  delimiter=" ",
                  sentence_delimiter="|||",
@@ -207,8 +259,7 @@ class MultiSentenceTextDataDecoder(data_decoder.DataDecoder):
                  text_tensor_name="text",
                  length_tensor_name="length",
                  text_id_tensor_name="text_ids",
-                 context_length_tensor_name="context_lengths"
-                 ):
+                 context_length_tensor_name="context_lengths"):
         self._split_level = split_level
         self._delimiter = delimiter
         self._bos_token = bos_token

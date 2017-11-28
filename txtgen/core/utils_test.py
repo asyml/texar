@@ -42,6 +42,19 @@ class UtilsTest(tf.test.TestCase):
         self.assertEqual(patched_dict["k_dict_2"], tgt_dict["k_dict_2"])
 
 
+    def test_uniquify_str(self):
+        """Tests :func:`txtgen.core.utils.uniquify_str`.
+        """
+        str_set = ['str']
+        unique_str = utils.uniquify_str('str', str_set)
+        self.assertEqual(unique_str, 'str_1')
+
+        str_set.append('str_1')
+        str_set.append('str_2')
+        unique_str = utils.uniquify_str('str', str_set)
+        self.assertEqual(unique_str, 'str_3')
+
+
 if __name__ == "__main__":
     tf.test.main()
 
