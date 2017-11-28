@@ -1,0 +1,259 @@
+"""
+Text Style Transfer.
+"""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+import tensorflow as tf
+from tensorflow.contrib.layers.python.layers import utils
+
+from txtgen import context
+from txtgen.modules.encoders.conv1d_discriminator import CNN
+from txtgen.models.text_style_transfer import ops
+
+
+class TSF:
+  """Text style transfer."""
+
+  def __init__(self, hparams=None):
+    self._hparams = hparams(hparams, self.default_hparams())
+    self.input_tensors = self._build_inputs()
+    (self.output_tensors, self.loss, self.opt) \
+      = self._build_model(self.input_tensors)
+
+  @staticmethod
+  def default_hparams():
+    return {
+      "name": "text_style_transfer",
+      "collections": "tsf",
+      "batch_size": 128,
+      "embedding_size": 100,
+      "rnn_hparams": {
+        "type": "GRUCell",
+        "size": 700,
+        "input_keep_prob": 0.5,
+        "output_keep_prob": 0.5,
+      },
+      "dim_y": 200,
+      "dim_z": 500,
+      "cnn_hparams": {
+        "kernel_sizes": [3, 4, 5],
+        "num_filter": 128,
+        "drop_ratio": 0.5,
+      },
+      "adam_hparams": {
+        "learning_rate": 1e-4,
+        "beta1": 0.9,
+        "beta2": 0.999
+      },
+    }
+
+  def _build_inputs(self):
+    batch_size = self._hparams.batch_size
+
+    enc_inputs = tf.placeholder(tf.int32, [batch_size, None], name='"enc_inputs')
+    dec_inputs = tf.placeholder(tf.int32, [batch_size, None], name='"dec_inputs')
+    targets = tf.placeholder(tf.int32, [batch_size, None], name="targets")
+    weights = tf.placeholder(tf.float32, [batch_size, None], name="weights")
+    labels = tf.placeholder(tf.float32, [batch_size], name="labels")
+    batch_len = tf.placeholder(tf.int32, name="batch_len")
+    gamma = tf.placeholder(tf.float32, name="gamma")
+    rho = tf.placeholder(tf.float32, name="rho")
+    lr = tf.placeholder(tf.float32, name="lr")
+
+    collections_input = self._hparams.collections + '/input'
+    utils.collect_named_outputs(collections_input, "enc_inputs", enc_inputs)
+    utils.collect_named_outputs(collections_input, "dec_inputs", dec_inputs)
+    utils.collect_named_outputs(collections_input, "targets", targets)
+    utils.collect_named_outputs(collections_input, "weights", weights)
+    utils.collect_named_outputs(collections_input, "labels", labels)
+    utils.collect_named_outputs(collections_input, "batch_len", batch_len)
+    utils.collect_named_outputs(collections_input, "gamma", gamma)
+    utils.collect_named_outputs(collections_input, "rho", rho)
+    utils.collect_named_outputs(collections_input, "lr", lr)
+
+    return utils.convert_collection_to_dict(collections_input)
+
+  def _build_model(self, input_tensors, reuse=False):
+    hparams = self._hparams
+    embedding = tf.variable(
+      "embedding", shape=[hparam.vocab_size, hparam.embedding_size])
+
+    enc_inputs = tf.nn.embedding_lookup(embedding, input_tensors["enc_inputs"])
+    dec_inputs = tf.nn.embedding_lookup(embedding, input_tensors["dec_inputs"])
+
+    labels = input_tensors["labels"]
+    labels = tf.reshape(labels, [-1, 1])
+
+    # auto encoder
+    label_proj_e = tf.layers.Dense(hparams.y_dim, name="encoder")
+    init_state = tf.concat([label_proj_e(labels),
+                            tf.zeros([hparams.batch_size, hparams.dim_z])], 1)
+    cell_e = ops.get_rnn_cell(hparam.rnn_hparams)
+
+    _, z = tf.nn.dynamic_rnn(cell_e, enc_inputs, initial_state=init_state,
+                               scope="encoder")
+    z  = z[:, hparams.dim_y:]
+
+    label_proj_g = tf.layers.Dense(hparams.y_dim, name="generator")
+    h_ori = tf.concat([label_proj_g(labels), z], 1)
+    h_tsf = tf.concat([label_proj_g(1 - labels), z], 1)
+
+    cell_g = ops.get_rnn_cell(hparam.rnn_hparams)
+    softmax_proj = tf.layer.Dense(hparams.vocab_size, name="softmax_proj")
+    g_outputs, _ = tf.nn.dynamic_rnn(cell_g, dec_inputs, initial_state=h_ori,
+                                       scope="generator")
+
+    teach_h = tf.concat([tf.expand_dims(h_ori, 1), g_outputs], 1)
+    g_logits = softmax_proj(tf.reshape(
+      g_outputs, [-1, hparams.rnn_hparams.size]))
+
+    loss_g = tf.nn.sparse_softmax_cross_entropy_with_logits(
+      labels=tf.reshape(input_tensors["targets"], [-1]), logits=g_logits)
+    loss_g *= tf.reshape(input_tensors["weights"], [-1])
+    loss_g = tf.reduce_sum(loss_g) / hparams.batch_size
+    ppl_g = tf.reduce_sum(loss_g) / (tf.reduce_sum(input_tensors["weights"]) \
+                                     + 1e-8)
+    # decoding 
+    go = dec_inputs[:, 0, :]
+    #  soft_func = feed_softmax(proj_layer, embedding, input_tensors["gamma"])
+    soft_func = ops.sample_gumbel(proj_layer, embedding, input_tensors["gamma"])
+    hard_func = ops.greedy_softmax(proj_layer, embedding)
+
+    soft_h_ori, soft_logits_ori, _ = ops.rnn_decode(
+      h_ori, go, hparams.max_len, cell_g, soft_func, scope="generator")
+    soft_h_tsf, soft_logits_tsf, _ = ops.rnn_decode(
+      h_tsf, go, hparams.max_len, cell_g, soft_func, scope="generator")
+
+    hard_h_ori, hard_logits_ori, _ = ops.rnn_decode(
+      h_ori, go, hparams.max_len, cell_g, hard_func, scope="generator")
+    hard_h_tsf, hard_logits_tsf, _ = ops.rnn_decode(
+      h_tsf, go, hparams.max_len, cell_g, hard_func, scope="generator")
+
+    # discriminator
+    half = hparams.batch_size/2
+    # soft_h_tsf = soft_h_tsf[:, input_tensors["atch_len"] + 1, :]
+    soft_h_tsf = soft_h_tsf[:, : 1+input_tensors["atch_len"], :]
+
+    cnn0_hparams = copy.copy(hparams.cnn_hparams)
+    cnn1_hparams = copy.copy(hparams.cnn_hparams)
+    cnn0_hparams["name"] = "cnn0"
+    cnn1_hparams["name"] = "cnn1"
+    
+    cnn0 = conv1d_discriminator.CNN(cnn0_hparams)
+    cnn1 = conv1d_discriminator.CNN(cnn1_hparams)
+
+    loss_d0 = ops.adv_loss(teach_h[:half], soft_h_tsf[half:], cnn0)
+    loss_d1 = ops.adv_loss(teach_h[half:], soft_h_tsf[:half], cnn1)
+
+    loss_d = loss_d0 + loss_d1
+    loss = loss_g - input_tensors["rho"] * loss_d
+
+    var_eg = ops.retrieve_variables(["encoder", "generator",
+                                     "softmax_proj", "embedding"])
+    var_d0 = ops.retrieve_variables(["cnn0"])
+    var_d1 = ops.retrieve_variables(["cnn1"])
+
+    # optimization
+    optimizer_all = tf.train.AdamOptimizer(**hparams.adam_hparams).minimize(
+      loss, var_list=var_eg)
+    optimizer_ae = tf.train.AdamOptimizer(**hparams.adam_hparams).minimize(
+      loss_g, var_list=var_eg)
+    optimizer_d0 = tf.train.AdamOptimizer(**hparams.adam_hparams).minimize(
+      loss_d0, var_list=var_d0)
+    optimizer_d1 = tf.train.AdamOptimizer(**hparams.adam_hparams).minimize(
+      loss_d1, var_list=var_d1)
+
+    # add tensors to collections
+    collections_output = hparams.collections + '/output'
+    utils.collect_named_outputs(collections_output, "h_ori", h_ori)
+    utils.collect_named_outputs(collections_output, "h_tsf", h_tsf)
+    utils.collect_named_outputs(collections_output, "hard_logits_ori",
+                                hard_logits_ori)
+    utils.collect_named_outputs(collections_output, "hard_logits_tsf",
+                                hard_logits_tsf)
+    output_tensors = utils.convert_collection_to_dict(collections_output)
+
+    collections_loss = hparams.collections + '/loss'
+    utils.collect_named_outputs(collections_loss, "loss", loss)
+    utils.collect_named_outputs(collections_loss, "loss_g", loss_g)
+    utils.collect_named_outputs(collections_loss, "ppl_g", ppl_g)
+    utils.collect_named_outputs(collections_loss, "loss_d0", loss_d0)
+    utils.collect_named_outputs(collections_loss, "loss_d1", loss_d1)
+    loss = utils.convert_collection_to_dict(collections_loss)
+
+    collections_opt = hparams.collections + '/opt'
+    utils.collect_named_outputs(collections_opt, "optimizer_all", optimizer_all)
+    utils.collect_named_outputs(collections_opt, "optimizer_ae", optimizer_ae)
+    utils.collect_named_outputs(collections_opt, "optimizer_d0", optimizer_d0)
+    utils.collect_named_outputs(collections_opt, "optimizer_d1", optimizer_d1)
+    opt = utils.convert_collection_to_dict(collections_opt)
+
+    return output_tensors, loss, opt
+
+  def train_d0_step(self, sess, batch, rho, gamma):
+    loss_d0, _ = sess.run([self.loss["loss_d0"], self.opt["optimizer_d0"]],
+                          self.feed_dict(batch, rho, gamma))
+    return loss_d0
+
+  def train_d1_step(self, sess, batch, rho, gamma):
+    loss_d1, _ = sess.run([self.loss["loss_d1"], self.opt["optimizer_d1"]],
+                          self.feed_dict(batch, rho, gamma))
+    return loss_d1
+
+  def train_g_step(self, sess, batch, rho, gamma):
+    loss, loss_g, ppl_g, loss_d, _ = sess.run(
+      [self.loss["loss"],
+       self.loss["loss_g"],
+       self.loss["ppl_g"],
+       self.loss["loss_d"],
+       self.opt["optimizer_all"]],
+      self.feed_dict(batch, rho, gamma))
+    return loss, loss_g, ppl_g, loss_d
+
+  def train_ae_step(self, sess, batch, rho, gamma):
+    loss, loss_g, ppl_g, loss_d, _ = sess.run(
+      [self.loss["loss"],
+       self.loss["loss_g"],
+       self.loss["ppl_g"],
+       self.loss["loss_d"],
+       self.opt["optimizer_ae"]],
+      self.feed_dict(batch, rho, gamma))
+    return loss, loss_g, ppl_g, loss_d
+
+  def eval_step(self, sess, batch, rho, gamma)
+    loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1 = sess.run(
+      [self.loss["loss"],
+       self.loss["loss_g"],
+       self.loss["ppl_g"],
+       self.loss["loss_d"],
+       self.loss["loss_d0"],
+       self.loss["loss_d1"],
+      self.feed_dict(batch, rho, gamma, is_train=False))
+    return loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1
+
+  def decode_step(self, sess, batch):
+    logits_ori, logits_tsf = sess.run(
+      [self.output_tensors["hard_logits_ori"],
+       self.output_tensors["hard_logits_tsf"],]
+      feed_dict = {
+        self.input_tensors["enc_inputs"]: batch["enc_inputs"],
+        self.input_tensors["dec_inputs"]: batch["dec_inputs"],
+        self.input_tensors["labels"]: batch["labels"]})
+    return logits_ori, logits_tsf
+
+  def feed_dict(self, batch, rho, gamma, is_train=True):
+    return {
+      context.is_train(): is_train,
+      self.input_tensors["batch_len"]: batch["len"],
+      self.input_tensors["enc_inputs"]: batch["enc_inputs"],
+      self.input_tensors["dec_inputs"]: batch["dec_inputs"],
+      self.input_tensors["targets"]: batch["targets"],
+      self.input_tensors["weights"]: batch["weights"],
+      self.input_tensprs["labels"]: batch["labels"],
+      self.input_tensors["rho"]: rho,
+      self.input_tensors["gamma"]: gamma,
+    }
+
