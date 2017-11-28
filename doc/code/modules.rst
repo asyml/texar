@@ -10,6 +10,12 @@ Module Base
 .. autoclass:: txtgen.modules.ModuleBase
     :members:
 
+Networks
+========
+
+.. autoclass:: txtgen.modules.FeedForwardNetwork
+    :members:
+
 Encoders
 ========
 
@@ -19,7 +25,10 @@ Encoders
 .. autoclass:: txtgen.modules.RNNEncoderBase
     :members:
 
-.. autoclass:: txtgen.modules.ForwardRNNEncoder
+.. autoclass:: txtgen.modules.UnidirectionalRNNEncoder
+    :members:
+
+.. autoclass:: txtgen.modules.BidirectionalRNNEncoder
     :members:
 
 Decoders

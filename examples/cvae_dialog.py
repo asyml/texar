@@ -9,10 +9,9 @@ from __future__ import print_function
 # pylint: disable=invalid-name, no-name-in-module
 
 import tensorflow as tf
-from tensorflow.python.framework import ops
 
 # We shall wrap all these modules
-from txtgen.data import database
+from txtgen.data import MultiSourceTextDataBase
 from txtgen.modules import ForwardConnector
 from txtgen.modules import BasicRNNDecoder, get_helper
 from txtgen.modules import HierarchicalEncoder
@@ -49,7 +48,7 @@ if __name__ == "__main__":
     }
 
     # Construct the database
-    dialog_db = database.MultiSourceTextDataBase(data_hparams)
+    dialog_db = MultiSourceTextDataBase(data_hparams)
     data_batch = dialog_db()
 
     # builder encoder

@@ -1,5 +1,5 @@
 """
-Unit tests for embedding related operations.
+Unit tests of :class:`HParams`.
 """
 
 from __future__ import absolute_import
