@@ -68,6 +68,8 @@ class HParams(object):
     """
 
     def __init__(self, hparams, default_hparams, allow_new_hparam=False):
+        if isinstance(hparams, HParams):
+            hparams = hparams.todict()
         if default_hparams is not None:
             parsed_hparams = self._parse(
                 hparams, default_hparams, allow_new_hparam)

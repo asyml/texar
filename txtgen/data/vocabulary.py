@@ -126,6 +126,28 @@ class Vocab(object):  # pylint: disable=too-many-instance-attributes
         return id_to_token_map, token_to_id_map, \
                id_to_token_map_py, token_to_id_map_py
 
+    def map_ids_to_tokens(self, ids):
+        """Maps ids into token text.
+
+        Args:
+            ids: An int tensor of token ids.
+
+        Returns:
+            A tensor of token text of the same shape.
+        """
+        return self.id_to_token_map.lookup(tf.to_int64(ids))
+
+    def map_tokens_to_ids(self, tokens):
+        """Maps token text into ids.
+
+        Args:
+            ids: An tensor of token text.
+
+        Returns:
+            A tensor of token ids of the same shape.
+        """
+        return self.token_to_id_map.lookup(tokens)
+
     @property
     def id_to_token_map(self):
         """The `HashTable` instance that maps from token index to the

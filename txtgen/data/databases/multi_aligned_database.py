@@ -171,9 +171,9 @@ class MultiAlignedDataBase(DataBaseBase):
         else:
             emb_hparams = hparams["embedding_init"]
             embedding = None
-            if emb_hparams["file"] is not None and emb_hparams["file"] != "":
+            if emb_hparams["file"] is not None and len(emb_hparams["file"]) > 0:
                 embedding = Embedding(
-                    vocab.token_to_id_map_py, emb_hparams)
+                    vocab.token_to_id_map_py, emb_hparams.todict())
 
         # Create the dataset
         dataset = tf_slim.dataset.Dataset(

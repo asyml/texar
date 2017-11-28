@@ -60,6 +60,12 @@ class EmbeddingTest(tf.test.TestCase):
         np.testing.assert_array_equal(word_vecs[0], vec)
         np.testing.assert_array_equal(word_vecs[1], vec)
 
+    def test_embedding(self):
+        """Tests :class:`txtgen.data.embedding.Embedding`.
+        """
+        vocab = {"word": 0, "词": 1}
+        emb = embedding.Embedding(vocab)
+        self.assertEqual(len(emb.word_vecs), len(vocab))
 
 if __name__ == "__main__":
     tf.test.main()
