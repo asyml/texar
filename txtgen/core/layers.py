@@ -907,10 +907,9 @@ def get_layer(hparams):
 
 #TODO(zhiting): fix code style
 def sinusoid_positional_encoding(inputs,
-                                zero_pad=True,
-                                scale=True,
+                                zero_pad=False,
+                                scale=False,
                                 reuse=None,
-                                position_duration=10000,
                                 max_time=None,
                                 scope='sinuoid_positional_embedding'):
     """obtain a positional encoding of inputs
@@ -921,12 +920,10 @@ def sinusoid_positional_encoding(inputs,
         zero_pad: [Boolean], If True, all the values of the first row(id = 0) should be constant zero
         scale: [Boolean], If True, the output will be multiplied by sqrt num_units(check details from paper)
         scope: [String], Optional scope for 'variable_scope'
-        position_duration: [Int], default=10000
     """
     print('inputs:shape{}'.format(inputs.get_shape())) #[3, None, 50]
     batch_size, _, hidden_dim = inputs.get_shape().as_list()
-    input_shape = tf.shape(inputs)
-    _, dynamic_max_time, _ = input_shape[0], input_shape[1], input_shape[2]
+    dynamic_max_time = tf.shape(inputs)[1]
     print('dynamic shape obtained')
     with tf.variable_scope(scope, reuse=reuse):
         position_idx = tf.tile(tf.expand_dims(tf.range(max_time), 0), [batch_size, 1]) #batch_size * max_time
@@ -976,9 +973,9 @@ def multihead_attention(queries,
         num_units = queries.get_shape().as_list()[-1]
 
         # Linear projections
-        print('keys:{}'.format(keys))
-        print('queries:{}'.format(queries))
-        print('num_units:{}'.format(num_units))
+        # print('keys:{}'.format(keys))
+        # print('queries:{}'.format(queries))
+        # print('num_units:{}'.format(num_units))
         Q = tf.layers.dense(queries, num_units, activation=tf.nn.relu) # (N, T_q, C)
         K = tf.layers.dense(keys, num_units, activation=tf.nn.relu) # (N, T_k, C)
         V = tf.layers.dense(keys, num_units, activation=tf.nn.relu) # (N, T_k, C)

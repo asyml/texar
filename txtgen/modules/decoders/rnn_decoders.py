@@ -269,8 +269,6 @@ class AttentionRNNDecoder(RNNDecoderBase):
             structure and default values.
 
     """
-    #TODO(zhiting): delete all `print` statements. Raise exceptions when
-    # necessary.
     def __init__(self,
                  memory,
                  memory_sequence_length=None,
@@ -280,14 +278,11 @@ class AttentionRNNDecoder(RNNDecoderBase):
                  vocab_size=None,
                  hparams=None):
         RNNDecoderBase.__init__(self, cell, embedding, vocab_size, hparams)
-        print('self._hparams:{}'.format(self._hparams))
         attn_hparams = self._hparams['attention']
         attn_kwargs = attn_hparams['kwargs'].todict()
         if not callable(attn_kwargs['probability_fn']):
-            print('not callable:{}'.format(attn_kwargs['probability_fn']))
             attn_kwargs['probability_fn'] = get_class(
                 attn_kwargs['probability_fn'])
-        # cannot use update, since Hparams hasn't implemented the interface
         attn_kwargs.update({
             "memory_sequence_length": memory_sequence_length,
             "memory": memory})
