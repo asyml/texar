@@ -19,6 +19,7 @@ from txtgen.core import optimization as opt
 from txtgen import context
 import os
 import codecs
+from nltk.translate.bleu_score import corpus_bleu
 if __name__ == "__main__":
     ### Build data pipeline
 
@@ -115,6 +116,10 @@ if __name__ == "__main__":
             }
         }
     }
+    word_vocab = text_database.target_vocab
+    src_words = text_database.source_vocab.map_ids_to_tokens(src_text)
+    tgt_words = text_database.target_vocab.map_ids_to_tokens(tgt_text)
+    prd_words = text_database.target_vocab.map_ids_to_tokens(preds)
     train_op, global_step = opt.get_train_op(mle_loss, hparams=opt_hparams)
 
     ### Graph is done. Now start running
@@ -135,17 +140,26 @@ if __name__ == "__main__":
 
             try:
                 while not coord.should_stop():
-                    sources, targets, prds = sess.run(
-                        [src_text, tgt_text, preds],
+                    source_words, target_words, predicted_words= sess.run(
+                        [src_words, tgt_words, prd_words],
                         feed_dict={context.is_train():False})
-                    for src,tgt,prd in zip(sources, targets, prds):
-                        worddict = text_database._tgt_dataset
-                        #TO DO(shr):evaluation metrics:bleu
-                        # got = " ".join()
-                        fout.write('src:{}\ntgt:{}\nprd:{}\n\n'.format(src,tgt,prd))
+
+                    for src,tgt,prd in zip(source_words, target_words, predicted_words):
+                        tgt_sentence =  " ".join(tgt).split("</S>")[0].strip()
+                        src_sentence = " ".join(src).split("</S>")[0].strip()
+                        prd_sentence = " ".join(prd).split("</S>")[0].strip()
+                        ref  = tgt_sentence.split()
+                        hypothesis = prd_sentence.split()
+                        if len(ref)>3 and len(hypothesis)>3:
+                            list_of_refs.append([ref])
+                            hypotheses.append(hypothesis)
+                        fout.write('src:{}\ntgt:{}\nprd:{}\n\n'.format(\
+                                src_sentence,tgt_sentence,prd_sentence))
             except tf.errors.OutOfRangeError:
                 print('Done -- epoch limit reached')
             finally:
                 coord.request_stop()
             coord.join(threads)
+            score = corpus_bleu(list_of_refs, hypotheses)
+            fout.write('BLEU score={}'.format(100*score))
 
