@@ -337,3 +337,28 @@ def is_str_or_unicode(x):
     otherwise.
     """
     return isinstance(x, str) or isinstance(x, unicode)
+
+def uniquify_str(str_, str_set):
+    """Uniquifies :attr:`str_` if :attr:`str_` is included in :attr:`str_set`.
+
+    This is done by appending '_[digits]' to :attr:`str_`. Returns
+    :attr:`str_set` directly if :attr:`str_` is not included in :attr:`str_set`.
+
+    Args:
+        str_ (string): A string to uniquify.
+        str_set (set, dict, or list): A collection of strings. The returned
+            string is guaranteed to be different from the elements in the
+            collection.
+
+    Returns:
+        string: The uniquified string. Returns :attr:`str_` directly if it is
+            already unique.
+    """
+    if str_ not in str_set:
+        return str_
+    else:
+        for i in range(1, len(str_set)+1):
+            unique_str = str_ + "_%d" % i
+            if unique_str not in str_set:
+                return unique_str
+    raise ValueError("Fails to uniquify string: " + str_)

@@ -106,9 +106,9 @@ def get_helper(helper_type,
         An instance of specified helper.
     """
     module_paths = [
-        'txtgen.custom',
         'txtgen.modules.decoders.rnn_decoder_helpers',
-        'tensorflow.contrib.seq2seq']
+        'tensorflow.contrib.seq2seq',
+        'txtgen.custom']
     class_kwargs = {"inputs": inputs,
                     "sequence_length": sequence_length,
                     "embedding": embedding,

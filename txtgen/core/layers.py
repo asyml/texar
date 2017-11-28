@@ -15,7 +15,7 @@ from txtgen.hyperparams import HParams
 from txtgen.core import utils
 
 # pylint: disable=not-context-manager, redefined-variable-type, invalid-name
-# pylint: disable=too-many-branches, too-many-arguments
+# pylint: disable=too-many-branches, too-many-arguments, too-many-lines
 
 def default_rnn_cell_hparams():
     """Returns default hyperparameters of an RNN cell.
@@ -234,7 +234,8 @@ def get_regularizer(hparams=None):
 
     Returns:
         A :tf_main:`Regularizer <keras/regularizers/Regularizer>` instance.
-        `None` if :attr:`hparams` takes the default value.
+        `None` if :attr:`hparams` is `None` or takes the default
+        hyperparameter value.
 
     Raises:
         ValueError: The resulting regularizer is not an instance of
@@ -242,6 +243,7 @@ def get_regularizer(hparams=None):
     """
     if hparams is None:
         return None
+
     if isinstance(hparams, dict):
         hparams = HParams(hparams, _default_regularizer_hparams())
     if utils.is_str_or_unicode(hparams.type):
@@ -269,13 +271,18 @@ def get_initializer(hparams=None):
     """
     if hparams is None:
         return None
+
     if utils.is_str_or_unicode(hparams["type"]):
         kwargs = hparams["kwargs"]
         if isinstance(kwargs, HParams):
             kwargs = kwargs.todict()
-        initializer = utils.get_instance(
-            hparams["type"], kwargs,
-            ["tensorflow.initializers", "tensorflow", "txtgen.custom"])
+        modules = ["tensorflow.initializers", "tensorflow.keras.initializers",
+                   "tensorflow", "txtgen.custom"]
+        try:
+            initializer = utils.get_instance(hparams["type"], kwargs, modules)
+        except TypeError:
+            initializer_fn = utils.get_function(hparams["type"], modules)
+            initializer = initializer_fn(**kwargs)
     else:
         initializer = hparams["type"]
     return initializer
@@ -296,11 +303,41 @@ def get_activation_fn(fn_name="identity"):
             The default value is "identity".
 
     Returns:
-        The activation function.
+        The activation function. `None` if :attr:`fn_name` is `None`.
     """
+    if fn_name is None:
+        return None
+
     fn_modules = ['tensorflow', 'tensorflow.nn', 'txtgen.custom']
     activation_fn = utils.get_function(fn_name, fn_modules)
     return activation_fn
+
+def get_constraint_fn(fn_name="NonNeg"):
+    """Returns a constraint function based on its name or full path.
+
+    Args:
+        fn_name (str): The name or full path to the constraint function.
+            The function can be:
+
+            - Built-in constraint functions defined in \
+            :tf_main:`tf.keras.constraints <keras/constraints>` \
+            (e.g., :tf_main:`NonNeg <keras/constraints/NonNeg>`) \
+            or :mod:`tf` or :mod:`tf.nn` (e.g., activation functions).
+            - User-defined function in :mod:`txtgen.custom`. The function \
+            must follow the signature `w' = constraint_fn(w)`.
+            - Externally defined function. Must provide the full path, \
+            e.g., :attr:`"my_module.my_constraint_fn"`.
+
+    Returns:
+        The constraint function. `None` if :attr:`fn_name` is `None`.
+    """
+    if fn_name is None:
+        return None
+
+    fn_modules = ['tensorflow.keras.constraints', 'tensorflow',
+                  'tensorflow.nn', 'txtgen.custom']
+    constraint_fn = utils.get_function(fn_name, fn_modules)
+    return constraint_fn
 
 def default_embedding_hparams():
     """Returns default hyperparameters of token embedding used in encoders,
@@ -345,24 +382,27 @@ def default_embedding_hparams():
             including:
 
             "type" : str or initializer instance
-                Name, full path, or instance of the initializer class. The
-                class can be
+                Name, full path, or instance of the initializer class; Or name
+                or full path to a function that returns the initializer class.
+                The class or function can be
 
-                - Built-in initializer defined in
-                  :tf_main:`tf.initializers <initializers>`, e.g.,
-                  :tf_main:`random_uniform <random_uniform_initializer>` (a.k.a
-                  tf.random_uniform_initializer) or in
-                  :mod:`tf`, e.g., :tf_main:`glorot_uniform_initializer
-                  <glorot_uniform_initializer>`.
+                - Built-in initializer defined in \
+                  :tf_main:`tf.initializers <initializers>`, e.g., \
+                  :tf_main:`random_uniform <random_uniform_initializer>` \
+                  (a.k.a :class:`tf.random_uniform_initializer`), or \
+                  in :mod:`tf`, e.g., :tf_main:`glorot_uniform_initializer \
+                  <glorot_uniform_initializer>`, or in \
+                  :tf_main:`tf.keras.initializers <keras/initializers>`.
                 - User-defined initializer in :mod:`txtgen.custom`.
                 - External initializer. Must provide the full path, \
                   e.g., :attr:`"my_module.MyInitializer"`, or the instance.
 
             "kwargs" : dict
                 A dictionary of arguments for constructor of the
-                initializer class. An initializer is created by
-                calling `initialzier_class(**kwargs)` where
-                :attr:`initializer_class` is specified in :attr:`"type"`.
+                initializer class or for the function. An initializer is
+                created by `initialzier = initializer_class_or_fn(**kwargs)`
+                where :attr:`initializer_class_or_fn` is specified in
+                :attr:`"type"`.
                 Ignored if :attr:`"type"` is an initializer instance.
 
             The default value corresponds to the initializer
@@ -513,12 +553,13 @@ class MergeLayer(tf.layers.Layer):
         self.built = True
 
 
-def _common_default_conv_kwargs():
+def _common_default_conv_dense_kwargs():
     """Returns the default keyword argument values that are common to
     convolution layers.
     """
     return {
         "activation": "identity",
+        "use_bias": True,
         "kernel_initializer": {
             "type": "glorot_uniform_initializer",
             "kwargs": {}
@@ -529,25 +570,30 @@ def _common_default_conv_kwargs():
         },
         "kernel_regularizer": _default_regularizer_hparams(),
         "bias_regularizer": _default_regularizer_hparams(),
-        "activity_regularizer": _default_regularizer_hparams()
+        "activity_regularizer": _default_regularizer_hparams(),
+        "kernel_constraint": None,
+        "bias_constraint": None,
+        "trainable": True,
+        "name": None
     }
 
 #TODO(zhiting): fix the docstring
 def default_conv1d_kwargs():
-    """Returns the default keyword argument values of 1D convolution layer(s)
+    """Returns the default keyword argument values of 1D convolution layer
     defined in :tf_main:`tf.layers.Conv1D <layers/Conv1D>`.
-
-    Some of the keyword arguments allow extended values as detailed in the
-    following.
 
     Returns:
         .. code-block:: python
 
             {
-                "kernel_size": 3,
                 "filters": 100,
+                "kernel_size": 3,
                 "strides": 1,
+                "padding": 'valid',
+                "data_format": 'channels_last',
+                "dilation_rate": 1
                 "activation": "identity",
+                "use_bias": True,
                 "kernel_initializer": {
                     "type": "glorot_uniform_initializer",
                     "kwargs": {}
@@ -562,7 +608,7 @@ def default_conv1d_kwargs():
                         "l1": 0.,
                         "l2": 0.
                     }
-                }
+                },
                 "bias_regularizer": {
                     # same as in "kernel_regularizer"
                     # ...
@@ -570,39 +616,46 @@ def default_conv1d_kwargs():
                 "activity_regularizer": {
                     # same as in "kernel_regularizer"
                     # ...
-                }
+                },
+                "kernel_constraint": None,
+                "bias_constraint": None,
+                "trainable": True,
+                "name": None
             }
 
         Here:
 
-        "kernel_size" : int or a list of int
-            The length(s) of 1D convolution window(s). If a list, filters with
-            different window lengths as specified in the list are created.
+        "filters" : int
+            The number of filters in the convolution.
 
-            The default value is `[3,4,5]`, which creates 3 sets of filters,
-            each of which are with lengths 3, 4, and 5.
+            The default value is `100`.
 
-        "filters" : int or a list of int
-            The number of filters in the convolution. If an int, equal number of
-            filters with different window lengths are created. If a list,
-            the list must be of the same length as the list in
-            :attr:`"kernel_size"`, and each integer in the list is the number
-            of filters with respective window length.
+        "kernel_size" : int
+            The length of 1D convolution window.
 
-            The default value is `100`, which creates 100 filters for each
-            filter set.
+            The default value is `3`.
 
-        "strides" : int or a list of int
-            The stride length of the convolution. If an int, the stride length
-            is shared across all filter sets. If a list, the list must be of
-            the same length as the list in :attr:`"kernel_size"`.
+        "strides" : int
+            The stride length of the convolution.
 
             The default value is `1`.
 
-        "dilation_rate" : int or a list of int
-            The dilation rate to use for dilated convolution. If an int, the
-            dilation rate is shared across all filter sets. If a list, the list
-            must be of the same length as the list in :attr:`"kernel_size"`.
+        "padding" : str
+            One of `"valid"` or `"same"` (case-insensitive).
+
+            The default value is `"valid"`.
+
+        "data_format" : str
+            The ordering of the dimensions in the inputs. One of
+            `"channels_last"` or `"channels_first"`.
+            `"channels_last"` corresponds to inputs with shape
+            `(batch, length, channels)`; `"channels_first"` corresponds to
+            inputs with shape `(batch, channels, length)`.
+
+            The default value is `"channels_last"`.
+
+        "dilation_rate" : int
+            The dilation rate to use for dilated convolution.
 
             The default value is `1`.
 
@@ -647,13 +700,43 @@ def default_conv1d_kwargs():
             :attr:`"kwargs"` (dict).
 
             The default value disables regularization.
+
+        "kernel_constraint" : str
+            Optional name or full path to projection function to be applied to
+            the kernel after being updated by an `Optimizer`. Used to
+            implement norm constraints
+            or value constraints for layer weights. The function must take
+            as input the unprojected variable and return the projected variable
+            with the same shape. Constraints are not safe to use when doing
+            asynchronous distributed training.
+
+            The function can be:
+
+            - Built-in constraint functions defined in \
+            :tf_main:`tf.keras.constraints <keras/constraints>` \
+            (e.g., :tf_main:`NonNeg <keras/constraints/NonNeg>`) \
+            or :mod:`tf` or :mod:`tf.nn` (e.g., activation functions).
+            - User-defined function in :mod:`txtgen.custom`. The function \
+            must follow the signature `w' = constraint_fn(w)`.
+            - Externally defined function. Must provide the full path, \
+            e.g., :attr:`"my_module.my_function"`.
+
+            The default value is `None`.
+
+        "bias_constraint" : str
+            Optional name or full path to projection function to be applied to
+            the bias after being updated by an `Optimizer`.
+
+            The default value is `None`.
     """
-    return {
+    kwargs = _common_default_conv_dense_kwargs()
+    kwargs.update({
         "kernel_size": 3,
         "filters": 100,
         "strides": 1,
         "dilation_rate": 1,
-    }
+    })
+    return kwargs
 
 def default_conv2d_kwargs():
     return {}
@@ -667,9 +750,17 @@ def default_conv2d_transpose_kwargs():
 def default_conv3d_transpose_kwargs():
     return {}
     #raise NotImplementedError
+
 def default_dense_kwargs():
-    return {}
-    #raise NotImplementedError
+    """Returns the default keyword argument values of dense layer
+    defined in :tf_main:`tf.layers.Dense <layers/Dense>`.
+    """
+    kwargs = _common_default_conv_dense_kwargs()
+    kwargs.update({
+        "units": 256
+    })
+    return kwargs
+
 def default_dropout_kwargs():
     return {}
     #raise NotImplementedError
@@ -757,14 +848,17 @@ def get_layer(hparams):
                 A dictionary of arguments for constructor of the
                 layer class. Ignored if :attr:`"type"` is a layer instance.
 
+                - Arguments named "activation" have values of type `str` that \
+                specify the name or full path to the activation function. \
+                The activation function will be used for making the layer.
                 - Arguments named "*_regularizer" and "*_initializer" \
                 have values of type `dict` that specifiy hyperparameters of \
                 respective regularizers and initializers. Regularizer and \
                 initializer instances will be created accordingly and used for \
                 making the layer.
-                - Arguments named "activation" have values of type `str` that \
-                specify the name or full path to the activation function. \
-                The activation function will be used for making the layer.
+                - Arguments named "*_constraint" have values of type `str` \
+                that specify the name or full path to the constant function. \
+                The constraint function will be used.
 
     Returns:
         A layer instance. If :attr:`hparams["type"]` is already a layer
@@ -798,6 +892,8 @@ def get_layer(hparams):
                 kwargs[k] = get_initializer(v)
             elif k.endswith('activation'):
                 kwargs[k] = get_activation_fn(v)
+            elif k.endswith('_constraint'):
+                kwargs[k] = get_constraint_fn(v)
             else:
                 kwargs[k] = v
 
@@ -938,7 +1034,8 @@ def multihead_attention(queries,
     return outputs
 
 
-
+# TODO(zhiting): Can this be a layer? Or inherits
+# :class:`txtgen.modules.networks.FeedForwardnetwork`?
 def poswise_feedforward(attended_dec, scope="multihead_attention", reuse=None):
     '''Point-wise feed forward net.
 
