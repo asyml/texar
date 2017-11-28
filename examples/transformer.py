@@ -155,7 +155,7 @@ if __name__ == "__main__":
                     print("%d: %.6f" % (step, loss))
 
                 if step % 1000 ==0:
-                    saver.save(sess, 'my-model', global_step = step)
+                    saver.save(sess, './my-model', global_step = step)
 
         except tf.errors.OutOfRangeError:
             print('Done -- epoch limit reached')
