@@ -3,6 +3,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import pdb
+
 import time
 import random
 
@@ -47,7 +49,7 @@ def get_batch(x, y, word2id, batch_size, min_len=5):
 
 def get_batches(x0, x1, word2id, batch_size, shuffle=True):
   # half as batch size
-  batch_size = batch_size / 2
+  batch_size = batch_size // 2
   if len(x0) < len(x1):
     x0 = makeup(x0, len(x1))
   if len(x1) < len(x0):
@@ -66,7 +68,8 @@ def get_batches(x0, x1, word2id, batch_size, shuffle=True):
       break
     batches.append(get_batch(x0[s:t] + x1[s:t],
                              [0] * (t-s) + [1]*(t-s),
-                             word2id))
+                             word2id,
+                             batch_size))
     s = t
  
   return batches

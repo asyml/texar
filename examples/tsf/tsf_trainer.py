@@ -5,26 +5,39 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from txt.models.tsf import TSF
+import pdb
+
+import cPickle as pkl
+import tensorflow as tf
+import json
+import os
+
+from txtgen.hyperparams import HParams
+from txtgen.models.tsf import TSF
 
 from trainer_base import TrainerBase
-from utils import log_print, get_batches
+from utils import *
+from stats import Stats
 
 class TSFTrainer(TrainerBase):
   """TSF trainer."""
   def __init__(self, hparams=None):
-    TrainerBase.__init__(self, hparams)
+    self._hparams = HParams(hparams, self.default_hparams())
+    TrainerBase.__init__(self, self._hparams)
 
   @staticmethod
   def default_hparams():
     return {
-      "name": "tsf"
+      "name": "tsf",
       "rho": 1.,
       "gamma_init": 1,
       "gamma_decay": 0.5,
       "gamma_min": 0.001,
-      "disp_interval": 1000,
-      "batch_size": 128
+      "disp_interval": 10,
+      "batch_size": 128,
+      "vocab_size": 10000,
+      "max_len": 20,
+      "max_epoch": 20
     }
 
   def load_data(self):
@@ -41,7 +54,7 @@ class TSFTrainer(TrainerBase):
     return vocab, train, val, test
 
   def eval_model(self, model, sess, vocab, data0, data1, outupt_path):
-    batches = utils.get_batches(data0, data1, vocab["word2id"],
+    batches = get_batches(data0, data1, vocab["word2id"],
                                 self._hparams.batch_size, shuffle=False)
     losses = Stats()
 
@@ -57,26 +70,26 @@ class TSFTrainer(TrainerBase):
                   w_loss=batch_size, w_g=batch_size,
                   w_ppl=word_size, w_d=batch_size,
                   w_d0=batch_size, w_d1=batch_size)
-      ori = utils.logits2word(logits_ori, vocab["word2id"])
-      tsf = utils.logits2word(logits_tsf, vocab["word2id"])
+      ori = logits2word(logits_ori, vocab["word2id"])
+      tsf = logits2word(logits_tsf, vocab["word2id"])
       half = self._hparams.batch_size/2
       data0_ori += tsf[:half]
       data1_ori += tsf[half:]
 
-    utils.write_sent(data0_ori, output_path + ".0.tsf")
-    utils.write_sent(data1_ori, output_path + ".1.tsf")
+    write_sent(data0_ori, output_path + ".0.tsf")
+    write_sent(data1_ori, output_path + ".1.tsf")
     return losses
 
   def train(self):
-    if FLAGS.config:
-      with open(FLAGS.config) as f:
+    if "config" in self._hparams.keys():
+      with open(self._hparams.config) as f:
         self._hparams = HParams(pkl.load(f))
 
     log_print("Start training with hparams:")
-    log_print(self._hparams)
-    if not FLAGS.config:
+    log_print(json.dumps(self._hparams.todict(), indent=2))
+    if not "config" in self._hparams.keys():
       with open(os.path.join(self._hparams.expt_dir, self._hparams.name)
-                + ".config") as f:
+                + ".config", "w") as f:
         pkl.dump(self._hparams, f)
 
     vocab, train, val, test = self.load_data()
@@ -90,45 +103,41 @@ class TSFTrainer(TrainerBase):
       model = TSF(self._hparams)
       log_print("finished building model")
 
-      if FLAGS.model:
-        model.saver.restore(ses, FLAGS.model)
+      if "model" in self._hparams.keys():
+        model.saver.restore(ses, self._hparams.model)
       else:
-        sess.run(tf.global_variable_initializer())
-        sess.run(tf.local_variable_initializer())
+        sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
 
       losses = Stats()
       gamma = self._hparams.gamma_init
       step = 0
       for epoch in range(self._hparams["max_epoch"]):
-        for batch in utils.get_batches(train[0], train[1], vocab["word2id"],
+        for batch in get_batches(train[0], train[1], vocab["word2id"],
                                        model._hparams.batch_size, shuffle=True):
-          loss_d0 = model.train_d0_step(sess, batch, self._hparams.rho,
-                                        self._hparams.gamma,
-                                        model._hparams.learning_rate )
-          loss_d1 = model.train_d1_step(sess, batch, self._hparams.rho,
-                                        self._hparams.gamma,
-                                        model._hparams.learning_rate )
+          pdb.set_trace()
+          loss_d0 = model.train_d0_step(sess, batch, self._hparams.rho, gamma)
+          loss_d1 = model.train_d1_step(sess, batch, self._hparams.rho, gamma)
 
           if loss_d0 < 1.2 and loss_d1 < 1.2:
             loss, loss_g, ppl_g, loss_d = model.train_g_step(
-              sess, batch, self._hparams.rho, self._hparams.gamma,
-              model._hparams.leanring_rate)
+              sess, batch, self._hparams.rho, gamma)
           else:
             loss, loss_g, ppl_g, loss_d = model.train_ae_step(
-              sess, batch, self._hparams.rho, self._hparams.gamma,
-              model._hparams.leanring_rate)
+              sess, batch, self._hparams.rho, gamma)
 
-          losses.add(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1)
+          losses.append(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1)
 
           step += 1
-          if step % self._hparams.disp_interval:
-            log_print(losses)
+          if step % self._hparams.disp_interval == 0:
+            log_print(str(losses))
             losses.reset()
 
         # eval on dev
         dev_loss = self.eval_model(
           model, sess, vocab, val[0], val[1],
-          os.path.join(FLAGS.expt, "sentiment.dev.epoch%d"%(epoch)))
+          os.path.join(self._hparams.expt_dir,
+                       "sentiment.dev.epoch%d"%(epoch)))
         log_print("dev:" + dev_loss)
         if dev_loss.loss < best_dev:
           best_dev = dev_loss.loss
@@ -143,9 +152,9 @@ class TSFTrainer(TrainerBase):
         gamma = max(self._hparams.gamma_min, gamma * self._hparams.gamma_decay)
 
 
-def main():
+def main(unused_args):
   trainer = TSFTrainer()
   trainer.train()
 
 if __name__ == "__main__":
-  main()
+  tf.app.run()

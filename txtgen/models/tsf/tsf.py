@@ -6,19 +6,24 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import pdb
+
+import copy
 import tensorflow as tf
 from tensorflow.contrib.layers.python.layers import utils
 
 from txtgen import context
+from txtgen.hyperparams import HParams
 from txtgen.modules.encoders.conv1d_discriminator import CNN
-from txtgen.models.text_style_transfer import ops
+from txtgen.models.tsf import ops
 
 
 class TSF:
   """Text style transfer."""
 
   def __init__(self, hparams=None):
-    self._hparams = hparams(hparams, self.default_hparams())
+    self._hparams = HParams(hparams, self.default_hparams(),
+                            allow_new_hparam=True)
     self.input_tensors = self._build_inputs()
     (self.output_tensors, self.loss, self.opt) \
       = self._build_model(self.input_tensors)
@@ -39,6 +44,7 @@ class TSF:
       "dim_y": 200,
       "dim_z": 500,
       "cnn_hparams": {
+        "name": "cnn",
         "kernel_sizes": [3, 4, 5],
         "num_filter": 128,
         "drop_ratio": 0.5,
@@ -53,8 +59,8 @@ class TSF:
   def _build_inputs(self):
     batch_size = self._hparams.batch_size
 
-    enc_inputs = tf.placeholder(tf.int32, [batch_size, None], name='"enc_inputs')
-    dec_inputs = tf.placeholder(tf.int32, [batch_size, None], name='"dec_inputs')
+    enc_inputs = tf.placeholder(tf.int32, [batch_size, None], name="enc_inputs")
+    dec_inputs = tf.placeholder(tf.int32, [batch_size, None], name="dec_inputs")
     targets = tf.placeholder(tf.int32, [batch_size, None], name="targets")
     weights = tf.placeholder(tf.float32, [batch_size, None], name="weights")
     labels = tf.placeholder(tf.float32, [batch_size], name="labels")
@@ -78,8 +84,8 @@ class TSF:
 
   def _build_model(self, input_tensors, reuse=False):
     hparams = self._hparams
-    embedding = tf.variable(
-      "embedding", shape=[hparam.vocab_size, hparam.embedding_size])
+    embedding = tf.get_variable(
+      "embedding", shape=[hparams.vocab_size, hparams.embedding_size])
 
     enc_inputs = tf.nn.embedding_lookup(embedding, input_tensors["enc_inputs"])
     dec_inputs = tf.nn.embedding_lookup(embedding, input_tensors["dec_inputs"])
@@ -88,21 +94,21 @@ class TSF:
     labels = tf.reshape(labels, [-1, 1])
 
     # auto encoder
-    label_proj_e = tf.layers.Dense(hparams.y_dim, name="encoder")
+    label_proj_e = tf.layers.Dense(hparams.dim_y, name="encoder")
     init_state = tf.concat([label_proj_e(labels),
                             tf.zeros([hparams.batch_size, hparams.dim_z])], 1)
-    cell_e = ops.get_rnn_cell(hparam.rnn_hparams)
+    cell_e = ops.get_rnn_cell(hparams.rnn_hparams)
 
     _, z = tf.nn.dynamic_rnn(cell_e, enc_inputs, initial_state=init_state,
                                scope="encoder")
     z  = z[:, hparams.dim_y:]
 
-    label_proj_g = tf.layers.Dense(hparams.y_dim, name="generator")
+    label_proj_g = tf.layers.Dense(hparams.dim_y, name="generator")
     h_ori = tf.concat([label_proj_g(labels), z], 1)
     h_tsf = tf.concat([label_proj_g(1 - labels), z], 1)
 
-    cell_g = ops.get_rnn_cell(hparam.rnn_hparams)
-    softmax_proj = tf.layer.Dense(hparams.vocab_size, name="softmax_proj")
+    cell_g = ops.get_rnn_cell(hparams.rnn_hparams)
+    softmax_proj = tf.layers.Dense(hparams.vocab_size, name="softmax_proj")
     g_outputs, _ = tf.nn.dynamic_rnn(cell_g, dec_inputs, initial_state=h_ori,
                                        scope="generator")
 
@@ -118,9 +124,10 @@ class TSF:
                                      + 1e-8)
     # decoding 
     go = dec_inputs[:, 0, :]
-    #  soft_func = feed_softmax(proj_layer, embedding, input_tensors["gamma"])
-    soft_func = ops.sample_gumbel(proj_layer, embedding, input_tensors["gamma"])
-    hard_func = ops.greedy_softmax(proj_layer, embedding)
+    #  soft_func = feed_softmax(softmax_proj, embedding, input_tensors["gamma"])
+    soft_func = ops.sample_gumbel(softmax_proj, embedding,
+                                  input_tensors["gamma"])
+    hard_func = ops.greedy_softmax(softmax_proj, embedding)
 
     soft_h_ori, soft_logits_ori, _ = ops.rnn_decode(
       h_ori, go, hparams.max_len, cell_g, soft_func, scope="generator")
@@ -133,17 +140,17 @@ class TSF:
       h_tsf, go, hparams.max_len, cell_g, hard_func, scope="generator")
 
     # discriminator
-    half = hparams.batch_size/2
+    half = hparams.batch_size // 2
     # soft_h_tsf = soft_h_tsf[:, input_tensors["atch_len"] + 1, :]
-    soft_h_tsf = soft_h_tsf[:, : 1+input_tensors["atch_len"], :]
+    soft_h_tsf = soft_h_tsf[:, : 1+input_tensors["batch_len"], :]
 
-    cnn0_hparams = copy.copy(hparams.cnn_hparams)
-    cnn1_hparams = copy.copy(hparams.cnn_hparams)
-    cnn0_hparams["name"] = "cnn0"
-    cnn1_hparams["name"] = "cnn1"
+    cnn0_hparams = copy.deepcopy(hparams.cnn_hparams)
+    cnn1_hparams = copy.deepcopy(hparams.cnn_hparams)
+    cnn0_hparams.name = "cnn0"
+    cnn1_hparams.name = "cnn1"
     
-    cnn0 = conv1d_discriminator.CNN(cnn0_hparams)
-    cnn1 = conv1d_discriminator.CNN(cnn1_hparams)
+    cnn0 = CNN(cnn0_hparams)
+    cnn1 = CNN(cnn1_hparams)
 
     loss_d0 = ops.adv_loss(teach_h[:half], soft_h_tsf[half:], cnn0)
     loss_d1 = ops.adv_loss(teach_h[half:], soft_h_tsf[:half], cnn1)
@@ -180,6 +187,7 @@ class TSF:
     utils.collect_named_outputs(collections_loss, "loss", loss)
     utils.collect_named_outputs(collections_loss, "loss_g", loss_g)
     utils.collect_named_outputs(collections_loss, "ppl_g", ppl_g)
+    utils.collect_named_outputs(collections_loss, "loss_d", loss_d)
     utils.collect_named_outputs(collections_loss, "loss_d0", loss_d0)
     utils.collect_named_outputs(collections_loss, "loss_d1", loss_d1)
     loss = utils.convert_collection_to_dict(collections_loss)
@@ -223,22 +231,22 @@ class TSF:
       self.feed_dict(batch, rho, gamma))
     return loss, loss_g, ppl_g, loss_d
 
-  def eval_step(self, sess, batch, rho, gamma)
+  def eval_step(self, sess, batch, rho, gamma):
     loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1 = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
        self.loss["ppl_g"],
        self.loss["loss_d"],
        self.loss["loss_d0"],
-       self.loss["loss_d1"],
+       self.loss["loss_d1"]],
       self.feed_dict(batch, rho, gamma, is_train=False))
     return loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1
 
   def decode_step(self, sess, batch):
     logits_ori, logits_tsf = sess.run(
       [self.output_tensors["hard_logits_ori"],
-       self.output_tensors["hard_logits_tsf"],]
-      feed_dict = {
+       self.output_tensors["hard_logits_tsf"]],
+      feed_dict={
         self.input_tensors["enc_inputs"]: batch["enc_inputs"],
         self.input_tensors["dec_inputs"]: batch["dec_inputs"],
         self.input_tensors["labels"]: batch["labels"]})
@@ -252,7 +260,7 @@ class TSF:
       self.input_tensors["dec_inputs"]: batch["dec_inputs"],
       self.input_tensors["targets"]: batch["targets"],
       self.input_tensors["weights"]: batch["weights"],
-      self.input_tensprs["labels"]: batch["labels"],
+      self.input_tensors["labels"]: batch["labels"],
       self.input_tensors["rho"]: rho,
       self.input_tensors["gamma"]: gamma,
     }

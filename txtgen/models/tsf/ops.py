@@ -22,15 +22,14 @@ def get_rnn_cell(hparams=None):
     "state_keep_prob": 1.0,
   }
 
-  if hparams is None or isinstance(hparams, dict):
-    hparams = HParams(hparams, default_hparams)
+  hparams = HParams(hparams, default_hparams, allow_new_hparam=True)
 
   cells = []
   for i in range(hparams.num_layers):
-    if cell_type == "BasicLSTMCell":
+    if hparams.type == "BasicLSTMCell":
       cell = rnn.BasicLSTMCell(hparams.size)
-    else: # cell_type == "GRUCell":
-      cell = rnn.BasicGRUCell(hparams.size)
+    else: # hparams.type == "GRU:
+      cell = rnn.GRUCell(hparams.size)
 
     cell = rnn.DropoutWrapper(
       cell = cell,
@@ -75,7 +74,7 @@ def sample_gumbel(proj_layer, embedding, gamma, straight_throught=False):
 
   return loop_func
 
-def greey_softmax(proj_layer, embedding):
+def greedy_softmax(proj_layer, embedding):
   def loop_func(output):
     logits = proj_layer(output)
     word = tf.argmax(logits, axis=1)
@@ -94,14 +93,14 @@ def rnn_decode(h, inp, length, cell, loop_func, scope):
       output, h = cell(inp, h)
     inp, logits, sample = loop_func(output)
     logits_seq.append(tf.expand_dims(logits, 1))
-    if sample:
+    if sample is not None:
       sample_seq.append(tf.expand_dims(sample, 1))
     else:
       sample_seq.append(sample)
 
   h_seq = tf.concat(h_seq, 1)
   logits_seq = tf.concat(h_seq, 1)
-  if sample[0]:
+  if sample[0] is not None:
     sample_seq = tf.concat(sample, 1)
   else:
     sample_seq = None
@@ -120,7 +119,7 @@ def adv_loss(x_real, x_fake, discriminator):
 def retrieve_variables(scopes):
   var = []
   for scope in scopes:
-    var += tf.get_collections(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
+    var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
   return var
 
 def feed_dict(model, batch, rho, gamma, dropout, learning_rate):
