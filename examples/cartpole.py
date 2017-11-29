@@ -1,11 +1,40 @@
 import numpy as np
 import gym
-from txtgen.models.deep_q_network import DeepQNetwork
+from txtgen.agents import NatureDQNAgent
 
-env = gym.make('CartPole-v0')
+import tensorflow as tf
+
+env = gym.make('CartPole-v1')
 
 if __name__ == '__main__':
-    agent = DeepQNetwork(actions=2, state_dimension=4)
+    hparams = NatureDQNAgent.default_hparams()
+    hparams['qnetwork'] = {
+        'hparams': {
+            'network_hparams': {
+                'layers': [
+                    {
+                        'type': 'Dense',
+                        'kwargs': {
+                            'units': 128,
+                            'activation': 'relu'
+                        }
+                    }, {
+                        'type': 'Dense',
+                        'kwargs': {
+                            'units': 128,
+                            'activation': 'relu'
+                        }
+                    }, {
+                        'type': 'Dense',
+                        'kwargs': {
+                            'units': 2
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    agent = NatureDQNAgent(actions=2, state_shape=(4, ), hparams=hparams)
 
     for i in range(5000):
         reward_sum = 0.0
