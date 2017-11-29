@@ -8,7 +8,7 @@ from __future__ import print_function
 
 class Stats():
   def __init__(self):
-    self.clear()
+    self.reset()
 
   def reset(self):
     self._loss, self._g, self._ppl, self._d, self._d0, self._d1 \
@@ -17,7 +17,7 @@ class Stats():
       = 0, 0, 0, 0, 0, 0
 
   def append(self, loss, g, ppl, d, d0, d1,
-             w_loss=1., w_g=1., w_ppl=1. w_d=1, w_d0=1., w_d1=1.):
+             w_loss=1., w_g=1., w_ppl=1., w_d=1, w_d0=1., w_d1=1.):
     self._loss.append(loss*w_loss)
     self._g.append(g*w_g)
     self._ppl.append(ppl*w_ppl)

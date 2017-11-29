@@ -7,9 +7,10 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from txtgen import HParams
-from txtgen.modules.encoders.encoder_base import EncoderBase
+from txtgen.hyperparams import HParams
+from txtgen.modules.module_base import ModuleBase
 from txtgen.core.layers import get_layer
+from txtgen.core import utils
 
 
 class CNN(ModuleBase):
@@ -30,7 +31,7 @@ class CNN(ModuleBase):
   @staticmethod
   def default_hparams():
     return {
-      "name": "cnn"
+      "name": "cnn",
       "kernel_sizes": [3, 4, 5],
       "num_filter": 128,
       "drop_ratio": 0.5
@@ -51,7 +52,7 @@ class CNN(ModuleBase):
     outputs = tf.concat(pooled_outputs, 1)
     outputs = self._dropout_layer(outputs)
 
-    logits = proj_layer(outputs)
+    logits = self._proj_layer(outputs)
 
     self._add_internal_trainable_variables()
     self._built = True
