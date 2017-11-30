@@ -119,9 +119,9 @@ class TSF:
     loss_g = tf.nn.sparse_softmax_cross_entropy_with_logits(
       labels=tf.reshape(input_tensors["targets"], [-1]), logits=g_logits)
     loss_g *= tf.reshape(input_tensors["weights"], [-1])
-    loss_g = tf.reduce_sum(loss_g) / hparams.batch_size
     ppl_g = tf.reduce_sum(loss_g) / (tf.reduce_sum(input_tensors["weights"]) \
                                      + 1e-8)
+    loss_g = tf.reduce_sum(loss_g) / hparams.batch_size
     # decoding 
     go = dec_inputs[:, 0, :]
     #  soft_func = feed_softmax(softmax_proj, embedding, input_tensors["gamma"])
@@ -247,6 +247,7 @@ class TSF:
       [self.output_tensors["hard_logits_ori"],
        self.output_tensors["hard_logits_tsf"]],
       feed_dict={
+        context.is_train(): False,
         self.input_tensors["enc_inputs"]: batch["enc_inputs"],
         self.input_tensors["dec_inputs"]: batch["dec_inputs"],
         self.input_tensors["labels"]: batch["labels"]})
