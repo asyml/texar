@@ -25,7 +25,9 @@ class CNN(ModuleBase):
                                     activation=activation)
       self._conv_layers.append(conv_layer)
 
-    self._dropout_layer = tf.layers.Dropout(rate=self._hparams.drop_ratio)
+    drop_ratio = self._hparams.drop_ratio
+    drop_ratio = 1 - utils.switch_dropout(1 - drop_ratio)
+    self._dropout_layer = tf.layers.Dropout(rate=drop_ratio)
     self._proj_layer = tf.layers.Dense(1)
 
   @staticmethod
@@ -39,8 +41,6 @@ class CNN(ModuleBase):
 
 
   def _build(self, inputs):
-    drop_ratio = self._hparams.drop_ratio
-    drop_ratio = 1 - utils.switch_dropout(1 - drop_ratio)
     pooled_outputs = []
     for conv_layer in self._conv_layers:
       h = conv_layer(inputs)
