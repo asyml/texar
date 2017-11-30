@@ -60,16 +60,16 @@ class TSFTrainer(TrainerBase):
 
     data0_ori, data1_tsf = [], []
     for batch in batches:
-      logits_ori, logits_tsf = model.decode_step(batch)
+      logits_ori, logits_tsf = model.decode_step(sess, batch)
 
       loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1 = model.eval_step(
         sess, batch, self._hparams.rho, self._hparams.gamma_min)
       batch_size = len(batch["enc_inputs"])
       word_size = batch["weights"].sum()
       losses.append(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1,
-                  w_loss=batch_size, w_g=batch_size,
-                  w_ppl=word_size, w_d=batch_size,
-                  w_d0=batch_size, w_d1=batch_size)
+                    w_loss=batch_size, w_g=batch_size,
+                    w_ppl=word_size, w_d=batch_size,
+                    w_d0=batch_size, w_d1=batch_size)
       ori = logits2word(logits_ori, vocab["word2id"])
       tsf = logits2word(logits_tsf, vocab["word2id"])
       half = self._hparams.batch_size/2
@@ -115,7 +115,6 @@ class TSFTrainer(TrainerBase):
       for epoch in range(self._hparams["max_epoch"]):
         for batch in get_batches(train[0], train[1], vocab["word2id"],
                                        model._hparams.batch_size, shuffle=True):
-          pdb.set_trace()
           loss_d0 = model.train_d0_step(sess, batch, self._hparams.rho, gamma)
           loss_d1 = model.train_d1_step(sess, batch, self._hparams.rho, gamma)
 
@@ -130,7 +129,7 @@ class TSFTrainer(TrainerBase):
 
           step += 1
           if step % self._hparams.disp_interval == 0:
-            log_print(str(losses))
+            log_print("step %d: "%(step) + str(losses))
             losses.reset()
 
         # eval on dev
