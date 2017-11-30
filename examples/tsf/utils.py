@@ -56,9 +56,17 @@ def get_batches(x0, x1, word2id, batch_size, shuffle=True):
     x1 = makeup(x1, len(x0))
   n = len(x0)
 
-  if shuffle:
-    random.shuffle(x0)
-    random.shuffle(x1)
+  # if shuffle:
+  #   random.shuffle(x0)
+  #   random.shuffle(x1)
+
+  # order0 = range(n)
+  # z = sorted(zip(order0, x0), key=lambda i:len(i[1]))
+  # order0, x0 = zip(*z)
+
+  # order1 = range(n)
+  # z = sorted(zip(order1, x1), key=lambda i:len(i[1]))
+  # order1, x1 = zip(*z)
 
   batches = []
   s = 0
@@ -71,6 +79,9 @@ def get_batches(x0, x1, word2id, batch_size, shuffle=True):
                              word2id,
                              batch_size))
     s = t
+
+  if shuffle:
+    random.shuffle(batches)
  
   return batches
 

@@ -33,7 +33,7 @@ class TSFTrainer(TrainerBase):
       "gamma_init": 1,
       "gamma_decay": 0.5,
       "gamma_min": 0.001,
-      "disp_interval": 10,
+      "disp_interval": 100,
       "batch_size": 128,
       "vocab_size": 10000,
       "max_len": 20,
@@ -55,7 +55,7 @@ class TSFTrainer(TrainerBase):
 
   def eval_model(self, model, sess, vocab, data0, data1, outupt_path):
     batches = get_batches(data0, data1, vocab["word2id"],
-                                self._hparams.batch_size, shuffle=False)
+                          self._hparams.batch_size, shuffle=False)
     losses = Stats()
 
     data0_ori, data1_tsf = [], []
@@ -73,11 +73,15 @@ class TSFTrainer(TrainerBase):
       ori = logits2word(logits_ori, vocab["word2id"])
       tsf = logits2word(logits_tsf, vocab["word2id"])
       half = self._hparams.batch_size/2
-      data0_ori += tsf[:half]
-      data1_ori += tsf[half:]
+      data0_ori += ori[:half]
+      data1_ori += ori[half:]
+      data0_tsf += tsf[:half]
+      data1_tsf += tsf[half:]
 
-    write_sent(data0_ori, output_path + ".0.tsf")
-    write_sent(data1_ori, output_path + ".1.tsf")
+    write_sent(data0_ori, output_path + ".0.ori")
+    write_sent(data1_ori, output_path + ".1.ori")
+    write_sent(data0_tsf, output_path + ".0.tsf")
+    write_sent(data1_tsf, output_path + ".1.tsf")
     return losses
 
   def train(self):
@@ -114,16 +118,21 @@ class TSFTrainer(TrainerBase):
       step = 0
       for epoch in range(self._hparams["max_epoch"]):
         for batch in get_batches(train[0], train[1], vocab["word2id"],
-                                       model._hparams.batch_size, shuffle=True):
+                                 model._hparams.batch_size, shuffle=True):
           loss_d0 = model.train_d0_step(sess, batch, self._hparams.rho, gamma)
           loss_d1 = model.train_d1_step(sess, batch, self._hparams.rho, gamma)
 
-          if loss_d0 < 1.2 and loss_d1 < 1.2:
-            loss, loss_g, ppl_g, loss_d = model.train_g_step(
-              sess, batch, self._hparams.rho, gamma)
-          else:
-            loss, loss_g, ppl_g, loss_d = model.train_ae_step(
-              sess, batch, self._hparams.rho, gamma)
+          # if loss_d0 < 1.2 and loss_d1 < 1.2:
+          #   loss, loss_g, ppl_g, loss_d = model.train_g_step(
+          #     sess, batch, self._hparams.rho, gamma)
+          # else:
+          #   loss, loss_g, ppl_g, loss_d = model.train_ae_step(
+          #     sess, batch, self._hparams.rho, gamma)
+            
+          loss, loss_g, ppl_g, loss_d = model.train_ae_step(
+            sess, batch, self._hparams.rho, gamma)
+
+          # loss, loss_g, ppl_g, loss_d = 0, 0, 0, 0
 
           losses.append(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1)
 
