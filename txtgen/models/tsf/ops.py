@@ -85,28 +85,27 @@ def greedy_softmax(proj_layer, embedding):
 
   return loop_func
 
-def rnn_decode(h, inp, length, cell, loop_func, scope):
-  h_seq, logits_seq, sample_seq = [], [], []
-
+def rnn_decode(state, inp, length, cell, loop_func, scope):
+  output_seq, logits_seq, sample_seq = [], [], []
   for t in range(length):
-    h_seq.append(tf.expand_dims(h, 1))
     # reuse cell params
     with tf.variable_scope(scope, reuse=True):
-      output, h = cell(inp, h)
+      output, state = cell(inp, state)
     inp, logits, sample = loop_func(output)
+    output_seq.append(tf.expand_dims(output, 1))
     logits_seq.append(tf.expand_dims(logits, 1))
     if sample is not None:
       sample_seq.append(tf.expand_dims(sample, 1))
     else:
       sample_seq.append(sample)
 
-  h_seq = tf.concat(h_seq, 1)
+  output_seq = tf.concat(output_seq, 1)
   logits_seq = tf.concat(logits_seq, 1)
   if sample[0] is not None:
     sample_seq = tf.concat(sample, 1)
   else:
     sample_seq = None
-  return h_seq, logits_seq, sample_seq
+  return output_seq, logits_seq, sample_seq
 
 def adv_loss(x_real, x_fake, discriminator):
   real_logits = discriminator(x_real)
