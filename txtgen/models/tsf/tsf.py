@@ -108,7 +108,7 @@ class TSF:
     cell_e = ops.get_rnn_cell(hparams.rnn_hparams)
 
     _, z = tf.nn.dynamic_rnn(cell_e, enc_inputs, initial_state=init_state,
-                               scope="encoder")
+                              scope="encoder")
     z  = z[:, hparams.dim_y:]
 
     label_proj_g = tf.layers.Dense(hparams.dim_y, name="generator")
@@ -120,7 +120,9 @@ class TSF:
     g_outputs, _ = tf.nn.dynamic_rnn(cell_g, dec_inputs, initial_state=h_ori,
                                        scope="generator")
 
-    teach_h = tf.concat([tf.expand_dims(h_ori, 1), g_outputs], 1)
+    h_ori_drop = tf.nn.dropout(
+      h_ori, keep_prob=hparams.rnn_hparams.output_keep_prob)
+    teach_h = tf.concat([tf.expand_dims(h_ori_drop, 1), g_outputs], 1)
     g_logits = softmax_proj(tf.reshape(
       g_outputs, [-1, hparams.rnn_hparams.size]))
 
@@ -155,7 +157,9 @@ class TSF:
     half = hparams.batch_size // 2
     # plus the encoder h
     soft_output_tsf = soft_output_tsf[:, :input_tensors["batch_len"], :]
-    soft_h_tsf = tf.concat([tf.expand_dims(h_tsf, 1), soft_output_tsf], 1)
+    h_tsf_drop = tf.nn.dropout(
+      h_tsf, keep_prob=hparams.rnn_hparams.output_keep_prob)
+    soft_h_tsf = tf.concat([tf.expand_dims(h_tsf_drop, 1), soft_output_tsf], 1)
 
     cnn0_hparams = copy.deepcopy(hparams.cnn_hparams)
     cnn1_hparams = copy.deepcopy(hparams.cnn_hparams)
