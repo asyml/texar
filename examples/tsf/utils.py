@@ -7,6 +7,7 @@ import pdb
 
 import time
 import random
+import numpy as np
 
 def log_print(line):
   """Add time to print function."""
@@ -89,12 +90,12 @@ def strip_eos(sents):
   return [sent[:sent.index("_EOS")] if "_EOS" in sent else sent
           for sent in sents]
 
-def logits2word(logits, word2id):
-  sents = np.argmax(logits, axis=1).tolist()
-  sents = [[word2id[word] for word in sent] for sent in sents]
+def logits2word(logits, id2word):
+  sents = np.argmax(logits, axis=2).tolist()
+  sents = [[id2word[word] for word in sent] for sent in sents]
   return strip_eos(sents)
 
 def write_sent(sents, path):
   with open(path, "w") as f:
     for sent in sents:
-      f.write("".join(sents) + "\n")
+      f.write(" ".join(sent) + "\n")

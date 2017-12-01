@@ -8,6 +8,7 @@ from __future__ import print_function
 import pdb
 
 import cPickle as pkl
+import numpy as np
 import tensorflow as tf
 import json
 import os
@@ -53,26 +54,29 @@ class TSFTrainer(TrainerBase):
 
     return vocab, train, val, test
 
-  def eval_model(self, model, sess, vocab, data0, data1, outupt_path):
+  def eval_model(self, model, sess, vocab, data0, data1, output_path):
     batches = get_batches(data0, data1, vocab["word2id"],
                           self._hparams.batch_size, shuffle=False)
     losses = Stats()
 
-    data0_ori, data1_tsf = [], []
+    data0_ori, data1_ori, data0_tsf, data1_tsf = [], [], [], []
     for batch in batches:
       logits_ori, logits_tsf = model.decode_step(sess, batch)
+      # (soft_logits_ori, soft_logits_tsf, \
+      #  g_logits, test_output, test_logits) = model.decode_step_soft(sess, batch)
+      # pdb.set_trace()
 
       loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1 = model.eval_step(
         sess, batch, self._hparams.rho, self._hparams.gamma_min)
       batch_size = len(batch["enc_inputs"])
-      word_size = batch["weights"].sum()
+      word_size = np.sum(batch["weights"])
       losses.append(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1,
                     w_loss=batch_size, w_g=batch_size,
                     w_ppl=word_size, w_d=batch_size,
                     w_d0=batch_size, w_d1=batch_size)
-      ori = logits2word(logits_ori, vocab["word2id"])
-      tsf = logits2word(logits_tsf, vocab["word2id"])
-      half = self._hparams.batch_size/2
+      ori = logits2word(logits_ori, vocab["id2word"])
+      tsf = logits2word(logits_tsf, vocab["id2word"])
+      half = self._hparams.batch_size // 2
       data0_ori += ori[:half]
       data1_ori += ori[half:]
       data0_tsf += tsf[:half]
@@ -108,7 +112,7 @@ class TSFTrainer(TrainerBase):
       log_print("finished building model")
 
       if "model" in self._hparams.keys():
-        model.saver.restore(ses, self._hparams.model)
+        model.saver.restore(sess, self._hparams.model)
       else:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
@@ -116,6 +120,7 @@ class TSFTrainer(TrainerBase):
       losses = Stats()
       gamma = self._hparams.gamma_init
       step = 0
+      best_dev = float("inf")
       for epoch in range(self._hparams["max_epoch"]):
         for batch in get_batches(train[0], train[1], vocab["word2id"],
                                  model._hparams.batch_size, shuffle=True):
@@ -146,14 +151,14 @@ class TSFTrainer(TrainerBase):
           model, sess, vocab, val[0], val[1],
           os.path.join(self._hparams.expt_dir,
                        "sentiment.dev.epoch%d"%(epoch)))
-        log_print("dev:" + dev_loss)
+        log_print("dev " + str(dev_loss))
         if dev_loss.loss < best_dev:
           best_dev = dev_loss.loss
           file_name = (
             self._hparams['name'] + '_' + '%.2f' %(best_dev) + '.model')
           model.saver.save(
             sess, os.path.join(self._hparams['expt_dir'], file_name),
-            latest_filename=hparams['name'] + '_checkpoint',
+            latest_filename=self._hparams['name'] + '_checkpoint',
             global_step=step)
           log_print("saved model %s"%(file_name))
 

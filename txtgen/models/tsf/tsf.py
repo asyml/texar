@@ -27,6 +27,7 @@ class TSF:
     self.input_tensors = self._build_inputs()
     (self.output_tensors, self.loss, self.opt) \
       = self._build_model(self.input_tensors)
+    self.saver = tf.train.Saver()
 
   @staticmethod
   def default_hparams():
@@ -139,6 +140,10 @@ class TSF:
     hard_h_tsf, hard_logits_tsf, _ = ops.rnn_decode(
       h_tsf, go, hparams.max_len, cell_g, hard_func, scope="generator")
 
+    with tf.variable_scope("generator", reuse=True):
+      test_output, _ = cell_g(go, h_ori)
+    test_logits = softmax_proj(test_output)
+
     # discriminator
     half = hparams.batch_size // 2
     # soft_h_tsf = soft_h_tsf[:, input_tensors["atch_len"] + 1, :]
@@ -181,6 +186,13 @@ class TSF:
                                 hard_logits_ori)
     utils.collect_named_outputs(collections_output, "hard_logits_tsf",
                                 hard_logits_tsf)
+    utils.collect_named_outputs(collections_output, "soft_logits_ori",
+                                soft_logits_ori)
+    utils.collect_named_outputs(collections_output, "soft_logits_tsf",
+                                soft_logits_tsf)
+    utils.collect_named_outputs(collections_output, "g_logits", g_logits)
+    utils.collect_named_outputs(collections_output, "test_output", test_output)
+    utils.collect_named_outputs(collections_output, "test_logits", test_logits)
     output_tensors = utils.convert_collection_to_dict(collections_output)
 
     collections_loss = hparams.collections + '/loss'
@@ -266,3 +278,17 @@ class TSF:
       self.input_tensors["gamma"]: gamma,
     }
 
+  def decode_step_soft(self, sess, batch, gamma=0.01):
+    logits_ori, logits_tsf, g_logits, test_output, test_logits = sess.run(
+      [self.output_tensors["soft_logits_ori"],
+       self.output_tensors["soft_logits_tsf"],
+       self.output_tensors["g_logits"],
+       self.output_tensors["test_output"],
+       self.output_tensors["test_logits"]],
+      feed_dict={
+        context.is_train(): False,
+        self.input_tensors["enc_inputs"]: batch["enc_inputs"],
+        self.input_tensors["dec_inputs"]: batch["dec_inputs"],
+        self.input_tensors["labels"]: batch["labels"],
+        self.input_tensors["gamma"]: gamma})
+    return logits_ori, logits_tsf, g_logits, test_output, test_logits
