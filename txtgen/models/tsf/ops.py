@@ -5,6 +5,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
+import pdb
+
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
 import numpy as np
@@ -99,7 +101,7 @@ def rnn_decode(h, inp, length, cell, loop_func, scope):
       sample_seq.append(sample)
 
   h_seq = tf.concat(h_seq, 1)
-  logits_seq = tf.concat(h_seq, 1)
+  logits_seq = tf.concat(logits_seq, 1)
   if sample[0] is not None:
     sample_seq = tf.concat(sample, 1)
   else:
