@@ -9,6 +9,7 @@ from __future__ import print_function
 import pdb
 
 import copy
+import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.layers.python.layers import utils
 
@@ -85,8 +86,14 @@ class TSF:
 
   def _build_model(self, input_tensors, reuse=False):
     hparams = self._hparams
+    embedding_init = np.random.random_sample(
+      (hparams.vocab_size, hparams.embedding_size)) - 0.5
+    for i in range(hparams.vocab_size):
+      embedding_init[i] /= np.linalg.norm(embedding_init[i])
+    # embedding = tf.get_variable(
+    #   "embedding", shape=[hparams.vocab_size, hparams.embedding_size])
     embedding = tf.get_variable(
-      "embedding", shape=[hparams.vocab_size, hparams.embedding_size])
+      "embedding", initializer=embedding_init.astype(np.float32))
 
     enc_inputs = tf.nn.embedding_lookup(embedding, input_tensors["enc_inputs"])
     dec_inputs = tf.nn.embedding_lookup(embedding, input_tensors["dec_inputs"])
@@ -130,14 +137,14 @@ class TSF:
                                   input_tensors["gamma"])
     hard_func = ops.greedy_softmax(softmax_proj, embedding)
 
-    soft_h_ori, soft_logits_ori, _ = ops.rnn_decode(
+    soft_output_ori, soft_logits_ori, _ = ops.rnn_decode(
       h_ori, go, hparams.max_len, cell_g, soft_func, scope="generator")
-    soft_h_tsf, soft_logits_tsf, _ = ops.rnn_decode(
+    soft_output_tsf, soft_logits_tsf, _ = ops.rnn_decode(
       h_tsf, go, hparams.max_len, cell_g, soft_func, scope="generator")
 
-    hard_h_ori, hard_logits_ori, _ = ops.rnn_decode(
+    hard_output_ori, hard_logits_ori, _ = ops.rnn_decode(
       h_ori, go, hparams.max_len, cell_g, hard_func, scope="generator")
-    hard_h_tsf, hard_logits_tsf, _ = ops.rnn_decode(
+    hard_output_tsf, hard_logits_tsf, _ = ops.rnn_decode(
       h_tsf, go, hparams.max_len, cell_g, hard_func, scope="generator")
 
     with tf.variable_scope("generator", reuse=True):
@@ -146,8 +153,9 @@ class TSF:
 
     # discriminator
     half = hparams.batch_size // 2
-    # soft_h_tsf = soft_h_tsf[:, input_tensors["atch_len"] + 1, :]
-    soft_h_tsf = soft_h_tsf[:, : 1+input_tensors["batch_len"], :]
+    # plus the encoder h
+    soft_output_tsf = soft_output_tsf[:, :input_tensors["batch_len"], :]
+    soft_h_tsf = tf.concat([tf.expand_dims(h_tsf, 1), soft_output_tsf], 1)
 
     cnn0_hparams = copy.deepcopy(hparams.cnn_hparams)
     cnn1_hparams = copy.deepcopy(hparams.cnn_hparams)
@@ -193,6 +201,8 @@ class TSF:
     utils.collect_named_outputs(collections_output, "g_logits", g_logits)
     utils.collect_named_outputs(collections_output, "test_output", test_output)
     utils.collect_named_outputs(collections_output, "test_logits", test_logits)
+    utils.collect_named_outputs(collections_output, "teach_h", teach_h)
+    utils.collect_named_outputs(collections_output, "soft_h_tsf", soft_h_tsf)
     output_tensors = utils.convert_collection_to_dict(collections_output)
 
     collections_loss = hparams.collections + '/loss'
@@ -214,8 +224,9 @@ class TSF:
     return output_tensors, loss, opt
 
   def train_d0_step(self, sess, batch, rho, gamma):
-    loss_d0, _ = sess.run([self.loss["loss_d0"], self.opt["optimizer_d0"]],
-                          self.feed_dict(batch, rho, gamma))
+    loss_d0, _ = sess.run(
+      [self.loss["loss_d0"], self.opt["optimizer_d0"],],
+      self.feed_dict(batch, rho, gamma))
     return loss_d0
 
   def train_d1_step(self, sess, batch, rho, gamma):
