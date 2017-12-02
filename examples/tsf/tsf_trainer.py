@@ -62,9 +62,6 @@ class TSFTrainer(TrainerBase):
     data0_ori, data1_ori, data0_tsf, data1_tsf = [], [], [], []
     for batch in batches:
       logits_ori, logits_tsf = model.decode_step(sess, batch)
-      # (soft_logits_ori, soft_logits_tsf, \
-      #  g_logits, test_output, test_logits) = model.decode_step_soft(sess, batch)
-      # pdb.set_trace()
 
       loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1 = model.eval_step(
         sess, batch, self._hparams.rho, self._hparams.gamma_min)
@@ -127,17 +124,12 @@ class TSFTrainer(TrainerBase):
           loss_d0 = model.train_d0_step(sess, batch, self._hparams.rho, gamma)
           loss_d1 = model.train_d1_step(sess, batch, self._hparams.rho, gamma)
 
-          # if loss_d0 < 1.2 and loss_d1 < 1.2:
-          #   loss, loss_g, ppl_g, loss_d = model.train_g_step(
-          #     sess, batch, self._hparams.rho, gamma)
-          # else:
-          #   loss, loss_g, ppl_g, loss_d = model.train_ae_step(
-          #     sess, batch, self._hparams.rho, gamma)
-            
-          loss, loss_g, ppl_g, loss_d = model.train_ae_step(
-            sess, batch, self._hparams.rho, gamma)
-
-          # loss, loss_g, ppl_g, loss_d = 0, 0, 0, 0
+          if loss_d0 < 1.2 and loss_d1 < 1.2:
+            loss, loss_g, ppl_g, loss_d = model.train_g_step(
+              sess, batch, self._hparams.rho, gamma)
+          else:
+            loss, loss_g, ppl_g, loss_d = model.train_ae_step(
+              sess, batch, self._hparams.rho, gamma)
 
           losses.append(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1)
 
