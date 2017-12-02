@@ -41,15 +41,16 @@ class TSF:
         "type": "GRUCell",
         "size": 700,
         "input_keep_prob": 0.5,
-        "output_keep_prob": 0.5,
       },
+      "output_keep_prob": 0.5
       "dim_y": 200,
       "dim_z": 500,
       "cnn_hparams": {
         "name": "cnn",
         "kernel_sizes": [3, 4, 5],
         "num_filter": 128,
-        "drop_ratio": 0.5,
+        "input_keep_prob": 1.,
+        "output_keep_prob": 0.5,
       },
       "adam_hparams": {
         "learning_rate": 1e-4,
@@ -118,11 +119,12 @@ class TSF:
     cell_g = ops.get_rnn_cell(hparams.rnn_hparams)
     softmax_proj = tf.layers.Dense(hparams.vocab_size, name="softmax_proj")
     g_outputs, _ = tf.nn.dynamic_rnn(cell_g, dec_inputs, initial_state=h_ori,
-                                       scope="generator")
+                                     scope="generator")
 
-    h_ori_drop = tf.nn.dropout(
-      h_ori, keep_prob=hparams.rnn_hparams.output_keep_prob)
-    teach_h = tf.concat([tf.expand_dims(h_ori_drop, 1), g_outputs], 1)
+    teach_h = tf.concat([tf.expand_dims(h_ori, 1), g_outputs], 1)
+
+    g_output = tf.nn.dropout(
+      g_output, utils.switch_dropout(hparams.output_keep_prob))
     g_logits = softmax_proj(tf.reshape(
       g_outputs, [-1, hparams.rnn_hparams.size]))
 
@@ -136,8 +138,10 @@ class TSF:
     go = dec_inputs[:, 0, :]
     #  soft_func = feed_softmax(softmax_proj, embedding, input_tensors["gamma"])
     soft_func = ops.sample_gumbel(softmax_proj, embedding,
-                                  input_tensors["gamma"])
-    hard_func = ops.greedy_softmax(softmax_proj, embedding)
+                                  input_tensors["gamma"],
+                                  output_keep_prob=hparams.output_keep_prob)
+    hard_func = ops.greedy_softmax(softmax_proj, embedding,
+                                   output_keep_prob=hparams.output_keep_prob)
 
     soft_output_ori, soft_logits_ori, _ = ops.rnn_decode(
       h_ori, go, hparams.max_len, cell_g, soft_func, scope="generator")
@@ -157,9 +161,7 @@ class TSF:
     half = hparams.batch_size // 2
     # plus the encoder h
     soft_output_tsf = soft_output_tsf[:, :input_tensors["batch_len"], :]
-    h_tsf_drop = tf.nn.dropout(
-      h_tsf, keep_prob=hparams.rnn_hparams.output_keep_prob)
-    soft_h_tsf = tf.concat([tf.expand_dims(h_tsf_drop, 1), soft_output_tsf], 1)
+    soft_h_tsf = tf.concat([tf.expand_dims(h_tsf, 1), soft_output_tsf], 1)
 
     cnn0_hparams = copy.deepcopy(hparams.cnn_hparams)
     cnn1_hparams = copy.deepcopy(hparams.cnn_hparams)
