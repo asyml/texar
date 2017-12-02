@@ -54,8 +54,9 @@ def gumbel_softmax(logits, gamma):
   g = -tf.log(-tf.log(u + eps) + eps)
   return tf.nn.softmax((logits + g) / gamma)
 
-def feed_softmax(proj_layer, embedding, gamma):
+def feed_softmax(proj_layer, embedding, gamma, output_keep_prob=0.5):
   def loop_func(output):
+    output = tf.nn.dropout(output, utils.switch_dropout(output_keep_prob))
     logits = proj_layer(output)
     prob = tf.nn.softmax(logits / gamma)
     inp = tf.matmul(prob, embedding)
@@ -63,8 +64,10 @@ def feed_softmax(proj_layer, embedding, gamma):
 
   return loop_func
 
-def sample_gumbel(proj_layer, embedding, gamma, straight_throught=False):
+def sample_gumbel(proj_layer, embedding, gamma, output_keep_prob=0.5,
+                  straight_throught=False):
   def loop_func(output):
+    output = tf.nn.dropout(output, utils.switch_dropout(output_keep_prob))
     logits = proj_layer(output)
     sample = gumbel_softmax(logits, gamma)
     if straight_throught:
@@ -76,8 +79,9 @@ def sample_gumbel(proj_layer, embedding, gamma, straight_throught=False):
 
   return loop_func
 
-def greedy_softmax(proj_layer, embedding):
+def greedy_softmax(proj_layer, embedding, output_keep_prob=0.5):
   def loop_func(output):
+    output = tf.nn.dropout(output, utils.switch_dropout(output_keep_prob))
     logits = proj_layer(output)
     word = tf.argmax(logits, axis=1)
     inp = tf.nn.embedding_lookup(embedding, word)
