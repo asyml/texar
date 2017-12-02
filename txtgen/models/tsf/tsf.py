@@ -71,7 +71,6 @@ class TSF:
     batch_len = tf.placeholder(tf.int32, name="batch_len")
     gamma = tf.placeholder(tf.float32, name="gamma")
     rho = tf.placeholder(tf.float32, name="rho")
-    lr = tf.placeholder(tf.float32, name="lr")
 
     collections_input = self._hparams.collections + '/input'
     utils.collect_named_outputs(collections_input, "enc_inputs", enc_inputs)
@@ -82,7 +81,6 @@ class TSF:
     utils.collect_named_outputs(collections_input, "batch_len", batch_len)
     utils.collect_named_outputs(collections_input, "gamma", gamma)
     utils.collect_named_outputs(collections_input, "rho", rho)
-    utils.collect_named_outputs(collections_input, "lr", lr)
 
     return utils.convert_collection_to_dict(collections_input)
 
@@ -176,7 +174,7 @@ class TSF:
     loss_d1 = ops.adv_loss(teach_h[half:], soft_h_tsf[:half], cnn1)
 
     loss_d = loss_d0 + loss_d1
-    loss = loss_g - input_tensors["rho"] * loss_d
+    loss =loss_g - input_tensors["rho"] * loss_d
 
     var_eg = ops.retrieve_variables(["encoder", "generator",
                                      "softmax_proj", "embedding"])

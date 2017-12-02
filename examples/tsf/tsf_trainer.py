@@ -118,9 +118,10 @@ class TSFTrainer(TrainerBase):
       gamma = self._hparams.gamma_init
       step = 0
       best_dev = float("inf")
+      batches = get_batches(train[0], train[1], vocab["word2id"],
+                            model._hparams.batch_size, shuffle=True)
       for epoch in range(self._hparams["max_epoch"]):
-        for batch in get_batches(train[0], train[1], vocab["word2id"],
-                                 model._hparams.batch_size, shuffle=True):
+        for batch in batches:
           loss_d0 = model.train_d0_step(sess, batch, self._hparams.rho, gamma)
           loss_d1 = model.train_d1_step(sess, batch, self._hparams.rho, gamma)
 
