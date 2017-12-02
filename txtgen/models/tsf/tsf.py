@@ -15,6 +15,7 @@ from tensorflow.contrib.layers.python.layers import utils
 
 from txtgen import context
 from txtgen.hyperparams import HParams
+from txtgen.core.utils import switch_dropout
 from txtgen.modules.encoders.conv1d_discriminator import CNN
 from txtgen.models.tsf import ops
 
@@ -42,7 +43,7 @@ class TSF:
         "size": 700,
         "input_keep_prob": 0.5,
       },
-      "output_keep_prob": 0.5
+      "output_keep_prob": 0.5,
       "dim_y": 200,
       "dim_z": 500,
       "cnn_hparams": {
@@ -123,8 +124,8 @@ class TSF:
 
     teach_h = tf.concat([tf.expand_dims(h_ori, 1), g_outputs], 1)
 
-    g_output = tf.nn.dropout(
-      g_output, utils.switch_dropout(hparams.output_keep_prob))
+    g_outputs = tf.nn.dropout(
+      g_outputs, switch_dropout(hparams.output_keep_prob))
     g_logits = softmax_proj(tf.reshape(
       g_outputs, [-1, hparams.rnn_hparams.size]))
 

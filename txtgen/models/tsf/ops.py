@@ -12,7 +12,7 @@ import tensorflow.contrib.rnn as rnn
 import numpy as np
 
 from txtgen.hyperparams import HParams
-from txtgen.core import utils
+from txtgen.core.utils import switch_dropout
 
 def get_rnn_cell(hparams=None):
   default_hparams = {
@@ -35,9 +35,9 @@ def get_rnn_cell(hparams=None):
 
     cell = rnn.DropoutWrapper(
       cell = cell,
-      input_keep_prob=utils.switch_dropout(hparams["input_keep_prob"]),
-      output_keep_prob=utils.switch_dropout(hparams["output_keep_prob"]),
-      state_keep_prob=utils.switch_dropout(hparams["state_keep_prob"]))
+      input_keep_prob=switch_dropout(hparams["input_keep_prob"]),
+      output_keep_prob=switch_dropout(hparams["output_keep_prob"]),
+      state_keep_prob=switch_dropout(hparams["state_keep_prob"]))
 
     cells.append(cell)
 
@@ -56,7 +56,7 @@ def gumbel_softmax(logits, gamma):
 
 def feed_softmax(proj_layer, embedding, gamma, output_keep_prob=0.5):
   def loop_func(output):
-    output = tf.nn.dropout(output, utils.switch_dropout(output_keep_prob))
+    output = tf.nn.dropout(output, switch_dropout(output_keep_prob))
     logits = proj_layer(output)
     prob = tf.nn.softmax(logits / gamma)
     inp = tf.matmul(prob, embedding)
@@ -67,7 +67,7 @@ def feed_softmax(proj_layer, embedding, gamma, output_keep_prob=0.5):
 def sample_gumbel(proj_layer, embedding, gamma, output_keep_prob=0.5,
                   straight_throught=False):
   def loop_func(output):
-    output = tf.nn.dropout(output, utils.switch_dropout(output_keep_prob))
+    output = tf.nn.dropout(output, switch_dropout(output_keep_prob))
     logits = proj_layer(output)
     sample = gumbel_softmax(logits, gamma)
     if straight_throught:
@@ -81,7 +81,7 @@ def sample_gumbel(proj_layer, embedding, gamma, output_keep_prob=0.5,
 
 def greedy_softmax(proj_layer, embedding, output_keep_prob=0.5):
   def loop_func(output):
-    output = tf.nn.dropout(output, utils.switch_dropout(output_keep_prob))
+    output = tf.nn.dropout(output, switch_dropout(output_keep_prob))
     logits = proj_layer(output)
     word = tf.argmax(logits, axis=1)
     inp = tf.nn.embedding_lookup(embedding, word)
