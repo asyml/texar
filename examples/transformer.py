@@ -25,11 +25,11 @@ if __name__ == "__main__":
     # filled with default values. For text database, default values are defined
     # in `txtgen.data.database.default_text_dataset_hparams()`.
     data_hparams = {
-        "num_epochs": 10,
+        "num_epochs": 20,
         "seed": 123,
         "batch_size":32,
         "source_dataset": {
-            "files": ['data/translation/de-en/de_sentences.txt'],
+            "files": ['data/translation/de-en/train_de_sentences.txt'],
             "vocab_file": 'data/translation/de-en/de.vocab.txt',
             "processing":{
                 "bos_token": "<SOURCE_BOS>",
@@ -37,7 +37,7 @@ if __name__ == "__main__":
                 }
         },
         "target_dataset": {
-            "files": ['data/translation/de-en/en_sentences.txt'],
+            "files": ['data/translation/de-en/train_en_sentences.txt'],
             "vocab_file": 'data/translation/de-en/en.vocab.txt',
             # "reader_share": True,
             "processing":{
@@ -153,10 +153,9 @@ if __name__ == "__main__":
                         feed_dict={context.is_train():True})
                 if step % 10 == 0:
                     print("%d: %.6f" % (step, loss))
-
-                if step % 1000 ==0:
-                    saver.save(sess, './my-model', global_step = step)
-
+                    saver.save(sess, './logdir/my-model', global_step = step)
+                if step % 100 ==0:
+                    coord.request_stop()
         except tf.errors.OutOfRangeError:
             print('Done -- epoch limit reached')
         finally:

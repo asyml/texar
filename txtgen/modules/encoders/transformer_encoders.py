@@ -107,7 +107,7 @@ class TransformerEncoder(EncoderBase):
         dim = embedded_inputs.shape.as_list()[2]
         if self._hparams.scale:
             embedded_inputs = embedded_inputs*(dim**0.5)
-        with tf.variable_scope(self.variable.scope):
+        with tf.variable_scope(self.variable_scope):
             if self._hparams.sinusoid:
                 position_inputs = layers.sinusoid_positional_encoding(embedded_inputs,
                         max_time=self._hparams.max_seq_length,
@@ -115,7 +115,7 @@ class TransformerEncoder(EncoderBase):
             enc_output = tf.layers.dropout(embedded_inputs+position_inputs,
                     rate=self._hparams.dropout,
                     training=context.is_train())
-            print('enc_output:{}'.format(enc_output.get_shape()))
+            # print('enc_output:{}'.format(enc_output.get_shape()))
             for i in range(self._hparams.num_blocks):
                 with tf.variable_scope("num_blocks_{}".format(i)):
                     enc_output = layers.multihead_attention(queries=enc_output,
