@@ -91,7 +91,8 @@ class BasicRNNDecoderTest(tf.test.TestCase):
         outputs, final_state, sequence_lengths = decoder(
             helper_train, decoder.cell.zero_state(self._batch_size, tf.float32))
 
-        inputs = tf.nn.embedding_lookup(decoder.embedding, self._inputs_placeholder)
+        inputs = tf.nn.embedding_lookup(decoder.embedding,
+                                        self._inputs_placeholder)
         tf_helper = tf.contrib.seq2seq.TrainingHelper(
             inputs, [self._max_time]*self._batch_size)
 
@@ -109,21 +110,27 @@ class BasicRNNDecoderTest(tf.test.TestCase):
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
             inputs_ = np.random.randint(
-                self._vocab_size, size=(self._batch_size, self._max_time), dtype=np.int32)
+                self._vocab_size, size=(self._batch_size, self._max_time),
+                dtype=np.int32)
+
             outputs_, final_state_, sequence_lengths_ = sess.run(
                 [outputs, final_state, sequence_lengths],
                 feed_dict={context.is_train(): True,
                            self._inputs_placeholder: inputs_})
+
             tf_outputs_, tf_final_state_, tf_sequence_lengths_ = sess.run(
                 [tf_outputs, tf_final_state, tf_sequence_lengths],
                 feed_dict={context.is_train(): True,
                            self._inputs_placeholder: inputs_})
 
-            np.testing.assert_array_equal(outputs_.rnn_output, tf_outputs_.rnn_output)
-            np.testing.assert_array_equal(outputs_.sample_id, tf_outputs_.sample_id)
+            np.testing.assert_array_equal(outputs_.rnn_output,
+                                          tf_outputs_.rnn_output)
+            np.testing.assert_array_equal(outputs_.sample_id,
+                                          tf_outputs_.sample_id)
             np.testing.assert_array_equal(final_state_.c, tf_final_state_.c)
             np.testing.assert_array_equal(final_state_.h, tf_final_state_.h)
-            np.testing.assert_array_equal(sequence_lengths_, tf_sequence_lengths_)
+            np.testing.assert_array_equal(sequence_lengths_,
+                                          tf_sequence_lengths_)
 
     def test_decode_infer(self):
         """Tests decoding in inferencee mode.
