@@ -48,20 +48,17 @@ def get_batch(x, y, word2id, batch_size, min_len=5):
     "len": max_len + 1
   }
 
-def get_batches(x0, x1, word2id, batch_size, shuffle=True):
+def get_batches(x0, x1, word2id, batch_size, sort=False):
   # half as batch size
   batch_size = batch_size // 2
-  if len(x0) < len(x1):
-    x0 = makeup(x0, len(x1))
-  if len(x1) < len(x0):
-    x1 = makeup(x1, len(x0))
-  n = len(x0)
+  n = max(len(x0), len(x1))
+  n = (n // batch_size + 1) * batch_size
+  if len(x0) < n:
+    x0 = makeup(x0, n)
+  if len(x1) < n:
+    x1 = makeup(x1, n)
 
-  # if shuffle:
-  #   random.shuffle(x0)
-  #   random.shuffle(x1)
-
-  if shuffle:
+  if sort:
     order0 = range(n)
     z = sorted(zip(order0, x0), key=lambda i:len(i[1]))
     order0, x0 = zip(*z)
@@ -69,23 +66,25 @@ def get_batches(x0, x1, word2id, batch_size, shuffle=True):
     order1 = range(n)
     z = sorted(zip(order1, x1), key=lambda i:len(i[1]))
     order1, x1 = zip(*z)
+  else:
+    order0 = range(n)
+    order1 = range(n)
+    random.shuffle(order0)
+    random.shuffle(order1)
+    x0 = [x0[i] for i in order0]
+    x1 = [x1[i] for i in order1]
 
   batches = []
   s = 0
   while s < n:
-    t = min(s + batch_size, n)
-    if t < s + batch_size:
-      break
+    t = s + batch_size
     batches.append(get_batch(x0[s:t] + x1[s:t],
                              [0] * (t-s) + [1]*(t-s),
                              word2id,
                              batch_size))
     s = t
-
-  if shuffle:
-    random.shuffle(batches)
  
-  return batches
+  return batches, order0, order1
 
 def strip_eos(sents):
   return [sent[:sent.index("_EOS")] if "_EOS" in sent else sent
@@ -100,3 +99,9 @@ def write_sent(sents, path):
   with open(path, "w") as f:
     for sent in sents:
       f.write(" ".join(sent) + "\n")
+
+def reorder(order, _x):
+  x = range(len(_x))
+  for i, a in zip(order, _x):
+    x[i] = a
+  return x

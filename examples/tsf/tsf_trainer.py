@@ -38,7 +38,9 @@ class TSFTrainer(TrainerBase):
       "batch_size": 128,
       "vocab_size": 10000,
       "max_len": 20,
-      "max_epoch": 20
+      "max_epoch": 20,
+      "sort_data": True,
+      "shuffle_across_epoch": False
     }
 
   def load_data(self):
@@ -55,8 +57,9 @@ class TSFTrainer(TrainerBase):
     return vocab, train, val, test
 
   def eval_model(self, model, sess, vocab, data0, data1, output_path):
-    batches = get_batches(data0, data1, vocab["word2id"],
-                          self._hparams.batch_size, shuffle=False)
+    batches, order0, order1 = get_batches(
+      data0, data1, vocab["word2id"],
+      self._hparams.batch_size, sort=self._hparams.sort_data)
     losses = Stats()
 
     data0_ori, data1_ori, data0_tsf, data1_tsf = [], [], [], []
@@ -78,6 +81,13 @@ class TSFTrainer(TrainerBase):
       data1_ori += ori[half:]
       data0_tsf += tsf[:half]
       data1_tsf += tsf[half:]
+
+    n0 = len(data0)
+    n1 = len(data1)
+    data0_ori = reorder(order0, data0_ori)[:n0]
+    data1_ori = reorder(order1, data1_ori)[:n1]
+    data0_tsf = reorder(order0, data0_tsf)[:n0]
+    data1_tsf = reorder(order1, data1_tsf)[:n1]
 
     write_sent(data0_ori, output_path + ".0.ori")
     write_sent(data1_ori, output_path + ".1.ori")
@@ -118,9 +128,16 @@ class TSFTrainer(TrainerBase):
       gamma = self._hparams.gamma_init
       step = 0
       best_dev = float("inf")
-      batches = get_batches(train[0], train[1], vocab["word2id"],
-                            model._hparams.batch_size, shuffle=True)
+      batches, _, _ = get_batches(train[0], train[1], vocab["word2id"],
+                                  model._hparams.batch_size,
+                                  sort=self._hparams.sort_data)
       for epoch in range(self._hparams["max_epoch"]):
+        # shuffle across batches
+        if self._hparams.shuffle_across_epoch:
+          batches = get_batches(train[0], train[1], vocab["word2id"],
+                                model._hparams.batch_size,
+                                sort=self._hparams.sort_data)
+        random.shuffle(batches)
         for batch in batches:
           loss_d0 = model.train_d0_step(sess, batch, self._hparams.rho, gamma)
           loss_d1 = model.train_d1_step(sess, batch, self._hparams.rho, gamma)
