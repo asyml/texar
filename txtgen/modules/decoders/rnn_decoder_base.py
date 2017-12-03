@@ -32,11 +32,13 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                  cell=None,
                  embedding=None,
                  vocab_size=None,
-                 hparams=None):
+                 hparams=None,
+                 output_layer=None):
         ModuleBase.__init__(self, hparams)
 
         self._helper = None
         self._initial_state = None
+        self._output_layer = output_layer
 
         # Make rnn cell
         with tf.variable_scope(self.variable_scope):
