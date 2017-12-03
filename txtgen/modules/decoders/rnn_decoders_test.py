@@ -7,6 +7,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import pdb
+
 import numpy as np
 
 import tensorflow as tf
@@ -36,7 +38,9 @@ class BasicRNNDecoderTest(tf.test.TestCase):
     def test_decode_train(self):
         """Tests decoding in training mode.
         """
-        decoder = BasicRNNDecoder(vocab_size=self._vocab_size)
+        output_layer = tf.layers.Dense(self._vocab_size)
+        decoder = BasicRNNDecoder(vocab_size=self._vocab_size,
+                                  output_layer=output_layer)
 
         helper_train = get_helper(
             decoder.hparams.helper_train.type,
@@ -70,11 +74,63 @@ class BasicRNNDecoderTest(tf.test.TestCase):
                 sequence_lengths_,
                 [self._max_time]*self._batch_size)
 
+    def test_decode_train_with_tf(self):
+        self._inputs_placeholder = tf.placeholder(
+            tf.int32, [self._batch_size, self._max_time], name="inputs")
+        output_layer = tf.layers.Dense(self._vocab_size)
+        decoder = BasicRNNDecoder(vocab_size=self._vocab_size,
+                                  output_layer=output_layer)
+
+        helper_train = get_helper(
+            decoder.hparams.helper_train.type,
+            inputs=self._inputs_placeholder,
+            sequence_length=[self._max_time]*self._batch_size,
+            embedding=decoder.embedding,
+            **decoder.hparams.helper_train.kwargs.todict())
+
+        outputs, final_state, sequence_lengths = decoder(
+            helper_train, decoder.cell.zero_state(self._batch_size, tf.float32))
+
+        inputs = tf.nn.embedding_lookup(decoder.embedding, self._inputs_placeholder)
+        tf_helper = tf.contrib.seq2seq.TrainingHelper(
+            inputs, [self._max_time]*self._batch_size)
+
+        tf_decoder = tf.contrib.seq2seq.BasicDecoder(
+            decoder.cell,
+            tf_helper,
+            decoder.cell.zero_state(self._batch_size, tf.float32),
+            output_layer=output_layer)
+
+        tf_outputs, tf_final_state, tf_sequence_lengths \
+            = tf.contrib.seq2seq.dynamic_decode(
+                tf_decoder)
+
+        cell_dim = decoder.hparams.rnn_cell.cell.kwargs.num_units
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            inputs_ = np.random.randint(
+                self._vocab_size, size=(self._batch_size, self._max_time), dtype=np.int32)
+            outputs_, final_state_, sequence_lengths_ = sess.run(
+                [outputs, final_state, sequence_lengths],
+                feed_dict={context.is_train(): True,
+                           self._inputs_placeholder: inputs_})
+            tf_outputs_, tf_final_state_, tf_sequence_lengths_ = sess.run(
+                [tf_outputs, tf_final_state, tf_sequence_lengths],
+                feed_dict={context.is_train(): True,
+                           self._inputs_placeholder: inputs_})
+
+            np.testing.assert_array_equal(outputs_.rnn_output, tf_outputs_.rnn_output)
+            np.testing.assert_array_equal(outputs_.sample_id, tf_outputs_.sample_id)
+            np.testing.assert_array_equal(final_state_.c, tf_final_state_.c)
+            np.testing.assert_array_equal(final_state_.h, tf_final_state_.h)
+            np.testing.assert_array_equal(sequence_lengths_, tf_sequence_lengths_)
 
     def test_decode_infer(self):
         """Tests decoding in inferencee mode.
         """
-        decoder = BasicRNNDecoder(vocab_size=self._vocab_size)
+        output_layer = tf.layers.Dense(self._vocab_size)
+        decoder = BasicRNNDecoder(vocab_size=self._vocab_size,
+                                  output_layer=output_layer)
 
         helper_infer = get_helper(
             decoder.hparams.helper_infer.type,
