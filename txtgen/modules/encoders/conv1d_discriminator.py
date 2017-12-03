@@ -5,6 +5,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import pdb
+
 import tensorflow as tf
 
 from txtgen.hyperparams import HParams
@@ -20,12 +22,9 @@ class CNN(ModuleBase):
 
     self._conv_layers = []
     for k in self._hparams.kernel_sizes:
-      activation = lambda x : tf.nn.leaky_relu(x, alpha=0.01)
-      conv_layer = tf.layers.Conv1D(self._hparams.num_filter, k,
-                                    activation=activation)
+      conv_layer = tf.layers.Conv1D(self._hparams.num_filter, k)
       self._conv_layers.append(conv_layer)
 
-    self._dropout_layer = tf.layers.Dropout(rate=self._hparams.drop_ratio)
     self._proj_layer = tf.layers.Dense(1)
 
   @staticmethod
@@ -34,23 +33,27 @@ class CNN(ModuleBase):
       "name": "cnn",
       "kernel_sizes": [3, 4, 5],
       "num_filter": 128,
-      "drop_ratio": 0.5
+      "output_keep_prob": 0.5,
+      "input_keep_prob": 1,
+      "leaky_relu_alpha": 0.01
     }
 
 
   def _build(self, inputs):
-    drop_ratio = self._hparams.drop_ratio
-    drop_ratio = 1 - utils.switch_dropout(1 - drop_ratio)
+    inputs = tf.nn.dropout(
+      inputs, utils.switch_dropout(self._hparams.input_keep_prob))
+
     pooled_outputs = []
     for conv_layer in self._conv_layers:
       h = conv_layer(inputs)
+      h = tf.nn.leaky_relu(h, alpha=self._hparams.leaky_relu_alpha)
       # pooling after conv
       h = tf.reduce_max(h, axis=1)
-      h = tf.reshape(h, [-1, h.get_shape().as_list()[-1]])
       pooled_outputs.append(h)
 
     outputs = tf.concat(pooled_outputs, 1)
-    outputs = self._dropout_layer(outputs)
+    outputs = tf.nn.dropout(
+      outputs, utils.switch_dropout(self._hparams.output_keep_prob))
 
     logits = self._proj_layer(outputs)
 

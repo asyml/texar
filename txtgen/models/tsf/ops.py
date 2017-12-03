@@ -5,12 +5,14 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
+import pdb
+
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
 import numpy as np
 
 from txtgen.hyperparams import HParams
-from txtgen.core import utils
+from txtgen.core.utils import switch_dropout
 
 def get_rnn_cell(hparams=None):
   default_hparams = {
@@ -33,9 +35,9 @@ def get_rnn_cell(hparams=None):
 
     cell = rnn.DropoutWrapper(
       cell = cell,
-      input_keep_prob=utils.switch_dropout(hparams["input_keep_prob"]),
-      output_keep_prob=utils.switch_dropout(hparams["output_keep_prob"]),
-      state_keep_prob=utils.switch_dropout(hparams["state_keep_prob"]))
+      input_keep_prob=switch_dropout(hparams["input_keep_prob"]),
+      output_keep_prob=switch_dropout(hparams["output_keep_prob"]),
+      state_keep_prob=switch_dropout(hparams["state_keep_prob"]))
 
     cells.append(cell)
 
@@ -52,8 +54,9 @@ def gumbel_softmax(logits, gamma):
   g = -tf.log(-tf.log(u + eps) + eps)
   return tf.nn.softmax((logits + g) / gamma)
 
-def feed_softmax(proj_layer, embedding, gamma):
+def feed_softmax(proj_layer, embedding, gamma, output_keep_prob=0.5):
   def loop_func(output):
+    output = tf.nn.dropout(output, switch_dropout(output_keep_prob))
     logits = proj_layer(output)
     prob = tf.nn.softmax(logits / gamma)
     inp = tf.matmul(prob, embedding)
@@ -61,8 +64,10 @@ def feed_softmax(proj_layer, embedding, gamma):
 
   return loop_func
 
-def sample_gumbel(proj_layer, embedding, gamma, straight_throught=False):
+def sample_gumbel(proj_layer, embedding, gamma, output_keep_prob=0.5,
+                  straight_throught=False):
   def loop_func(output):
+    output = tf.nn.dropout(output, switch_dropout(output_keep_prob))
     logits = proj_layer(output)
     sample = gumbel_softmax(logits, gamma)
     if straight_throught:
@@ -74,8 +79,9 @@ def sample_gumbel(proj_layer, embedding, gamma, straight_throught=False):
 
   return loop_func
 
-def greedy_softmax(proj_layer, embedding):
+def greedy_softmax(proj_layer, embedding, output_keep_prob=0.5):
   def loop_func(output):
+    output = tf.nn.dropout(output, switch_dropout(output_keep_prob))
     logits = proj_layer(output)
     word = tf.argmax(logits, axis=1)
     inp = tf.nn.embedding_lookup(embedding, word)
@@ -83,28 +89,27 @@ def greedy_softmax(proj_layer, embedding):
 
   return loop_func
 
-def rnn_decode(h, inp, length, cell, loop_func, scope):
-  h_seq, logits_seq, sample_seq = [], [], []
-
+def rnn_decode(state, inp, length, cell, loop_func, scope):
+  output_seq, logits_seq, sample_seq = [], [], []
   for t in range(length):
-    h_seq.append(tf.expand_dims(h, 1))
     # reuse cell params
     with tf.variable_scope(scope, reuse=True):
-      output, h = cell(inp, h)
+      output, state = cell(inp, state)
     inp, logits, sample = loop_func(output)
+    output_seq.append(tf.expand_dims(output, 1))
     logits_seq.append(tf.expand_dims(logits, 1))
     if sample is not None:
       sample_seq.append(tf.expand_dims(sample, 1))
     else:
       sample_seq.append(sample)
 
-  h_seq = tf.concat(h_seq, 1)
-  logits_seq = tf.concat(h_seq, 1)
+  output_seq = tf.concat(output_seq, 1)
+  logits_seq = tf.concat(logits_seq, 1)
   if sample[0] is not None:
     sample_seq = tf.concat(sample, 1)
   else:
     sample_seq = None
-  return h_seq, logits_seq, sample_seq
+  return output_seq, logits_seq, sample_seq
 
 def adv_loss(x_real, x_fake, discriminator):
   real_logits = discriminator(x_real)
