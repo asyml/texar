@@ -7,6 +7,7 @@ import pdb
 
 import time
 import random
+import numpy as np
 
 def log_print(line):
   """Add time to print function."""
@@ -56,9 +57,18 @@ def get_batches(x0, x1, word2id, batch_size, shuffle=True):
     x1 = makeup(x1, len(x0))
   n = len(x0)
 
+  # if shuffle:
+  #   random.shuffle(x0)
+  #   random.shuffle(x1)
+
   if shuffle:
-    random.shuffle(x0)
-    random.shuffle(x1)
+    order0 = range(n)
+    z = sorted(zip(order0, x0), key=lambda i:len(i[1]))
+    order0, x0 = zip(*z)
+
+    order1 = range(n)
+    z = sorted(zip(order1, x1), key=lambda i:len(i[1]))
+    order1, x1 = zip(*z)
 
   batches = []
   s = 0
@@ -71,6 +81,9 @@ def get_batches(x0, x1, word2id, batch_size, shuffle=True):
                              word2id,
                              batch_size))
     s = t
+
+  if shuffle:
+    random.shuffle(batches)
  
   return batches
 
@@ -78,12 +91,12 @@ def strip_eos(sents):
   return [sent[:sent.index("_EOS")] if "_EOS" in sent else sent
           for sent in sents]
 
-def logits2word(logits, word2id):
-  sents = np.argmax(logits, axis=1).tolist()
-  sents = [[word2id[word] for word in sent] for sent in sents]
+def logits2word(logits, id2word):
+  sents = np.argmax(logits, axis=2).tolist()
+  sents = [[id2word[word] for word in sent] for sent in sents]
   return strip_eos(sents)
 
 def write_sent(sents, path):
   with open(path, "w") as f:
     for sent in sents:
-      f.write("".join(sents) + "\n")
+      f.write(" ".join(sent) + "\n")
