@@ -81,7 +81,6 @@ class TransformerDecoder(ModuleBase):
         num_units = tgt_embedding.shape.as_list()[2]
         if self._hparams.scale:
             tgt_embedding = tgt_embedding * (num_units**0.5)
-        hparams = self._hparams
         with tf.variable_scope(self.variable_scope):
             if self._hparams.sinusoid:
                 position_dec_embeds = layers.sinusoid_positional_encoding(tgt_embedding,
@@ -90,8 +89,8 @@ class TransformerDecoder(ModuleBase):
             else:
                 position_dec_embeds = layers.get_embedding(
                         vocab_size=self._hparams.max_seq_length,
-                        num_units=self._hparams.embedding.dim,
-                        scope='dec_pe')
+                        hparams=self._hparams.embedding,
+                        variable_scope='dec_pe')
             dec_input = tf.layers.dropout(tgt_embedding + position_dec_embeds,
                     rate = self._hparams.dropout,
                     training = context.is_train())
@@ -99,16 +98,16 @@ class TransformerDecoder(ModuleBase):
                 with tf.variable_scope("num_blocks_{}".format(i)):
                     attended_dec = layers.multihead_attention(queries = dec_input,
                             keys = dec_input,
-                            num_heads = hparams.num_heads,
-                            dropout_rate = hparams.dropout,
+                            num_heads = self._hparams.num_heads,
+                            dropout_rate = self._hparams.dropout,
                             causality = True,
                             scope = "self_attention")
                     attended_dec = layers.normalize(attended_dec)
 
                     attended_dec = layers.multihead_attention(queries = dec_input,
                             keys = encoder_output,
-                            num_heads = hparams.num_heads,
-                            dropout_rate = hparams.dropout,
+                            num_heads = self._hparams.num_heads,
+                            dropout_rate = self._hparams.dropout,
                             causality = False,
                             scope = "vanilla_attention")
                     attended_dec = layers.normalize(attended_dec)

@@ -32,7 +32,7 @@ if __name__ == "__main__":
         "batch_size":32,
         "source_dataset": {
             "files": ['data/translation/de-en/test_de_sentences.txt'],
-            "vocab_file": 'data/translation/de-en/de.vocab.txt',
+            "vocab_file": 'data/translation/de-en/filter_de.vocab.txt',
             "processing":{
                 "bos_token": "<SOURCE_BOS>",
                 "eos_token": "<SOURCE_EOS>",
@@ -40,7 +40,7 @@ if __name__ == "__main__":
         },
         "target_dataset": {
             "files": ['data/translation/de-en/test_en_sentences.txt'],
-            "vocab_file": 'data/translation/de-en/en.vocab.txt',
+            "vocab_file": 'data/translation/de-en/filter_en.vocab.txt',
             # "reader_share": True,
             "processing":{
                 "bos_token": "<TARGET_BOS>",
@@ -108,10 +108,13 @@ if __name__ == "__main__":
     # for other hyperparameters.
     opt_hparams={
         "optimizer": {
-            "type": "MomentumOptimizer",
+            "type": "AdamOptimizer",
             "kwargs": {
                 "learning_rate": 0.0001,
-                "momentum": 0.9
+                "beta1": 0.9,
+                "beta2":0.98,
+                "epsilon":1e-8,
+                # "momentum": 0.9
             }
         }
     }
@@ -146,13 +149,16 @@ if __name__ == "__main__":
                         feed_dict={context.is_train():False})
 
                     for src,tgt,prd in zip(source_words, target_words, predicted_words):
-                        src = [str(b, encoding='utf-8') for b in src]
-                        tgt = [str(b, encoding='utf-8') for b in tgt]
+                        src = [str(b, encoding='utf-8') for b in src][1:]
+                        tgt = [str(b, encoding='utf-8') for b in tgt][1:]
                         prd = [str(b, encoding='utf-8') for b in prd]
-                        tgt_sentence =  " ".join(tgt).split("</S>")[0].strip()
-                        src_sentence = " ".join(src).split("</S>")[0].strip()
-                        prd_sentence = " ".join(prd).split("</S>")[0].strip()
-                        ref  = tgt_sentence.split()
+                        tgt_sentence =  " ".join(tgt).split("<TARGET_EOS>")[0].strip()
+                        src_sentence = " ".join(src).split("<SOURCE_EOS>")[0].strip()
+                        prd_sentence = " ".join(prd).split("<TARGET_EOS>")[0].strip()
+                        print('src:{}'.format(src_sentence))
+                        print('tgt:{}'.format(tgt_sentence))
+                        print('prd:{}'.format(prd_sentence))
+                        ref = tgt_sentence.split()
                         hypothesis = prd_sentence.split()
                         if len(ref)>3 and len(hypothesis)>3:
                             list_of_refs.append([ref])
