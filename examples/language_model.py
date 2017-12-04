@@ -8,6 +8,7 @@ from __future__ import print_function
 
 # pylint: disable=invalid-name, no-name-in-module
 
+import sys
 import tensorflow as tf
 
 # We shall wrap all these modules
@@ -18,8 +19,9 @@ from txtgen.losses import mle_losses
 from txtgen.core import optimization as opt
 from txtgen import context
 
-if __name__ == "__main__":
-    ### Build data pipeline
+
+def load_data():
+    # Build data pipeline
 
     # Config data hyperparams. Hyperparams not configured will be automatically
     # filled with default values. For text database, default values are defined
@@ -43,12 +45,19 @@ if __name__ == "__main__":
     #                               # `[batch_size, max_seq_length]`
     # }
     data_batch = text_db()
+    return data_batch, text_db.vocab, text_db.batch_size
 
-    ### Build model
-    inputs = data_batch['text_ids'][:, -1]
+
+def create_model(vocab_size):
+    # Ensure model structure for train and inference.
     # Build decoder. Simply use the default hyperparameters.
-    #decoder = rnn_decoders.BasicRNNDecoder(vocab_size=text_db.vocab.vocab_size)
-    decoder = BasicRNNDecoder(vocab_size=text_db.vocab.vocab_size)
+    return BasicRNNDecoder(vocab_size=vocab_size)
+
+
+def train():
+    data_batch, vocab, batch_size = load_data()
+
+    decoder = create_model(vocab.vocab_size)
 
     # Build connector, which simply feeds zero state to decoder as initial state
     connector = ConstantConnector(decoder.state_size)
@@ -63,7 +72,7 @@ if __name__ == "__main__":
 
     # Decode
     outputs, final_state, sequence_lengths = decoder(
-        helper=helper_train, initial_state=connector(text_db.batch_size))
+        helper=helper_train, initial_state=connector(batch_size))
 
     # Build loss
     mle_loss = mle_losses.average_sequence_sparse_softmax_cross_entropy(
@@ -92,14 +101,13 @@ if __name__ == "__main__":
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
 
-        #with tf.contrib.slim.queues.QueueRunners(sess):
+        # with tf.contrib.slim.queues.QueueRunners(sess):
         #    _, step, loss = sess.run(
         #        [train_op, global_step, mle_loss],
         #        feed_dict={context.is_train(): True})
 
         #    if step % 10 == 0:
         #        print("%d: %.6f" % (step, loss))
-
 
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
@@ -125,3 +133,51 @@ if __name__ == "__main__":
             coord.request_stop()
         coord.join(threads)
 
+        saver = tf.train.Saver(tf.global_variables())
+        saver.save(sess, './checkpoints/lm.ckpt', global_step=global_step)
+
+
+def sample(ckpt, n_samples=5):
+    _, vocab, _ = load_data()
+
+    decoder = create_model(vocab.vocab_size)
+
+    # Build connector, which simply feeds zero state to decoder as initial state
+    connector = ConstantConnector(decoder.state_size)
+
+    # Build the inference helper.
+    helper_infer = get_helper(
+        decoder.hparams.helper_infer.type,
+        embedding=decoder.embedding,
+        start_tokens=[vocab._token_to_id_map_py[vocab.bos_token]] * n_samples,
+        end_token=vocab._token_to_id_map_py[vocab.eos_token],
+        softmax_temperature=None,
+        seed=None
+    )
+
+    # Decode
+    outputs, final_state, sequence_lengths = decoder(
+        helper=helper_infer, initial_state=connector(n_samples))
+
+    with tf.Session() as sess:
+        saver = tf.train.Saver(tf.global_variables())
+        saver.restore(sess, ckpt)
+
+        sess_outputs = sess.run(outputs, feed_dict={context.is_train(): False})
+        for i in range(n_samples):
+            words = [vocab._id_to_token_map_py[id] for id in sess_outputs.sample_id[i]]
+
+            if vocab.eos_token in words:
+                words = words[:words.index(vocab.eos_token)]
+
+            print('> ' + ' '.join(words))
+
+
+if __name__ == "__main__":
+
+    ckpt = sys.argv[1] if len(sys.argv) > 1 else None  # model checkpoint path
+
+    if ckpt:
+        sample(ckpt)
+    else:
+        train()

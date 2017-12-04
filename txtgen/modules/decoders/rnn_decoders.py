@@ -9,6 +9,8 @@ from __future__ import print_function
 # pylint: disable=no-name-in-module, too-many-arguments, too-many-locals
 # pylint: disable=not-context-manager
 
+import pdb
+
 import collections
 
 import tensorflow as tf
@@ -109,8 +111,9 @@ class BasicRNNDecoder(RNNDecoderBase):
                  cell=None,
                  embedding=None,
                  vocab_size=None,
-                 hparams=None):
-        RNNDecoderBase.__init__(self, cell, embedding, vocab_size, hparams)
+                 hparams=None,
+                 output_layer=None):
+        RNNDecoderBase.__init__(self, cell, embedding, vocab_size, hparams, output_layer)
 
     @staticmethod
     def default_hparams():
@@ -197,16 +200,20 @@ class BasicRNNDecoder(RNNDecoderBase):
 
     def step(self, time, inputs, state, name=None):
         cell_outputs, cell_state = self._cell(inputs, state)
-        logits = tf.contrib.layers.fully_connected(
-            inputs=cell_outputs, num_outputs=self._vocab_size)
+        if self._output_layer:
+            outputs = self._output_layer(cell_outputs)
+        # logits = tf.contrib.layers.fully_connected(
+        #     inputs=cell_outputs, num_outputs=self._vocab_size)
+        # sample_ids = self._helper.sample(
+        #     time=time, outputs=, state=cell_state)
         sample_ids = self._helper.sample(
-            time=time, outputs=logits, state=cell_state)
+            time=time, outputs=outputs, state=cell_state)
         (finished, next_inputs, next_state) = self._helper.next_inputs(
             time=time,
-            outputs=logits,
+            outputs=outputs,
             state=cell_state,
             sample_ids=sample_ids)
-        outputs = BasicRNNDecoderOutput(logits, sample_ids)
+        outputs = BasicRNNDecoderOutput(outputs, sample_ids)
         #next_state should be cell_state directly,
         #according to function next_inputs
         return (outputs, next_state, next_inputs, finished)
