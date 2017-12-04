@@ -1066,6 +1066,7 @@ def poswise_feedforward(attended_dec, scope="multihead_attention", reuse=None):
 
 
 #TODO(zhiting): Is there TF built-in function for this?
+
 def normalize(inputs,
               epsilon = 1e-8,
               scope="ln",

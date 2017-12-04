@@ -94,7 +94,7 @@ class TransformerEncoder(EncoderBase):
             "max_seq_length":100,
             'scale':True,
             'sinusoid':True,
-            'dropout':0.9,
+            'dropout':0.1,
             'num_blocks':2,
             'num_heads':5,
         }
@@ -112,6 +112,11 @@ class TransformerEncoder(EncoderBase):
                 position_inputs = layers.sinusoid_positional_encoding(embedded_inputs,
                         max_time=self._hparams.max_seq_length,
                         scope="enc_pe")
+            else:
+                position_inputs = layers.get_embedding(
+                        hparams = self._hparams.embedding,
+                        vocab_size=self._hparams.max_seq_length,
+                        variable_scope='enc_pe')
             enc_output = tf.layers.dropout(embedded_inputs+position_inputs,
                     rate=self._hparams.dropout,
                     training=context.is_train())
