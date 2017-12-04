@@ -95,8 +95,7 @@ class Vocab(object):  # pylint: disable=too-many-instance-attributes
                              "vocabulary: '%s'" % self._unk_token)
         if self._padding_token in vocab:
             raise ValueError("Special padding token already exists in the "
-                             "vocabulary: '%s', it is an empty token by default"
-                             % self._padding_token)
+                             "vocabulary: '%s'" % self._padding_token)
 
         # Places _padding_token at the beginning to make sure it take index 0.
         vocab = [self._padding_token, self._bos_token, self._eos_token,

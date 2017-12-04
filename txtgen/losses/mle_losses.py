@@ -12,6 +12,8 @@ from tensorflow.python.ops import rnn          # pylint: disable=E0611
 
 # pylint: disable=invalid-name, not-context-manager, protected-access
 
+#TODO(zhiting): update the docs
+# allow dtype
 def _mask_sequences(sequence, sequence_length, time_major=False):
     """Masks out sequence entries that are beyond the respective sequence
     lengths.
@@ -102,8 +104,7 @@ def average_sequence_softmax_cross_entropy(labels,
         losses = tf.nn.softmax_cross_entropy_with_logits(
             labels=labels, logits=logits)
         losses = _mask_sequences(losses, sequence_length, time_major)
-        seq_length_sum = tf.to_float(tf.reduce_sum(sequence_length))
-        loss = tf.reduce_sum(losses) / seq_length_sum
+        loss = tf.reduce_sum(losses) / tf.to_float(tf.shape(labels)[0])
         return loss
 
 
@@ -166,7 +167,6 @@ def average_sequence_sparse_softmax_cross_entropy(labels,
         losses = tf.nn.sparse_softmax_cross_entropy_with_logits(
             labels=labels, logits=logits)
         losses = _mask_sequences(losses, sequence_length, time_major)
-        seq_length_sum = tf.to_float(tf.reduce_sum(sequence_length))
-        loss = tf.reduce_sum(losses) / seq_length_sum
+        loss = tf.reduce_sum(losses) / tf.to_float(tf.shape(labels)[0])
         return loss
 
