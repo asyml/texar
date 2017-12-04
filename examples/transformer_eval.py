@@ -11,7 +11,7 @@ import tensorflow as tf
 # from tensorflow.python.framework import ops
 
 # We shall wrap all these modules
-from txtgen.data import database
+from txtgen.data import PairedTextDataBase
 from txtgen.modules import ConstantConnector
 from txtgen.modules import TransformerEncoder, TransformerDecoder
 from txtgen.losses import mle_losses
@@ -19,6 +19,7 @@ from txtgen.core import optimization as opt
 from txtgen import context
 import os
 import codecs
+from nltk.translate.bleu_score import corpus_bleu
 if __name__ == "__main__":
     ### Build data pipeline
 
@@ -30,7 +31,7 @@ if __name__ == "__main__":
         "seed": 123,
         "batch_size":32,
         "source_dataset": {
-            "files": ['data/translation/de-en/de_sentences.txt'],
+            "files": ['data/translation/de-en/test_de_sentences.txt'],
             "vocab_file": 'data/translation/de-en/de.vocab.txt',
             "processing":{
                 "bos_token": "<SOURCE_BOS>",
@@ -38,7 +39,7 @@ if __name__ == "__main__":
                 }
         },
         "target_dataset": {
-            "files": ['data/translation/de-en/en_sentences.txt'],
+            "files": ['data/translation/de-en/test_en_sentences.txt'],
             "vocab_file": 'data/translation/de-en/en.vocab.txt',
             # "reader_share": True,
             "processing":{
@@ -58,7 +59,7 @@ if __name__ == "__main__":
         'num_heads': 8,
     }
     # Construct the database
-    text_database = database.PairedTextDataBase(data_hparams)
+    text_database = PairedTextDataBase(data_hparams)
 
     text_data_batch = text_database()
     encoder = TransformerEncoder(vocab_size=text_database.source_vocab.vocab_size,
@@ -67,7 +68,6 @@ if __name__ == "__main__":
             hparams=extra_hparams)
 
     connector = ConstantConnector(output_size=decoder._hparams.embedding.dim)
-    print('encoder decoder finished')
     src_text = text_data_batch['source_text_ids'][:, :extra_hparams['max_seq_length']]
     tgt_text = text_data_batch['target_text_ids'][:, :extra_hparams['max_seq_length']]
 
@@ -115,15 +115,21 @@ if __name__ == "__main__":
             }
         }
     }
+    word_vocab = text_database.target_vocab
+    src_words = text_database.source_vocab.id_to_token_map.lookup(tf.to_int64(src_text))
+    tgt_words = text_database.target_vocab.id_to_token_map.lookup(tf.to_int64(tgt_text))
+    prd_words = text_database.target_vocab.id_to_token_map.lookup(tf.to_int64(preds))
     train_op, global_step = opt.get_train_op(mle_loss, hparams=opt_hparams)
 
     ### Graph is done. Now start running
     saver = tf.train.Saver()
     # We shall wrap these environment setup codes
     with tf.Session() as sess:
-        saver.restore(sess, tf.train.latest_checkpoint('model/'))
+        ckpt = tf.train.get_checkpoint_state('logdir')
+        print("found checkpoint:{}".format(ckpt))
+        saver.restore(sess, ckpt.model_checkpoint_path)
         print('restored!')
-        mname = open('model/'+ '/checkpoint', 'r').read().split('"')[1]
+        mname = open('logdir/checkpoint', 'r').read().split('"')[1]
         if not os.path.exists('results'): os.mkdir('results')
         with codecs.open('results/'+mname, 'w', 'utf-8') as fout:
             list_of_refs, hypotheses=[], []
@@ -135,17 +141,29 @@ if __name__ == "__main__":
 
             try:
                 while not coord.should_stop():
-                    sources, targets, prds = sess.run(
-                        [src_text, tgt_text, preds],
+                    source_words, target_words, predicted_words= sess.run(
+                        [src_words, tgt_words, prd_words],
                         feed_dict={context.is_train():False})
-                    for src,tgt,prd in zip(sources, targets, prds):
-                        worddict = text_database._tgt_dataset
-                        #TO DO(shr):evaluation metrics:bleu
-                        # got = " ".join()
-                        fout.write('src:{}\ntgt:{}\nprd:{}\n\n'.format(src,tgt,prd))
+
+                    for src,tgt,prd in zip(source_words, target_words, predicted_words):
+                        src = [str(b, encoding='utf-8') for b in src]
+                        tgt = [str(b, encoding='utf-8') for b in tgt]
+                        prd = [str(b, encoding='utf-8') for b in prd]
+                        tgt_sentence =  " ".join(tgt).split("</S>")[0].strip()
+                        src_sentence = " ".join(src).split("</S>")[0].strip()
+                        prd_sentence = " ".join(prd).split("</S>")[0].strip()
+                        ref  = tgt_sentence.split()
+                        hypothesis = prd_sentence.split()
+                        if len(ref)>3 and len(hypothesis)>3:
+                            list_of_refs.append([ref])
+                            hypotheses.append(hypothesis)
+                        fout.write('src:{}\ntgt:{}\nprd:{}\n\n'.format(\
+                                src_sentence,tgt_sentence,prd_sentence))
             except tf.errors.OutOfRangeError:
                 print('Done -- epoch limit reached')
             finally:
                 coord.request_stop()
             coord.join(threads)
+            score = corpus_bleu(list_of_refs, hypotheses)
+            fout.write('BLEU score={}'.format(100*score))
 
