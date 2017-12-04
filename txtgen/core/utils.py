@@ -23,7 +23,7 @@ from tensorflow.python.ops import rnn
 from txtgen import context
 
 
-MAX_SEQ_LENGTH = np.iinfo(np.int32).max
+MAX_SEQ_LENGTH = np.iinfo(np.int32).max  #TODO (zhiting): move to constants
 
 ## Some modules can be imported directly, e.g., `import tensorflow.train` fails.
 ## Such modules are treated in a special way in utils like `get_class` as below.

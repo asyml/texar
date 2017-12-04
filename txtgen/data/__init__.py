@@ -12,3 +12,4 @@ from __future__ import print_function
 from txtgen.data.databases import *
 from txtgen.data.vocabulary import *
 from txtgen.data.embedding import *
+from txtgen.data.constants import *
