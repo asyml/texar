@@ -150,6 +150,7 @@ def sequence_sparse_softmax_cross_entropy(labels,
             labels=labels, logits=logits)
         return _mask_sequences(losses, sequence_length, time_major)
 
+# cannot add label_smoothing parameter
 def average_sequence_sparse_softmax_cross_entropy(labels,
                                                   logits,
                                                   sequence_length,
@@ -170,3 +171,20 @@ def average_sequence_sparse_softmax_cross_entropy(labels,
         loss = tf.reduce_sum(losses) / tf.to_float(tf.shape(labels)[0])
         return loss
 
+def label_smoothing(labels, total_class, smooth_rate, name=None):
+    with tf.name_scope(name, "label_smoothing"):
+        one_hot_labels = tf.one_hot(labels, depth=total_class)
+        return (1-smooth_rate)*one_hot_labels + (smooth_rate)/total_class
+
+def average_sequence_cross_entropy_with_logits(labels,
+        logits,
+        sequence_length,
+        time_major=False,
+        name=None):
+    with tf.name_scope(name, "cross_entropy_with_logits"):
+        losses = tf.nn.softmax_cross_entropy_With_logits(logits=logits,
+                labels=labels)
+        losses = _mask_sequences(losses, sequence_length, time_major)
+        seq_length_sum = tf.to_float(tf.reduce_sum(sequence_length))
+        loss = tf.reduce_sum(losses)/seq_length_sum
+        return loss
