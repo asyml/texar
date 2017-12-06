@@ -202,6 +202,8 @@ class BasicRNNDecoder(RNNDecoderBase):
         cell_outputs, cell_state = self._cell(inputs, state)
         if self._output_layer:
             outputs = self._output_layer(cell_outputs)
+        else:
+            outputs = cell_outputs
         # logits = tf.contrib.layers.fully_connected(
         #     inputs=cell_outputs, num_outputs=self._vocab_size)
         # sample_ids = self._helper.sample(
