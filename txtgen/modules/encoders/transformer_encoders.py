@@ -47,12 +47,14 @@ class TransformerEncoder(EncoderBase):
                 self._embedding = layers.get_embedding(
                     self._hparams.embedding, embedding, vocab_size,
                     self.variable_scope)
+
             embed_dim = self._embedding.shape.as_list()[1]
             if self._hparams.zero_pad:
                 self._embedding = tf.concat((tf.zeros(shape=[1, embed_dim]),
                                             self._embedding[1:, :]), 0)
             if self._hparams.embedding.trainable:
                 self._add_trainable_variable(self._embedding)
+
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
@@ -91,46 +93,56 @@ class TransformerEncoder(EncoderBase):
             "embedding":layers.default_embedding_hparams(),
             "name":"transformer_encoder",
             "zero_pad":True,
-            "max_seq_length":100,
+            "max_seq_length":10,
             'scale':True,
-            'sinusoid':True,
+            'sinusoid':False,
             'dropout':0.1,
-            'num_blocks':2,
-            'num_heads':5,
+            'num_blocks':6,
+            'num_heads':8,
         }
 
     def _build(self, inputs, **kwargs):
         if self._embedding is not None:
-            embedded_inputs = tf.nn.embedding_lookup(self._embedding, inputs)
+            enc = tf.nn.embedding_lookup(self._embedding, inputs)
         else:
-            embedded_inputs = inputs
-        dim = embedded_inputs.shape.as_list()[2]
+            enc = inputs
+        dim = enc.shape.as_list()[-1]
         if self._hparams.scale:
-            embedded_inputs = embedded_inputs*(dim**0.5)
+            enc = enc * (dim**0.5)
+
         with tf.variable_scope(self.variable_scope):
             if self._hparams.sinusoid:
-                position_inputs = layers.sinusoid_positional_encoding(embedded_inputs,
+                enc += layers.sinusoid_positional_encoding(inputs,
+                        num_units=dim,
                         max_time=self._hparams.max_seq_length,
-                        scope="enc_pe")
+                        variable_scope='enc_pe',
+                    )
             else:
-                position_inputs = layers.get_embedding(
+                position_enc_embedding = layers.get_embedding(
                         hparams = self._hparams.embedding,
                         vocab_size=self._hparams.max_seq_length,
-                        variable_scope='enc_pe')
-            enc_output = tf.layers.dropout(embedded_inputs+position_inputs,
+                        variable_scope='enc_pe',
+                        )
+                enc += tf.nn.embedding_lookup(position_enc_embedding,
+                        tf.tile(tf.expand_dims(tf.range(tf.shape(inputs)[1]), 0), \
+                                [inputs.shape[0], 1]))
+
+            print('dropout rate:{}'.format(self._hparams.dropout))
+            print('encoder num_heads:{}'.format(self._hparams.num_heads))
+            enc = tf.layers.dropout(enc,
                     rate=self._hparams.dropout,
                     training=context.is_train())
-            # print('enc_output:{}'.format(enc_output.get_shape()))
+
             for i in range(self._hparams.num_blocks):
                 with tf.variable_scope("num_blocks_{}".format(i)):
-                    enc_output = layers.multihead_attention(queries=enc_output,
-                            keys=enc_output,
-                            num_heads=self._hparams.num_heads,
-                            dropout_rate=self._hparams.dropout,
-                            causality=False)
-                    enc_output = layers.normalize(enc_output)
-                    enc_output = layers.poswise_feedforward(enc_output)
-                    enc_output = layers.normalize(enc_output)
+                    enc = layers.multihead_attention(queries=enc,
+                        keys=enc,
+                        num_heads=self._hparams.num_heads,
+                        dropout_rate=self._hparams.dropout,
+                        num_units=self._hparams.embedding.dim,
+                        causality=False)
+                    enc = layers.poswise_feedforward(enc,
+                        num_units=[4*self._hparams.embedding.dim, self._hparams.embedding.dim])
         self._add_internal_trainable_variables()
         self._built=True
-        return enc_output
+        return enc
