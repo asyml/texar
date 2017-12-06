@@ -182,9 +182,10 @@ def average_sequence_cross_entropy_with_logits(labels,
         time_major=False,
         name=None):
     with tf.name_scope(name, "cross_entropy_with_logits"):
-        losses = tf.nn.softmax_cross_entropy_With_logits(logits=logits,
+        losses = tf.nn.softmax_cross_entropy_with_logits(logits=logits,
                 labels=labels)
-        losses = _mask_sequences(losses, sequence_length, time_major)
-        seq_length_sum = tf.to_float(tf.reduce_sum(sequence_length))
-        loss = tf.reduce_sum(losses)/seq_length_sum
+        is_target=tf.to_float(tf.not_equal(labels, 0))
+        # losses = _mask_sequences(losses, sequence_length, time_major)
+        # seq_length_sum = tf.to_float(tf.reduce_sum(sequence_length))
+        loss = tf.reduce_sum(losses*is_target)/tf.reduce_sum(is_target)
         return loss

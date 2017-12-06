@@ -8,8 +8,19 @@ from __future__ import print_function
 
 # pylint: disable=invalid-name, no-name-in-module
 
+# question: the loaded data is different each time I run it.
+# even if I have set random seeds for tensorflow, numpy and random,
+# and I have manually set the seed for database instance.
+
+rseed=123
 import sys
+
 import tensorflow as tf
+tf.set_random_seed(rseed)
+import random
+random.seed(rseed)
+import numpy as np
+np.random.seed(rseed)
 
 # We shall wrap all these modules
 from txtgen.data import MonoTextDataBase
@@ -18,6 +29,7 @@ from txtgen.modules import BasicRNNDecoder, get_helper
 from txtgen.losses import mle_losses
 from txtgen.core import optimization as opt
 from txtgen import context
+
 
 
 def load_data():
@@ -74,6 +86,7 @@ def train():
     outputs, final_state, sequence_lengths = decoder(
         helper=helper_train, initial_state=connector(batch_size))
 
+    print('decoder done')
     # Build loss
     mle_loss = mle_losses.average_sequence_sparse_softmax_cross_entropy(
         labels=data_batch['text_ids'][:, 1:],
@@ -124,6 +137,10 @@ def train():
                     [sequence_lengths, data_batch['length']],
                     feed_dict={context.is_train(): True})
 
+                # question: can we run the sess.run twice?
+                # I'm wondering whether the loaded data will be different in these two times
+
+                print('sep len:{}'.format(seq_len))
                 if step % 10 == 0:
                     print("%d: %.6f" % (step, loss))
 
