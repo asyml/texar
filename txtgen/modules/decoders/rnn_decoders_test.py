@@ -57,6 +57,7 @@ class BasicRNNDecoderTest(tf.test.TestCase):
         cell_dim = decoder.hparams.rnn_cell.cell.kwargs.num_units
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
+
             outputs_, final_state_, sequence_lengths_ = sess.run(
                 [outputs, final_state, sequence_lengths],
                 feed_dict={context.is_train(): True})
