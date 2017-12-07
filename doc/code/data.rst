@@ -7,13 +7,13 @@ Data
 Vocab
 ===========
 
-.. autoclass:: txtgen.data.Vocab
+.. autoclass:: texar.data.Vocab
     :members:
 
 Embedding
 ==========
 
-.. autoclass:: txtgen.data.Embedding
+.. autoclass:: texar.data.Embedding
     :members:
 
 Databases
@@ -22,23 +22,23 @@ Databases
 :hidden:`DataBaseBase`
 ------------------------
 
-.. autoclass:: txtgen.data.DataBaseBase
+.. autoclass:: texar.data.DataBaseBase
     :members:
 
 :hidden:`MonoTextDataBase`
 -------------------------------
 
-.. autoclass:: txtgen.data.MonoTextDataBase
+.. autoclass:: texar.data.MonoTextDataBase
     :members:
 
 :hidden:`PairedTextDataBase`
 -------------------------------
 
-.. autoclass:: txtgen.data.PairedTextDataBase
+.. autoclass:: texar.data.PairedTextDataBase
     :members:
 
 :hidden:`MultiSourceTextDataBase`
 -------------------------------
 
-.. autoclass:: txtgen.data.MultiSourceTextDataBase
+.. autoclass:: texar.data.MultiSourceTextDataBase
     :members:

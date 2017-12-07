@@ -7,28 +7,28 @@ Modules
 Module Base
 ===========
 
-.. autoclass:: txtgen.modules.ModuleBase
+.. autoclass:: texar.modules.ModuleBase
     :members:
 
 Networks
 ========
 
-.. autoclass:: txtgen.modules.FeedForwardNetwork
+.. autoclass:: texar.modules.FeedForwardNetwork
     :members:
 
 Encoders
 ========
 
-.. autoclass:: txtgen.modules.EncoderBase
+.. autoclass:: texar.modules.EncoderBase
     :members:
 
-.. autoclass:: txtgen.modules.RNNEncoderBase
+.. autoclass:: texar.modules.RNNEncoderBase
     :members:
 
-.. autoclass:: txtgen.modules.UnidirectionalRNNEncoder
+.. autoclass:: texar.modules.UnidirectionalRNNEncoder
     :members:
 
-.. autoclass:: txtgen.modules.BidirectionalRNNEncoder
+.. autoclass:: texar.modules.BidirectionalRNNEncoder
     :members:
 
 Decoders
@@ -37,52 +37,52 @@ Decoders
 :hidden:`RNNDecoderBase`
 ------------------------
 
-.. autoclass:: txtgen.modules.RNNDecoderBase
+.. autoclass:: texar.modules.RNNDecoderBase
     :members:
 
 :hidden:`BasicRNNDecoderOutput`
 -------------------------------
 
-.. autoclass:: txtgen.modules.BasicRNNDecoderOutput
+.. autoclass:: texar.modules.BasicRNNDecoderOutput
     :members:
 
 :hidden:`BasicRNNDecoder`
 -------------------------
 
-.. autoclass:: txtgen.modules.BasicRNNDecoder
+.. autoclass:: texar.modules.BasicRNNDecoder
     :members:
 
 :hidden:`AttentionRNNDecoderOutput`
 -----------------------------------
 
-.. autoclass:: txtgen.modules.AttentionRNNDecoderOutput
+.. autoclass:: texar.modules.AttentionRNNDecoderOutput
     :members:
 
 :hidden:`AttentionRNNDecoder`
 -----------------------------
 
-.. autoclass:: txtgen.modules.AttentionRNNDecoder
+.. autoclass:: texar.modules.AttentionRNNDecoder
     :members:
 
 :hidden:`default_helper_train_hparams`
 --------------------------------------
 
-.. autofunction:: txtgen.modules.default_helper_train_hparams
+.. autofunction:: texar.modules.default_helper_train_hparams
 
 :hidden:`default_helper_infer_hparams`
 --------------------------------------
 
-.. autofunction:: txtgen.modules.default_helper_infer_hparams
+.. autofunction:: texar.modules.default_helper_infer_hparams
 
 :hidden:`get_helper`
 ------------------------
 
-.. autofunction:: txtgen.modules.get_helper
+.. autofunction:: texar.modules.get_helper
 
 :hidden:`EmbeddingTrainingHelper`
 ----------------------------------
 
-.. autoclass:: txtgen.modules.EmbeddingTrainingHelper
+.. autoclass:: texar.modules.EmbeddingTrainingHelper
     :members:
 
 Connectors
@@ -91,41 +91,41 @@ Connectors
 :hidden:`ConnectorBase`
 --------------------------------------
 
-.. autoclass:: txtgen.modules.ConnectorBase
+.. autoclass:: texar.modules.ConnectorBase
     :members:
 
 :hidden:`ConstantConnector`
 --------------------------------------
 
-.. autoclass:: txtgen.modules.ConstantConnector
+.. autoclass:: texar.modules.ConstantConnector
     :members:
 
 :hidden:`ForwardConnector`
 --------------------------------------
 
-.. autoclass:: txtgen.modules.ForwardConnector
+.. autoclass:: texar.modules.ForwardConnector
     :members:
 
 :hidden:`MLPTransformConnector`
 --------------------------------------
 
-.. autoclass:: txtgen.modules.MLPTransformConnector
+.. autoclass:: texar.modules.MLPTransformConnector
     :members:
 
 :hidden:`ReparameterizedStochasticConnector`
 --------------------------------------------
 
-.. autoclass:: txtgen.modules.ReparameterizedStochasticConnector
+.. autoclass:: texar.modules.ReparameterizedStochasticConnector
     :members:
 
 :hidden:`StochasticConnector`
 --------------------------------------
 
-.. autoclass:: txtgen.modules.StochasticConnector
+.. autoclass:: texar.modules.StochasticConnector
     :members:
 
 :hidden:`ConcatConnector`
 --------------------------------------
 
-.. autoclass:: txtgen.modules.ConcatConnector
+.. autoclass:: texar.modules.ConcatConnector
     :members:

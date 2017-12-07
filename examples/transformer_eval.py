@@ -15,12 +15,12 @@ import numpy as np
 np.random.seed(123)
 
 # We shall wrap all these modules
-from txtgen.data import PairedTextDataBase
-# from txtgen.modules import ConstantConnector
-from txtgen.modules import TransformerEncoder, TransformerDecoder
-from txtgen.losses import mle_losses
-from txtgen.core import optimization as opt
-from txtgen import context
+from texar.data import PairedTextDataBase
+# from texar.modules import ConstantConnector
+from texar.modules import TransformerEncoder, TransformerDecoder
+from texar.losses import mle_losses
+from texar.core import optimization as opt
+from texar import context
 import os
 import codecs
 from nltk.translate.bleu_score import corpus_bleu
@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     # Config data hyperparams. Hyperparams not configured will be automatically
     # filled with default values. For text database, default values are defined
-    # in `txtgen.data.database.default_text_dataset_hparams()`.
+    # in `texar.data.database.default_text_dataset_hparams()`.
     data_hparams = {
         "num_epochs": 20,
         "seed": 123,

@@ -14,7 +14,7 @@
       ```
     - Run unit tests, e.g.,
       ```bash
-      python ./txtgen/modules/encoders/rnn_encoders_test.py
+      python ./texar/modules/encoders/rnn_encoders_test.py
       ```
 
 # Code style

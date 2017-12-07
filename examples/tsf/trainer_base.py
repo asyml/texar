@@ -9,7 +9,7 @@ import pdb
 
 import tensorflow as tf
 
-from txtgen.hyperparams import HParams
+from texar.hyperparams import HParams
 
 flags = tf.flags
 FLAGS = flags.FLAGS
