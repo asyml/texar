@@ -114,14 +114,6 @@ def train():
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
 
-        # with tf.contrib.slim.queues.QueueRunners(sess):
-        #    _, step, loss = sess.run(
-        #        [train_op, global_step, mle_loss],
-        #        feed_dict={context.is_train(): True})
-
-        #    if step % 10 == 0:
-        #        print("%d: %.6f" % (step, loss))
-
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 

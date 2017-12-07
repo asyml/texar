@@ -13,10 +13,11 @@ import tensorflow.contrib.distributions as tfds
 from tensorflow.python.util import nest    # pylint: disable=E0611
 
 from txtgen.core import layers
-from txtgen.modules.connectors.connectors import ConstantConnector
-from txtgen.modules.connectors.connectors import ReparameterizedStochasticConnector
-from txtgen.modules.connectors.connectors import StochasticConnector
-from txtgen.modules.connectors.connectors import ConcatConnector
+from txtgen.modules import ConstantConnector
+from txtgen.modules import MLPTransformConnector
+from txtgen.modules import ReparameterizedStochasticConnector
+from txtgen.modules import StochasticConnector
+from txtgen.modules import ConcatConnector
 from txtgen.modules.connectors.connectors import _assert_same_size
 
 # pylint: disable=too-many-locals
@@ -69,8 +70,15 @@ class TestConnectors(tf.test.TestCase):
         """Tests the logic of
         :class:`~txtgen.modules.connectors.MLPTransformConnector`.
         """
-        # TODO(zhiting)
-        pass
+        connector = MLPTransformConnector(self._decoder_cell.state_size)
+        output = connector(tf.zeros([5, 10]))
+        nest.assert_same_structure(output, self._decoder_cell.state_size)
+
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+
+            output_ = sess.run(output)
+            nest.assert_same_structure(output_, self._decoder_cell.state_size)
 
     def test_reparameterized_stochastic_connector(self):
         """Tests the logic of
