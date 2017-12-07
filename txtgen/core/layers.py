@@ -277,7 +277,7 @@ def get_initializer(hparams=None):
         if isinstance(kwargs, HParams):
             kwargs = kwargs.todict()
         modules = ["tensorflow.initializers", "tensorflow.keras.initializers",
-                   "tensorflow", "txtgen.custom"]
+                   "tensorflow", "txtgen.custom", "tensorflow.contrib.layers"]
         try:
             initializer = utils.get_instance(hparams["type"], kwargs, modules)
         except TypeError:
@@ -907,6 +907,7 @@ def get_layer(hparams):
 
 #TODO(zhiting): fix code style
 def sinusoid_positional_encoding(inputs,
+                                num_units,
                                 zero_pad=False,
                                 scale=False,
                                 reuse=None,
@@ -922,8 +923,9 @@ def sinusoid_positional_encoding(inputs,
         scope: [String], Optional scope for 'variable_scope'
     """
     print('inputs:shape{}'.format(inputs.get_shape())) #[3, None, 50]
-    batch_size, _, hidden_dim = inputs.get_shape().as_list()
+    batch_size = inputs.shape.as_list()[0]
     dynamic_max_time = tf.shape(inputs)[1]
+    hidden_dim = num_units
     print('dynamic shape obtained')
     with tf.variable_scope(scope, reuse=reuse):
         position_idx = tf.tile(tf.expand_dims(tf.range(max_time), 0), [batch_size, 1]) #batch_size * max_time
@@ -950,32 +952,34 @@ def sinusoid_positional_encoding(inputs,
 #TODO(zhiting): fix code style
 def multihead_attention(queries,
                         keys,
+                        num_units=None,
                         num_heads=8,
                         dropout_rate=0,
                         causality=False,
-                        scope = 'multihead_attention',
-                        reuse= None):
-    """perform multihead attention
+                        scope="multihead_attention",
+                        reuse=None):
+    '''Applies multihead attention.
+
     Args:
-        queries: A 3d tensor with shape of [N, T_q, C_q].
-        keys: A 3d tensor with shape of [N, T_k, C_k].
-        num_units: A scalar. Attention size.
-        dropout_rate: A floating point number.
-        causality: Boolean. Should be true, units that reference the future are masked
-        num_heads: An int. Number of heads.
-        scope: Optional scope for `variable_scope`.
-        reuse: Boolean, whether to reuse the weights of a previous layer by the same name.
+      queries: A 3d tensor with shape of [N, T_q, C_q].
+      keys: A 3d tensor with shape of [N, T_k, C_k].
+      num_units: A scalar. Attention size.
+      dropout_rate: A floating point number.
+      causality: Boolean. If true, units that reference the future are masked.
+      num_heads: An int. Number of heads.
+      scope: Optional scope for `variable_scope`.
+      reuse: Boolean, whether to reuse the weights of a previous layer
+        by the same name.
+
     Returns
-        A 3d tensor with shape of (N, T_q, C)
-    """
+      A 3d tensor with shape of (N, T_q, C)
+    '''
     with tf.variable_scope(scope, reuse=reuse):
         # Set the fall back option for num_units
-        num_units = queries.get_shape().as_list()[-1]
+        if num_units is None:
+            num_units = queries.get_shape().as_list[-1]
 
         # Linear projections
-        # print('keys:{}'.format(keys))
-        # print('queries:{}'.format(queries))
-        # print('num_units:{}'.format(num_units))
         Q = tf.layers.dense(queries, num_units, activation=tf.nn.relu) # (N, T_q, C)
         K = tf.layers.dense(keys, num_units, activation=tf.nn.relu) # (N, T_k, C)
         V = tf.layers.dense(keys, num_units, activation=tf.nn.relu) # (N, T_k, C)
@@ -988,7 +992,7 @@ def multihead_attention(queries,
         # Multiplication
         outputs = tf.matmul(Q_, tf.transpose(K_, [0, 2, 1])) # (h*N, T_q, T_k)
 
-        # According to the paper, there is a scale operation
+        # Scale
         outputs = outputs / (K_.get_shape().as_list()[-1] ** 0.5)
 
         # Key Masking
@@ -1002,7 +1006,7 @@ def multihead_attention(queries,
         # Causality = Future blinding
         if causality:
             diag_vals = tf.ones_like(outputs[0, :, :]) # (T_q, T_k)
-            tril = tf.contrib.linalg.LinearOperatorTriL(diag_vals).to_dense() # (T_q, T_k)  The upper triangle of the last two dimensions is ignored.
+            tril = tf.contrib.linalg.LinearOperatorTriL(diag_vals).to_dense() # (T_q, T_k)
             masks = tf.tile(tf.expand_dims(tril, 0), [tf.shape(outputs)[0], 1, 1]) # (h*N, T_q, T_k)
 
             paddings = tf.ones_like(masks)*(-2**32+1)
@@ -1030,45 +1034,13 @@ def multihead_attention(queries,
         outputs += queries
 
         # Normalize
+        outputs = normalize(outputs) # (N, T_q, C)
 
     return outputs
 
 
-# TODO(zhiting): Can this be a layer? Or inherits
-# :class:`txtgen.modules.networks.FeedForwardnetwork`?
-def poswise_feedforward(attended_dec, scope="multihead_attention", reuse=None):
-    '''Point-wise feed forward net.
-
-    Args:
-      inputs: A 3d tensor with shape of [N, T, C].
-      num_units: A list of two integers.
-      scope: Optional scope for `variable_scope`.
-      reuse: Boolean, whether to reuse the weights of a previous layer
-        by the same name.
-
-    Returns:
-      A 3d tensor with the same shape and dtype as inputs
-    '''
-    hidden_dim = attended_dec.shape.as_list()[-1]
-    with tf.variable_scope(scope, reuse=reuse):
-        outputs = tf.layers.conv1d(inputs = attended_dec,
-                filters=hidden_dim*4,
-                kernel_size=1,
-                activation=tf.nn.relu,
-                use_bias=True)
-        outputs = tf.layers.conv1d(inputs = outputs,
-                filters=hidden_dim,
-                kernel_size=1,
-                activation=None,
-                use_bias=True)
-        outputs += attended_dec #residual connection
-    return outputs
-
-
-#TODO(zhiting): Is there TF built-in function for this?
 def normalize(inputs,
               epsilon = 1e-8,
-              scope="ln",
               reuse=None):
     '''Applies layer normalization.
 
@@ -1083,15 +1055,80 @@ def normalize(inputs,
     Returns:
       A tensor with the same shape and data dtype as `inputs`.
     '''
-    with tf.variable_scope(scope, reuse=reuse):
-        inputs_shape = inputs.get_shape()
-        params_shape = inputs_shape[-1:]
+    mean, variance = tf.nn.moments(inputs, [-1], keep_dims=True)
+    normalized = (inputs - mean) / ( (variance + epsilon) ** (.5) )
+    return normalized
 
-        mean, variance = tf.nn.moments(inputs, [-1], keep_dims=True)
-        beta= tf.Variable(tf.zeros(params_shape))
-        gamma = tf.Variable(tf.ones(params_shape))
-        normalized = (inputs - mean) / ( (variance + epsilon) ** (.5) )
-        outputs = gamma * normalized + beta
+
+# TODO(zhiting): Can this be a layer? Or inherits
+# :class:`txtgen.modules.networks.FeedForwardnetwork`?
+def poswise_feedforward(inputs,
+                num_units=[2048, 512],
+                scope="multihead_attention",
+                reuse=None):
+    '''Point-wise feed forward net.
+
+    Args:
+      inputs: A 3d tensor with shape of [N, T, C].
+      num_units: A list of two integers.
+      scope: Optional scope for `variable_scope`.
+      reuse: Boolean, whether to reuse the weights of a previous layer
+        by the same name.
+
+    Returns:
+      A 3d tensor with the same shape and dtype as inputs
+    '''
+    with tf.variable_scope(scope, reuse=reuse):
+        # Inner layer
+        params = {"inputs": inputs, "filters": num_units[0], "kernel_size": 1,
+                  "activation": tf.nn.relu, "use_bias": True}
+        outputs = tf.layers.conv1d(**params)
+
+        # Readout layer
+        params = {"inputs": outputs, "filters": num_units[1], "kernel_size": 1,
+                  "activation": None, "use_bias": True}
+        outputs = tf.layers.conv1d(**params)
+
+        # Residual connection
+        outputs += inputs
+
+        # Normalize
+        outputs = normalize(outputs)
 
     return outputs
 
+
+def label_smoothing(inputs, epsilon=0.1):
+    '''Applies label smoothing. See https://arxiv.org/abs/1512.00567.
+
+    Args:
+      inputs: A 3d tensor with shape of [N, T, V], where V is the number of vocabulary.
+      epsilon: Smoothing rate.
+
+    For example,
+
+    ```
+    import tensorflow as tf
+    inputs = tf.convert_to_tensor([[[0, 0, 1],
+       [0, 1, 0],
+       [1, 0, 0]],
+      [[1, 0, 0],
+       [1, 0, 0],
+       [0, 1, 0]]], tf.float32)
+
+    outputs = label_smoothing(inputs)
+
+    with tf.Session() as sess:
+        print(sess.run([outputs]))
+
+    >>
+    [array([[[ 0.03333334,  0.03333334,  0.93333334],
+        [ 0.03333334,  0.93333334,  0.03333334],
+        [ 0.93333334,  0.03333334,  0.03333334]],
+       [[ 0.93333334,  0.03333334,  0.03333334],
+        [ 0.93333334,  0.03333334,  0.03333334],
+        [ 0.03333334,  0.93333334,  0.03333334]]], dtype=float32)]
+    ```
+    '''
+    K = inputs.get_shape().as_list()[-1] # number of channels
+    return ((1-epsilon) * inputs) + (epsilon / K)
