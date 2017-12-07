@@ -200,13 +200,12 @@ class BasicRNNDecoder(RNNDecoderBase):
 
     def step(self, time, inputs, state, name=None):
         cell_outputs, cell_state = self._cell(inputs, state)
-        #if self._output_layer:
-        #    outputs = self._output_layer(cell_outputs)
-        # TODO(zhiting): test
-        outputs = tf.contrib.layers.fully_connected(
-            inputs=cell_outputs, num_outputs=self._vocab_size, activation_fn=tf.identity)
-        #outputs = tf.layers.dense(
-        #    cell_outputs, self._vocab_size)
+        if self._output_layer:
+            outputs = self._output_layer(cell_outputs)
+        else:
+            outputs = cell_outputs
+        # logits = tf.contrib.layers.fully_connected(
+        #     inputs=cell_outputs, num_outputs=self._vocab_size, activation_fn=None)
         # sample_ids = self._helper.sample(
         #     time=time, outputs=, state=cell_state)
         sample_ids = self._helper.sample(
