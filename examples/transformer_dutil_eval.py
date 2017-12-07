@@ -9,10 +9,10 @@ from __future__ import print_function
 # pylint: disable=invalid-name, no-name-in-module
 import os
 # We shall wrap all these modules
-from txtgen.modules import TransformerEncoder, TransformerDecoder
-from txtgen.losses import mle_losses
-from txtgen.core import optimization as opt
-# from txtgen import context
+from texar.modules import TransformerEncoder, TransformerDecoder
+from texar.losses import mle_losses
+from texar.core import optimization as opt
+# from texar import context
 import numpy as np
 import random
 from data_load import load_test_data, load_de_vocab, load_en_vocab, data_hparams
@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     # Config data hyperparams. Hyperparams not configured will be automatically
     # filled with default values. For text database, default values are defined
-    # in `txtgen.data.database.default_text_dataset_hparams()`.
+    # in `texar.data.database.default_text_dataset_hparams()`.
     extra_hparams = {
         'max_seq_length':10,
         'scale':True,

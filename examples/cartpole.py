@@ -1,6 +1,6 @@
 import numpy as np
 import gym
-from txtgen.agents import NatureDQNAgent
+from texar.agents import NatureDQNAgent
 
 import tensorflow as tf
 
