@@ -29,6 +29,9 @@ class TSFTrainer(TrainerBase):
   @staticmethod
   def default_hparams():
     return {
+      "data_dir": "../../data/yelp",
+      "expt_dir": "../../expt",
+      "log_dir": "log",
       "name": "tsf",
       "rho": 1.,
       "gamma_init": 1,
@@ -39,8 +42,10 @@ class TSFTrainer(TrainerBase):
       "vocab_size": 10000,
       "max_len": 20,
       "max_epoch": 20,
-      "sort_data": True,
-      "shuffle_across_epoch": False
+      "sort_data": False,
+      "shuffle_across_epoch": True,
+      "d_update_freq": 2,
+      "expt_dir": "expt",
     }
 
   def load_data(self):
@@ -131,16 +136,23 @@ class TSFTrainer(TrainerBase):
       batches, _, _ = get_batches(train[0], train[1], vocab["word2id"],
                                   model._hparams.batch_size,
                                   sort=self._hparams.sort_data)
-      for epoch in range(self._hparams["max_epoch"]):
+
+      log_dir = os.path.join(self._hparams.expt_dir, self._hparams.log_dir)
+      train_writer = tf.summary.FileWriter(log_dir, sess.graph)
+
+      for epoch in range(1, self._hparams["max_epoch"] + 1):
         # shuffle across batches
+        log_print("------------------epoch %d --------------"%(epoch))
+        log_print("gamma %.3f"%(gamma))
         if self._hparams.shuffle_across_epoch:
-          batches = get_batches(train[0], train[1], vocab["word2id"],
+          batches, _, _ = get_batches(train[0], train[1], vocab["word2id"],
                                 model._hparams.batch_size,
                                 sort=self._hparams.sort_data)
         random.shuffle(batches)
         for batch in batches:
-          loss_d0 = model.train_d0_step(sess, batch, self._hparams.rho, gamma)
-          loss_d1 = model.train_d1_step(sess, batch, self._hparams.rho, gamma)
+          for _ in range(self._hparams.d_update_freq):
+            loss_d0 = model.train_d0_step(sess, batch, self._hparams.rho, gamma)
+            loss_d1 = model.train_d1_step(sess, batch, self._hparams.rho, gamma)
 
           if loss_d0 < 1.2 and loss_d1 < 1.2:
             loss, loss_g, ppl_g, loss_d = model.train_g_step(
@@ -157,10 +169,8 @@ class TSFTrainer(TrainerBase):
             losses.reset()
 
         # eval on dev
-        dev_loss = self.eval_model(
-          model, sess, vocab, val[0], val[1],
-          os.path.join(self._hparams.expt_dir,
-                       "sentiment.dev.epoch%d"%(epoch)))
+        dev_loss = self.eval_model(model, sess, vocab, val[0], val[1],
+          os.path.join(log_dir, "sentiment.dev.epoch%d"%(epoch)))
         log_print("dev " + str(dev_loss))
         if dev_loss.loss < best_dev:
           best_dev = dev_loss.loss
@@ -174,6 +184,7 @@ class TSFTrainer(TrainerBase):
 
         gamma = max(self._hparams.gamma_min, gamma * self._hparams.gamma_decay)
 
+    return best_dev
 
 def main(unused_args):
   trainer = TSFTrainer()

@@ -14,9 +14,9 @@ from txtgen.hyperparams import HParams
 flags = tf.flags
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("data_dir", "../../data/yelp", "data folder")
-flags.DEFINE_string("expt_dir", "../../expt", "experiment folder")
-flags.DEFINE_string("log_dir", "log", "experiment folder")
+flags.DEFINE_string("data_dir", "", "data folder")
+flags.DEFINE_string("expt_dir", "", "experiment folder")
+flags.DEFINE_string("log_dir", "", "experiment folder")
 flags.DEFINE_integer("seed", 0, "random seed")
 flags.DEFINE_string("config", "", "config to load.")
 flags.DEFINE_string("model", "", "model to load.")
