@@ -52,16 +52,19 @@ class TransformerDecoder(ModuleBase):
     @staticmethod
     def default_hparams():
         return {
-            "embedding_enabled": True,
-            "embedding": layers.default_embedding_hparams(),
-            "name":"transformer_decoder",
-            "num_heads":8,
-            "num_blocks":6,
-            "zero_pad": True,
-            "max_seq_length":10,
-            "scale":True,
-            "dropout":0.1,
-            "sinusoid":True,
+                "embedding_enabled": True,
+                "embedding": layers.default_embedding_hparams(),
+                "name":"transformer_decoder",
+                "num_heads":8,
+                "num_blocks":6,
+                "zero_pad": True,
+                "max_seq_length":10,
+                "scale":True,
+                "dropout":0.1,
+                "sinusoid":True,
+                "helper_infer": {
+                    'type':'GreedyEmbeddingHelper',
+                },
             }
 
     def _build(self, inputs, encoder_output):
