@@ -32,13 +32,12 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                  cell=None,
                  embedding=None,
                  vocab_size=None,
-                 hparams=None,
-                 output_layer=None):
+                 output_layer=None,
+                 hparams=None):
         ModuleBase.__init__(self, hparams)
 
         self._helper = None
         self._initial_state = None
-        self._output_layer = output_layer
 
         # Make rnn cell
         with tf.variable_scope(self.variable_scope):
@@ -49,10 +48,11 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
 
         # Make embedding
         if vocab_size is None:
-            if not self._hparams.use_embedding or embedding is None:
+            if self._hparams.use_embedding and embedding is None:
                 raise ValueError(
-                    "`vocab_size` is required if embedding is not enabled or "
+                    "`vocab_size` is required if embedding is used and"
                     "`embedding` is None.")
+        self._vocab_size = None
 
         self._embedding = None
         if self._hparams.use_embedding:
@@ -65,8 +65,20 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             if self._hparams.embedding.trainable:
                 self._add_trainable_variable(self._embedding)
             self._vocab_size = self._embedding.get_shape().as_list()[0]
-        else:
+
+        if vocab_size is not None:
             self._vocab_size = vocab_size
+
+        # Make the output layer
+        self._output_layer = output_layer
+        if self._output_layer is None:
+            if self._vocab_size is None:
+                raise ValueError(
+                    "Output layer size cannot be inferred automatically. "
+                    "Must specify either `vocab_size` or "
+                    "`embedding` (if embedding is used).")
+            with tf.variable_scope(self.variable_scope):
+                self._output_layer = tf.layers.Dense(units=self._vocab_size)
 
     @staticmethod
     def default_hparams():
@@ -133,6 +145,18 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
     @property
     def batch_size(self):
         return self._helper.batch_size
+
+    @property
+    def output_size(self):
+        """Output size of one step.
+        """
+        raise NotImplementedError
+
+    @property
+    def output_dtype(self):
+        """Types of output of one step.
+        """
+        raise NotImplementedError
 
     def initialize(self, name=None):
         # Inherits from TFDecoder

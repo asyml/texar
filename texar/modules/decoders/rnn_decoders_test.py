@@ -63,7 +63,7 @@ class BasicRNNDecoderTest(tf.test.TestCase):
                 feed_dict={context.is_train(): True})
             self.assertIsInstance(outputs_, BasicRNNDecoderOutput)
             self.assertEqual(
-                outputs_.rnn_output.shape,
+                outputs_.logits.shape,
                 (self._batch_size, self._max_time, self._vocab_size))
             self.assertEqual(
                 outputs_.sample_id.shape, (self._batch_size, self._max_time))
@@ -122,7 +122,7 @@ class BasicRNNDecoderTest(tf.test.TestCase):
                 feed_dict={context.is_train(): True,
                            self._inputs_placeholder: inputs_})
 
-            np.testing.assert_array_equal(outputs_.rnn_output,
+            np.testing.assert_array_equal(outputs_.logits,
                                           tf_outputs_.rnn_output)
             np.testing.assert_array_equal(outputs_.sample_id,
                                           tf_outputs_.sample_id)
@@ -161,7 +161,7 @@ class BasicRNNDecoderTest(tf.test.TestCase):
             self.assertIsInstance(outputs_, BasicRNNDecoderOutput)
             max_length = max(sequence_lengths_)
             self.assertEqual(
-                outputs_.rnn_output.shape,
+                outputs_.logits.shape,
                 (self._batch_size, max_length, self._vocab_size))
             self.assertEqual(
                 outputs_.sample_id.shape, (self._batch_size, max_length))
@@ -216,7 +216,7 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
                 feed_dict={context.is_train(): True})
             self.assertIsInstance(outputs_, AttentionRNNDecoderOutput)
             self.assertEqual(
-                outputs_.rnn_output.shape,
+                outputs_.logits.shape,
                 (self._batch_size, self._max_time, self._vocab_size))
             self.assertEqual(
                 outputs_.sample_id.shape, (self._batch_size, self._max_time))
@@ -259,7 +259,7 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
             self.assertIsInstance(outputs_, AttentionRNNDecoderOutput)
             max_length = max(sequence_lengths_)
             self.assertEqual(
-                outputs_.rnn_output.shape,
+                outputs_.logits.shape,
                 (self._batch_size, max_length, self._vocab_size))
             self.assertEqual(
                 outputs_.sample_id.shape, (self._batch_size, max_length))

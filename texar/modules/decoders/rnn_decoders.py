@@ -7,15 +7,14 @@ from __future__ import division
 from __future__ import print_function
 
 # pylint: disable=no-name-in-module, too-many-arguments, too-many-locals
-# pylint: disable=not-context-manager
-
-import pdb
+# pylint: disable=not-context-manager, protected-access
 
 import collections
 
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import AttentionWrapper
 from tensorflow.python.framework import tensor_shape, dtypes
+from tensorflow.python.util import nest
 
 from texar.modules.decoders.rnn_decoder_base import RNNDecoderBase
 from texar.core.utils import get_instance, get_class
@@ -27,45 +26,49 @@ __all__ = [
 
 class BasicRNNDecoderOutput(
         collections.namedtuple("BasicRNNDecoderOutput",
-                               ("rnn_output", "sample_id"))):
+                               ("logits", "sample_id", "cell_output"))):
     """The outputs of basic RNN decoders that include both RNN results and
     sampled ids at each step.
 
-    This is the same as :class:`tensorflow.contrib.seq2seq.BasicDecoderOutput`.
-
     Attributes:
-        rnn_output: The outputs of RNN at each step. E.g., in
-            :class:`~texar.modules.BasicRNNDecoder`, this
-            is a Tensor of shape `[batch_size, max_time, vocab_size]` containing
-            the logits at each step.
+        logits: The output of RNN at each step by applying the
+            output layer on cell outputs. E.g., in
+            :class:`~texar.modules.BasicRNNDecoder` with default
+            hyperparameters, this is a Tensor of
+            shape `[batch_size, max_time, vocab_size]`.
         sample_id: The sampled results at each step. E.g., in
             :class:`~texar.modules.BasicRNNDecoder`
             with default helpers (e.g.,
             :class:`~texar.modules.EmbeddingTrainingHelper`), this is a Tensor
             of shape `[batch_size, max_time]` containing the sampled token
             index at each step.
+        cell_output: The output of RNN cell at each step. This is the results
+            prior to the output layer. E.g., in
+            :class:`~texar.modules.BasicRNNDecoder` with default
+            hyperparameters, this is a Tensor of
+            shape `[batch_size, max_time, cell_output_size]`.
     """
     pass
 
 class AttentionRNNDecoderOutput(
         collections.namedtuple(
             "AttentionRNNDecoderOutput",
-            ["rnn_output", "sample_id", "cell_output",
+            ["logits", "sample_id", "cell_output",
              "attention_scores", "attention_context"])):
     """The outputs of attention RNN decoders that additionally include attention
     results.
 
     Attributes:
-        rnn_output: The outputs of RNN at each step. E.g., in
+        logits: The outputs of RNN at each step by applying the
+            output layer on cell outputs. E.g., in
             :class:`~texar.modules.AttentionRNNDecoder`, this is a Tensor of
-            shape `[batch_size, max_time, vocab_size]` containing the logits
-            at each step.
+            shape `[batch_size, max_time, vocab_size]`.
         sample_id: The sampled results at each step. E.g., in
             :class:`~texar.modules.AttentionRNNDecoder` with default helpers
             (e.g., :class:`~texar.modules.EmbeddingTrainingHelper`), this
-            is a Tensor of shape `[batch_size, max_time]` containing the sampled
-            token index at each step.
-        cell_output: The output states of RNN cell at each step. E.g., in
+            is a Tensor of shape `[batch_size, max_time]` containing the
+            sampled token index at each step.
+        cell_output: The output of RNN cell at each step. E.g., in
             :class:`~texar.modules.AttentionRNNDecoder`, this is a Tensor of
             shape `[batch_size, max_time, cell_output_size]`.
         attention_scores: A single or tuple of `Tensor`(s) containing the
@@ -101,6 +104,15 @@ class BasicRNNDecoder(RNNDecoderBase):
         vocab_size (int, optional): Vocabulary size. Required if
             :attr:`hparams["use_embedding"]` is `False` or :attr:`embedding` is
             not provided.
+        output_layer (optional): An instance of
+            :tf_main:`tf.layers.Layer <layers/Layer>`, or
+            :tf_main:`tf.identity <identity>`. Apply to the RNN cell
+            output to get logits. If `None`, a dense layer
+            is used with output dimension set to :attr:`vocab_size`
+            if :attr:`vocab_size` is specified, otherwise inferred from
+            from :attr:`embedding` (if embedding is used and
+            :attr:`embedding` is specified). Set `output_layer=tf.identity` if
+            you do not want to have an output layer after the RNN cell outputs.
         hparams (dict, optional): Hyperparameters. If not specified, the default
             hyperparameter setting is used. See
             :meth:`~texar.modules.BasicRNNDecoder.default_hparams` for the
@@ -111,9 +123,10 @@ class BasicRNNDecoder(RNNDecoderBase):
                  cell=None,
                  embedding=None,
                  vocab_size=None,
-                 hparams=None,
-                 output_layer=None):
-        RNNDecoderBase.__init__(self, cell, embedding, vocab_size, hparams, output_layer)
+                 output_layer=None,
+                 hparams=None):
+        RNNDecoderBase.__init__(self, cell, embedding, vocab_size,
+                                output_layer, hparams)
 
     @staticmethod
     def default_hparams():
@@ -195,29 +208,38 @@ class BasicRNNDecoder(RNNDecoderBase):
         hparams["name"] = "basic_rnn_decoder"
         return hparams
 
+    def _rnn_output_size(self):
+        size = self._cell.output_size
+        if self._output_layer is tf.identity:
+            return size
+        else:
+            # To use layer's compute_output_shape, we need to convert the
+            # RNNCell's output_size entries into shapes with an unknown
+            # batch size.  We then pass this through the layer's
+            # compute_output_shape and read off all but the first (batch)
+            # dimensions to get the output size of the rnn with the layer
+            # applied to the top.
+            output_shape_with_unknown_batch = nest.map_structure(
+                lambda s: tensor_shape.TensorShape([None]).concatenate(s),
+                size)
+            layer_output_shape = self._output_layer._compute_output_shape(
+                output_shape_with_unknown_batch)
+            return nest.map_structure(lambda s: s[1:], layer_output_shape)
+
     def initialize(self, name=None):
         return self._helper.initialize() + (self._initial_state,)
 
     def step(self, time, inputs, state, name=None):
         cell_outputs, cell_state = self._cell(inputs, state)
-        if self._output_layer:
-            outputs = self._output_layer(cell_outputs)
-        else:
-            outputs = cell_outputs
-        # logits = tf.contrib.layers.fully_connected(
-        #     inputs=cell_outputs, num_outputs=self._vocab_size, activation_fn=None)
-        # sample_ids = self._helper.sample(
-        #     time=time, outputs=, state=cell_state)
+        logits = self._output_layer(cell_outputs)
         sample_ids = self._helper.sample(
-            time=time, outputs=outputs, state=cell_state)
+            time=time, outputs=logits, state=cell_state)
         (finished, next_inputs, next_state) = self._helper.next_inputs(
             time=time,
-            outputs=outputs,
+            outputs=logits,
             state=cell_state,
             sample_ids=sample_ids)
-        outputs = BasicRNNDecoderOutput(outputs, sample_ids)
-        #next_state should be cell_state directly,
-        #according to function next_inputs
+        outputs = BasicRNNDecoderOutput(logits, sample_ids, cell_outputs)
         return (outputs, next_state, next_inputs, finished)
 
     def finalize(self, outputs, final_state, sequence_lengths):
@@ -225,14 +247,27 @@ class BasicRNNDecoder(RNNDecoderBase):
 
     @property
     def output_size(self):
+        """Output size of one step.
+        """
         return BasicRNNDecoderOutput(
-            rnn_output=self._vocab_size,
-            sample_id=tensor_shape.TensorShape([]))
+            logits=self._rnn_output_size(),
+            sample_id=self._helper.sample_ids_shape,
+            cell_output=self._cell.output_size)
 
     @property
     def output_dtype(self):
+        """Types of output of one step.
+        """
+        # Assume the dtype of the cell is the output_size structure
+        # containing the input_state's first component's dtype.
+        # Return that structure and the sample_ids_dtype from the helper.
+        dtype = nest.flatten(self._initial_state)[0].dtype
         return BasicRNNDecoderOutput(
-            rnn_output=dtypes.float32, sample_id=dtypes.int32)
+            logits=nest.map_structure(lambda _: dtype, self._rnn_output_size()),
+            sample_id=self._helper.sample_ids_dtype,
+            cell_output=nest.map_structure(
+                lambda _: dtype, self._cell.output_size))
+
 
 class AttentionRNNDecoder(RNNDecoderBase):
     """RNN decoder with attention mechanism.
@@ -466,8 +501,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
         attention_scores = wrapper_state.alignments
         attention_context = wrapper_state.attention
 
-        logits = tf.contrib.layers.fully_connected(
-            inputs=wrapper_outputs, num_outputs=self._vocab_size)
+        logits = self._output_layer(wrapper_outputs)
         sample_ids = self._helper.sample(
             time=time, outputs=logits, state=cell_state)
         (finished, next_inputs, next_state) = self._helper.next_inputs(
@@ -483,22 +517,22 @@ class AttentionRNNDecoder(RNNDecoderBase):
     def finalize(self, outputs, final_state, sequence_lengths):
         return outputs, final_state
 
-
     @property
     def output_size(self):
         state_size = self.cell.state_size
         return AttentionRNNDecoderOutput(
-            rnn_output=self._vocab_size,
+            logits=self._vocab_size,
             sample_id=tensor_shape.TensorShape([]),
             #TODO(zhiting): why access `_cell` ?
             cell_output=self.cell._cell.output_size,
             attention_scores=state_size.alignments,
             attention_context=state_size.attention)
 
+    # TODO(zhiting): fix it
     @property
     def output_dtype(self):
         return AttentionRNNDecoderOutput(
-            rnn_output=dtypes.float32,
+            logits=dtypes.float32,
             sample_id=dtypes.int32,
             cell_output=dtypes.float32,
             attention_scores=dtypes.float32,
