@@ -39,26 +39,22 @@ class TSF:
       "batch_size": 128,
       "embedding_size": 100,
       # rnn hprams
-      "rnn_hparams": {
-        "type": "GRUCell",
-        "size": 700,
-        "input_keep_prob": 0.5,
-      },
+      "rnn_type": "GRUCell",
+      "rnn_size": 700,
+      "rnn_input_keep_prob": 0.5,
       "output_keep_prob": 0.5,
       "dim_y": 200,
       "dim_z": 500,
-      "cnn_hparams": {
-        "name": "cnn",
-        "kernel_sizes": [3, 4, 5],
-        "num_filter": 128,
-        "input_keep_prob": 1.,
-        "output_keep_prob": 0.5,
-      },
-      "adam_hparams": {
-        "learning_rate": 1e-4,
-        "beta1": 0.9,
-        "beta2": 0.999
-      },
+      # cnn
+      "cnn_name": "cnn",
+      "cnn_kernel_sizes": [3, 4, 5],
+      "cnn_num_filter": 128,
+      "cnn_input_keep_prob": 1.,
+      "cnn_output_keep_prob": 0.5,
+      # adam
+      "adam_learning_rate": 1e-4,
+      "adam_beta1": 0.9,
+      "adam_beta2": 0.999
     }
 
   def _build_inputs(self):
@@ -76,7 +72,7 @@ class TSF:
     collections_input = self._hparams.collections + '/input'
     input_tensors = utils.register_collection(
       collections_input,
-      [("encoder_inputs", encoder_inputs),
+      [("enc_inputs", enc_inputs),
        ("dec_inputs", dec_inputs),
        ("targets", targets),
        ("weights", weights),
@@ -109,8 +105,9 @@ class TSF:
     # init_state = tf.concat([label_proj_e(labels),
     #                         tf.zeros([hparams.batch_size, hparams.dim_z])], 1)
 
-    init_state = tf.zeros([hparams.batch_size, hparams.rnn_hparams.size])
-    cell_e = ops.get_rnn_cell(hparams.rnn_hparams)
+    rnn_hparams = utils.filter_hparams(hparams, "rnn")
+    init_state = tf.zeros([hparams.batch_size, rnn_hparams.size])
+    cell_e = ops.get_rnn_cell(rnn_hparams)
 
     _, z = tf.nn.dynamic_rnn(cell_e, enc_inputs, initial_state=init_state,
                               scope="encoder")
@@ -120,7 +117,7 @@ class TSF:
     h_ori = tf.concat([label_proj_g(labels), z], 1)
     h_tsf = tf.concat([label_proj_g(1 - labels), z], 1)
 
-    cell_g = ops.get_rnn_cell(hparams.rnn_hparams)
+    cell_g = ops.get_rnn_cell(rnn_hparams)
     softmax_proj = tf.layers.Dense(hparams.vocab_size, name="softmax_proj")
     g_outputs, _ = tf.nn.dynamic_rnn(cell_g, dec_inputs, initial_state=h_ori,
                                      scope="generator")
@@ -129,8 +126,7 @@ class TSF:
 
     g_outputs = tf.nn.dropout(
       g_outputs, switch_dropout(hparams.output_keep_prob))
-    g_logits = softmax_proj(tf.reshape(
-      g_outputs, [-1, hparams.rnn_hparams.size]))
+    g_logits = softmax_proj(tf.reshape(g_outputs, [-1, rnn_hparams.size]))
 
     loss_g = tf.nn.sparse_softmax_cross_entropy_with_logits(
       labels=tf.reshape(input_tensors["targets"], [-1]), logits=g_logits)
@@ -167,8 +163,9 @@ class TSF:
     soft_output_tsf = soft_output_tsf[:, :input_tensors["batch_len"], :]
     soft_h_tsf = tf.concat([tf.expand_dims(h_tsf, 1), soft_output_tsf], 1)
 
-    cnn0_hparams = copy.deepcopy(hparams.cnn_hparams)
-    cnn1_hparams = copy.deepcopy(hparams.cnn_hparams)
+    cnn_hparams = utils.filter_hparams(hparams, "cnn")
+    cnn0_hparams = copy.deepcopy(cnn_hparams)
+    cnn1_hparams = copy.deepcopy(cnn_hparams)
     cnn0_hparams.name = "cnn0"
     cnn1_hparams.name = "cnn1"
     
@@ -187,13 +184,14 @@ class TSF:
     var_d1 = ops.retrieve_variables(["cnn1"])
 
     # optimization
-    optimizer_all = tf.train.AdamOptimizer(**hparams.adam_hparams).minimize(
+    adam_hparams = utils.filter_hparams(hparams, "adam")
+    optimizer_all = tf.train.AdamOptimizer(**adam_hparams).minimize(
       loss, var_list=var_eg)
-    optimizer_ae = tf.train.AdamOptimizer(**hparams.adam_hparams).minimize(
+    optimizer_ae = tf.train.AdamOptimizer(**adam_hparams).minimize(
       loss_g, var_list=var_eg)
-    optimizer_d0 = tf.train.AdamOptimizer(**hparams.adam_hparams).minimize(
+    optimizer_d0 = tf.train.AdamOptimizer(**adam_hparams).minimize(
       loss_d0, var_list=var_d0)
-    optimizer_d1 = tf.train.AdamOptimizer(**hparams.adam_hparams).minimize(
+    optimizer_d1 = tf.train.AdamOptimizer(**adam_hparams).minimize(
       loss_d1, var_list=var_d1)
 
     # add tensors to collections
@@ -227,12 +225,12 @@ class TSF:
     )
 
     collections_opt = hparams.collections + '/opt'
-    opt = utils.ergister_collections(
+    opt = utils.register_collection(
       collections_opt,
       [("optimizer_all", optimizer_all),
        ("optimizer_ae", optimizer_ae),
        ("optimizer_d0", optimizer_d0),
-       ("optimizer_d0", optimizer_d1),
+       ("optimizer_d1", optimizer_d1),
       ]
     )
 
