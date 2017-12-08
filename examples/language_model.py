@@ -90,7 +90,7 @@ def train():
     # Build loss
     mle_loss = mle_losses.average_sequence_sparse_softmax_cross_entropy(
         labels=data_batch['text_ids'][:, 1:],
-        logits=outputs.rnn_output,
+        logits=outputs.logits,
         sequence_length=sequence_lengths)
 
     # Build train op. Only config the optimizer while using default settings
@@ -114,6 +114,8 @@ def train():
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
 
+        tf.summary.FileWriter('language_models', sess.graph)
+        exit()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
