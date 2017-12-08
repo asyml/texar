@@ -3,5 +3,5 @@ Loss Functions
 
 Losses
 ======
-.. automodule:: txtgen.losses.losses
+.. automodule:: texar.losses.losses
     :members:
