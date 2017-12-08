@@ -8,6 +8,7 @@ from __future__ import print_function
 from __future__ import division
 
 import copy
+import json
 
 __all__ = [
     "HParams"
@@ -244,6 +245,12 @@ class HParams(object):
 
     def __contains__(self, name):
         return name in self._hparams
+
+    def __str__(self):
+        """Return a string of the hparams.
+        """
+        hparams_dict = self.todict()
+        return json.dumps(hparams_dict, sort_keys=True, indent=2)
 
     def get(self, name, default=None):
         """Returns the hyperparameter value for the given name. If name is not
