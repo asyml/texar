@@ -45,7 +45,6 @@ class TSFTrainer(TrainerBase):
       "sort_data": False,
       "shuffle_across_epoch": True,
       "d_update_freq": 2,
-      "expt_dir": "expt",
     }
 
   def load_data(self):

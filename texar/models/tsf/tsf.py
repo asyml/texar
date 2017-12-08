@@ -11,13 +11,13 @@ import pdb
 import copy
 import numpy as np
 import tensorflow as tf
-from tensorflow.contrib.layers.python.layers import utils
 
 from texar import context
 from texar.hyperparams import HParams
 from texar.core.utils import switch_dropout
 from texar.modules.encoders.conv1d_discriminator import CNN
 from texar.models.tsf import ops
+from texar.models.tsf import utils
 
 
 class TSF:
@@ -38,6 +38,7 @@ class TSF:
       "collections": "tsf",
       "batch_size": 128,
       "embedding_size": 100,
+      # rnn hprams
       "rnn_hparams": {
         "type": "GRUCell",
         "size": 700,
@@ -73,16 +74,18 @@ class TSF:
     rho = tf.placeholder(tf.float32, name="rho")
 
     collections_input = self._hparams.collections + '/input'
-    utils.collect_named_outputs(collections_input, "enc_inputs", enc_inputs)
-    utils.collect_named_outputs(collections_input, "dec_inputs", dec_inputs)
-    utils.collect_named_outputs(collections_input, "targets", targets)
-    utils.collect_named_outputs(collections_input, "weights", weights)
-    utils.collect_named_outputs(collections_input, "labels", labels)
-    utils.collect_named_outputs(collections_input, "batch_len", batch_len)
-    utils.collect_named_outputs(collections_input, "gamma", gamma)
-    utils.collect_named_outputs(collections_input, "rho", rho)
+    input_tensors = utils.register_collection(
+      collections_input,
+      [("encoder_inputs", encoder_inputs),
+       ("dec_inputs", dec_inputs),
+       ("targets", targets),
+       ("weights", weights),
+       ("labels", labels),
+       ("batch_len", batch_len),
+       ("gamma", gamma),
+       ("rho", rho)])
 
-    return utils.convert_collection_to_dict(collections_input)
+    return input_tensors
 
   def _build_model(self, input_tensors, reuse=False):
     hparams = self._hparams
@@ -195,38 +198,43 @@ class TSF:
 
     # add tensors to collections
     collections_output = hparams.collections + '/output'
-    utils.collect_named_outputs(collections_output, "h_ori", h_ori)
-    utils.collect_named_outputs(collections_output, "h_tsf", h_tsf)
-    utils.collect_named_outputs(collections_output, "hard_logits_ori",
-                                hard_logits_ori)
-    utils.collect_named_outputs(collections_output, "hard_logits_tsf",
-                                hard_logits_tsf)
-    utils.collect_named_outputs(collections_output, "soft_logits_ori",
-                                soft_logits_ori)
-    utils.collect_named_outputs(collections_output, "soft_logits_tsf",
-                                soft_logits_tsf)
-    utils.collect_named_outputs(collections_output, "g_logits", g_logits)
-    utils.collect_named_outputs(collections_output, "test_output", test_output)
-    utils.collect_named_outputs(collections_output, "test_logits", test_logits)
-    utils.collect_named_outputs(collections_output, "teach_h", teach_h)
-    utils.collect_named_outputs(collections_output, "soft_h_tsf", soft_h_tsf)
-    output_tensors = utils.convert_collection_to_dict(collections_output)
+    output_tensors = utils.register_collection(
+      collections_output,
+      [("h_ori", h_ori),
+       ("h_tsf", h_tsf),
+       ("hard_logits_ori", hard_logits_ori),
+       ("hard_logits_tsf", hard_logits_tsf),
+       ("soft_logits_ori", soft_logits_ori),
+       ("soft_logits_tsf", soft_logits_tsf),
+       ("g_logits", g_logits),
+       ("test_output", test_output),
+       ("test_logits", test_logits),
+       ("teach_h", teach_h),
+       ("soft_h_tsf", soft_h_tsf)
+      ]
+    )
 
     collections_loss = hparams.collections + '/loss'
-    utils.collect_named_outputs(collections_loss, "loss", loss)
-    utils.collect_named_outputs(collections_loss, "loss_g", loss_g)
-    utils.collect_named_outputs(collections_loss, "ppl_g", ppl_g)
-    utils.collect_named_outputs(collections_loss, "loss_d", loss_d)
-    utils.collect_named_outputs(collections_loss, "loss_d0", loss_d0)
-    utils.collect_named_outputs(collections_loss, "loss_d1", loss_d1)
-    loss = utils.convert_collection_to_dict(collections_loss)
+    loss = utils.register_collection(
+      collections_loss,
+      [("loss", loss),
+       ("loss_g", loss_g),
+       ("ppl_g", ppl_g),
+       ("loss_d", loss_d),
+       ("loss_d0", loss_d0),
+       ("loss_d1", loss_d1),
+      ]
+    )
 
     collections_opt = hparams.collections + '/opt'
-    utils.collect_named_outputs(collections_opt, "optimizer_all", optimizer_all)
-    utils.collect_named_outputs(collections_opt, "optimizer_ae", optimizer_ae)
-    utils.collect_named_outputs(collections_opt, "optimizer_d0", optimizer_d0)
-    utils.collect_named_outputs(collections_opt, "optimizer_d1", optimizer_d1)
-    opt = utils.convert_collection_to_dict(collections_opt)
+    opt = utils.ergister_collections(
+      collections_opt,
+      [("optimizer_all", optimizer_all),
+       ("optimizer_ae", optimizer_ae),
+       ("optimizer_d0", optimizer_d0),
+       ("optimizer_d0", optimizer_d1),
+      ]
+    )
 
     return output_tensors, loss, opt
 
