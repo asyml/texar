@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# txtgen documentation build configuration file, created by
+# texar documentation build configuration file, created by
 # sphinx-quickstart on Mon Sep  4 21:15:05 2017.
 #
 # This file is execfile()d with the current directory set to its
@@ -53,7 +53,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'txtgen'
+project = u'texar'
 copyright = u'2017, TxtGen'
 author = u'TxtGen'
 
@@ -133,7 +133,7 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
-#html_title = u'txtgen v0.1.1'
+#html_title = u'texar v0.1.1'
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #html_short_title = None
@@ -222,7 +222,7 @@ html_context = {
 #html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'txtgendoc'
+htmlhelp_basename = 'texardoc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -244,7 +244,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'txtgen.tex', u'txtgen Documentation',
+    (master_doc, 'texar.tex', u'texar Documentation',
      u'TxtGen', 'manual'),
 ]
 
@@ -274,7 +274,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'txtgen', u'txtgen Documentation',
+    (master_doc, 'texar', u'texar Documentation',
      [author], 1)
 ]
 
@@ -288,8 +288,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'txtgen', u'txtgen Documentation',
-     author, 'txtgen', 'One line description of project.',
+    (master_doc, 'texar', u'texar Documentation',
+     author, 'texar', 'One line description of project.',
      'Miscellaneous'),
 ]
 

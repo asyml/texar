@@ -8,16 +8,28 @@ from __future__ import print_function
 
 # pylint: disable=invalid-name, no-name-in-module
 
+# question: the loaded data is different each time I run it.
+# even if I have set random seeds for tensorflow, numpy and random,
+# and I have manually set the seed for database instance.
+
+rseed=123
 import sys
+
 import tensorflow as tf
+tf.set_random_seed(rseed)
+import random
+random.seed(rseed)
+import numpy as np
+np.random.seed(rseed)
 
 # We shall wrap all these modules
-from txtgen.data import MonoTextDataBase
-from txtgen.modules import ConstantConnector
-from txtgen.modules import BasicRNNDecoder, get_helper
-from txtgen.losses import mle_losses
-from txtgen.core import optimization as opt
-from txtgen import context
+from texar.data import MonoTextDataBase
+from texar.modules import ConstantConnector
+from texar.modules import BasicRNNDecoder, get_helper
+from texar.losses import mle_losses
+from texar.core import optimization as opt
+from texar import context
+
 
 
 def load_data():
@@ -25,7 +37,7 @@ def load_data():
 
     # Config data hyperparams. Hyperparams not configured will be automatically
     # filled with default values. For text database, default values are defined
-    # in `txtgen.data.database.default_text_dataset_hparams()`.
+    # in `texar.data.database.default_text_dataset_hparams()`.
     data_hparams = {
         "num_epochs": 10,
         "seed": 123,
@@ -74,11 +86,12 @@ def train():
     outputs, final_state, sequence_lengths = decoder(
         helper=helper_train, initial_state=connector(batch_size))
 
+    print('decoder done')
     # Build loss
     mle_loss = mle_losses.average_sequence_sparse_softmax_cross_entropy(
         labels=data_batch['text_ids'][:, 1:],
         logits=outputs.rnn_output,
-        sequence_length=sequence_lengths - 1)
+        sequence_length=sequence_lengths)
 
     # Build train op. Only config the optimizer while using default settings
     # for other hyperparameters.
@@ -101,14 +114,6 @@ def train():
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
 
-        # with tf.contrib.slim.queues.QueueRunners(sess):
-        #    _, step, loss = sess.run(
-        #        [train_op, global_step, mle_loss],
-        #        feed_dict={context.is_train(): True})
-
-        #    if step % 10 == 0:
-        #        print("%d: %.6f" % (step, loss))
-
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
@@ -120,6 +125,14 @@ def train():
                     [train_op, global_step, mle_loss],
                     feed_dict={context.is_train(): True})
 
+                sequence_length_, seq_len = sess.run(
+                    [sequence_lengths, data_batch['length']],
+                    feed_dict={context.is_train(): True})
+
+                # question: can we run the sess.run twice?
+                # I'm wondering whether the loaded data will be different in these two times
+
+                print('sep len:{}'.format(seq_len))
                 if step % 10 == 0:
                     print("%d: %.6f" % (step, loss))
 

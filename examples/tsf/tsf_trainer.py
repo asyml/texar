@@ -13,8 +13,8 @@ import tensorflow as tf
 import json
 import os
 
-from txtgen.hyperparams import HParams
-from txtgen.models.tsf import TSF
+from texar.hyperparams import HParams
+from texar.models.tsf import TSF
 
 from trainer_base import TrainerBase
 from utils import *

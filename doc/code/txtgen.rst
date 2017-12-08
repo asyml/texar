@@ -1,4 +1,4 @@
-Txtgen
+Texar
 ******
 
-.. automodule:: txtgen 
+.. automodule:: texar 

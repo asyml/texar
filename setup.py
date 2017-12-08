@@ -6,7 +6,7 @@ Setup file.
 import setuptools
 
 setuptools.setup(
-    name="txtgen",
+    name="texar",
     version="0.0.1",
     url="https://github.com/ZhitingHu/txtgen",
 

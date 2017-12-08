@@ -3,17 +3,17 @@ Core
 
 Layers
 ======
-.. automodule:: txtgen.core.layers
+.. automodule:: texar.core.layers
     :members:
 
 
 Networks
 ========
-.. automodule:: txtgen.core.networks
+.. automodule:: texar.core.networks
     :members:
 
 
 Utils
 =====
-.. automodule:: txtgen.core.utils
+.. automodule:: texar.core.utils
     :members:
