@@ -21,7 +21,6 @@ from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.losses import mle_losses
 from texar.core import optimization as opt
 from texar import context
-import time
 
 if __name__ == "__main__":
     ### Build data pipeline
@@ -33,7 +32,7 @@ if __name__ == "__main__":
         "num_epochs": 20,
         "seed": 123,
         "batch_size":32,
-        # "shuffle":False,
+        "shuffle":False,
         "source_dataset": {
             "files": ['data/translation/de-en/train_de_sentences.txt'],
             "vocab_file": 'data/translation/de-en/filter_de.vocab.txt',
@@ -57,18 +56,31 @@ if __name__ == "__main__":
         'scale':True,
         'sinusoid':False,
         'embedding': {
-            'initializer': {
-                'type':'xavier_initializer',
-                },
+            'name': 'embedding',
             'dim': 512,
+            'initializer': {
+                'type': tf.contrib.layers.xavier_initializer(),
+                },
+            'trainable':True,
+            # 'regularizer':
+
+            #    'type':'xavier_initializer',
+            #    'kwargs': {
+            #        'uniform':True,
+            #        'seed':None,
+            #        'dtype':tf.float32,
+            #        },
+            #    },
         },
         'num_blocks': 6,
         'num_heads': 8,
     }
     # Construct the database
     text_database = PairedTextDataBase(data_hparams)
-    print('database finished')
-
+    #dedict = text_database.source_vocab._id_to_token_map_py
+    #for idx, word in dedict.items():
+    #    print('id:{} word:{}'.format(idx, word))
+    # print('database finished')
     text_data_batch = text_database()
     encoder = TransformerEncoder(vocab_size=text_database.source_vocab.vocab_size,
             hparams=extra_hparams)
@@ -77,7 +89,6 @@ if __name__ == "__main__":
             hparams=extra_hparams)
 
     ori_src_text = text_data_batch['source_text_ids']
-
     ori_tgt_text = text_data_batch['target_text_ids']
 
     padded_src_text = tf.concat(
@@ -91,6 +102,9 @@ if __name__ == "__main__":
     encoder_input = padded_src_text[:, 1:]
     decoder_input = padded_tgt_text[:, :-1]
 
+    # srcdata = tf.summary.histogram('srcdata', encoder_input)
+    # tgtdata = tf.summary.histogram('tgtdata', decoder_input)
+
     encoder_output = encoder(encoder_input)
     logits, preds = decoder(decoder_input, encoder_output)
 
@@ -100,61 +114,65 @@ if __name__ == "__main__":
 
     labels = padded_tgt_text[:, 1:]
     is_target = tf.to_float(tf.not_equal(labels, 0))
-    acc = tf.reduce_sum(tf.to_float(tf.equal(preds, labels))*is_target)/ (tf.reduce_sum(is_target))
+    targets_num = tf.reduce_sum(is_target)
+    acc = tf.reduce_sum(tf.to_float(tf.equal(preds, labels))*is_target)/ targets_num
+    acc_stat = tf.summary.scalar('acc', acc)
 
-    labels = mle_losses.label_smoothing(labels,
-            text_database.target_vocab.vocab_size,\
-            loss_params['label_smoothing'])
+    onehot_labels = tf.one_hot(labels, depth=text_database.target_vocab.vocab_size)
 
-    loss = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=labels)
-    mean_loss = tf.reduce_sum(loss*is_target) / (tf.reduce_sum(is_target))
+    smoothed_labels = ( (1-loss_params['label_smoothing'])*onehot_labels) +\
+        (loss_params['label_smoothing']/text_database.target_vocab.vocab_size)
+    loss = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=smoothed_labels)
+    mean_loss = tf.reduce_sum(loss*is_target) / targets_num
+    #opt_hparams={
+    #    "optimizer": {
+    #        "type": "AdamOptimizer",
+    #        "kwargs": {
+    #            "learning_rate": 0.0001,
+    #            "beta1": 0.9,
+    #            "beta2": 0.98,
+    #            "epsilon": 1e-8,
+    #        }
+    #    }
+    #}
+    #train_op, global_step = opt.get_train_op(mean_loss, hparams=opt_hparams)
+    global_step = tf.Variable(0, name='global_step', trainable=False)
+    optimizer = tf.train.AdamOptimizer(learning_rate=0.0001, beta1=0.9, beta2=0.98, epsilon=1e-8)
+    train_op = optimizer.minimize(mean_loss, global_step=global_step)
+    tf.summary.scalar('mean_loss', mean_loss)
+    merged = tf.summary.merge_all()
 
-    #mle_loss = mle_losses.average_sequence_softmax_cross_entropy(
-    #       labels=labels,
-    #       logits=logits,
-    #       sequence_length=text_data_batch['target_length']-1)
-    opt_hparams={
-        "optimizer": {
-            "type": "AdamOptimizer",
-            "kwargs": {
-                "learning_rate": 0.0001,
-                "beta1": 0.9,
-                "beta2": 0.98,
-                "epsilon": 1e-8,
-            }
-        }
-    }
-    train_op, global_step = opt.get_train_op(mean_loss, hparams=opt_hparams)
     saver = tf.train.Saver()
     # We shall wrap these environment setup codes
-
     with tf.Session() as sess:
+
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
+        writer = tf.summary.FileWriter("./tmp/histogram_example", graph=sess.graph)
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-        # print(ops.get_collection(ops.GraphKeys.QUEUE_RUNNERS))
-
         try:
             while not coord.should_stop():
-                #pred loss, not include BOS
-                #source, target, _, step, loss, accy= sess.run(
-                #    [padded_src_text, padded_tgt_text, train_op, global_step, mean_loss, acc],
-                #    feed_dict={context.is_train(): True})
-                source, target = sess.run(
-                        [padded_src_text, padded_tgt_text], feed_dict={context.is_train():True})
+                # for epoch in range(num_epochs):
+                source, target,predict, _, step, loss, accy, mgd= sess.run(
+                    [encoder_input, labels, preds, train_op, global_step, mean_loss, acc, merged],
+                    feed_dict={context.is_train(): True})
 
-                print('source:{}\n target:{}\n'.format(source, target))
-                # for var in tf.trainable_variables():
-                #     print('name:{}\tshape:{}\ttype:{}\n'.format(var.name, var.shape, var.dtype))
-                if step % 100 == 0:
-                    print("time{} step{} loss{} acc{}".format(time.asctime(time.localtime(time.time())), step, loss, accy))
+                sourcetxt = [' '.join([text_database.source_vocab._id_to_token_map_py[i] for i in line]) \
+                        for line in source.tolist()]
+                targettxt = [ ' '.join([text_database.target_vocab._id_to_token_map_py[i] for i in line]) \
+                        for line in target.tolist()]
+                writer.add_summary(mgd, global_step=step)
+                for index, line in enumerate(zip(source, sourcetxt, target, targettxt)):
+                    print('{}:{} source:{} txt:{}'.format((step-1)*32+index, step, line[0], line[1]))
+                    print('{}:{} target:{} txt:{}'.format((step-1)*32+index, step, line[2], line[3]))
+                for var in tf.trainable_variables():
+                     print('name:{}\tshape:{}\ttype:{}'.format(var.name, var.shape, var.dtype))
                 if step % 1000 == 0:
                     saver.save(sess, './logdir/my-model', global_step = step)
-                # if step % 2000 ==0:
-                #    coord.request_stop()
+                    coord.request_stop()
         except tf.errors.OutOfRangeError:
             print('Done -- epoch limit reached')
         finally:

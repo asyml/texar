@@ -277,10 +277,11 @@ def get_initializer(hparams=None):
         if isinstance(kwargs, HParams):
             kwargs = kwargs.todict()
         modules = ["tensorflow.initializers", "tensorflow.keras.initializers",
-                   "tensorflow", "texar.custom", "tensorflow.contrib.layers"]
+                   "tensorflow", "texar.custom"]
         try:
             initializer = utils.get_instance(hparams["type"], kwargs, modules)
-        except TypeError:
+        except ValueError:
+            modules += ['tensorflow.contrib.layers']
             initializer_fn = utils.get_function(hparams["type"], modules)
             initializer = initializer_fn(**kwargs)
     else:
