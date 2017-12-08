@@ -56,7 +56,7 @@ if __name__ == "__main__":
         'scale':True,
         'sinusoid':False,
         'embedding': {
-            'name': 'embedding',
+            'name': 'lookup_table',
             'dim': 512,
             'initializer': {
                 'type': tf.contrib.layers.xavier_initializer(),
@@ -82,6 +82,7 @@ if __name__ == "__main__":
     #    print('id:{} word:{}'.format(idx, word))
     # print('database finished')
     text_data_batch = text_database()
+    print('extra_hparams:{}'.format(extra_hparams['embedding']['name']))
     encoder = TransformerEncoder(vocab_size=text_database.source_vocab.vocab_size,
             hparams=extra_hparams)
     print('encoder scope:{}'.format(encoder.variable_scope.name))
@@ -106,7 +107,8 @@ if __name__ == "__main__":
     # tgtdata = tf.summary.histogram('tgtdata', decoder_input)
 
     encoder_output = encoder(encoder_input)
-    logits, preds = decoder(decoder_input, encoder_output)
+    logits, preds = decoder(inputs=decoder_input,
+            encoder_output=encoder_output)
 
     loss_params = {
             'label_smoothing':0.1,
@@ -116,7 +118,7 @@ if __name__ == "__main__":
     is_target = tf.to_float(tf.not_equal(labels, 0))
     targets_num = tf.reduce_sum(is_target)
     acc = tf.reduce_sum(tf.to_float(tf.equal(preds, labels))*is_target)/ targets_num
-    acc_stat = tf.summary.scalar('acc', acc)
+    tf.summary.scalar('acc', acc)
 
     onehot_labels = tf.one_hot(labels, depth=text_database.target_vocab.vocab_size)
 
@@ -164,12 +166,17 @@ if __name__ == "__main__":
                         for line in source.tolist()]
                 targettxt = [ ' '.join([text_database.target_vocab._id_to_token_map_py[i] for i in line]) \
                         for line in target.tolist()]
+                predicttxt = [ ' '.join([text_database.target_vocab._id_to_token_map_py[i] for i in line])\
+                        for line in predict.tolist()]
                 writer.add_summary(mgd, global_step=step)
-                for index, line in enumerate(zip(source, sourcetxt, target, targettxt)):
-                    print('{}:{} source:{} txt:{}'.format((step-1)*32+index, step, line[0], line[1]))
-                    print('{}:{} target:{} txt:{}'.format((step-1)*32+index, step, line[2], line[3]))
+                #for index, line in enumerate(zip(source, sourcetxt, target, targettxt, predict, predicttxt)):
+                #    print('{}:{} source:{} txt:{}'.format((step-1)*32+index, step, line[0], line[1]))
+                #    print('{}:{} target:{} txt:{}'.format((step-1)*32+index, step, line[2], line[3]))
+                #    print('{}:{} predict:{} txt:{}'.format((step-1)*32+index, step, line[4], line[5]))
+                print('var cnt:{}'.format(len(tf.trainable_variables())))
                 for var in tf.trainable_variables():
                      print('name:{}\tshape:{}\ttype:{}'.format(var.name, var.shape, var.dtype))
+                exit()
                 if step % 1000 == 0:
                     saver.save(sess, './logdir/my-model', global_step = step)
                     coord.request_stop()

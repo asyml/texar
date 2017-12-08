@@ -462,7 +462,8 @@ def default_embedding_hparams():
 def get_embedding(hparams=None,
                   init_values=None,
                   vocab_size=None,
-                  variable_scope=None):
+                  variable_scope=None,
+                  subscope='Embedding'):
     """Creates embedding variable if not exists.
 
     Args:
@@ -485,12 +486,13 @@ def get_embedding(hparams=None,
         Variable: A 2D `Variable` of the same shape with :attr:`init_values`
         or of the shape :attr:`[vocab_size, hparams["dim"]]`.
     """
-    with tf.variable_scope(variable_scope, "embedding"):
+    with tf.variable_scope(variable_scope, subscope):
         if hparams is None or isinstance(hparams, dict):
             hparams = HParams(hparams, default_embedding_hparams())
         regularizer = get_regularizer(hparams["regularizer"])
         if init_values is None:
             initializer = get_initializer(hparams["initializer"])
+            print('hparams:{}'.format(hparams['name']))
             return tf.get_variable(name=hparams["name"],
                                    shape=[vocab_size, hparams["dim"]],
                                    initializer=initializer,
@@ -1097,39 +1099,3 @@ def poswise_feedforward(inputs,
         outputs = normalize(outputs)
 
     return outputs
-
-
-def label_smoothing(inputs, epsilon=0.1):
-    '''Applies label smoothing. See https://arxiv.org/abs/1512.00567.
-
-    Args:
-      inputs: A 3d tensor with shape of [N, T, V], where V is the number of vocabulary.
-      epsilon: Smoothing rate.
-
-    For example,
-
-    ```
-    import tensorflow as tf
-    inputs = tf.convert_to_tensor([[[0, 0, 1],
-       [0, 1, 0],
-       [1, 0, 0]],
-      [[1, 0, 0],
-       [1, 0, 0],
-       [0, 1, 0]]], tf.float32)
-
-    outputs = label_smoothing(inputs)
-
-    with tf.Session() as sess:
-        print(sess.run([outputs]))
-
-    >>
-    [array([[[ 0.03333334,  0.03333334,  0.93333334],
-        [ 0.03333334,  0.93333334,  0.03333334],
-        [ 0.93333334,  0.03333334,  0.03333334]],
-       [[ 0.93333334,  0.03333334,  0.03333334],
-        [ 0.93333334,  0.03333334,  0.03333334],
-        [ 0.03333334,  0.93333334,  0.03333334]]], dtype=float32)]
-    ```
-    '''
-    K = inputs.get_shape().as_list()[-1] # number of channels
-    return ((1-epsilon) * inputs) + (epsilon / K)
