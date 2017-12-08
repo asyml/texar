@@ -102,9 +102,11 @@ class TSF:
     labels = tf.reshape(labels, [-1, 1])
 
     # auto encoder
-    label_proj_e = tf.layers.Dense(hparams.dim_y, name="encoder")
-    init_state = tf.concat([label_proj_e(labels),
-                            tf.zeros([hparams.batch_size, hparams.dim_z])], 1)
+    # label_proj_e = tf.layers.Dense(hparams.dim_y, name="encoder")
+    # init_state = tf.concat([label_proj_e(labels),
+    #                         tf.zeros([hparams.batch_size, hparams.dim_z])], 1)
+
+    init_state = tf.zeros([hparams.batch_size, hparams.rnn_hparams.size])
     cell_e = ops.get_rnn_cell(hparams.rnn_hparams)
 
     _, z = tf.nn.dynamic_rnn(cell_e, enc_inputs, initial_state=init_state,
