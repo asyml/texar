@@ -16,6 +16,7 @@ import numpy as np
 # pylint: disable=invalid-name, no-member, no-name-in-module
 
 import tensorflow as tf
+import sys
 from tensorflow.python.framework import ops
 from tensorflow.python.util import nest
 from tensorflow.python.ops import rnn
@@ -45,7 +46,7 @@ def get_class(class_name, module_paths=None):
         A class.
 
     Raises:
-        ValueError: If class is not found based on :attr:`class_name` and
+        TypeError: If class is not found based on :attr:`class_name` and
             :attr:`module_paths`.
     """
     class_ = locate(class_name)
@@ -92,14 +93,14 @@ def get_instance(class_name, kwargs, module_paths=None):
     """
     # Locate the class
     class_ = get_class(class_name, module_paths)
-
+    print('class:{}'.format(class_))
     # Check validity of arguments
     class_args = set(inspect.getargspec(class_.__init__).args)
     for key in kwargs.keys():
         if key not in class_args:
             raise ValueError(
-                "Invalid argument for class %s.%s: %s" %
-                (class_.__module__, class_.__name__, key))
+                    "Invalid argument for class %s.%s: %s, valid args:%s" %
+                (class_.__module__, class_.__name__, key, class_args))
 
     return class_(**kwargs)
 
@@ -336,7 +337,10 @@ def is_str_or_unicode(x):
     """Returns `True` if :attr:`x` is either a str or unicode. Returns `False`
     otherwise.
     """
-    return isinstance(x, str) or isinstance(x, unicode)
+    if sys.version_info[0]<3:
+        return isinstance(x, str) or isinstance(x, unicode)
+    else:
+        return isinstance(x, str)
 
 def uniquify_str(str_, str_set):
     """Uniquifies :attr:`str_` if :attr:`str_` is included in :attr:`str_set`.
