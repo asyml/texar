@@ -52,9 +52,10 @@ class RNNEncoderBase(EncoderBase):
         EncoderBase.__init__(self, hparams)
 
         # Make embedding
+        self._vocab_size = vocab_size
         self._embedding = None
         if self._hparams.use_embedding:
-            if embedding is None and vocab_size is None:
+            if embedding is None and self._vocab_size is None:
                 raise ValueError(
                     "`vocab_szie` is required if embedding is enabled and "
                     "`embedding` is not provided")
@@ -62,10 +63,12 @@ class RNNEncoderBase(EncoderBase):
                 self._embedding = embedding
             else:
                 self._embedding = layers.get_embedding(
-                    self._hparams.embedding, embedding, vocab_size,
+                    self._hparams.embedding, embedding, self._vocab_size,
                     self.variable_scope)
             if self._hparams.embedding.trainable:
                 self._add_trainable_variable(self._embedding)
+            if self._vocab_size is None:
+                self._vocab_size = self._embedding.get_shape().as_list()[0]
 
     @staticmethod
     def default_hparams():

@@ -104,7 +104,9 @@ def average_sequence_softmax_cross_entropy(labels,
         losses = tf.nn.softmax_cross_entropy_with_logits(
             labels=labels, logits=logits)
         losses = _mask_sequences(losses, sequence_length, time_major)
-        loss = tf.reduce_sum(losses) / tf.to_float(tf.shape(labels)[0])
+        print('losses:{} dtype:{}'.format(losses.shape, losses.dtype))
+        print('sequence_length:{} dtype:{}'.format(sequence_length.shape, sequence_length.dtype))
+        loss = tf.reduce_sum(losses) / tf.reduce_sum(tf.to_float(sequence_length))
         return loss
 
 
@@ -171,16 +173,7 @@ def average_sequence_sparse_softmax_cross_entropy(labels,
         loss = tf.reduce_sum(losses) / tf.to_float(tf.shape(labels)[0])
         return loss
 
-def average_sequence_cross_entropy_with_logits(labels,
-        logits,
-        sequence_length,
-        time_major=False,
-        name=None):
-    with tf.name_scope(name, "cross_entropy_with_logits"):
-        losses = tf.nn.softmax_cross_entropy_with_logits(logits=logits,
-                labels=labels)
-        is_target=tf.to_float(tf.not_equal(labels, 0))
-        # losses = _mask_sequences(losses, sequence_length, time_major)
-        # seq_length_sum = tf.to_float(tf.reduce_sum(sequence_length))
-        loss = tf.reduce_sum(losses*is_target)/tf.reduce_sum(is_target)
-        return loss
+def label_smoothing(labels, total_class, smooth_rate, name=None):
+    with tf.name_scope(name, 'label_smoothing'):
+        one_hot_labels =tf.one_hot(labels, depth=total_class)
+        return  (1-smooth_rate)*one_hot_labels + (smooth_rate)/total_class

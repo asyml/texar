@@ -93,7 +93,6 @@ def get_instance(class_name, kwargs, module_paths=None):
     """
     # Locate the class
     class_ = get_class(class_name, module_paths)
-    print('class:{}'.format(class_))
     # Check validity of arguments
     class_args = set(inspect.getargspec(class_.__init__).args)
     for key in kwargs.keys():

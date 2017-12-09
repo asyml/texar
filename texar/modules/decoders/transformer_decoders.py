@@ -42,22 +42,13 @@ class TransformerDecoder(ModuleBase):
                 else:
                     self._embedding = layers.get_embedding(
                         self._hparams.embedding, embedding, vocab_size,
-                        variable_scope='enc_embed',
-                        subscope=None)
+                        variable_scope='dec_embed')
                 embed_dim = self._embedding.shape.as_list()[-1]
                 if self._hparams.zero_pad:
                     self._embedding = tf.concat((tf.zeros(shape=[1, embed_dim]),
                         self._embedding[1:, :]), 0)
                 if self._hparams.embedding.trainable:
                     self._add_trainable_variable(self._embedding)
-            with tf.variable_scope('enc_pe'):
-                if self._hparams.sinusoid:
-                    raise ValueError('not implemented')
-                else:
-                    self.position_enc_embedding = tf.get_variable('lookup_table',
-                            dtype=tf.float32,
-                            shape=[self._hparams.max_seq_length, self._hparams.embedding.dim],
-                            initializer=tf.contrib.layers.xavier_initializer())
 
     @staticmethod
     def default_hparams():
@@ -78,11 +69,22 @@ class TransformerDecoder(ModuleBase):
             }
 
     def _build(self, inputs, encoder_output):
-        dec = tf.nn.embedding_lookup(self._embedding, inputs)
+        if self._embedding is not None:
+            dec = tf.nn.embedding_lookup(self._embedding, inputs)
         if self._hparams.scale:
             dec = dec * (self._hparams.embedding.dim**0.5)
 
-        dec += tf.nn.embedding_lookup(self.position_dec_embedding,
+        if self._hparams.sinusoid:
+            dec += layers.sinusoid_positional_encoding(dec,
+                    num_units=self._hparams.embedding,
+                    max_time=self._hparams.max_seq_length,
+                    variable_scope='dec_pe')
+        else:
+            self.position_dec_embedding = layers.get_embedding(
+                    hparams=self._hparams.embedding,
+                    vocab_size=self._hparams.max_seq_length,
+                    variable_scope='dec_pe')
+            dec += tf.nn.embedding_lookup(self.position_dec_embedding,
                     tf.tile(tf.expand_dims(tf.range(tf.shape(inputs)[1]), 0),\
                             [tf.shape(inputs)[0], 1]))
         dec = tf.layers.dropout(dec,

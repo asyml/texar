@@ -14,9 +14,11 @@ _IS_TRAIN_KEY = "CONTEXT_IS_TRAIN"
 
 def is_train():
     """Returns the global mode indicator.
-     Returns: A bool placeholder that indicates the global train/infer mode.
+
+    Returns:
+        A bool placeholder that indicates the global train/infer mode.
     """
-    # return False
+    #return False # TODO(zhiting): why added this?
     is_train_values = tf.get_collection_ref(_IS_TRAIN_KEY)
     if len(is_train_values) < 1:
         is_train_values.append(tf.placeholder(tf.bool, name="is_train"))
