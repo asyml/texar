@@ -52,22 +52,20 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 raise ValueError(
                     "`vocab_size` is required if embedding is used and"
                     "`embedding` is None.")
-        self._vocab_size = None
 
+        self._vocab_size = vocab_size
         self._embedding = None
         if self._hparams.use_embedding:
             if isinstance(embedding, tf.Variable):
                 self._embedding = embedding
             else:
                 self._embedding = layers.get_embedding(
-                    self._hparams.embedding, embedding, vocab_size,
+                    self._hparams.embedding, embedding, self._vocab_size,
                     self.variable_scope)
             if self._hparams.embedding.trainable:
                 self._add_trainable_variable(self._embedding)
-            self._vocab_size = self._embedding.get_shape().as_list()[0]
-
-        if vocab_size is not None:
-            self._vocab_size = vocab_size
+            if self._vocab_size is None:
+                self._vocab_size = self._embedding.get_shape().as_list()[0]
 
         # Make the output layer
         self._output_layer = output_layer
