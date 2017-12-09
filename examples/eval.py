@@ -41,28 +41,59 @@ def eval():
     y = tf.placeholder(tf.int32, shape=(data_hparams['batch_size'], data_hparams['max_seq_length']))
     de2idx, idx2de = load_de_vocab()
     en2idx, idx2en = load_en_vocab()
-    encoder = TransformerEncoder(vocab_size=len(de2idx),
+
+    decoder_input =tf.concat((tf.ones_like(y[:, :1]), y[:, :-1]), -1) # 1:<S>
+
+    encoder= TransformerEncoder(vocab_size=len(de2idx),
             hparams=extra_hparams)
+    encoder_output=encoder(x)
+
     decoder = TransformerDecoder(vocab_size=len(idx2en),
             hparams=extra_hparams)
-    encoder_output = encoder(x)
-    logits, preds = decoder(y, encoder_output)
 
+    #vocab=text_database.target_vocab
+
+    #helper_infer=get_helper(
+    #        decoder.hparams.helper_infer.type,
+    #        embedding=decoder.embedding,
+    #        start_tokens=[vocab._token_to_id_map_py[vocab.bos_token]]*data_hparams['max_sequence_length'],
+    #        end_token=vocab._token_to_id_map[vocab.eos_token],
+    #        softmax_temperature=None)
+
+
+
+    logits, preds = decoder(decoder_input, encoder_output)
     # Start session
-    sv = tf.train.Supervisor(
-            saver = tf.train.Saver(tf.trainable_variables()),
-            save_model_secs=0)
-    with sv.managed_session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
+    #print('var cnt:{}'.format(len(tf.trainable_variables())))
+    #for var in tf.trainable_variables():
+    #    print('var: name:{} shape:{} dtype:{}'.format(var.name, var.shape, var.dtype))
+
+    with tf.Session() as sess:
         ## Restore parameters
-        sv.saver.restore(sess, tf.train.latest_checkpoint('../transformer/logdir'))
+        sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
+        sess.run(tf.tables_initializer())
+        saver = tf.train.Saver(tf.trainable_variables())
+        #sv.saver.restore(sess, tf.train.latest_checkpoint('./logdir'))
         #print('var cnt:{}'.format(len(tf.trainable_variables())))
+
         #for var in tf.trainable_variables():
         #    print('var name:{} shape:{} dtype:{}'.format(var.name, var.shape, var.dtype))
         #exit()
-        print("Restored!")
 
+        varlist =tf.trainable_variables()
+        namelist = [var.name for var in varlist]
+        newnamelist = [name[:7]+'_1'+name[7:] if (name[7]=='/' and (name[8]=='n' or name[8]=='d' or name[8]=='e')) else name for name in namelist]
+        newnamelist = [name[:-2] if name[-2]==':' else name for name in newnamelist]
+        vardict={}
+        for name, var in zip(newnamelist, varlist):
+            vardict[name]=var
+        saver = tf.train.Saver(vardict)
+        saver.restore(sess, tf.train.latest_checkpoint('./logdir'))
+        #writer = tf.summary.FileWriter('eval/', sess.graph)
+        #exit()
         ## Get model name
-        mname = open('../transformer/logdir/checkpoint', 'r').read().split('"')[1] # model name
+        mname = open('./logdir/checkpoint', 'r').read().split('"')[1] # model name
         print('mname:{}'.format(mname))
         ## Inference
         if not os.path.exists('results'): os.mkdir('results')
@@ -76,9 +107,7 @@ def eval():
                 ### Autoregressive inference
                 outputs = np.zeros((data_hparams['batch_size'], data_hparams['max_seq_length']), np.int32)
                 for j in range(data_hparams['max_seq_length']):
-                    print('begin fetch')
                     _preds = sess.run(preds, feed_dict={x: src, y: outputs})
-                    print('run over')
                     outputs[:, j] = _preds[:, j]
 
                 ### Write to file
