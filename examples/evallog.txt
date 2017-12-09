@@ -1,0 +1,163 @@
+Graph loaded
+var name:encoder/enc_embed/lookup_table:0 shape:(9796, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/enc_pe/lookup_table:0 shape:(10, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_0/multihead_attention/dense/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_0/multihead_attention/dense/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_0/multihead_attention/dense_1/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_0/multihead_attention/dense_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_0/multihead_attention/dense_2/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_0/multihead_attention/dense_2/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_0/multihead_attention/conv1d/kernel:0 shape:(1, 512, 2048) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_0/multihead_attention/conv1d/bias:0 shape:(2048,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_0/multihead_attention/conv1d_1/kernel:0 shape:(1, 2048, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_0/multihead_attention/conv1d_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_1/multihead_attention/dense/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_1/multihead_attention/dense/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_1/multihead_attention/dense_1/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_1/multihead_attention/dense_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_1/multihead_attention/dense_2/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_1/multihead_attention/dense_2/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_1/multihead_attention/conv1d/kernel:0 shape:(1, 512, 2048) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_1/multihead_attention/conv1d/bias:0 shape:(2048,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_1/multihead_attention/conv1d_1/kernel:0 shape:(1, 2048, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_1/multihead_attention/conv1d_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_2/multihead_attention/dense/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_2/multihead_attention/dense/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_2/multihead_attention/dense_1/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_2/multihead_attention/dense_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_2/multihead_attention/dense_2/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_2/multihead_attention/dense_2/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_2/multihead_attention/conv1d/kernel:0 shape:(1, 512, 2048) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_2/multihead_attention/conv1d/bias:0 shape:(2048,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_2/multihead_attention/conv1d_1/kernel:0 shape:(1, 2048, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_2/multihead_attention/conv1d_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_3/multihead_attention/dense/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_3/multihead_attention/dense/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_3/multihead_attention/dense_1/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_3/multihead_attention/dense_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_3/multihead_attention/dense_2/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_3/multihead_attention/dense_2/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_3/multihead_attention/conv1d/kernel:0 shape:(1, 512, 2048) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_3/multihead_attention/conv1d/bias:0 shape:(2048,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_3/multihead_attention/conv1d_1/kernel:0 shape:(1, 2048, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_3/multihead_attention/conv1d_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_4/multihead_attention/dense/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_4/multihead_attention/dense/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_4/multihead_attention/dense_1/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_4/multihead_attention/dense_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_4/multihead_attention/dense_2/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_4/multihead_attention/dense_2/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_4/multihead_attention/conv1d/kernel:0 shape:(1, 512, 2048) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_4/multihead_attention/conv1d/bias:0 shape:(2048,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_4/multihead_attention/conv1d_1/kernel:0 shape:(1, 2048, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_4/multihead_attention/conv1d_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_5/multihead_attention/dense/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_5/multihead_attention/dense/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_5/multihead_attention/dense_1/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_5/multihead_attention/dense_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_5/multihead_attention/dense_2/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_5/multihead_attention/dense_2/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_5/multihead_attention/conv1d/kernel:0 shape:(1, 512, 2048) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_5/multihead_attention/conv1d/bias:0 shape:(2048,) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_5/multihead_attention/conv1d_1/kernel:0 shape:(1, 2048, 512) dtype:<dtype: 'float32_ref'>
+var name:encoder/num_blocks_5/multihead_attention/conv1d_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/dec_embed/lookup_table:0 shape:(8767, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/dec_pe/lookup_table:0 shape:(10, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_0/self_attention/dense/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_0/self_attention/dense/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_0/self_attention/dense_1/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_0/self_attention/dense_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_0/self_attention/dense_2/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_0/self_attention/dense_2/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_0/vanilla_attention/dense/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_0/vanilla_attention/dense/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_0/vanilla_attention/dense_1/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_0/vanilla_attention/dense_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_0/vanilla_attention/dense_2/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_0/vanilla_attention/dense_2/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_0/multihead_attention/conv1d/kernel:0 shape:(1, 512, 2048) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_0/multihead_attention/conv1d/bias:0 shape:(2048,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_0/multihead_attention/conv1d_1/kernel:0 shape:(1, 2048, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_0/multihead_attention/conv1d_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_1/self_attention/dense/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_1/self_attention/dense/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_1/self_attention/dense_1/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_1/self_attention/dense_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_1/self_attention/dense_2/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_1/self_attention/dense_2/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_1/vanilla_attention/dense/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_1/vanilla_attention/dense/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_1/vanilla_attention/dense_1/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_1/vanilla_attention/dense_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_1/vanilla_attention/dense_2/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_1/vanilla_attention/dense_2/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_1/multihead_attention/conv1d/kernel:0 shape:(1, 512, 2048) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_1/multihead_attention/conv1d/bias:0 shape:(2048,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_1/multihead_attention/conv1d_1/kernel:0 shape:(1, 2048, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_1/multihead_attention/conv1d_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_2/self_attention/dense/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_2/self_attention/dense/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_2/self_attention/dense_1/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_2/self_attention/dense_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_2/self_attention/dense_2/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_2/self_attention/dense_2/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_2/vanilla_attention/dense/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_2/vanilla_attention/dense/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_2/vanilla_attention/dense_1/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_2/vanilla_attention/dense_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_2/vanilla_attention/dense_2/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_2/vanilla_attention/dense_2/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_2/multihead_attention/conv1d/kernel:0 shape:(1, 512, 2048) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_2/multihead_attention/conv1d/bias:0 shape:(2048,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_2/multihead_attention/conv1d_1/kernel:0 shape:(1, 2048, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_2/multihead_attention/conv1d_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_3/self_attention/dense/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_3/self_attention/dense/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_3/self_attention/dense_1/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_3/self_attention/dense_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_3/self_attention/dense_2/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_3/self_attention/dense_2/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_3/vanilla_attention/dense/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_3/vanilla_attention/dense/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_3/vanilla_attention/dense_1/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_3/vanilla_attention/dense_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_3/vanilla_attention/dense_2/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_3/vanilla_attention/dense_2/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_3/multihead_attention/conv1d/kernel:0 shape:(1, 512, 2048) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_3/multihead_attention/conv1d/bias:0 shape:(2048,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_3/multihead_attention/conv1d_1/kernel:0 shape:(1, 2048, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_3/multihead_attention/conv1d_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_4/self_attention/dense/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_4/self_attention/dense/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_4/self_attention/dense_1/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_4/self_attention/dense_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_4/self_attention/dense_2/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_4/self_attention/dense_2/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_4/vanilla_attention/dense/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_4/vanilla_attention/dense/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_4/vanilla_attention/dense_1/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_4/vanilla_attention/dense_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_4/vanilla_attention/dense_2/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_4/vanilla_attention/dense_2/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_4/multihead_attention/conv1d/kernel:0 shape:(1, 512, 2048) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_4/multihead_attention/conv1d/bias:0 shape:(2048,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_4/multihead_attention/conv1d_1/kernel:0 shape:(1, 2048, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_4/multihead_attention/conv1d_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_5/self_attention/dense/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_5/self_attention/dense/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_5/self_attention/dense_1/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_5/self_attention/dense_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_5/self_attention/dense_2/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_5/self_attention/dense_2/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_5/vanilla_attention/dense/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_5/vanilla_attention/dense/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_5/vanilla_attention/dense_1/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_5/vanilla_attention/dense_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_5/vanilla_attention/dense_2/kernel:0 shape:(512, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_5/vanilla_attention/dense_2/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_5/multihead_attention/conv1d/kernel:0 shape:(1, 512, 2048) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_5/multihead_attention/conv1d/bias:0 shape:(2048,) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_5/multihead_attention/conv1d_1/kernel:0 shape:(1, 2048, 512) dtype:<dtype: 'float32_ref'>
+var name:decoder/num_blocks_5/multihead_attention/conv1d_1/bias:0 shape:(512,) dtype:<dtype: 'float32_ref'>
+var name:decoder/dense/kernel:0 shape:(512, 8767) dtype:<dtype: 'float32_ref'>
+var name:decoder/dense/bias:0 shape:(8767,) dtype:<dtype: 'float32_ref'>
