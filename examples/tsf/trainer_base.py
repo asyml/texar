@@ -36,12 +36,24 @@ class TrainerBase(object):
     if FLAGS.model:
       flags_hparams["model"] = FLAGS.model
 
-    self._hparams = HParams(self._hparams, flags_hparams)
+    self._hparams = HParams(hparams, flags_hparams)
+
+  def load_data(self):
+    hparams = self._hparams
+    with open(os.path.join(hparams["data_dir"], "vocab.pkl")) as f:
+      vocab = pkl.load(f)
+    with open(os.path.join(hparams["data_dir"], "train.pkl")) as f:
+      train = pkl.load(f)
+    with open(os.path.join(hparams["data_dir"], "val.pkl")) as f:
+      val = pkl.load(f)
+    with open(os.path.join(hparams["data_dir"], "test.pkl")) as f:
+      test = pkl.load(f)
+
+    return vocab, train, val, test
 
   @staticmethod
   def default_hparams():
-    return {
-    }
+    raise NotImplementedError
 
   def load_data(self):
     raise NotImplementedError

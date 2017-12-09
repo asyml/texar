@@ -23,8 +23,7 @@ from stats import Stats
 class TSFTrainer(TrainerBase):
   """TSF trainer."""
   def __init__(self, hparams=None):
-    self._hparams = HParams(hparams, self.default_hparams())
-    TrainerBase.__init__(self, self._hparams)
+    TrainerBase.__init__(self, hparams)
 
   @staticmethod
   def default_hparams():
@@ -44,21 +43,9 @@ class TSFTrainer(TrainerBase):
       "max_epoch": 20,
       "sort_data": False,
       "shuffle_across_epoch": True,
-      "d_update_freq": 2,
+      "d_update_freq": 1,
     }
 
-  def load_data(self):
-    hparams = self._hparams
-    with open(os.path.join(hparams["data_dir"], "vocab.pkl")) as f:
-      vocab = pkl.load(f)
-    with open(os.path.join(hparams["data_dir"], "train.pkl")) as f:
-      train = pkl.load(f)
-    with open(os.path.join(hparams["data_dir"], "val.pkl")) as f:
-      val = pkl.load(f)
-    with open(os.path.join(hparams["data_dir"], "test.pkl")) as f:
-      test = pkl.load(f)
-
-    return vocab, train, val, test
 
   def eval_model(self, model, sess, vocab, data0, data1, output_path):
     batches, order0, order1 = get_batches(
@@ -174,10 +161,10 @@ class TSFTrainer(TrainerBase):
         if dev_loss.loss < best_dev:
           best_dev = dev_loss.loss
           file_name = (
-            self._hparams['name'] + '_' + '%.2f' %(best_dev) + '.model')
+            self._hparams["name"] + "_" + "%.2f" %(best_dev) + ".model")
           model.saver.save(
-            sess, os.path.join(self._hparams['expt_dir'], file_name),
-            latest_filename=self._hparams['name'] + '_checkpoint',
+            sess, os.path.join(self._hparams["expt_dir"], file_name),
+            latest_filename=self._hparams["name"] + "_checkpoint",
             global_step=step)
           log_print("saved model %s"%(file_name))
 
