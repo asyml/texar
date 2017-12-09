@@ -136,10 +136,51 @@ class ClassifierTrainer(TrainerBase):
 
     return best_dev
 
+  def test(self):
+    if "config" in self._hparams.keys():
+      with open(self._hparams.config) as f:
+        self._hparams = HParams(pkl.load(f))
+
+    log_print(json.dumps(self._hparams.todict(), indent=2))
+
+    vocab, train, val, test = self.load_data()
+    train, val, test = self.prepare_data(train, val, test)
+
+    # set vocab size
+    self._hparams.vocab_size = vocab["size"]
+
+    test_path = FLAGS.test
+    if test_path.endswith(".pkl"):
+      test = pkl.load(open(test_path))
+      test_x = data[0] + data[1]
+      test_y = [0] * len(data[0]) + [1] * len(data[1])
+      test = (test_x, test_y)
+    else:
+      test_path_0 = test_path.replace("*", 0)
+      test_path_1 = test_path.replace("*", 1)
+      test_0 = load_data(test_path_0)
+      test_0 = data_to_id(test_0, vocab["word2id"])
+      test_1 = load_data(test_path_1)
+      test_1 = data_to_id(test_1, vocab["word2id"])
+      test_x = test_0 + test_1
+      test_y = [0] * len(test_0) + [1] * len(test_1)
+      test = (test_x, tet_y)
+
+    with tf.Session() as sess:
+      model = Classifier(self._hparams)
+      log_print("finished building model")
+
+      model.saver.restore(sess, self._hparams.model)
+
+      loss, accu = self.eval_model(model, sess, vocab, test[0],
+                                   test[1])
+      log_print("test loss %.2f accu %.3f"%(test_loss, test_accu))
+
+    return accu
 
 def main(unused_args):
   trainer = ClassifierTrainer()
-  trainer.train()
+  trainer.run()
 
 if __name__ == "__main__":
   tf.app.run()

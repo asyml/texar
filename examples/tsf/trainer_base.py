@@ -16,6 +16,7 @@ from texar.hyperparams import HParams
 flags = tf.flags
 FLAGS = flags.FLAGS
 
+flags.DEFINE_bool("test", "", "test path")
 flags.DEFINE_string("data_dir", "", "data folder")
 flags.DEFINE_string("expt_dir", "", "experiment folder")
 flags.DEFINE_string("log_dir", "", "experiment folder")
@@ -54,9 +55,17 @@ class TrainerBase(object):
     return vocab, train, val, test
 
   @staticmethod
-  def default_hparams():
+  def default_hparams(self):
     raise NotImplementedError
 
-  def train():
+  def train(self):
     raise NotImplementedError
 
+  def test(self):
+    raise NotImplementedError
+
+  def run(self):
+    if FLGAS.test:
+      self.test()
+    else:
+      self.train()

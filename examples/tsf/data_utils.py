@@ -10,7 +10,7 @@ import cPickle as pkl
 import tensorflow as tf
 
 import vocabulary
-from utils import log_print
+from utils import *
 
 flags = tf.flags
 FLAGS = flags.FLAGS
@@ -21,17 +21,6 @@ flags.DEFINE_string("val", "sentiment.dev", "val file")
 flags.DEFINE_string("test", "sentiment.test", "test file")
 flags.DEFINE_integer("min_word_count", 5, "min number of word count")
 
-def load_data(path):
-  data = []
-  with open(path) as f:
-    for line in f:
-      data.append(line.split())
-  return data
-
-def data_to_id(data, word2id):
-  data_id = [[word2id[word] if word in word2id else word2id["_UNK"]
-              for word in sent ] for sent in data]
-  return data_id
 
 def main(unused_args):
   train0 = load_data(os.path.join(FLAGS.path, FLAGS.train + ".0"))

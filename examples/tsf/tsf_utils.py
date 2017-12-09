@@ -3,11 +3,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-def makeup(_x, n):
-  x = []
-  for i in range(n):
-    x.append(_x[i % len(_x)])
-  return x
+import time
+import random
+import numpy as np
+
 
 def get_batch(x, y, word2id, batch_size, min_len=5):
   pad = word2id["_PAD"]
@@ -75,22 +74,3 @@ def get_batches(x0, x1, word2id, batch_size, sort=False):
  
   return batches, order0, order1
 
-def strip_eos(sents):
-  return [sent[:sent.index("_EOS")] if "_EOS" in sent else sent
-          for sent in sents]
-
-def logits2word(logits, id2word):
-  sents = np.argmax(logits, axis=2).tolist()
-  sents = [[id2word[word] for word in sent] for sent in sents]
-  return strip_eos(sents)
-
-def write_sent(sents, path):
-  with open(path, "w") as f:
-    for sent in sents:
-      f.write(" ".join(sent) + "\n")
-
-def reorder(order, _x):
-  x = range(len(_x))
-  for i, a in zip(order, _x):
-    x[i] = a
-  return x
