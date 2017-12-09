@@ -18,6 +18,7 @@ from texar.models.tsf import TSF
 
 from trainer_base import TrainerBase
 from utils import *
+from tsf_utils import *
 from stats import Stats
 
 class TSFTrainer(TrainerBase):
