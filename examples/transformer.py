@@ -25,22 +25,19 @@ from texar import context
 if __name__ == "__main__":
     ### Build data pipeline
 
-    # Config data hyperparams. Hyperparams not configured will be automatically
-    # filled with default values. For text database, default values are defined
-    # in `texar.data.database.default_text_dataset_hparams()`.
     data_hparams = {
         "num_epochs": 20,
         "seed": 123,
-        "batch_size":32,
-        "shuffle":False,
+        "batch_size": 32,
+        "shuffle": False,
         "source_dataset": {
             "files": ['data/translation/de-en/train_de_sentences.txt'],
             "vocab_file": 'data/translation/de-en/filter_de.vocab.txt',
-            "processing":{
+            "processing": {
                 "bos_token": "<S>",
                 "eos_token": "</S>",
                 # max_seq_length
-                }
+            }
         },
         "target_dataset": {
             "files": ['data/translation/de-en/train_en_sentences.txt'],
@@ -60,7 +57,7 @@ if __name__ == "__main__":
             'dim': 512,
             'initializer': {
                 'type': tf.contrib.layers.xavier_initializer(),
-                },
+            },
             'trainable':True,
         },
         'num_blocks': 6,
@@ -73,10 +70,10 @@ if __name__ == "__main__":
     #    print('id:{} word:{}'.format(idx, word))
     # print('database finished')
     text_data_batch = text_database()
-    encoder = TransformerEncoder(vocab_size=text_database.source_vocab.vocab_size,
-            hparams=extra_hparams)
-    decoder = TransformerDecoder(vocab_size=text_database.target_vocab.vocab_size,
-            hparams=extra_hparams)
+    encoder = TransformerEncoder(
+        vocab_size=text_database.source_vocab.vocab_size, hparams=extra_hparams)
+    decoder = TransformerDecoder(
+        vocab_size=text_database.target_vocab.vocab_size, hparams=extra_hparams)
 
     ori_src_text = text_data_batch['source_text_ids']
     ori_tgt_text = text_data_batch['target_text_ids']
