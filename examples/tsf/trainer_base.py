@@ -7,6 +7,8 @@ from __future__ import print_function
 
 import pdb
 
+import cPickle as pkl
+import os
 import tensorflow as tf
 
 from texar.hyperparams import HParams
@@ -53,9 +55,6 @@ class TrainerBase(object):
 
   @staticmethod
   def default_hparams():
-    raise NotImplementedError
-
-  def load_data(self):
     raise NotImplementedError
 
   def train():

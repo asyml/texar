@@ -10,15 +10,15 @@ import numpy as np
 import tensorflow as tf
 import json
 import os
+import random
 
 from texar.hyperparams import HParams
 from texar.models.tsf import TSF
-from texar.models.classifier import Classifier
+from texar.models.tsf.classifier import Classifier
 
 from trainer_base import TrainerBase
 from utils import *
 from classifier_utils import *
-from stats import Stats
 
 class ClassifierTrainer(TrainerBase):
   """Classifier Trainer."""
@@ -28,7 +28,15 @@ class ClassifierTrainer(TrainerBase):
   @staticmethod
   def default_hparams():
     return {
-      
+      "data_dir": "../../data/yelp",
+      "expt_dir": "../../expt",
+      "log_dir": "log",
+      "name": "classifier",
+      "batch_size": 128,
+      "vocab_size": 10000,
+      "max_len": 20,
+      "max_epoch": 20,
+      "disp_interval": 100,
     }
 
   def prepare_data(self, train, val, test):
@@ -46,12 +54,12 @@ class ClassifierTrainer(TrainerBase):
     losses = []
     for batch in batches:
       loss, prob = model.eval_step(sess, batch)
-      losses += loss[:batch["actual_size"]]
+      losses += loss.tolist()[:batch["actual_size"]]
       probs += prob.tolist()[:batch["actual_size"]]
     y_hat = [ p > 0.5 for p in probs]
     same = [ p == q for p, q in zip(y, y_hat)]
     loss = sum(losses) / len(losses)
-    accu = 100*sum(same) / len(y)
+    accu = sum(same) / len(y)
     return loss, accu
 
   def train(self):
@@ -87,8 +95,8 @@ class ClassifierTrainer(TrainerBase):
       loss = 0.
       accu = 0.
       step = 0
-      batches = get_batches(train[0], train[1], self._hparams.batch_size,
-                            shuffle=True)
+      batches = get_batches(train[0], train[1], vocab["word2id"],
+                            self._hparams.batch_size, shuffle=True)
       
       log_dir = os.path.join(self._hparams.expt_dir, self._hparams.log_dir)
       train_writer = tf.summary.FileWriter(log_dir, sess.graph)
@@ -96,7 +104,6 @@ class ClassifierTrainer(TrainerBase):
       for epoch in range(1, self._hparams.max_epoch + 1):
         # shuffle across batches
         log_print("------------------epoch %d --------------"%(epoch))
-        log_print("gamma %.3f"%(gamma))
         random.shuffle(batches)
 
         for batch in batches:
@@ -104,15 +111,19 @@ class ClassifierTrainer(TrainerBase):
 
           step += 1
           loss += step_loss / self._hparams.disp_interval
-          accu += accu / self._hparams.disp_interval
+          accu += step_accu / self._hparams.disp_interval
           if step % self._hparams.disp_interval == 0:
-            log_print("step %d: loss %.2f accu %.3f "%(step), loss, accu )
+            log_print("step %d: loss %.2f aaccu %.3f "%(step, loss, accu ))
             loss = 0.
             accu = 0.
 
 
-        dev_loss, dev_accu = self.eval_model(
-          model, sess, vocab, val[0], val[1])
+        dev_loss, dev_accu = self.eval_model(model, sess, vocab, val[0],
+                                             val[1])
+        test_loss, test_accu = self.eval_model(model, sess, vocab, test[0],
+                                               test[1])
+        log_print("dev loss %.2f accu %.3f"%(dev_loss, dev_accu))
+        log_print("test loss %.2f accu %.3f"%(test_loss, test_accu))
         if dev_accu > best_dev:
           best_dev = dev_accu
           file_name = (
