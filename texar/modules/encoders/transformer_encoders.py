@@ -46,25 +46,15 @@ class TransformerEncoder(EncoderBase):
                 if isinstance(embedding, tf.Variable):
                     self._embedding = embedding
                 else:
-                    print('encoder param:{}'.format(self._hparams.embedding.name))
                     self._embedding = layers.get_embedding(
                         self._hparams.embedding, embedding, vocab_size,
-                        variable_scope='enc_embed',
-                        subscope=None)
+                        variable_scope='enc_embed')
                 embed_dim = self._hparams.embedding.dim
                 if self._hparams.zero_pad:
                     self._embedding = tf.concat((tf.zeros(shape=[1, embed_dim]),
                                                 self._embedding[1:, :]), 0)
                 if self._hparams.embedding.trainable:
                     self._add_trainable_variable(self._embedding)
-            with tf.variable_scope('enc_pe'):
-                if self._hparams.sinusoid:
-                    raise ValueError('not implemented')
-                else:
-                    self.position_enc_embedding = tf.get_variable('lookup_table',
-                            dtype=tf.float32,
-                            shape=[self._hparams.max_seq_length, self._hparams.embedding.dim],
-                            initializer=tf.contrib.layers.xavier_initializer())
 
     @staticmethod
     def default_hparams():
@@ -113,30 +103,26 @@ class TransformerEncoder(EncoderBase):
         }
 
     def _build(self, inputs, **kwargs):
-        #if self._hparams.embedding_enabled:
-        #    #if embedding is None and vocab_size is None:
-        #    #    raise ValueError("If `embedding` is not provided, "
-        #    #                    "`vocab_size` must be specified.")
-        #    #if isinstance(embedding, tf.Variable):
-        #    #    self._embedding = embedding
-        #    #else:
-        #    #    self._embedding = layers.get_embedding(
-        #    #        self._hparams.embedding, embedding, vocab_size,
-        #    #        self.variable_scope)
-
-        #    #embed_dim = self._embedding.shape.as_list()[1]
-        #    #if self._hparams.zero_pad:
-        #    #    self._embedding = tf.concat((tf.zeros(shape=[1, embed_dim]),
-        #    #                                self._embedding[1:, :]), 0)
-        #    #if self._hparams.embedding.trainable:
-        #    #    self._add_trainable_variable(self._embedding)
-        enc = tf.nn.embedding_lookup(self._embedding, inputs)
+        if self._embedding is not None:
+            enc = tf.nn.embedding_lookup(self._embedding, inputs)
+        else:
+            enc = inputs
         if self._hparams.scale:
             enc = enc * (self._hparams.embedding.dim**0.5)
 
-        enc += tf.nn.embedding_lookup(self.position_enc_embedding,
-            tf.tile(tf.expand_dims(tf.range(tf.shape(inputs)[1]), 0), \
-                    [inputs.shape[0], 1]))
+        if self._hparams.sinusoid:
+            enc += layers.sinusoid_positional_encoding(inputs,
+                    num_units=self._hparams.embedding.dim,
+                    max_time=self._hparams.max_seq_length,
+                    variable_scope='enc_pe')
+        else:
+            self.position_enc_embedding=layers.get_embedding(
+                    hparams=self._hparams.embedding,
+                    vocab_size=self._hparams.max_seq_length,
+                    variable_scope='enc_pe')
+            enc += tf.nn.embedding_lookup(self.position_enc_embedding,
+                    tf.tile(tf.expand_dims(tf.range(tf.shape(inputs)[1]), 0),
+                        [inputs.shape[0], 1]))
 
         enc = tf.layers.dropout(enc,
                 rate=self._hparams.dropout,
