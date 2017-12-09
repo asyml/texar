@@ -462,8 +462,7 @@ def default_embedding_hparams():
 def get_embedding(hparams=None,
                   init_values=None,
                   vocab_size=None,
-                  variable_scope=None,
-                  subscope='Embedding'):
+                  variable_scope='Embedding'):
     """Creates embedding variable if not exists.
 
     Args:
@@ -486,13 +485,12 @@ def get_embedding(hparams=None,
         Variable: A 2D `Variable` of the same shape with :attr:`init_values`
         or of the shape :attr:`[vocab_size, hparams["dim"]]`.
     """
-    with tf.variable_scope(variable_scope, subscope):
+    with tf.variable_scope(variable_scope):
         if hparams is None or isinstance(hparams, dict):
             hparams = HParams(hparams, default_embedding_hparams())
         regularizer = get_regularizer(hparams["regularizer"])
         if init_values is None:
             initializer = get_initializer(hparams["initializer"])
-            print('hparams:{}'.format(hparams['name']))
             return tf.get_variable(name=hparams["name"],
                                    shape=[vocab_size, hparams["dim"]],
                                    initializer=initializer,
@@ -925,11 +923,9 @@ def sinusoid_positional_encoding(inputs,
         scale: [Boolean], If True, the output will be multiplied by sqrt num_units(check details from paper)
         scope: [String], Optional scope for 'variable_scope'
     """
-    print('inputs:shape{}'.format(inputs.get_shape())) #[3, None, 50]
     batch_size = inputs.shape.as_list()[0]
     dynamic_max_time = tf.shape(inputs)[1]
     hidden_dim = num_units
-    print('dynamic shape obtained')
     with tf.variable_scope(scope, reuse=reuse):
         position_idx = tf.tile(tf.expand_dims(tf.range(max_time), 0), [batch_size, 1]) #batch_size * max_time
         position_enc = np.array([
@@ -940,16 +936,13 @@ def sinusoid_positional_encoding(inputs,
         position_enc[:, 1::2] = np.cos(position_enc[:, 1::2])
 
         lookup_table = tf.convert_to_tensor(position_enc, dtype=tf.float32)
-        print('lookup_table:{}'.format(lookup_table))
         if zero_pad:
             lookup_table = tf.concat((tf.zeros(shape=[1, hidden_dim]),
                 lookup_table[1:, :]), 0)
         outputs = tf.nn.embedding_lookup(lookup_table, position_idx)
         if scale:
             outputs = outputs * hidden_dim**0.5
-        print('outputs:{}'.format(outputs.shape))
         outputs = outputs[:, :dynamic_max_time, :]
-        print('outputs:{}'.format(outputs.shape))
         return outputs
 
 #TODO(zhiting): fix code style
