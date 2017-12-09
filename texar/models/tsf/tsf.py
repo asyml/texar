@@ -79,7 +79,8 @@ class TSF:
        ("labels", labels),
        ("batch_len", batch_len),
        ("gamma", gamma),
-       ("rho", rho)])
+       ("rho", rho),
+      ])
 
     return input_tensors
 
@@ -208,7 +209,7 @@ class TSF:
        ("test_output", test_output),
        ("test_logits", test_logits),
        ("teach_h", teach_h),
-       ("soft_h_tsf", soft_h_tsf)
+       ("soft_h_tsf", soft_h_tsf),
       ]
     )
 
