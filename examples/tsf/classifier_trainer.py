@@ -20,6 +20,9 @@ from trainer_base import TrainerBase
 from utils import *
 from classifier_utils import *
 
+flags = tf.flags
+FLAGS = flags.FLAGS
+
 class ClassifierTrainer(TrainerBase):
   """Classifier Trainer."""
   def __init__(self, hparams=None):
@@ -90,7 +93,6 @@ class ClassifierTrainer(TrainerBase):
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
 
-
       best_dev = float("-inf")
       loss = 0.
       accu = 0.
@@ -139,7 +141,7 @@ class ClassifierTrainer(TrainerBase):
   def test(self):
     if "config" in self._hparams.keys():
       with open(self._hparams.config) as f:
-        self._hparams = HParams(pkl.load(f))
+        self._hparams = HParams(pkl.load(f), None)
 
     log_print(json.dumps(self._hparams.todict(), indent=2))
 
@@ -152,29 +154,29 @@ class ClassifierTrainer(TrainerBase):
     test_path = FLAGS.test
     if test_path.endswith(".pkl"):
       test = pkl.load(open(test_path))
-      test_x = data[0] + data[1]
-      test_y = [0] * len(data[0]) + [1] * len(data[1])
+      test_x = test[0] + test[1]
+      test_y = [0] * len(test[0]) + [1] * len(test[1])
       test = (test_x, test_y)
     else:
-      test_path_0 = test_path.replace("*", 0)
-      test_path_1 = test_path.replace("*", 1)
+      test_path_0 = test_path.replace("*", "0")
+      test_path_1 = test_path.replace("*", "1")
       test_0 = load_data(test_path_0)
       test_0 = data_to_id(test_0, vocab["word2id"])
       test_1 = load_data(test_path_1)
       test_1 = data_to_id(test_1, vocab["word2id"])
       test_x = test_0 + test_1
       test_y = [0] * len(test_0) + [1] * len(test_1)
-      test = (test_x, tet_y)
+      test = (test_x, test_y)
 
     with tf.Session() as sess:
       model = Classifier(self._hparams)
       log_print("finished building model")
 
-      model.saver.restore(sess, self._hparams.model)
+      model.saver.restore(sess, FLAGS.model)
 
       loss, accu = self.eval_model(model, sess, vocab, test[0],
                                    test[1])
-      log_print("test loss %.2f accu %.3f"%(test_loss, test_accu))
+      log_print("test loss %.2f accu %.3f"%(loss, accu))
 
     return accu
 

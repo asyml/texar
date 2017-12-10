@@ -16,7 +16,7 @@ from texar.hyperparams import HParams
 flags = tf.flags
 FLAGS = flags.FLAGS
 
-flags.DEFINE_bool("test", "", "test path")
+flags.DEFINE_string("test", "", "test path")
 flags.DEFINE_string("data_dir", "", "data folder")
 flags.DEFINE_string("expt_dir", "", "experiment folder")
 flags.DEFINE_string("log_dir", "", "experiment folder")
@@ -65,7 +65,7 @@ class TrainerBase(object):
     raise NotImplementedError
 
   def run(self):
-    if FLGAS.test:
+    if FLAGS.test:
       self.test()
     else:
       self.train()
