@@ -39,7 +39,7 @@ class TrainerBase(object):
     if FLAGS.model:
       flags_hparams["model"] = FLAGS.model
 
-    self._hparams = HParams(hparams, flags_hparams)
+    self._hparams = HParams(hparams, flags_hparams, allow_new_hparam=True)
 
   def load_data(self):
     hparams = self._hparams

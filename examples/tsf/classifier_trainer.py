@@ -12,9 +12,11 @@ import json
 import os
 import random
 
+
 from texar.hyperparams import HParams
 from texar.models.tsf import TSF
-from texar.models.tsf.classifier import Classifier
+# from texar.models.tsf.classifier import Classifier
+from texar.models.tsf import Classifier
 
 from trainer_base import TrainerBase
 from utils import *
@@ -37,6 +39,10 @@ class ClassifierTrainer(TrainerBase):
       "name": "classifier",
       "batch_size": 128,
       "vocab_size": 10000,
+      "gamma_init": 1,
+      "gamma_decay": 0.5,
+      "gamma_min": 0.1,
+      "use_self_gate": False,
       "max_len": 20,
       "max_epoch": 20,
       "disp_interval": 100,
@@ -56,7 +62,10 @@ class ClassifierTrainer(TrainerBase):
     probs = []
     losses = []
     for batch in batches:
-      loss, prob = model.eval_step(sess, batch)
+      # loss, prob = model.eval_step(sess, batch,
+      # gamma=self._hparams.gamma_min)
+      loss, prob, alpha = model.visualize_step(
+        sess, batch, self._hparams.gamma_min)
       losses += loss.tolist()[:batch["actual_size"]]
       probs += prob.tolist()[:batch["actual_size"]]
     y_hat = [ p > 0.5 for p in probs]
@@ -71,7 +80,7 @@ class ClassifierTrainer(TrainerBase):
         self._hparams = HParams(pkl.load(f))
 
     log_print("Start training with hparams:")
-    log_print(json.dumps(self._hparams.todict(), indent=2))
+    log_print(str(self._hparams))
     if not "config" in self._hparams.keys():
       with open(os.path.join(self._hparams.expt_dir, self._hparams.name)
                 + ".config", "w") as f:
@@ -93,6 +102,8 @@ class ClassifierTrainer(TrainerBase):
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
 
+
+      gamma = self._hparams.gamma_init
       best_dev = float("-inf")
       loss = 0.
       accu = 0.
@@ -106,16 +117,17 @@ class ClassifierTrainer(TrainerBase):
       for epoch in range(1, self._hparams.max_epoch + 1):
         # shuffle across batches
         log_print("------------------epoch %d --------------"%(epoch))
+        log_print("gamma %.3f"%(gamma))
         random.shuffle(batches)
 
         for batch in batches:
-          step_loss, step_accu = model.train_step(sess, batch)
+          step_loss, step_accu = model.train_step(sess, batch, gamma)
 
           step += 1
           loss += step_loss / self._hparams.disp_interval
           accu += step_accu / self._hparams.disp_interval
           if step % self._hparams.disp_interval == 0:
-            log_print("step %d: loss %.2f aaccu %.3f "%(step, loss, accu ))
+            log_print("step %d: loss %.2f accu %.3f "%(step, loss, accu ))
             loss = 0.
             accu = 0.
 
@@ -135,6 +147,8 @@ class ClassifierTrainer(TrainerBase):
             latest_filename=self._hparams['name'] + '_checkpoint',
             global_step=step)
           log_print("saved model %s"%(file_name))
+
+        gamma = max(self._hparams.gamma_min, gamma * self._hparams.gamma_decay)
 
     return best_dev
 

@@ -15,6 +15,7 @@ from texar import context
 from texar.hyperparams import HParams
 from texar.core.utils import switch_dropout
 from texar.modules.encoders.conv1d_discriminator import CNN
+from texar.modules.encoders.self_gate import SelfGate
 from texar.models.tsf import ops
 from texar.models.tsf import utils
 
@@ -39,6 +40,12 @@ class Classifier:
       "cnn_num_filter": 128,
       "cnn_input_keep_prob": 1.,
       "cnn_output_keep_prob": 0.5,
+      "use_self_gate": False,
+      # self_gate
+      "self_gate_name": "self_gate",
+      "self_gate_type": "Attn",
+      "self_gate_size": 100,
+      "self_gate_leaky_relu_alpha": 0.2,
       # adam
       "adam_learning_rate": 1e-4,
       "adam_beta1": 0.9,
@@ -53,11 +60,21 @@ class Classifier:
 
     x = tf.placeholder(tf.int32, [batch_size, None], name="x")
     y = tf.placeholder(tf.int32, [batch_size], name="y")
+    gamma = tf.placeholder(tf.float32, [1], name="gamma")
     embedding = tf.get_variable(
       "embedding", [hparams.vocab_size,  hparams.embedding_size])
     x_emb = tf.nn.embedding_lookup(embedding, x)
+
+    self_gate_hparams = utils.filter_hparams(hparams, "self_gate")
+    print(self_gate_hparams)
+    self_gate = SelfGate(self_gate_hparams)
+    inputs, alpha = self_gate(x_emb, gamma)
+
+    if not self._hparams.use_self_gate:
+      inputs, alpha = x_emb, alpha
+      
     cnn = CNN(cnn_hparams)
-    logits = cnn(x_emb)
+    logits = cnn(inputs)
     logits = tf.reshape(logits, [-1])
     prob = tf.sigmoid(logits)
     pred = tf.cast(tf.greater(prob, 0.5), dtype=tf.int32)
@@ -73,6 +90,8 @@ class Classifier:
       hparams.collections,
       [("x", x),
        ("y", y),
+       ("gamma", gamma),
+       ("alpha", alpha),
        ("logits", logits),
        ("prob", prob),
        ("pred", pred),
@@ -84,7 +103,7 @@ class Classifier:
 
     return tensors
 
-  def train_step(self, sess, batch):
+  def train_step(self, sess, batch, gamma=1):
     loss, accu, _ = sess.run(
       [self.tensors["loss"], self.tensors["accu"],
        self.tensors["optimizer"]],
@@ -92,11 +111,12 @@ class Classifier:
         context.is_train(): True,
         self.tensors["x"]: batch["x"],
         self.tensors["y"]: batch["y"],
+        self.tensors["gamma"]: [gamma],
       })
 
     return loss, accu
 
-  def eval_step(self, sess, batch):
+  def eval_step(self, sess, batch, gamma=1):
     loss, prob = sess.run(
       # return loss as vector
       [self.tensors["losses"], self.tensors["prob"]],
@@ -104,7 +124,22 @@ class Classifier:
         context.is_train(): False,
         self.tensors["x"]: batch["x"],
         self.tensors["y"]: batch["y"],
+        self.tensors["gamma"]: [gamma],
       })
 
     return loss, prob
+
+  def visualize_step(self, sess, batch, gamma=1):
+    loss, prob, alpha = sess.run(
+      # return loss as vector
+      [self.tensors["losses"], self.tensors["prob"], self.tensors["alpha"]],
+      feed_dict={
+        context.is_train(): False,
+        self.tensors["x"]: batch["x"],
+        self.tensors["y"]: batch["y"],
+        self.tensors["gamma"]: [gamma],
+      })
+
+    return loss, prob, alpha
+
 
