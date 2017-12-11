@@ -906,28 +906,25 @@ def get_layer(hparams):
     return layer
 
 
-#TODO(zhiting): fix code style
 def sinusoid_positional_encoding(inputs,
-                                num_units,
-                                zero_pad=False,
-                                scale=False,
-                                reuse=None,
-                                max_time=None,
-                                scope='sinuoid_positional_embedding'):
+                                 num_units,
+                                 scale=False,
+                                 reuse=None,
+                                 max_time=None,
+                                 variable_scope='sinuoid_positional_embedding'):
     """obtain a positional encoding of inputs
     Args:
         inputs: [Tensor] A Tensor of shape `[batch_size, max_time, hidden_dim]`
         max_time: [Int], max time steps
         hidden_dim: [Int], hidden size of embedding
-        zero_pad: [Boolean], If True, all the values of the first row(id = 0) should be constant zero
-        scale: [Boolean], If True, the output will be multiplied by sqrt num_units(check details from paper)
-        scope: [String], Optional scope for 'variable_scope'
+        scale: [Boolean], If True, the output will be multiplied by sqrt(num_units)
+        variable_scope: [String], Optional scope for 'variable_scope'
     """
     batch_size = inputs.shape.as_list()[0]
     dynamic_max_time = tf.shape(inputs)[1]
     hidden_dim = num_units
-    with tf.variable_scope(scope, reuse=reuse):
-        position_idx = tf.tile(tf.expand_dims(tf.range(max_time), 0), [batch_size, 1]) #batch_size * max_time
+    with tf.variable_scope(variable_scope, reuse=reuse):
+        position_idx = tf.tile(tf.expand_dims(tf.range(max_time), 0), [batch_size, 1])
         position_enc = np.array([
             [pos /np.power(10000, 2.*i/hidden_dim) for i in range(hidden_dim)]
             for pos in range(max_time)])
@@ -936,107 +933,91 @@ def sinusoid_positional_encoding(inputs,
         position_enc[:, 1::2] = np.cos(position_enc[:, 1::2])
 
         lookup_table = tf.convert_to_tensor(position_enc, dtype=tf.float32)
-        if zero_pad:
-            lookup_table = tf.concat((tf.zeros(shape=[1, hidden_dim]),
-                lookup_table[1:, :]), 0)
         outputs = tf.nn.embedding_lookup(lookup_table, position_idx)
         if scale:
             outputs = outputs * hidden_dim**0.5
         outputs = outputs[:, :dynamic_max_time, :]
         return outputs
 
-#TODO(zhiting): fix code style
 def multihead_attention(queries,
                         keys,
                         num_units=None,
                         num_heads=8,
                         dropout_rate=0,
                         causality=False,
-                        scope="multihead_attention",
-                        reuse=None):
+                        scope='multihead_attention'):
     '''Applies multihead attention.
 
     Args:
-      queries: A 3d tensor with shape of [N, T_q, C_q].
-      keys: A 3d tensor with shape of [N, T_k, C_k].
-      num_units: A scalar. Attention size.
+      queries: A 3d tensor with shape of [batch, length_query, depth_query].
+      keys: A 3d tensor with shape of [batch, length_key, depth_key].
+      num_units: A scalar indicating the attention size, equals to depth_query if not given.
       dropout_rate: A floating point number.
       causality: Boolean. If true, units that reference the future are masked.
-      num_heads: An int. Number of heads.
+      num_heads: An int. Number of heads with calculating attention.
       scope: Optional scope for `variable_scope`.
       reuse: Boolean, whether to reuse the weights of a previous layer
         by the same name.
-
     Returns
-      A 3d tensor with shape of (N, T_q, C)
+      A 3d tensor with shape of (batch, length_query, num_units)
     '''
-    with tf.variable_scope(scope, reuse=reuse):
-        # Set the fall back option for num_units
+    with tf.variable_scope(scope):
         if num_units is None:
-            num_units = queries.get_shape().as_list[-1]
+            num_units = queries.get_shape().as_list()[-1]
 
-        # Linear projections
-        Q = tf.layers.dense(queries, num_units, activation=tf.nn.relu) # (N, T_q, C)
-        K = tf.layers.dense(keys, num_units, activation=tf.nn.relu) # (N, T_k, C)
-        V = tf.layers.dense(keys, num_units, activation=tf.nn.relu) # (N, T_k, C)
+        Q = tf.layers.dense(queries, num_units, activation=tf.nn.relu)
+        K = tf.layers.dense(keys, num_units, activation=tf.nn.relu)
+        V = tf.layers.dense(keys, num_units, activation=tf.nn.relu)
 
-        # Split and concat
-        Q_ = tf.concat(tf.split(Q, num_heads, axis=2), axis=0) # (h*N, T_q, C/h)
-        K_ = tf.concat(tf.split(K, num_heads, axis=2), axis=0) # (h*N, T_k, C/h)
-        V_ = tf.concat(tf.split(V, num_heads, axis=2), axis=0) # (h*N, T_k, C/h)
+        Q_ = tf.concat(tf.split(Q, num_heads, axis=2), axis=0)
+        K_ = tf.concat(tf.split(K, num_heads, axis=2), axis=0)
+        V_ = tf.concat(tf.split(V, num_heads, axis=2), axis=0)
 
-        # Multiplication
-        outputs = tf.matmul(Q_, tf.transpose(K_, [0, 2, 1])) # (h*N, T_q, T_k)
+        outputs = tf.matmul(Q_, tf.transpose(K_, [0, 2, 1]))
 
-        # Scale
         outputs = outputs / (K_.get_shape().as_list()[-1] ** 0.5)
 
-        # Key Masking
-        key_masks = tf.sign(tf.abs(tf.reduce_sum(keys, axis=-1))) # (N, T_k)
-        key_masks = tf.tile(key_masks, [num_heads, 1]) # (h*N, T_k)
-        key_masks = tf.tile(tf.expand_dims(key_masks, 1), [1, tf.shape(queries)[1], 1]) # (h*N, T_q, T_k)
+        #not sure why there should be key_masks and query_masks
+        key_masks = tf.sign(tf.abs(tf.reduce_sum(keys, axis=-1)))
+        key_masks = tf.tile(key_masks, [num_heads, 1])
+        key_masks = tf.tile(tf.expand_dims(key_masks, 1), [1, tf.shape(queries)[1], 1])
 
         paddings = tf.ones_like(outputs)*(-2**32+1)
-        outputs = tf.where(tf.equal(key_masks, 0), paddings, outputs) # (h*N, T_q, T_k)
+        outputs = tf.where(tf.equal(key_masks, 0), paddings, outputs)
 
-        # Causality = Future blinding
         if causality:
-            diag_vals = tf.ones_like(outputs[0, :, :]) # (T_q, T_k)
-            tril = tf.contrib.linalg.LinearOperatorTriL(diag_vals).to_dense() # (T_q, T_k)
-            masks = tf.tile(tf.expand_dims(tril, 0), [tf.shape(outputs)[0], 1, 1]) # (h*N, T_q, T_k)
+            diag_vals = tf.ones_like(outputs[0, :, :])
+            tril = tf.contrib.linalg.LinearOperatorTriL(diag_vals).to_dense()
+            masks = tf.tile(tf.expand_dims(tril, 0), [tf.shape(outputs)[0], 1, 1])
 
             paddings = tf.ones_like(masks)*(-2**32+1)
-            outputs = tf.where(tf.equal(masks, 0), paddings, outputs) # (h*N, T_q, T_k)
+            outputs = tf.where(tf.equal(masks, 0), paddings, outputs)
 
-        # Activation
-        outputs = tf.nn.softmax(outputs) # (h*N, T_q, T_k)
+        outputs = tf.nn.softmax(outputs)
 
-        # Query Masking
-        query_masks = tf.sign(tf.abs(tf.reduce_sum(queries, axis=-1))) # (N, T_q)
-        query_masks = tf.tile(query_masks, [num_heads, 1]) # (h*N, T_q)
-        query_masks = tf.tile(tf.expand_dims(query_masks, -1), [1, 1, tf.shape(keys)[1]]) # (h*N, T_q, T_k)
-        outputs *= query_masks # broadcasting. (N, T_q, C)
+        query_masks = tf.sign(tf.abs(tf.reduce_sum(queries, axis=-1)))
+        query_masks = tf.tile(query_masks, [num_heads, 1])
+        query_masks = tf.tile(tf.expand_dims(query_masks, -1), [1, 1, tf.shape(keys)[1]])
+        outputs *= query_masks
 
-        # Dropouts
         outputs = tf.layers.dropout(outputs, rate=dropout_rate, training=context.is_train())
 
-        # Weighted sum
-        outputs = tf.matmul(outputs, V_) # ( h*N, T_q, C/h)
+        outputs = tf.matmul(outputs, V_)
+        outputs = tf.concat(tf.split(outputs, num_heads, axis=0), axis=2)
+        #(batch_size, length_query, attention_size)
 
-        # Restore shape
-        outputs = tf.concat(tf.split(outputs, num_heads, axis=0), axis=2 ) # (N, T_q, C)
+        #residual connection
+        if num_units == queries.get_shape().as_list()[-1]:
+            outputs += queries
 
-        # Residual connection
-        outputs += queries
-
-        # Normalize
-        outputs = normalize(outputs) # (N, T_q, C)
+        outputs = normalize(outputs)
 
     return outputs
 
 
 def normalize(inputs,
-              epsilon = 1e-8,
+              epsilon=1e-8,
+              scope='ln',
               reuse=None):
     '''Applies layer normalization.
 
@@ -1051,44 +1032,12 @@ def normalize(inputs,
     Returns:
       A tensor with the same shape and data dtype as `inputs`.
     '''
-    mean, variance = tf.nn.moments(inputs, [-1], keep_dims=True)
-    normalized = (inputs - mean) / ( (variance + epsilon) ** (.5) )
-    return normalized
-
-
-# TODO(zhiting): Can this be a layer? Or inherits
-# :class:`texar.modules.networks.FeedForwardnetwork`?
-def poswise_feedforward(inputs,
-                num_units=[2048, 512],
-                scope="multihead_attention",
-                reuse=None):
-    '''Point-wise feed forward net.
-
-    Args:
-      inputs: A 3d tensor with shape of [N, T, C].
-      num_units: A list of two integers.
-      scope: Optional scope for `variable_scope`.
-      reuse: Boolean, whether to reuse the weights of a previous layer
-        by the same name.
-
-    Returns:
-      A 3d tensor with the same shape and dtype as inputs
-    '''
     with tf.variable_scope(scope, reuse=reuse):
-        # Inner layer
-        params = {"inputs": inputs, "filters": num_units[0], "kernel_size": 1,
-                  "activation": tf.nn.relu, "use_bias": True}
-        outputs = tf.layers.conv1d(**params)
-
-        # Readout layer
-        params = {"inputs": outputs, "filters": num_units[1], "kernel_size": 1,
-                  "activation": None, "use_bias": True}
-        outputs = tf.layers.conv1d(**params)
-
-        # Residual connection
-        outputs += inputs
-
-        # Normalize
-        outputs = normalize(outputs)
-
+        inputs_shape = inputs.get_shape()
+        params_shape = inputs_shape[-1:]
+        mean, variance = tf.nn.moments(inputs, [-1], keep_dims=True)
+        beta = tf.Variable(tf.zeros(params_shape))
+        gamma = tf.Variable(tf.ones(params_shape))
+        outputs = tf.nn.batch_normalization(inputs, mean, variance,\
+            offset=beta, scale=gamma, variance_epsilon=epsilon)
     return outputs
