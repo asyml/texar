@@ -16,53 +16,67 @@ import numpy as np
 from data_load import load_test_data, load_de_vocab, load_en_vocab, data_hparams
 from nltk.translate.bleu_score import corpus_bleu
 from texar.modules import TransformerEncoder, TransformerDecoder
-def eval():
-    # Load graph
-
+from texar import context
+def evaluate():
+    """
+    evaluate the saved model in logdir directory
+    """
     print("Graph loaded")
 
     # Load data
     extra_hparams = {
-            'max_seq_length':10,
-            'scale':True,
-            'sinusoid':False,
-            'embedding': {
-                'name':'lookup_table',
-                'initializer': {
-                    'type':'xavier_initializer',
-                    },
-                'dim': 512,
+        'max_seq_length':10,
+        'scale':True,
+        'sinusoid':False,
+        'embedding': {
+            'name':'lookup_table',
+            'initializer': {
+                'type':'xavier_initializer',
                 },
-            'num_blocks': 6,
-            'num_heads': 8,
+            'dim': 512,
+            },
+        'num_blocks': 6,
+        'num_heads': 8,
+        'poswise_feedforward': {
+            'name':'multihead_attention',
+            'layers':[
+                {
+                    'type':'Conv1D',
+                    'kwargs': {
+                        'filters':512*4,
+                        'kernel_size':1,
+                        'activation':'relu',
+                        'use_bias':True,
+                    }
+                },
+                {
+                    'type':'Conv1D',
+                    'kwargs': {
+                        'filters':512,
+                        'kernel_size':1,
+                        'use_bias':True,
+                    }
+                }
+            ],
+        },
     }
-    X, Sources, Targets = load_test_data()
-    x = tf.placeholder(tf.int32, shape=(data_hparams['batch_size'], data_hparams['max_seq_length']))
-    y = tf.placeholder(tf.int32, shape=(data_hparams['batch_size'], data_hparams['max_seq_length']))
-    de2idx, idx2de = load_de_vocab()
+    test_corpus, sources, targets = load_test_data()
+    src_input = tf.placeholder(tf.int32, shape=(data_hparams['batch_size'], \
+        data_hparams['max_seq_length']))
+    tgt_input = tf.placeholder(tf.int32, shape=(data_hparams['batch_size'], \
+        data_hparams['max_seq_length']))
+    de2idx, _ = load_de_vocab()
     en2idx, idx2en = load_en_vocab()
+    decoder_input = tf.concat((tf.ones_like(tgt_input[:, :1]), tgt_input[:, :-1]), -1) # 1:<S>
 
-    decoder_input =tf.concat((tf.ones_like(y[:, :1]), y[:, :-1]), -1) # 1:<S>
+    encoder = TransformerEncoder(vocab_size=len(de2idx), hparams=extra_hparams)
+    encoder_output = encoder(src_input)
 
-    encoder= TransformerEncoder(vocab_size=len(de2idx),
-            hparams=extra_hparams)
-    encoder_output=encoder(x)
-
-    decoder = TransformerDecoder(vocab_size=len(idx2en),
-            hparams=extra_hparams)
+    decoder = TransformerDecoder(vocab_size=len(en2idx), hparams=extra_hparams)
 
     #vocab=text_database.target_vocab
+    _, preds = decoder(decoder_input, encoder_output)
 
-    #helper_infer=get_helper(
-    #        decoder.hparams.helper_infer.type,
-    #        embedding=decoder.embedding,
-    #        start_tokens=[vocab._token_to_id_map_py[vocab.bos_token]]*data_hparams['max_sequence_length'],
-    #        end_token=vocab._token_to_id_map[vocab.eos_token],
-    #        softmax_temperature=None)
-
-
-
-    logits, preds = decoder(decoder_input, encoder_output)
     # Start session
     #print('var cnt:{}'.format(len(tf.trainable_variables())))
     #for var in tf.trainable_variables():
@@ -74,21 +88,12 @@ def eval():
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
         saver = tf.train.Saver(tf.trainable_variables())
-        #sv.saver.restore(sess, tf.train.latest_checkpoint('./logdir'))
-        #print('var cnt:{}'.format(len(tf.trainable_variables())))
-
         #for var in tf.trainable_variables():
         #    print('var name:{} shape:{} dtype:{}'.format(var.name, var.shape, var.dtype))
         #exit()
 
-        varlist =tf.trainable_variables()
-        namelist = [var.name for var in varlist]
-        newnamelist = [name[:7]+'_1'+name[7:] if (name[7]=='/' and (name[8]=='n' or name[8]=='d' or name[8]=='e')) else name for name in namelist]
-        newnamelist = [name[:-2] if name[-2]==':' else name for name in newnamelist]
-        vardict={}
-        for name, var in zip(newnamelist, varlist):
-            vardict[name]=var
-        saver = tf.train.Saver(vardict)
+
+        saver = tf.train.Saver()
         saver.restore(sess, tf.train.latest_checkpoint('./logdir'))
         #writer = tf.summary.FileWriter('eval/', sess.graph)
         #exit()
@@ -96,21 +101,21 @@ def eval():
         mname = open('./logdir/checkpoint', 'r').read().split('"')[1] # model name
         print('mname:{}'.format(mname))
         ## Inference
-        if not os.path.exists('results'): os.mkdir('results')
+        if not os.path.exists('results'):
+            os.mkdir('results')
         with codecs.open("results/" + mname, "w", "utf-8") as fout:
             list_of_refs, hypotheses = [], []
-            for i in range(len(X) // data_hparams['batch_size']):
-                ### Get mini-batches
-                src = X[i*data_hparams['batch_size']: (i+1)*data_hparams['batch_size']]
-                sources = Sources[i*data_hparams['batch_size']: (i+1)*data_hparams['batch_size']]
-                targets = Targets[i*data_hparams['batch_size']: (i+1)*data_hparams['batch_size']]
-                ### Autoregressive inference
-                outputs = np.zeros((data_hparams['batch_size'], data_hparams['max_seq_length']), np.int32)
-                for j in range(data_hparams['max_seq_length']):
-                    _preds = sess.run(preds, feed_dict={x: src, y: outputs})
-                    outputs[:, j] = _preds[:, j]
+            for i in range(len(test_corpus) // data_hparams['batch_size']):
+                src = test_corpus[i*data_hparams['batch_size']: (i+1)*data_hparams['batch_size']]
+                sources = sources[i*data_hparams['batch_size']: (i+1)*data_hparams['batch_size']]
+                targets = targets[i*data_hparams['batch_size']: (i+1)*data_hparams['batch_size']]
 
-                ### Write to file
+                outputs = np.zeros((data_hparams['batch_size'], data_hparams['max_seq_length']),\
+                    np.int32)
+                for j in range(data_hparams['max_seq_length']):
+                    _, _preds = sess.run([encoder.enc, preds], \
+                        feed_dict={src_input: src, tgt_input: outputs, context.is_train():False})
+                    outputs[:, j] = _preds[:, j]
                 for source, target, pred in zip(sources, targets, outputs): # sentence-wise
                     got = " ".join(idx2en[idx] for idx in pred).split("</S>")[0].strip()
                     fout.write("- source: " + source +"\n")
@@ -130,7 +135,5 @@ def eval():
             fout.write("Bleu Score = " + str(100*score))
 
 if __name__ == '__main__':
-    eval()
+    evaluate()
     print("Done")
-
-

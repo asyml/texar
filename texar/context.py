@@ -18,7 +18,6 @@ def is_train():
     Returns:
         A bool placeholder that indicates the global train/infer mode.
     """
-    #return False # TODO(zhiting): why added this?
     is_train_values = tf.get_collection_ref(_IS_TRAIN_KEY)
     if len(is_train_values) < 1:
         is_train_values.append(tf.placeholder(tf.bool, name="is_train"))
