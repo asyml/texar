@@ -11,7 +11,7 @@ import collections
 # pylint: disable=not-context-manager
 import tensorflow as tf
 from tensorflow.python.framework import tensor_shape, dtypes
-
+from texar.modules.networks import FeedForwardNetwork
 from texar.modules.module_base import ModuleBase
 from texar.core import layers
 from texar import context
@@ -32,41 +32,40 @@ class TransformerDecoder(ModuleBase):
         ModuleBase.__init__(self, hparams)
         self._vocab_size = vocab_size
         self._embedding = None
-        with tf.variable_scope(self.variable_scope):
-            if self._hparams.embedding_enabled:
-                if embedding is None and vocab_size == None:
-                    raise ValueError("If 'embedding' is not provided, "
-                            "'vocab_size' must be specified.")
-                if isinstance(embedding, tf.Variable):
-                    self._embedding = embedding
-                else:
-                    self._embedding = layers.get_embedding(
-                        self._hparams.embedding, embedding, vocab_size,
-                        variable_scope='dec_embed')
-                embed_dim = self._embedding.shape.as_list()[-1]
-                if self._hparams.zero_pad:
-                    self._embedding = tf.concat((tf.zeros(shape=[1, embed_dim]),
-                        self._embedding[1:, :]), 0)
-                if self._hparams.embedding.trainable:
-                    self._add_trainable_variable(self._embedding)
+        if self._hparams.use_embedding:
+            if embedding is None and vocab_size == None:
+                raise ValueError("If 'embedding' is not provided, "
+                        "'vocab_size' must be specified.")
+            if isinstance(embedding, tf.Variable):
+                self._embedding = embedding
+            else:
+                self._embedding = layers.get_embedding(
+                    self._hparams.embedding, embedding, vocab_size,
+                    variable_scope=self.variable_scope)
+            self._embed_dim = self._embedding.get_shape().as_list()[-1]
+            if self._hparams.zero_pad:
+                self._embedding = tf.concat((tf.zeros(shape=[1, self._embed_dim]),
+                    self._embedding[1:, :]), 0)
+            if self._hparams.embedding.trainable:
+                self._add_trainable_variable(self._embedding)
+            if self._vocab_size is None:
+                self._vocab_size = self._embedding.get_shape().as_list()[0]
 
     @staticmethod
     def default_hparams():
         return {
-                "embedding_enabled": True,
-                "embedding": layers.default_embedding_hparams(),
-                "name":"decoder",
-                "num_heads":8,
-                "num_blocks":6,
-                "zero_pad": True,
-                "max_seq_length":10,
-                "scale":True,
-                "dropout":0.1,
-                "sinusoid":True,
-                "helper_infer": {
-                    'type':'GreedyEmbeddingHelper',
-                },
-            }
+            "use_embedding": True,
+            "embedding": layers.default_embedding_hparams(),
+            "name":"decoder",
+            "num_heads":8,
+            "num_blocks":6,
+            "zero_pad": True,
+            "max_seq_length":10,
+            "scale":True,
+            "dropout":0.1,
+            "sinusoid":False,
+            'poswise_feedforward':None,
+        }
 
     def _build(self, inputs, encoder_output):
         if self._embedding is not None:
@@ -106,16 +105,19 @@ class TransformerDecoder(ModuleBase):
                         dropout_rate = self._hparams.dropout,
                         causality = False,
                         scope = "vanilla_attention")
-                dec = layers.poswise_feedforward(dec,
-                        num_units=[4*self._hparams.embedding.dim, self._hparams.embedding.dim])
+                poswise_network = FeedForwardNetwork(
+                        hparams=self._hparams['poswise_feedforward'])
+                with tf.variable_scope(poswise_network.variable_scope, reuse=True):
+                    # why there could be 'multihead_attention_1' scope
+                    dec += poswise_network(dec)
+                    dec = layers.normalize(dec)
         self.dec = dec
-        #even if don't use tf.variable_scope(self.variable_scope),
-        # the variables will appear in this scope automatically
         self.logits = tf.layers.dense(dec, self._vocab_size)
-        #print('logit:{}'.format(self.logits.name))
         self.preds = tf.to_int64(tf.argmax(self.logits, axis=-1))
-        self._add_internal_trainable_variables()
-        self._built = True
+
+        if not self._built:
+            self._add_internal_trainable_variables()
+            self._built = True
         return self.logits, self.preds
 
     @property
