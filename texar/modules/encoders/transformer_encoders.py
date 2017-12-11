@@ -40,6 +40,8 @@ class TransformerEncoder(EncoderBase):
 
         self._vocab_size = vocab_size
         self._embedding = None
+        self.enc = None
+        self.position_enc_embedding = None
         #with tf.variable_scope(self.variable_scope):
         if self._hparams.use_embedding:
             if embedding is None and self._vocab_size is None:
@@ -112,34 +114,30 @@ class TransformerEncoder(EncoderBase):
             self.enc = tf.nn.embedding_lookup(self._embedding, inputs)
         else:
             self.enc = inputs
-
         if self._hparams.scale:
             self.enc = self.enc * (self._hparams.embedding.dim**0.5)
-
         if self._hparams.sinusoid:
-            self.enc += layers.sinusoid_positional_encoding(inputs,
-                    num_units=self._hparams.embedding.dim,
-                    max_time=self._hparams.max_seq_length,
-                    variable_scope='enc_pe')
+            self.enc += layers.sinusoid_positional_encoding(
+                inputs,
+                num_units=self._hparams.embedding.dim,
+                max_time=self._hparams.max_seq_length,
+                variable_scope='enc_pe')
         else:
-            self.position_enc_embedding=layers.get_embedding(
-                    hparams=self._hparams.embedding,
-                    vocab_size=self._hparams.max_seq_length,
-                    variable_scope='enc_pe')
-            self.enc += tf.nn.embedding_lookup(self.position_enc_embedding,
-                    tf.tile(tf.expand_dims(tf.range(tf.shape(inputs)[1]), 0),
-                        [inputs.shape[0], 1]))
+            self.position_enc_embedding = layers.get_embedding(
+                hparams=self._hparams.embedding,
+                vocab_size=self._hparams.max_seq_length,
+                variable_scope='enc_pe')
+            self.enc += tf.nn.embedding_lookup(self.position_enc_embedding,\
+                tf.tile(tf.expand_dims(tf.range(tf.shape(inputs)[1]), 0), [inputs.shape[0], 1]))
 
-        self.enc = tf.layers.dropout(self.enc,
-                rate=self._hparams.dropout,
-                training=context.is_train())
-
+        self.enc = tf.layers.dropout(self.enc, \
+            rate=self._hparams.dropout, training=context.is_train())
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("num_blocks_{}".format(i)):
-                self.enc = layers.multihead_attention(queries=self.enc,
+                self.enc = layers.multihead_attention(
+                    queries=self.enc,
                     keys=self.enc,
-                    num_heads=self._hparams.num_heads,
-                    dropout_rate=self._hparams.dropout,
+                    num_heads=self._hparams.num_heads, dropout_rate=self._hparams.dropout,
                     num_units=self._hparams.embedding.dim,
                     causality=False,
                     scope='self_attention')
