@@ -26,10 +26,10 @@ if __name__ == "__main__":
     ### Build data pipeline
 
     data_hparams = {
-        "num_epochs": 20,
+        "num_epochs": 40,
         "seed": 123,
         "batch_size": 32,
-        "shuffle": False,
+        "shuffle": True,
         "source_dataset": {
             "files": ['data/translation/de-en/train_de_sentences.txt'],
             "vocab_file": 'data/translation/de-en/filter_de.vocab.txt',
@@ -62,6 +62,28 @@ if __name__ == "__main__":
         },
         'num_blocks': 6,
         'num_heads': 8,
+        'poswise_feedforward': {
+            'name':'multihead_attention',
+            'layers':[
+                {
+                    'type':'Conv1D',
+                    'kwargs': {
+                        'filters':512*4,
+                        'kernel_size':1,
+                        'activation':'relu',
+                        'use_bias':True,
+                    }
+                },
+                {
+                    'type':'Conv1D',
+                    'kwargs': {
+                        'filters':512,
+                        'kernel_size':1,
+                        'use_bias':True,
+                    }
+                }
+            ],
+        },
     }
     # Construct the database
     text_database = PairedTextDataBase(data_hparams)
@@ -70,11 +92,6 @@ if __name__ == "__main__":
     #    print('id:{} word:{}'.format(idx, word))
     # print('database finished')
     text_data_batch = text_database()
-    encoder = TransformerEncoder(
-        vocab_size=text_database.source_vocab.vocab_size, hparams=extra_hparams)
-    decoder = TransformerDecoder(
-        vocab_size=text_database.target_vocab.vocab_size, hparams=extra_hparams)
-
     ori_src_text = text_data_batch['source_text_ids']
     ori_tgt_text = text_data_batch['target_text_ids']
 
@@ -123,11 +140,11 @@ if __name__ == "__main__":
     train_op, global_step = opt.get_train_op(mle_loss, hparams=opt_hparams)
     merged = tf.summary.merge_all()
 
-    print('var cnt:{}'.format(len(tf.trainable_variables())))
-    for var in tf.trainable_variables():
-        print('name:{}\tshape:{}\ttype:{}'.format(var.name, var.shape, var.dtype))
+    #print('var cnt:{}'.format(len(tf.trainable_variables())))
+    #for var in tf.trainable_variables():
+    #    print('name:{}\tshape:{}\ttype:{}'.format(var.name, var.shape, var.dtype))
 
-    saver = tf.train.Saver()
+    saver = tf.train.Saver(max_to_keep=None)
 
     # We shall wrap these environment setup codes
     with tf.Session() as sess:
@@ -161,7 +178,7 @@ if __name__ == "__main__":
                 #for var in tf.trainable_variables():
                 #     print('name:{}\tshape:{}\ttype:{}'.format(var.name, var.shape, var.dtype))
                 #exit()
-                if step % 1000 == 0:
+                if step % 1703 == 0:
                     print('step:{} loss:{}'.format(step, loss))
                     saver.save(sess, './logdir/my-model', global_step = step)
         except tf.errors.OutOfRangeError:
