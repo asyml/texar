@@ -906,28 +906,25 @@ def get_layer(hparams):
     return layer
 
 
-#TODO(zhiting): fix code style
 def sinusoid_positional_encoding(inputs,
-                                num_units,
-                                zero_pad=False,
-                                scale=False,
-                                reuse=None,
-                                max_time=None,
-                                scope='sinuoid_positional_embedding'):
+                                 num_units,
+                                 scale=False,
+                                 reuse=None,
+                                 max_time=None,
+                                 variable_scope='sinuoid_positional_embedding'):
     """obtain a positional encoding of inputs
     Args:
         inputs: [Tensor] A Tensor of shape `[batch_size, max_time, hidden_dim]`
         max_time: [Int], max time steps
         hidden_dim: [Int], hidden size of embedding
-        zero_pad: [Boolean], If True, all the values of the first row(id = 0) should be constant zero
-        scale: [Boolean], If True, the output will be multiplied by sqrt num_units(check details from paper)
-        scope: [String], Optional scope for 'variable_scope'
+        scale: [Boolean], If True, the output will be multiplied by sqrt(num_units)
+        variable_scope: [String], Optional scope for 'variable_scope'
     """
     batch_size = inputs.shape.as_list()[0]
     dynamic_max_time = tf.shape(inputs)[1]
     hidden_dim = num_units
-    with tf.variable_scope(scope, reuse=reuse):
-        position_idx = tf.tile(tf.expand_dims(tf.range(max_time), 0), [batch_size, 1]) #batch_size * max_time
+    with tf.variable_scope(variable_scope, reuse=reuse):
+        position_idx = tf.tile(tf.expand_dims(tf.range(max_time), 0), [batch_size, 1])
         position_enc = np.array([
             [pos /np.power(10000, 2.*i/hidden_dim) for i in range(hidden_dim)]
             for pos in range(max_time)])
@@ -936,9 +933,6 @@ def sinusoid_positional_encoding(inputs,
         position_enc[:, 1::2] = np.cos(position_enc[:, 1::2])
 
         lookup_table = tf.convert_to_tensor(position_enc, dtype=tf.float32)
-        if zero_pad:
-            lookup_table = tf.concat((tf.zeros(shape=[1, hidden_dim]),
-                lookup_table[1:, :]), 0)
         outputs = tf.nn.embedding_lookup(lookup_table, position_idx)
         if scale:
             outputs = outputs * hidden_dim**0.5
@@ -1008,9 +1002,8 @@ def multihead_attention(queries,
 
         outputs = tf.layers.dropout(outputs, rate=dropout_rate, training=context.is_train())
 
-        # Weighted sum
         outputs = tf.matmul(outputs, V_)
-        outputs = tf.concat(tf.split(outputs, num_heads, axis=0), axis=2 )
+        outputs = tf.concat(tf.split(outputs, num_heads, axis=0), axis=2)
         #(batch_size, length_query, attention_size)
 
         #residual connection
@@ -1043,9 +1036,8 @@ def normalize(inputs,
         inputs_shape = inputs.get_shape()
         params_shape = inputs_shape[-1:]
         mean, variance = tf.nn.moments(inputs, [-1], keep_dims=True)
-        beta= tf.Variable(tf.zeros(params_shape))
+        beta = tf.Variable(tf.zeros(params_shape))
         gamma = tf.Variable(tf.ones(params_shape))
-        outputs = tf.nn.batch_normalization(inputs, mean, variance,
-                offset=beta, scale=gamma, variance_epsilon=epsilon)
+        outputs = tf.nn.batch_normalization(inputs, mean, variance,\
+            offset=beta, scale=gamma, variance_epsilon=epsilon)
     return outputs
-

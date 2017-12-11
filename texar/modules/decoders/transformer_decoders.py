@@ -17,7 +17,7 @@ from texar.core import layers
 from texar import context
 
 class TransformerDecoderOutput(
-        collections.namedtuple("TransformerDecoderOutput",
+        collections.namedtuple("TransformerDecoderOutput",\
             ("output_logits", "sample_ids"))):
     """the output logits and sampled_ids"""
     pass
@@ -25,17 +25,15 @@ class TransformerDecoderOutput(
 class TransformerDecoder(ModuleBase):
     """decoder for transformer: Attention is all you need
     """
-    def __init__(self,
-                embedding=None,
-                vocab_size=None,
-                hparams=None):
+    def __init__(self, embedding=None, vocab_size=None, hparams=None):
         ModuleBase.__init__(self, hparams)
         self._vocab_size = vocab_size
         self._embedding = None
+        self.position_dec_embedding = None
+        self.dec, self.logits, self.preds = None, None, None
         if self._hparams.use_embedding:
-            if embedding is None and vocab_size == None:
-                raise ValueError("If 'embedding' is not provided, "
-                        "'vocab_size' must be specified.")
+            if embedding is None and vocab_size is None:
+                raise ValueError("If 'embedding' is not provided, 'vocab_size' must be specified.")
             if isinstance(embedding, tf.Variable):
                 self._embedding = embedding
             else:
@@ -44,7 +42,7 @@ class TransformerDecoder(ModuleBase):
                     variable_scope=self.variable_scope)
             self._embed_dim = self._embedding.get_shape().as_list()[-1]
             if self._hparams.zero_pad:
-                self._embedding = tf.concat((tf.zeros(shape=[1, self._embed_dim]),
+                self._embedding = tf.concat((tf.zeros(shape=[1, self._embed_dim]),\
                     self._embedding[1:, :]), 0)
             if self._hparams.embedding.trainable:
                 self._add_trainable_variable(self._embedding)
@@ -74,39 +72,41 @@ class TransformerDecoder(ModuleBase):
             dec = dec * (self._hparams.embedding.dim**0.5)
 
         if self._hparams.sinusoid:
-            dec += layers.sinusoid_positional_encoding(dec,
-                    num_units=self._hparams.embedding,
-                    max_time=self._hparams.max_seq_length,
-                    variable_scope='dec_pe')
+            dec += layers.sinusoid_positional_encoding(
+                dec,
+                num_units=self._hparams.embedding,
+                max_time=self._hparams.max_seq_length,
+                variable_scope='dec_pe')
         else:
             self.position_dec_embedding = layers.get_embedding(
-                    hparams=self._hparams.embedding,
-                    vocab_size=self._hparams.max_seq_length,
-                    variable_scope='dec_pe')
-            dec += tf.nn.embedding_lookup(self.position_dec_embedding,
-                    tf.tile(tf.expand_dims(tf.range(tf.shape(inputs)[1]), 0),\
-                            [tf.shape(inputs)[0], 1]))
-        dec = tf.layers.dropout(dec,
-                rate = self._hparams.dropout,
-                training = context.is_train())
+                hparams=self._hparams.embedding,
+                vocab_size=self._hparams.max_seq_length,
+                variable_scope='dec_pe')
+            dec += tf.nn.embedding_lookup(self.position_dec_embedding,\
+                tf.tile(tf.expand_dims(tf.range(tf.shape(inputs)[1]), 0), [tf.shape(inputs)[0], 1]))
+        dec = tf.layers.dropout(
+            dec,
+            rate=self._hparams.dropout,
+            training=context.is_train())
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("num_blocks_{}".format(i)):
-                dec = layers.multihead_attention(queries = dec,
-                        keys = dec,
-                        num_units = self._hparams.embedding.dim,
-                        num_heads = self._hparams.num_heads,
-                        dropout_rate = self._hparams.dropout,
-                        causality = True,
-                        scope = "self_attention")
-                dec = layers.multihead_attention(queries = dec,
-                        keys = encoder_output,
-                        num_units= self._hparams.embedding.dim,
-                        num_heads = self._hparams.num_heads,
-                        dropout_rate = self._hparams.dropout,
-                        causality = False,
-                        scope = "vanilla_attention")
-                poswise_network = FeedForwardNetwork(
-                        hparams=self._hparams['poswise_feedforward'])
+                dec = layers.multihead_attention(
+                    queries=dec,
+                    keys=dec,
+                    num_units=self._hparams.embedding.dim,
+                    num_heads=self._hparams.num_heads,
+                    dropout_rate=self._hparams.dropout,
+                    causality=True,
+                    scope="self_attention")
+                dec = layers.multihead_attention(
+                    queries=dec,
+                    keys=encoder_output,
+                    num_units=self._hparams.embedding.dim,
+                    num_heads=self._hparams.num_heads,
+                    dropout_rate=self._hparams.dropout,
+                    causality=False,
+                    scope="vanilla_attention")
+                poswise_network = FeedForwardNetwork(hparams=self._hparams['poswise_feedforward'])
                 with tf.variable_scope(poswise_network.variable_scope, reuse=True):
                     # why there could be 'multihead_attention_1' scope
                     dec += poswise_network(dec)
@@ -122,6 +122,11 @@ class TransformerDecoder(ModuleBase):
 
     @property
     def output_size(self):
+        """
+        The output of the _build function, (logits, preds)
+        logits: [batch_size, length, vocab_size]
+        preds: [batch_size, length]
+        """
         return TransformerDecoderOutput(
             output_logits=tensor_shape.TensorShape([None, None, self._vocab_size]),
             sample_id=tensor_shape.TensorShape([None, None])
@@ -129,6 +134,8 @@ class TransformerDecoder(ModuleBase):
 
     @property
     def output_dtype(self):
+        """
+        The output dtype of the _build function, (float32, int32)
+        """
         return TransformerDecoderOutput(
             output_logits=dtypes.float32, sample_id=dtypes.int32)
-
