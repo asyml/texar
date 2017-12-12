@@ -1,16 +1,27 @@
-from agent_base import AgentBase
-from texar.core import optimization as opt
-from texar.core import get_class
-from texar.losses.dqn_losses import l2_loss
+#
+"""TODO: add docs
+"""
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+import random
+import numpy as np
 
 import tensorflow as tf
-import numpy as np
-import random
+
+from texar.agents.agent_base import AgentBase
+from texar.core import optimization as opt
+from texar.core import get_instance, get_class
+from texar.losses.dqn_losses import l2_loss
 
 
-class NatureDQNAgent(AgentBase):
+class NatureDQNAgent(AgentBase): # pylint: disable=too-many-instance-attributes
+    """TODO: docs
+    """
     def __init__(self, actions, state_shape, hparams=None):
         AgentBase.__init__(self, hparams=hparams)
+
         self.actions = actions
         self.state_shape = state_shape
 
@@ -20,9 +31,10 @@ class NatureDQNAgent(AgentBase):
         self.update_period = self._hparams.update_period
 
         # network
-        network_type = get_class(class_name=self._hparams.qnetwork.type,
-                                 module_paths=['texar.modules', 'texar.custom'])
-        self.network = network_type(self._hparams.qnetwork.hparams)
+        self.network = get_instance(
+            self._hparams.qnetwork.type,
+            {"hparams": self._hparams.qnetwork.hparams},
+            module_paths=['texar.modules', 'texar.custom'])
 
         # replay_memory
         replay_memory_type = get_class(class_name=self._hparams.replay_memory.type,
@@ -59,7 +71,7 @@ class NatureDQNAgent(AgentBase):
             'observation_steps': 100,
             'update_period': 100,
             'qnetwork': {
-                'type': 'NatureQNetwork',
+                'type': 'NatureQNet',
                 'hparams': None
             },
             'replay_memory': {

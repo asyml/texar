@@ -280,7 +280,7 @@ def get_initializer(hparams=None):
                    "tensorflow", "texar.custom"]
         try:
             initializer = utils.get_instance(hparams["type"], kwargs, modules)
-        except ValueError:
+        except TypeError:
             modules += ['tensorflow.contrib.layers']
             initializer_fn = utils.get_function(hparams["type"], modules)
             initializer = initializer_fn(**kwargs)

@@ -14,4 +14,4 @@ from texar.modules.encoders import *
 from texar.modules.decoders import *
 from texar.modules.connectors import *
 from texar.modules.predictors import *
-from texar.modules.q_networks import *
+from texar.modules.q_nets import *

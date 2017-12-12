@@ -1,8 +1,17 @@
+#
+"""
+Deep Q Network for the CartPole game in OpenAI gym.
+"""
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import numpy as np
 import gym
+
 from texar.agents import NatureDQNAgent
 
-import tensorflow as tf
+# pylint: disable=invalid-name
 
 env = gym.make('CartPole-v1')
 
@@ -50,4 +59,5 @@ if __name__ == '__main__':
             reward_sum += reward
             if is_terminal:
                 break
-        print 'episode {round_id}: {reward}'.format(round_id=i, reward=reward_sum)
+        print('episode {round_id}: {reward}'.format(round_id=i,
+                                                    reward=reward_sum))
