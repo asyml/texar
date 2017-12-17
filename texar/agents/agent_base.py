@@ -1,7 +1,14 @@
+"""
+Base class for rl agents.
+"""
+
 from texar.hyperparams import HParams
 
 
-class AgentBase:
+class AgentBase(object):
+    """
+    Base class inherited by rl agents.
+    """
     def __init__(self, hparams=None):
         self._hparams = HParams(hparams, self.default_hparams())
         self.current_state = None
@@ -9,15 +16,43 @@ class AgentBase:
 
     @staticmethod
     def default_hparams():
+        """Returns a dictionary of hyperparameters with default values.
+        """
         return {
             'name': 'agent_base'
         }
 
     def set_initial_state(self, observation):
+        """
+        reset the current state
+        Args:
+            observation: observation in the beginning
+        """
         raise NotImplementedError
 
-    def perceive(self, action, reward, is_terminal, next_state):
+    def perceive(self, action, reward, is_terminal, next_observation):
+        """
+        Perceive from environment
+        Args:
+            action: A OneHot vector indicate the action
+            reward: A number indicate the reward
+            is_terminal: True iff it is a terminal state
+            next_observation: New Observation from environment
+        """
         raise NotImplementedError
 
-    def get_action(self, state, action_mask=None):
+    def get_action(self, state=None, action_mask=None):
+        """
+        Get Action according to state and action_mask
+        Args:
+            state(numpy.array): assign a state if it is not 'None', otherwise it
+                is current state by default
+            action_mask(List): A List of True or False, indicate this time each
+                action can be take or not, if it is 'None', then all the actions
+                can be take.
+        Returns:
+            The possibility of taking each action.
+        Return Type:
+            List
+        """
         raise NotImplementedError

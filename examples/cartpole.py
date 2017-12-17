@@ -53,8 +53,10 @@ if __name__ == '__main__':
             action = agent.get_action()
             action_id = np.argmax(action)
 
-            next_observation, reward, is_terminal, info = env.step(action=action_id)
-            agent.perceive(next_observation=next_observation, action=action, reward=reward, is_terminal=is_terminal)
+            next_observation, reward, is_terminal, info = \
+                env.step(action=action_id)
+            agent.perceive(next_observation=next_observation, action=action,
+                           reward=reward, is_terminal=is_terminal)
 
             reward_sum += reward
             if is_terminal:
