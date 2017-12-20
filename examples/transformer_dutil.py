@@ -15,33 +15,12 @@ from texar.losses import mle_losses
 from texar.core import optimization as opt
 from texar import context
 
+from data_load import get_batch_data, load_de_vocab, load_en_vocab
+
 if __name__ == "__main__":
-    ### Build data pipeline
     tf.set_random_seed(123)
     np.random.seed(123)
     random.seed(123)
-    data_hparams = {
-        "num_epochs": 25,
-        "seed": 123,
-        "batch_size": 32,
-        "shuffle": True,
-        "source_dataset": {
-            "files": ['data/translation/de-en/train_de_sentences.txt'],
-            "vocab_file": 'data/translation/de-en/filter_de.vocab.txt',
-            "processing": {
-                "bos_token": "<S>",
-                "eos_token": "</S>",
-            }
-        },
-        "target_dataset": {
-            "files": ['data/translation/de-en/train_en_sentences.txt'],
-            "vocab_file": 'data/translation/de-en/filter_en.vocab.txt',
-            "processing":{
-                "bos_token": "<S>",
-                "eos_token": "</S>",
-            },
-        }
-    }
     extra_hparams = {
         'max_seq_length':10,
         'scale':True,
@@ -79,38 +58,30 @@ if __name__ == "__main__":
             ],
         },
     }
-    # Construct the database
-    text_database = PairedTextDataBase(data_hparams)
-    text_data_batch = text_database()
-    ori_src_text = text_data_batch['source_text_ids']
-    ori_tgt_text = text_data_batch['target_text_ids']
+    src_input, tgt_input, num_batch = get_batch_data()
+    de2idx, idx2de = load_de_vocab()
+    en2idx, idx2en = load_en_vocab()
 
-    padded_src_text = tf.concat([ori_src_text, tf.zeros([tf.shape(ori_src_text)[0],\
-        extra_hparams['max_seq_length']+1-tf.shape(ori_src_text)[1]], dtype=tf.int64)], axis=1)
-    padded_tgt_text = tf.concat([ori_tgt_text, tf.zeros([tf.shape(ori_tgt_text)[0],\
-        extra_hparams['max_seq_length']+1-tf.shape(ori_tgt_text)[1]], dtype=tf.int64)], axis=1)
-    encoder_input = padded_src_text[:, 1:]
-    decoder_input = padded_tgt_text[:, :-1]
-    encoder = TransformerEncoder(vocab_size=text_database.source_vocab.vocab_size,\
-        hparams=extra_hparams)
-    encoder_output = encoder(encoder_input)
+    decoder_input = tf.concat((tf.ones_like(tgt_input[:, :1]), tgt_input[:, :-1]), -1)
 
-    decoder = TransformerDecoder(vocab_size=text_database.target_vocab.vocab_size,\
-            hparams=extra_hparams)
+    encoder = TransformerEncoder(vocab_size=len(de2idx), hparams=extra_hparams)
+    encoder_output = encoder(src_input)
+
+    decoder = TransformerDecoder(vocab_size=len(en2idx), hparams=extra_hparams)
     logits, preds = decoder(decoder_input, encoder_output)
     loss_params = {
         'label_smoothing':0.1,
     }
+    istarget = tf.to_float(tf.not_equal(tgt_input, 0))
+    smoothed_labels = mle_losses.label_smoothing(tgt_input, len(en2idx), loss_params['label_smoothing'])
 
-    labels = padded_tgt_text[:, 1:]
-
-    smooth_labels = mle_losses.label_smoothing(labels, text_database.target_vocab.vocab_size, \
-        loss_params['label_smoothing'])
     mle_loss = mle_losses.average_sequence_softmax_cross_entropy(
-        labels=smooth_labels,
+        labels=smoothed_labels,
         logits=logits,
-        sequence_length=text_data_batch['target_length']-1)
-
+        sequence_length=tf.reduce_sum(istarget, -1))
+    tf.summary.scalar('mle_loss', mle_loss)
+    acc = tf.reduce_sum(tf.to_float(tf.equal(preds, tgt_input))*istarget) / (tf.reduce_sum(istarget))
+    tf.summary.scalar('acc', acc)
     opt_hparams = {
         "optimizer": {
             "type": "AdamOptimizer",
@@ -124,30 +95,40 @@ if __name__ == "__main__":
     }
 
     train_op, global_step = opt.get_train_op(mle_loss, hparams=opt_hparams)
+    #global_step = tf.Variable(0, name='global_step', trainable=False)
+    #optimizer = tf.train.AdamOptimizer(learning_rate=0.0001, beta1=0.9, beta2=0.98, epsilon=1e-8)
+    #train_op = optimizer.minimize(mle_loss, global_step=global_step)
     merged = tf.summary.merge_all()
-    saver = tf.train.Saver(max_to_keep=10)
 
+    #print('var cnt:{}'.format(len(tf.trainable_variables())))
+    #for var in tf.trainable_variables():
+    #    print('name:{}\tshape:{}\ttype:{}'.format(var.name, var.shape, var.dtype))
+    logdir = './dutil_logdir/'
+    # We shall wrap these environment setup codes
     with tf.Session() as sess:
 
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
-        writer = tf.summary.FileWriter("./logdir/", graph=sess.graph)
+        saver = tf.train.Saver(max_to_keep=10)
+        writer = tf.summary.FileWriter(logdir, graph=sess.graph)
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-
         try:
             while not coord.should_stop():
-                source, target, predict, _, step, loss, mgd = sess.run(
-                    [encoder_input, labels, preds, train_op, global_step, mle_loss, merged],
-                    feed_dict={context.is_train(): True})
-                writer.add_summary(mgd, global_step=step)
-                if step % 1703 == 0:
-                    print('step:{} loss:{}'.format(step, loss))
-                    saver.save(sess, './logdir/my-model', global_step=step)
+                for epoch in range(20):
+                    for batch_idx in range(num_batch):
+                        source, target, predict, _, gstep, loss, mgd = sess.run(
+                            [src_input, tgt_input, preds, train_op, global_step, mle_loss, merged],
+                            feed_dict={context.is_train(): True})
+                    writer.add_summary(mgd, global_step=gstep)
+                    assert gstep % 1703 == 0
+                    print('step:{} loss:{}'.format(gstep, loss))
+                    saver.save(sess, logdir+'my-model', global_step=gstep)
+                coord.request_stop()
         except tf.errors.OutOfRangeError:
             print('Done -- epoch limit reached')
         finally:
             coord.request_stop()
         coord.join(threads)
-        saver.save(sess, './logdir/my-model', global_step=step)
+        saver.save(sess, logdir+'my-model', global_step=gstep)
