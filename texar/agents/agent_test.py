@@ -1,4 +1,8 @@
-from nature_dqn_agent import NatureDQNAgent
+"""
+Test for Agents
+"""
+
+from texar.agents.nature_dqn_agent import NatureDQNAgent
 
 
 hparams = NatureDQNAgent.default_hparams()
@@ -22,5 +26,5 @@ hparams['qnetwork'] = {
         }
     }
 }
-agent1 = NatureDQNAgent(actions=2, state_shape=(4, ), hparams=hparams)
-agent2 = NatureDQNAgent(actions=2, state_shape=(4, ), hparams=hparams)
+agent_1 = NatureDQNAgent(actions=2, state_shape=(4, ), hparams=hparams)
+agent_2 = NatureDQNAgent(actions=2, state_shape=(4, ), hparams=hparams)
