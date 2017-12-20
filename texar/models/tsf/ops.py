@@ -60,7 +60,7 @@ def feed_softmax(proj_layer, embedding, gamma, output_keep_prob=0.5):
     logits = proj_layer(output)
     prob = tf.nn.softmax(logits / gamma)
     inp = tf.matmul(prob, embedding)
-    return inp, logits, None
+    return inp, logits, prob
 
   return loop_func
 
