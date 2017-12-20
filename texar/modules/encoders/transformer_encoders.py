@@ -128,7 +128,7 @@ class TransformerEncoder(EncoderBase):
                 vocab_size=self._hparams.max_seq_length,
                 variable_scope='enc_pe')
             self.enc += tf.nn.embedding_lookup(self.position_enc_embedding,\
-                tf.tile(tf.expand_dims(tf.range(tf.shape(inputs)[1]), 0), [inputs.shape[0], 1]))
+                tf.tile(tf.expand_dims(tf.range(tf.shape(inputs)[1]), 0), [tf.shape(inputs)[0], 1]))
 
         self.enc = tf.layers.dropout(self.enc, \
             rate=self._hparams.dropout, training=context.is_train())
@@ -140,7 +140,7 @@ class TransformerEncoder(EncoderBase):
                     num_heads=self._hparams.num_heads, dropout_rate=self._hparams.dropout,
                     num_units=self._hparams.embedding.dim,
                     causality=False,
-                    scope='self_attention')
+                    scope='multihead_attention')
                 poswise_network = FeedForwardNetwork(hparams=self._hparams['poswise_feedforward'])
                 with tf.variable_scope(poswise_network.variable_scope, reuse=True):
                     # why there could be a scope('multihead_attention_1')

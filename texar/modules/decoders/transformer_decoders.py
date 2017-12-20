@@ -113,7 +113,7 @@ class TransformerDecoder(ModuleBase):
                     dec = layers.normalize(dec)
         self.dec = dec
         self.logits = tf.layers.dense(dec, self._vocab_size)
-        self.preds = tf.to_int64(tf.argmax(self.logits, axis=-1))
+        self.preds = tf.to_int32(tf.argmax(self.logits, axis=-1))
 
         if not self._built:
             self._add_internal_trainable_variables()
