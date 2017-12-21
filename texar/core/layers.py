@@ -6,10 +6,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
+import math
+
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
-import numpy as np
-
 from texar import context
 from texar.hyperparams import HParams
 from texar.core import utils
@@ -907,10 +907,9 @@ def get_layer(hparams):
 
 
 def sinusoid_positional_encoding(inputs,
-                                 num_units,
-                                 scale=False,
                                  reuse=None,
-                                 max_time=None,
+                                 min_timescale=1.0,
+                                 max_timescale=1.0e4,
                                  variable_scope='sinuoid_positional_embedding'):
     """obtain a positional encoding of inputs
     Args:
@@ -920,24 +919,21 @@ def sinusoid_positional_encoding(inputs,
         scale: [Boolean], If True, the output will be multiplied by sqrt(num_units)
         variable_scope: [String], Optional scope for 'variable_scope'
     """
-    batch_size = inputs.shape.as_list()[0]
-    dynamic_max_time = tf.shape(inputs)[1]
-    hidden_dim = num_units
+    length = tf.shape(inputs)[1]
+    channels = tf.shape(inputs)[2]
     with tf.variable_scope(variable_scope, reuse=reuse):
-        position_idx = tf.tile(tf.expand_dims(tf.range(max_time), 0), [batch_size, 1])
-        position_enc = np.array([
-            [pos /np.power(10000, 2.*i/hidden_dim) for i in range(hidden_dim)]
-            for pos in range(max_time)])
-
-        position_enc[:, 0::2] = np.sin(position_enc[:, 0::2])
-        position_enc[:, 1::2] = np.cos(position_enc[:, 1::2])
-
-        lookup_table = tf.convert_to_tensor(position_enc, dtype=tf.float32)
-        outputs = tf.nn.embedding_lookup(lookup_table, position_idx)
-        if scale:
-            outputs = outputs * hidden_dim**0.5
-        outputs = outputs[:, :dynamic_max_time, :]
-        return outputs
+        position = tf.to_float(tf.range(length))
+        num_timescales = channels // 2
+        log_timescale_increment = (
+            math.log(float(max_timescale) / float(min_timescale)) /
+            (tf.to_float(num_timescales) - 1))
+        inv_timescales = min_timescale * tf.exp(
+            tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
+        scaled_time = tf.expand_dims(position, 1) * tf.expand_dims(inv_timescales, 0)
+        signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=1)
+        signal = tf.pad(signal, [[0, 0], [0, tf.mod(channels, 2)]])
+        signal = tf.reshape(signal, [1, length, channels])
+        return signal
 
 def multihead_attention(queries,
                         keys,
