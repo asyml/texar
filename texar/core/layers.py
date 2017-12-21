@@ -6,6 +6,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
+
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
 import numpy as np
@@ -553,6 +554,33 @@ class MergeLayer(tf.layers.Layer):
         #  self.bias = None
         self.built = True
 
+
+class SequentialLayer(tf.layers.Layer):
+    """A layer that consists of multiple layers connected sequentially.
+
+    Args:
+        layers (list): The list of layers to be connected sequentially.
+    """
+    def __init__(self, layers,
+                 trainable=True,
+                 name=None,
+                 **kwargs):
+        super(SequentialLayer, self).__init__(
+            trainable=trainable, name=name, **kwargs)
+        self._layers = layers
+
+    def call(self, inputs):
+        for layer in self._layers:
+            outputs = layer(inputs)
+            inputs = outputs
+        return outputs
+
+    def _compute_output_shape(self, input_shape):
+        input_shape = tf.TensorShape(input_shape)
+        for layer in self._layers:
+            output_shape = layer._compute_output_shape(input_shape)
+            input_shape = output_shape
+        return output_shape
 
 def _common_default_conv_dense_kwargs():
     """Returns the default keyword argument values that are common to

@@ -8,6 +8,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
 
@@ -83,6 +84,7 @@ class GetRNNCellTest(tf.test.TestCase):
                          layers.default_embedding_hparams()["dim"])
 
         hparams = {
+            "name": "embedding_2",
             "initializer": {
                 "type": tf.random_uniform_initializer(minval=-0.1, maxval=0.1)
             },
@@ -103,6 +105,27 @@ class GetRNNCellTest(tf.test.TestCase):
         }
         layer = layers.get_layer(hparams)
         self.assertTrue(isinstance(layer, tf.layers.Conv1D))
+
+class SequentialLayerTest(tf.test.TestCase):
+    """Test sequential layer.
+    """
+
+    def test_seq_layer(self):
+        #TODO(zichao): add docstring
+        layers_ = []
+        layers_.append(tf.layers.Dense(100))
+        layers_.append(tf.layers.Dense(200))
+        seq_layer = layers.SequentialLayer(layers_)
+        output_shape = seq_layer._compute_output_shape([None, 10]) # pylint: disable=protected-access
+        self.assertEqual(output_shape[1].value, 200)
+
+        inputs = tf.zeros([10, 20], dtype=tf.float32)
+        outputs = seq_layer(inputs)
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            outputs_ = sess.run(outputs)
+            self.assertEqual(outputs_.shape[0], 10)
+            self.assertEqual(outputs_.shape[1], 200)
 
 if __name__ == "__main__":
     tf.test.main()
