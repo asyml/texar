@@ -155,4 +155,3 @@ class EmbeddingTrainingHelper(TFTrainingHelper):
                 sequence_length=sequence_length,
                 time_major=time_major,
                 name=name)
-
