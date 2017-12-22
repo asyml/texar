@@ -25,7 +25,6 @@ if __name__ == "__main__":
     data_hparams = {
         "num_epochs": 25,
         "seed": 123,
-        "batch_size": 128,
         "shuffle": True,
         "source_dataset": {
             "files": ['/home/shr/t2t_data/train_ende_wmt_bpe32k_en.txt'],
@@ -43,8 +42,9 @@ if __name__ == "__main__":
                 "eos_token": "<EOS>",
             },
         },
-        'bucket_boundaries': boundaries,
-
+        'batch_size':2048,
+        'bucket_boundaries': [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 24, 26, 28, 30, 33, 36, 39, 42, 46, 50, 55, 60, 66, 72, 79, 86, 94, 103, 113, 124, 136, 149, 163, 179, 196, 215, 236],
+        'bucket_batch_size':[240, 180, 180, 180, 144, 144, 144, 120, 120, 120, 90, 90, 90, 90, 80, 72, 72, 60, 60, 48, 48, 48, 40, 40, 36, 30, 30, 24, 24, 20, 20, 18, 18, 16, 15, 12, 12, 10, 10, 9, 8, 8],
     }
     extra_hparams = {
         #'max_seq_length':256,
