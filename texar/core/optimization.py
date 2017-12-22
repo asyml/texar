@@ -220,8 +220,7 @@ def get_train_op(loss, variables=None, global_step=None,
         same :attr:`global_step` variable is returned, otherwise a new global
         step is created and returned.
     """
-    if hparams is None or isinstance(hparams, dict):
-        hparams = HParams(hparams, default_optimization_hparams())
+    hparams = HParams(hparams, default_optimization_hparams())
 
     if variables is None:
         variables = tf.trainable_variables()
