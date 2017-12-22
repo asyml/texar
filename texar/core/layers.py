@@ -1033,17 +1033,16 @@ def multihead_attention(queries,
         if num_units == queries.get_shape().as_list()[-1]:
             outputs += queries
 
-        outputs = normalize(outputs)
+        outputs = layer_normalize(outputs)
 
     return outputs
 
 
-def normalize(inputs,
+def layer_normalize(inputs,
               epsilon=1e-8,
               scope='ln',
               reuse=None):
-    '''Applies layer normalization.
-
+    '''Applies layer normalization. averaging over the last dimension
     Args:
       inputs: A tensor with 2 or more dimensions, where the first dimension has
         `batch_size`.
@@ -1056,11 +1055,11 @@ def normalize(inputs,
       A tensor with the same shape and data dtype as `inputs`.
     '''
     with tf.variable_scope(scope, reuse=reuse):
-        inputs_shape = inputs.get_shape()
-        params_shape = inputs_shape[-1:]
+        filters = inputs.get_shape()[-1]
         mean, variance = tf.nn.moments(inputs, [-1], keep_dims=True)
-        beta = tf.Variable(tf.zeros(params_shape))
-        gamma = tf.Variable(tf.ones(params_shape))
-        outputs = tf.nn.batch_normalization(inputs, mean, variance,\
-            offset=beta, scale=gamma, variance_epsilon=epsilon)
+        alpha = tf.get_variable('layer_norm_scale', [filters], initializer=tf.ones_initializer())
+        gamma = tf.get_variable('layer_norm_bias', [filters], initializer=tf.zeros_initializer())
+        norm_x = (inputs - mean) * tf.rsqrt(variance + epsilon)
+        outputs = norm_x * alpha + gamma
+
     return outputs

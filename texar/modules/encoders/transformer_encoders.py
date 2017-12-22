@@ -100,7 +100,7 @@ class TransformerEncoder(EncoderBase):
             "embedding":layers.default_embedding_hparams(),
             "name":"encoder",
             "zero_pad":True,
-            "max_seq_length":10,
+            "max_seq_length":100000000,
             'scale':True,
             'sinusoid':False,
             'dropout':0.1,
@@ -115,12 +115,11 @@ class TransformerEncoder(EncoderBase):
         else:
             self.enc = inputs
         if self._hparams.scale:
-            self.enc = self.enc * (self._hparams.embedding.dim**0.5)
+            self.enc = self.enc * (self._embedding.shape.as_list()[-1]**0.5)
+
         if self._hparams.sinusoid:
             self.enc += layers.sinusoid_positional_encoding(
-                inputs,
-                num_units=self._hparams.embedding.dim,
-                max_time=self._hparams.max_seq_length,
+                self.enc,
                 variable_scope='enc_pe')
         else:
             self.position_enc_embedding = layers.get_embedding(
@@ -142,12 +141,10 @@ class TransformerEncoder(EncoderBase):
                     causality=False,
                     scope='multihead_attention')
                 poswise_network = FeedForwardNetwork(hparams=self._hparams['poswise_feedforward'])
-                with tf.variable_scope(poswise_network.variable_scope, reuse=True):
-                    # why there could be a scope('multihead_attention_1')
-                    #residual connection
+                with tf.variable_scope(poswise_network.variable_scope):
+                    # there could be a scope('multihead_attention_1', in normalization)
                     self.enc += poswise_network(self.enc)
-                    #layer normalization
-                    self.enc = layers.normalize(self.enc)
+                    self.enc = layers.layer_normalize(self.enc)
 
         if not self._built:
             self._add_internal_trainable_variables()

@@ -40,12 +40,12 @@ class TransformerDecoder(ModuleBase):
                 self._embedding = layers.get_embedding(
                     self._hparams.embedding, embedding, vocab_size,
                     variable_scope=self.variable_scope)
-            self._embed_dim = self._embedding.get_shape().as_list()[-1]
-            if self._hparams.zero_pad:
-                self._embedding = tf.concat((tf.zeros(shape=[1, self._embed_dim]),\
-                    self._embedding[1:, :]), 0)
-            if self._hparams.embedding.trainable:
-                self._add_trainable_variable(self._embedding)
+                self._embed_dim = self._embedding.get_shape().as_list()[-1]
+                if self._hparams.zero_pad:
+                    self._embedding = tf.concat((tf.zeros(shape=[1, self._embed_dim]),\
+                        self._embedding[1:, :]), 0)
+                if self._hparams.embedding.trainable:
+                    self._add_trainable_variable(self._embedding)
             if self._vocab_size is None:
                 self._vocab_size = self._embedding.get_shape().as_list()[0]
 
@@ -61,21 +61,21 @@ class TransformerDecoder(ModuleBase):
             "max_seq_length":10,
             "scale":True,
             "dropout":0.1,
-            "sinusoid":False,
+            "sinusoid":True,
             'poswise_feedforward':None,
         }
 
     def _build(self, inputs, encoder_output):
         if self._embedding is not None:
             dec = tf.nn.embedding_lookup(self._embedding, inputs)
+        else:
+            dec = inputs
         if self._hparams.scale:
-            dec = dec * (self._hparams.embedding.dim**0.5)
+            dec = dec * (self._embedding.shape.as_list()[-1]**0.5)
 
         if self._hparams.sinusoid:
             dec += layers.sinusoid_positional_encoding(
                 dec,
-                num_units=self._hparams.embedding,
-                max_time=self._hparams.max_seq_length,
                 variable_scope='dec_pe')
         else:
             self.position_dec_embedding = layers.get_embedding(
@@ -107,10 +107,9 @@ class TransformerDecoder(ModuleBase):
                     causality=False,
                     scope="vanilla_attention")
                 poswise_network = FeedForwardNetwork(hparams=self._hparams['poswise_feedforward'])
-                with tf.variable_scope(poswise_network.variable_scope, reuse=True):
-                    # why there could be 'multihead_attention_1' scope
+                with tf.variable_scope(poswise_network.variable_scope):
                     dec += poswise_network(dec)
-                    dec = layers.normalize(dec)
+                    dec = layers.layer_normalize(dec)
         self.dec = dec
         self.logits = tf.layers.dense(dec, self._vocab_size)
         self.preds = tf.to_int32(tf.argmax(self.logits, axis=-1))
