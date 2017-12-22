@@ -40,7 +40,7 @@ class CNN(ModuleBase):
       "num_filter": 128,
       "output_keep_prob": 0.5,
       "input_keep_prob": 1,
-      "leaky_relu_alpha": 0.01
+      "leaky_relu_alpha": 0.01,
       "vocab_size": 10000,
       "embedding_size": 100,
     }

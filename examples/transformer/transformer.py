@@ -10,9 +10,10 @@ import random
 import numpy as np
 import tensorflow as tf
 from texar.data import PairedTextDataBase
+from texar.core.utils import _bucket_boundaries
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.losses import mle_losses
-from texar.core import optimization as opt
+#from texar.core import optimization as opt
 from texar import context
 
 if __name__ == "__main__":
@@ -20,42 +21,48 @@ if __name__ == "__main__":
     tf.set_random_seed(123)
     np.random.seed(123)
     random.seed(123)
+    boundaries = _bucket_boundaries(max_length=256)
     data_hparams = {
         "num_epochs": 25,
         "seed": 123,
-        "batch_size": 32,
+        "batch_size": 128,
         "shuffle": True,
         "source_dataset": {
-            "files": ['~/t2t_data/train_ende_wmt32k_en'],
-            "vocab_file": '~/t2t_data/vocab.ende.32768.filtered',
+            "files": ['/home/shr/t2t_data/train_ende_wmt_bpe32k_en.txt'],
+            "vocab_file": '/home/shr/t2t_data/vocab.bpe.32000.filtered',
             "processing": {
                 "bos_token": "<BOS>",
                 "eos_token": "<EOS>",
             }
         },
         "target_dataset": {
-            "files": ['~/t2t_data/train_ende_wmt32k_de'],
+            "files": ['/home/shr/t2t_data/train_ende_wmt_bpe32k_de.txt'],
             "vocab_share":True,
             "processing":{
                 "bos_token": "<BOS>",
                 "eos_token": "<EOS>",
             },
-        }
+        },
+        'bucket_boundaries': boundaries,
+
     }
     extra_hparams = {
-        'max_seq_length':1000000000,
+        #'max_seq_length':256,
         'embedding': {
             'name': 'lookup_table',
             'dim': 512,
             'initializer': {
-                'type': tf.contrib.layers.xavier_initializer(),
-            },
+                'type': 'uniform_unit_scaling',
+            }
+            #    'type': tf.contrib.layers.xavier_initializer(),
+            #},
         },
         'sinusoid': True,
+        #'sinusoid': False,
         'num_blocks': 6,
         'num_heads': 8,
         'poswise_feedforward': {
-            'name':'multihead_attention',
+            'name':'ffn',
             'layers':[
                 {
                     'type':'Conv1D',
@@ -89,8 +96,10 @@ if __name__ == "__main__":
     encoder_output = encoder(encoder_input)
 
     decoder = TransformerDecoder(vocab_size=text_database.target_vocab.vocab_size,\
+            embedding = encoder._embedding,
             hparams=extra_hparams)
     logits, preds = decoder(decoder_input, encoder_output)
+    print('logits:{} preds:{}'.format(logits.shape, preds.shape))
     loss_params = {
         'label_smoothing':0.1,
     }
@@ -103,21 +112,21 @@ if __name__ == "__main__":
         sequence_length=text_data_batch['target_length']-1)
 
     opt_hparams = {
-        "optimizer": {
-            "type": "AdamOptimizer",
-            "kwargs": {
-                "learning_rate": 0.0001,
-                "beta1": 0.9,
-                "beta2": 0.98,
-                "epsilon": 1e-8,
-            }
-        }
+        'warmup_steps': 16000,
     }
+    global_step = tf.Variable(0, trainable=False)
+    learning_rate = extra_hparams['embedding']['dim']*\
+        (tf.minimum(tf.pow(tf.to_float(global_step), -0.5),
+            tf.multiply(tf.to_float(global_step), opt_hparams['warmup_steps'] ** (-1.5)) ))
+    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate,
+            beta1=0.9, beta2=0.98, epsilon=1e-8)
+    train_op = optimizer.minimize(mle_loss, global_step)
+    tf.summary.scalar('mle_loss', mle_loss)
 
-    train_op, global_step = opt.get_train_op(mle_loss, hparams=opt_hparams)
     merged = tf.summary.merge_all()
     saver = tf.train.Saver(max_to_keep=10)
-    with tf.Session() as sess:
+    with tf.Session(config=tf.ConfigProto(
+            allow_soft_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
@@ -131,6 +140,7 @@ if __name__ == "__main__":
                     [encoder_input, labels, preds, train_op, global_step, mle_loss, merged],
                     feed_dict={context.is_train(): True})
                 writer.add_summary(mgd, global_step=step)
+                print('source:{} target:{}'.format(source.shape, target.shape))
                 if step % 100 == 0:
                     print('step:{} loss:{}'.format(step, loss))
                     saver.save(sess, './logdir/my-model', global_step=step)
