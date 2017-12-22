@@ -18,8 +18,12 @@ from texar.core import utils
 # pylint: disable=not-context-manager, too-many-arguments
 
 __all__ = [
-    "default_helper_train_hparams", "default_helper_infer_hparams",
-    "get_helper", "EmbeddingTrainingHelper"
+    "default_helper_train_hparams",
+    "default_helper_infer_hparams",
+    "get_helper",
+    "EmbeddingTrainingHelper",
+    "GumbelSoftmaxEmbeddingHelper",
+    "SoftmaxEmbeddingHelper",
 ]
 
 def default_helper_train_hparams():
@@ -213,7 +217,7 @@ class SoftmaxEmbeddingHelper(TFHelper):
         return sample_ids
 
     def next_inputs(self, time, outputs, state, sample_ids, name=None):
-        finished = [False] * self._batch_size
+        finished = tf.tile([False], [self._batch_size])
         if self._stop_gradient:
             sample_ids = tf.stop_gradient(sample_ids)
         next_inputs = tf.matmul(sample_ids, self._embedding)
