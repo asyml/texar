@@ -110,5 +110,5 @@ class TSFClassifierStats():
     return sum(self._ds) / self._w_ds
 
   def __str__(self):
-    return "l %.2f, g %.2f, p %.2f df %.2f, dr %.2f ds %.2f" %(
+    return "l %.2f, g %.2f, p %.2f df %.2f dr %.2f, ds %.2f" %(
       self.loss, self.g, self.ppl, self.df, self.dr, self.ds)

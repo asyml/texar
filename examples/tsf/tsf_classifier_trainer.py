@@ -41,6 +41,7 @@ class TSFClassifierTrainer(TrainerBase):
       "disp_interval": 100,
       "batch_size": 128,
       "vocab_size": 10000,
+      "cnn_vocab_size": 10000,
       "max_len": 20,
       "max_epoch": 20,
       "sort_data": False,
@@ -59,15 +60,15 @@ class TSFClassifierTrainer(TrainerBase):
     for batch in batches:
       logits_ori, logits_tsf = model.decode_step(sess, batch)
 
-      loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1 = model.eval_step(
+      loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds = model.eval_step(
         sess, batch, self._hparams.rho_f, self._hparams.rho_r,
         self._hparams.gamma_min)
       batch_size = len(batch["enc_inputs"])
       word_size = np.sum(batch["weights"])
-      losses.append(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1,
+      losses.append(loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds,
                     w_loss=batch_size, w_g=batch_size,
-                    w_ppl=word_size, w_d=batch_size,
-                    w_d0=batch_size, w_d1=batch_size)
+                    w_ppl=word_size, w_df=batch_size,
+                    w_dr=batch_size, w_ds=batch_size)
       ori = logits2word(logits_ori, vocab["id2word"])
       tsf = logits2word(logits_tsf, vocab["id2word"])
       half = self._hparams.batch_size // 2
@@ -95,7 +96,7 @@ class TSFClassifierTrainer(TrainerBase):
         self._hparams = HParams(pkl.load(f))
 
     log_print("Start training with hparams:")
-    log_print(json.dumps(self._hparams.todict(), indent=2))
+    log_print(str(self._hparams))
     if not "config" in self._hparams.keys():
       with open(os.path.join(self._hparams.expt_dir, self._hparams.name)
                 + ".config", "w") as f:
@@ -105,6 +106,7 @@ class TSFClassifierTrainer(TrainerBase):
 
     # set vocab size
     self._hparams.vocab_size = vocab["size"]
+    self._hparams.cnn_vocab_size = vocab["size"]
 
     # set some hparams here
 
