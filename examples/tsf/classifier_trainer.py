@@ -102,7 +102,6 @@ class ClassifierTrainer(TrainerBase):
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
 
-
       gamma = self._hparams.gamma_init
       best_dev = float("-inf")
       loss = 0.

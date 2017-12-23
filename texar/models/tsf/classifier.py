@@ -65,14 +65,13 @@ class Classifier:
       "embedding", [hparams.vocab_size,  hparams.embedding_size])
     x_emb = tf.nn.embedding_lookup(embedding, x)
 
-    self_gate_hparams = utils.filter_hparams(hparams, "self_gate")
-    print(self_gate_hparams)
-    self_gate = SelfGate(self_gate_hparams)
-    inputs, alpha = self_gate(x_emb, gamma)
-
     if not self._hparams.use_self_gate:
-      inputs, alpha = x_emb, alpha
-      
+      inputs, alpha = x_emb, x_emb
+    else:
+      self_gate_hparams = utils.filter_hparams(hparams, "self_gate")
+      self_gate = SelfGate(self_gate_hparams)
+      inputs, alpha = self_gate(x_emb, gamma)
+
     cnn = CNN(cnn_hparams)
     logits = cnn(inputs)
     logits = tf.reshape(logits, [-1])
