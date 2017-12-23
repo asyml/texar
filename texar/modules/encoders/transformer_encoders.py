@@ -133,16 +133,16 @@ class TransformerEncoder(EncoderBase):
             rate=self._hparams.dropout, training=context.is_train())
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("num_blocks_{}".format(i)):
-                self.enc = layers.multihead_attention(
-                    queries=self.enc,
-                    keys=self.enc,
-                    num_heads=self._hparams.num_heads, dropout_rate=self._hparams.dropout,
-                    num_units=self._hparams.embedding.dim,
-                    causality=False,
-                    scope='multihead_attention')
+                with tf.variable_scope('self_attention'):
+                    self.enc = layers.multihead_attention(
+                        queries=self.enc,
+                        keys=self.enc,
+                        num_heads=self._hparams.num_heads, dropout_rate=self._hparams.dropout,
+                        num_units=self._hparams.embedding.dim,
+                        causality=False,
+                        scope='multihead_attention')
                 poswise_network = FeedForwardNetwork(hparams=self._hparams['poswise_feedforward'])
                 with tf.variable_scope(poswise_network.variable_scope):
-                    # there could be a scope('multihead_attention_1', in normalization)
                     self.enc += poswise_network(self.enc)
                     self.enc = layers.layer_normalize(self.enc)
 

@@ -21,14 +21,14 @@ def evaluate():
         'embedding': {
             'name':'lookup_table',
             'initializer': {
-                'type':'xavier_initializer',
+                'type':'uniform_unit_scaling',
                 },
             'dim': 512,
             },
         'num_blocks': 6,
         'num_heads': 8,
         'poswise_feedforward': {
-            'name':'multihead_attention',
+            'name':'ffn',
             'layers':[
                 {
                     'type':'Conv1D',
@@ -129,7 +129,6 @@ def evaluate():
                 src = test_corpus[i*hp.batch_size: (i+1)*hp.batch_size]
                 sources = source_list[i*hp.batch_size: (i+1)*hp.batch_size]
                 targets = target_list[i*hp.batch_size: (i+1)*hp.batch_size]
-
                 outputs = np.zeros((hp.batch_size, hp.maxlen),\
                     np.int32)
                 for j in range(hp.maxlen):

@@ -946,6 +946,7 @@ def sinusoid_positional_encoding(inputs,
         scale: [Boolean], If True, the output will be multiplied by sqrt(num_units)
         variable_scope: [String], Optional scope for 'variable_scope'
     """
+    print('begin sinusoid encoding')
     length = tf.shape(inputs)[1]
     channels = tf.shape(inputs)[2]
     with tf.variable_scope(variable_scope, reuse=reuse):
@@ -960,6 +961,7 @@ def sinusoid_positional_encoding(inputs,
         signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=1)
         signal = tf.pad(signal, [[0, 0], [0, tf.mod(channels, 2)]])
         signal = tf.reshape(signal, [1, length, channels])
+        print('sinusoid encoding finished')
         return signal
 
 def multihead_attention(queries,
@@ -988,9 +990,9 @@ def multihead_attention(queries,
         if num_units is None:
             num_units = queries.get_shape().as_list()[-1]
 
-        Q = tf.layers.dense(queries, num_units, activation=tf.nn.relu)
-        K = tf.layers.dense(keys, num_units, activation=tf.nn.relu)
-        V = tf.layers.dense(keys, num_units, activation=tf.nn.relu)
+        Q = tf.layers.dense(queries, num_units, use_bias=False, name='q')
+        K = tf.layers.dense(keys, num_units, use_bias=False, name='k')
+        V = tf.layers.dense(keys, num_units, use_bias=False, name='v')
 
         Q_ = tf.concat(tf.split(Q, num_heads, axis=2), axis=0)
         K_ = tf.concat(tf.split(K, num_heads, axis=2), axis=0)
@@ -1000,7 +1002,7 @@ def multihead_attention(queries,
 
         outputs = outputs / (K_.get_shape().as_list()[-1] ** 0.5)
 
-        #not sure why there should be key_masks and query_masks
+        #filter out the attention allocated for paddings
         key_masks = tf.sign(tf.abs(tf.reduce_sum(keys, axis=-1)))
         key_masks = tf.tile(key_masks, [num_heads, 1])
         key_masks = tf.tile(tf.expand_dims(key_masks, 1), [1, tf.shape(queries)[1], 1])
@@ -1027,6 +1029,8 @@ def multihead_attention(queries,
 
         outputs = tf.matmul(outputs, V_)
         outputs = tf.concat(tf.split(outputs, num_heads, axis=0), axis=2)
+
+        outputs = tf.layers.dense(outputs, num_units, use_bias=False, name='output_transform')
         #(batch_size, length_query, attention_size)
 
         #residual connection
@@ -1061,5 +1065,4 @@ def layer_normalize(inputs,
         gamma = tf.get_variable('layer_norm_bias', [filters], initializer=tf.zeros_initializer())
         norm_x = (inputs - mean) * tf.rsqrt(variance + epsilon)
         outputs = norm_x * alpha + gamma
-
     return outputs
