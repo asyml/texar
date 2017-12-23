@@ -966,6 +966,8 @@ def sinusoid_positional_encoding(inputs,
 
 def multihead_attention(queries,
                         keys,
+                        queries_valid_length,
+                        keys_valid_length,
                         num_units=None,
                         num_heads=8,
                         dropout_rate=0,
@@ -1002,11 +1004,11 @@ def multihead_attention(queries,
 
         outputs = outputs / (K_.get_shape().as_list()[-1] ** 0.5)
 
-        #filter out the attention allocated for paddings
-        key_masks = tf.sign(tf.abs(tf.reduce_sum(keys, axis=-1)))
-        key_masks = tf.tile(key_masks, [num_heads, 1])
+        max_time = tf.to_int32(tf.shape(keys))[1]
+        key_masks = tf.sequence_mask(
+            tf.to_int32(keys_valid_length), max_time, tf.float32)
+        key_masks = tf.tile(key_masks, [num_heads,1])
         key_masks = tf.tile(tf.expand_dims(key_masks, 1), [1, tf.shape(queries)[1], 1])
-
         paddings = tf.ones_like(outputs)*(-2**32+1)
         outputs = tf.where(tf.equal(key_masks, 0), paddings, outputs)
 
@@ -1020,8 +1022,10 @@ def multihead_attention(queries,
 
         outputs = tf.nn.softmax(outputs)
 
-        query_masks = tf.sign(tf.abs(tf.reduce_sum(queries, axis=-1)))
-        query_masks = tf.tile(query_masks, [num_heads, 1])
+        max_time = tf.to_int32(tf.shape(queries))[1]
+        query_masks = tf.sequence_mask(
+            tf.to_int32(queries_valid_length), max_time, tf.float32)
+        query_masks = tf.tile(query_masks, [num_heads,1])
         query_masks = tf.tile(tf.expand_dims(query_masks, -1), [1, 1, tf.shape(keys)[1]])
         outputs *= query_masks
 

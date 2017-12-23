@@ -109,7 +109,7 @@ class TransformerEncoder(EncoderBase):
             'poswise_feedforward':None,
         }
 
-    def _build(self, inputs, **kwargs):
+    def _build(self, inputs, inputs_length, **kwargs):
         if self._embedding is not None:
             self.enc = tf.nn.embedding_lookup(self._embedding, inputs)
         else:
@@ -137,6 +137,8 @@ class TransformerEncoder(EncoderBase):
                     self.enc = layers.multihead_attention(
                         queries=self.enc,
                         keys=self.enc,
+                        queries_valid_length=inputs_length,
+                        keys_valid_length=inputs_length,
                         num_heads=self._hparams.num_heads, dropout_rate=self._hparams.dropout,
                         num_units=self._hparams.embedding.dim,
                         causality=False,

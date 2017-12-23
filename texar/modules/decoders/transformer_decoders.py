@@ -68,7 +68,7 @@ class TransformerDecoder(ModuleBase):
             'poswise_feedforward':None,
         }
 
-    def _build(self, inputs, encoder_output):
+    def _build(self, inputs, encoder_output, src_length, tgt_length):
         if self._embedding is not None:
             dec = tf.nn.embedding_lookup(self._embedding, inputs)
         else:
@@ -96,6 +96,8 @@ class TransformerDecoder(ModuleBase):
                 dec = layers.multihead_attention(
                     queries=dec,
                     keys=dec,
+                    queries_valid_length=src_length,
+                    keys_valid_length=tgt_length,
                     num_units=self._hparams.embedding.dim,
                     num_heads=self._hparams.num_heads,
                     dropout_rate=self._hparams.dropout,
@@ -104,6 +106,8 @@ class TransformerDecoder(ModuleBase):
                 dec = layers.multihead_attention(
                     queries=dec,
                     keys=encoder_output,
+                    queries_valid_length=tgt_length,
+                    keys_valid_length=src_length,
                     num_units=self._hparams.embedding.dim,
                     num_heads=self._hparams.num_heads,
                     dropout_rate=self._hparams.dropout,
@@ -115,13 +119,12 @@ class TransformerDecoder(ModuleBase):
                     dec = layers.layer_normalize(dec)
         self.dec = dec
 
+        # share the projection weight with word embedding
         batch_size, length= tf.shape(dec)[0], tf.shape(dec)[1]
         depth = dec.get_shape()[2]
-
         self.dec = tf.reshape(self.dec, [-1, depth])
         self.logits = tf.matmul(self.dec, tf.transpose(self._embedding))
-
-        self.logits = tf.reshape(self.logits, [batch_size, length, -1])
+        self.logits = tf.reshape(self.logits, [batch_size, length, self._vocab_size])
 
         self.preds = tf.to_int32(tf.argmax(self.logits, axis=-1))
 
