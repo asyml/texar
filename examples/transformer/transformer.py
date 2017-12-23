@@ -46,7 +46,8 @@ if __name__ == "__main__":
         'batch_size':50,
         #'batch_size':2048,
         'bucket_boundaries': [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 24, 26, 28, 30, 33, 36, 39, 42, 46, 50, 55, 60, 66, 72, 79, 86, 94, 103, 113, 124, 136, 149, 163, 179, 196, 215, 236],
-        #'bucket_batch_size':[i // 2 for i in bucket_batch_size]
+        'bucket_batch_size':[i // 2 for i in bucket_batch_size]
+        #'bucket_batch_size': bucket_batch_size,
     }
     extra_hparams = {
         'embedding': {
@@ -136,6 +137,7 @@ if __name__ == "__main__":
         var_list = tf.trainable_variables()
         #for var in var_list:
         #    print('var:{} shape:{} dtype:{}'.format(var.name, var.shape, var.dtype))
+        #exit()
         writer = tf.summary.FileWriter("./logdir/", graph=sess.graph)
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
@@ -148,7 +150,7 @@ if __name__ == "__main__":
                     [encoder_input, labels, preds, train_op, global_step, mle_loss, merged],
                     feed_dict={context.is_train(): True})
                 writer.add_summary(mgd, global_step=step)
-                print('source:{} target:{}'.format(source.shape, target.shape))
+                print('step:{} source:{} target:{}'.format(step, source.shape, target.shape))
                 if step % 100 == 0:
                     print('step:{} loss:{}'.format(step, loss))
                     saver.save(sess, './logdir/my-model', global_step=step)
