@@ -58,3 +58,57 @@ class Stats():
   def __str__(self):
     return "loss %.2f, g %.2f, ppl %.2f d %.2f, adv %.2f %.2f" %(
       self.loss, self.g, self.ppl, self.d, self.d0, self.d1)
+
+
+class TSFClassifierStats():
+  def __init__(self):
+    self.reset()
+
+  def reset(self):
+    self._loss, self._g, self._ppl, self._df, self._dr, self._ds \
+      = [], [], [], [], [], []
+    self._w_loss, self._w_g, self._w_ppl, self._w_df, self._w_dr, self._w_ds \
+      = 0, 0, 0, 0, 0, 0
+
+  def append(self, loss, g, ppl, df, dr, ds,
+             w_loss=1., w_g=1., w_ppl=1., w_df=1, w_dr=1., w_ds=1.):
+    self._loss.append(loss*w_loss)
+    self._g.append(g*w_g)
+    self._ppl.append(ppl*w_ppl)
+    self._df.append(df*w_df)
+    self._dr.append(dr*w_dr)
+    self._ds.append(ds*w_ds)
+    self._w_loss += w_loss
+    self._w_g += w_g
+    self._w_ppl += w_ppl
+    self._w_df += w_df
+    self._w_dr += w_dr
+    self._w_ds+= w_ds
+
+  @property
+  def loss(self):
+    return sum(self._loss) / self._w_loss
+
+  @property
+  def g(self):
+    return sum(self._g) / self._w_g
+
+  @property
+  def ppl(self):
+    return sum(self._ppl) / self._w_ppl
+
+  @property
+  def df(self):
+    return sum(self._df) / self._w_df
+
+  @property
+  def dr(self):
+    return sum(self._dr) / self._w_dr
+
+  @property
+  def ds(self):
+    return sum(self._ds) / self._w_ds
+
+  def __str__(self):
+    return "l %.2f, g %.2f, p %.2f df %.2f, dr %.2f ds %.2f" %(
+      self.loss, self.g, self.ppl, self.df, self.dr, self.ds)

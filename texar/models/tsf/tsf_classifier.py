@@ -220,13 +220,13 @@ class TSFClassifier:
 
     return output_tensors, loss, opt
 
-  def train_d_step(self, sess, batch, rho, gamma):
+  def train_d_step(self, sess, batch):
     loss_ds, _ = sess.run(
       [self.loss["loss_ds"], self.opt["optimizer_ds"],],
-      self.feed_dict(batch, rho, gamma))
+      self.feed_dict(batch, 0., 0., 1.))
     return loss_ds
 
-  def train_g_step(self, sess, batch, rho, gamma):
+  def train_g_step(self, sess, batch, rho_f, rho_r, gamma):
     loss, loss_g, ppl_g, loss_df, loss_dr = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
@@ -234,10 +234,10 @@ class TSFClassifier:
        self.loss["loss_df"],
        self.loss["loss_dr"],
        self.opt["optimizer_all"]],
-      self.feed_dict(batch, rho, gamma))
+      self.feed_dict(batch, rho_f, rho_r, gamma))
     return loss, loss_g, ppl_g, loss_df, loss_dr
 
-  def train_ae_step(self, sess, batch, rho, gamma):
+  def train_ae_step(self, sess, batch, rho_f, rho_r, gamma):
     loss, loss_g, ppl_g, loss_df, loss_dr, _ = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
@@ -245,19 +245,19 @@ class TSFClassifier:
        self.loss["loss_df"],
        self.loss["loss_dr"],
        self.opt["optimizer_ae"]],
-      self.feed_dict(batch, rho, gamma))
+      self.feed_dict(batch, rho_f, rho_r, gamma))
     return loss, loss_g, ppl_g, loss_df, loss_dr
 
-  def eval_step(self, sess, batch, rho, gamma):
-    loss, loss_g, ppl_g, loss_df, loss_dr = sess.run(
+  def eval_step(self, sess, batch, rho_f, rho_r, gamma):
+    loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
        self.loss["ppl_g"],
-       self.loss["loss_d"],
-       self.loss["loss_d0"],
-       self.loss["loss_d1"]],
-      self.feed_dict(batch, rho, gamma, is_train=False))
-    return loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1
+       self.loss["loss_df"],
+       self.loss["loss_dr"],
+       self.loss["loss_ds"]],
+      self.feed_dict(batch, rho_f, rho_r, gamma, is_train=False))
+    return loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds
 
   def decode_step(self, sess, batch):
     logits_ori, logits_tsf = sess.run(
