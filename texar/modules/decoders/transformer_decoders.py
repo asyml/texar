@@ -114,7 +114,15 @@ class TransformerDecoder(ModuleBase):
                     dec += poswise_network(dec)
                     dec = layers.layer_normalize(dec)
         self.dec = dec
-        self.logits = tf.layers.dense(dec, self._vocab_size)
+
+        batch_size, length= tf.shape(dec)[0], tf.shape(dec)[1]
+        depth = dec.get_shape()[2]
+
+        self.dec = tf.reshape(self.dec, [-1, depth])
+        self.logits = tf.matmul(self.dec, tf.transpose(self._embedding))
+
+        self.logits = tf.reshape(self.logits, [batch_size, length, -1])
+
         self.preds = tf.to_int32(tf.argmax(self.logits, axis=-1))
 
         if not self._built:
