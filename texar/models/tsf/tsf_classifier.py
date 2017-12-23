@@ -67,9 +67,10 @@ class TSFClassifier:
     targets = tf.placeholder(tf.int32, [batch_size, None], name="targets")
     weights = tf.placeholder(tf.float32, [batch_size, None], name="weights")
     labels = tf.placeholder(tf.float32, [batch_size], name="labels")
-    batch_len = tf.placeholder(tf.int32, name="batch_len")
-    gamma = tf.placeholder(tf.float32, name="gamma")
-    rho = tf.placeholder(tf.float32, name="rho")
+    batch_len = tf.placeholder(tf.int32, [], name="batch_len")
+    gamma = tf.placeholder(tf.float32, [], name="gamma")
+    rho_f = tf.placeholder(tf.float32, [], name="rho_f")
+    rho_r = tf.placeholder(tf.float32, [], name="rho_r")
 
     collections_input = self._hparams.collections + '/input'
     input_tensors = utils.register_collection(
@@ -81,7 +82,8 @@ class TSFClassifier:
        ("labels", labels),
        ("batch_len", batch_len),
        ("gamma", gamma),
-       ("rho", rho),
+       ("rho_f", rho_f),
+       ("rho_r", rho_r),
       ])
 
     return input_tensors
@@ -227,7 +229,7 @@ class TSFClassifier:
     return loss_ds
 
   def train_g_step(self, sess, batch, rho_f, rho_r, gamma):
-    loss, loss_g, ppl_g, loss_df, loss_dr = sess.run(
+    loss, loss_g, ppl_g, loss_df, loss_dr, _ = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
        self.loss["ppl_g"],

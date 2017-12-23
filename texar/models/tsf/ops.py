@@ -106,7 +106,7 @@ def rnn_decode(state, inp, length, cell, loop_func, scope):
   output_seq = tf.concat(output_seq, 1)
   logits_seq = tf.concat(logits_seq, 1)
   if sample[0] is not None:
-    sample_seq = tf.concat(sample, 1)
+    sample_seq = tf.concat(sample_seq, 1)
   else:
     sample_seq = None
   return output_seq, logits_seq, sample_seq
