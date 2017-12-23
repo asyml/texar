@@ -13,7 +13,7 @@ import codecs
 import regex
 
 def load_de_vocab():
-    vocab = [line.split()[0] for line in codecs.open('data/translation/de-en/de.vocab.tsv', 'r', 'utf-8').read().splitlines() if int(line.split()[1])>=hp.min_cnt]
+    vocab = [line.split()[0] for line in codecs.open('/home/shr/t2t_data/vocab.bpe.32000.eval').read().splitlines()]
     word2idx = {word: idx for idx, word in enumerate(vocab)}
     idx2word = {idx: word for idx, word in enumerate(vocab)}
     return word2idx, idx2word
@@ -31,14 +31,17 @@ def create_data(source_sents, target_sents):
     # Index
     x_list, y_list, Sources, Targets = [], [], [], []
     for source_sent, target_sent in zip(source_sents, target_sents):
-        x = [de2idx.get(word, 1) for word in (source_sent + u" </S>").split()] # 1: OOV, </S>: End of Text
-        y = [en2idx.get(word, 1) for word in (target_sent + u" </S>").split()]
-        if max(len(x), len(y)) <=hp.maxlen:
-            x_list.append(np.array(x))
-            y_list.append(np.array(y))
-            Sources.append(source_sent)
-            Targets.append(target_sent)
+        x = [de2idx[word] for word in (source_sent + u" <EOS>").split()] # 1: OOV, </S>: End of Text
+        y = [en2idx[word] for word in (target_sent + u" <EOS>").split()]
+        x = x[:hp.maxlen]
+        y = y[:hp.maxlen]
 
+        # truncate or discard
+        #if max(len(x), len(y)) <=hp.maxlen:
+        x_list.append(np.array(x))
+        y_list.append(np.array(y))
+        Sources.append(source_sent)
+        Targets.append(target_sent)
     # Pad
     X = np.zeros([len(x_list), hp.maxlen], np.int32)
     Y = np.zeros([len(y_list), hp.maxlen], np.int32)
@@ -66,6 +69,12 @@ def load_test_data():
 
     X, Y, Sources, Targets = create_data(de_sents, en_sents)
     return X, Sources, Targets # (1064, 150)
+
+def load_test_wmt_data(data_hparams):
+    en_sents = [line.strip() for line in codecs.open(hp.source_test, 'r', 'utf_8').read().split('\n')]
+    de_sents = [line.strip() for line in codecs.open(hp.target_test, 'r', 'utf-8').read().split('\n')]
+    X, Y, Sources, Targets = create_data(en_sents, de_sents)
+    return X, Sources, Targets
 
 def get_batch_data():
     # Load data

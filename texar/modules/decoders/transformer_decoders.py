@@ -34,8 +34,11 @@ class TransformerDecoder(ModuleBase):
         if self._hparams.use_embedding:
             if embedding is None and vocab_size is None:
                 raise ValueError("If 'embedding' is not provided, 'vocab_size' must be specified.")
-            if isinstance(embedding, tf.Variable):
+            #print('type embedding:{}'.format(type(embedding)))
+            #<class 'tensorflow.python.framework.ops.Tensor'>
+            if isinstance(embedding, tf.Tensor):
                 self._embedding = embedding
+                print('embedding shared between encoder and decoder')
             else:
                 self._embedding = layers.get_embedding(
                     self._hparams.embedding, embedding, vocab_size,

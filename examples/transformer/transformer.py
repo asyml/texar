@@ -22,8 +22,9 @@ if __name__ == "__main__":
     np.random.seed(123)
     random.seed(123)
     boundaries = _bucket_boundaries(max_length=256)
+    bucket_batch_size = [240, 180, 180, 180, 144, 144, 144, 120, 120, 120, 90, 90, 90, 90, 80, 72, 72, 60, 60, 48, 48, 48, 40, 40, 36, 30, 30, 24, 24, 20, 20, 18, 18, 16, 15, 12, 12, 10, 10, 9, 8, 8]
     data_hparams = {
-        "num_epochs": 25,
+        "num_epochs": 2,
         "seed": 123,
         "shuffle": True,
         "source_dataset": {
@@ -42,20 +43,18 @@ if __name__ == "__main__":
                 "eos_token": "<EOS>",
             },
         },
-        'batch_size':2048,
+        'batch_size':50,
+        #'batch_size':2048,
         'bucket_boundaries': [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 24, 26, 28, 30, 33, 36, 39, 42, 46, 50, 55, 60, 66, 72, 79, 86, 94, 103, 113, 124, 136, 149, 163, 179, 196, 215, 236],
-        'bucket_batch_size':[240, 180, 180, 180, 144, 144, 144, 120, 120, 120, 90, 90, 90, 90, 80, 72, 72, 60, 60, 48, 48, 48, 40, 40, 36, 30, 30, 24, 24, 20, 20, 18, 18, 16, 15, 12, 12, 10, 10, 9, 8, 8],
+        #'bucket_batch_size':[i // 2 for i in bucket_batch_size]
     }
     extra_hparams = {
-        #'max_seq_length':256,
         'embedding': {
             'name': 'lookup_table',
             'dim': 512,
             'initializer': {
                 'type': 'uniform_unit_scaling',
             }
-            #    'type': tf.contrib.layers.xavier_initializer(),
-            #},
         },
         'sinusoid': True,
         #'sinusoid': False,
@@ -115,27 +114,36 @@ if __name__ == "__main__":
         'warmup_steps': 16000,
     }
     global_step = tf.Variable(0, trainable=False)
-    learning_rate = extra_hparams['embedding']['dim']*\
-        (tf.minimum(tf.pow(tf.to_float(global_step), -0.5),
-            tf.multiply(tf.to_float(global_step), opt_hparams['warmup_steps'] ** (-1.5)) ))
+    fstep = tf.to_float(global_step)
+    learning_rate = extra_hparams['embedding']['dim']**-0.5 *\
+        (tf.minimum((fstep+1)**-0.5,
+            (fstep+1) * opt_hparams['warmup_steps']**-1.5) )
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate,
             beta1=0.9, beta2=0.98, epsilon=1e-8)
     train_op = optimizer.minimize(mle_loss, global_step)
+    tf.summary.scalar('lr', learning_rate)
     tf.summary.scalar('mle_loss', mle_loss)
 
     merged = tf.summary.merge_all()
-    saver = tf.train.Saver(max_to_keep=10)
+    saver = tf.train.Saver(max_to_keep=2)
     with tf.Session(config=tf.ConfigProto(
             allow_soft_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
+        graph = tf.get_default_graph()
+        graph.finalize()
+        var_list = tf.trainable_variables()
+        #for var in var_list:
+        #    print('var:{} shape:{} dtype:{}'.format(var.name, var.shape, var.dtype))
         writer = tf.summary.FileWriter("./logdir/", graph=sess.graph)
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
         try:
             while not coord.should_stop():
+                #source, target= sess.run(
+                #    [encoder_input, labels], feed_dict={context.is_train():True})
                 source, target, predict, _, step, loss, mgd = sess.run(
                     [encoder_input, labels, preds, train_op, global_step, mle_loss, merged],
                     feed_dict={context.is_train(): True})
@@ -149,4 +157,4 @@ if __name__ == "__main__":
         finally:
             coord.request_stop()
         coord.join(threads)
-        saver.save(sess, './logdir/my-model', global_step=step)
+        #saver.save(sess, './logdir/my-model', global_step=step)
