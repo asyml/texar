@@ -60,15 +60,19 @@ class TSFClassifierTrainer(TrainerBase):
     for batch in batches:
       logits_ori, logits_tsf = model.decode_step(sess, batch)
 
-      loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds = model.eval_step(
+      loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds, \
+        accu_f, accu_r, accu_s = model.eval_step(
         sess, batch, self._hparams.rho_f, self._hparams.rho_r,
         self._hparams.gamma_min)
       batch_size = len(batch["enc_inputs"])
       word_size = np.sum(batch["weights"])
       losses.append(loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds,
+                    accu_f, accu_r, accu_s, 
                     w_loss=batch_size, w_g=batch_size,
                     w_ppl=word_size, w_df=batch_size,
-                    w_dr=batch_size, w_ds=batch_size)
+                    w_dr=batch_size, w_ds=batch_size,
+                    w_af=batch_size, w_ar=batch_size,
+                    w_as=batch_size)
       ori = logits2word(logits_ori, vocab["id2word"])
       tsf = logits2word(logits_tsf, vocab["id2word"])
       half = self._hparams.batch_size // 2
@@ -143,16 +147,19 @@ class TSFClassifierTrainer(TrainerBase):
         for batch in batches:
           loss_ds = 0.
           for _ in range(self._hparams.d_update_freq):
-            loss_ds = model.train_d_step(sess, batch)
+            loss_ds, accu_s = model.train_d_step(sess, batch)
 
           if loss_ds < 1.2:
-            loss, loss_g, ppl_g, loss_df, loss_dr = model.train_g_step(
-              sess, batch, self._hparams.rho_f, self._hparams.rho_r, gamma)
+            (loss, loss_g, ppl_g, loss_df, loss_dr,
+             accu_f, accu_r) = model.train_g_step(
+               sess, batch, self._hparams.rho_f, self._hparams.rho_r, gamma)
           else:
-            loss, loss_g, ppl_g, loss_df, loss_dr = model.train_ae_step(
-              sess, batch, self._hparams.rho_f, self._hparams.rho_r, gamma)
+            (loss, loss_g, ppl_g, loss_df, loss_dr,
+             accu_f, accu_r)= model.train_ae_step(
+               sess, batch, self._hparams.rho_f, self._hparams.rho_r, gamma)
 
-          losses.append(loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds)
+          losses.append(loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds,
+                        accu_f, accu_r, accu_s)
 
           step += 1
           if step % self._hparams.disp_interval == 0:
