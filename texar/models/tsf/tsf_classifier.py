@@ -164,9 +164,11 @@ class TSFClassifier:
 
     # classifier supervised training 
     targets = input_tensors["targets"]
-    loss_ds = ops.adv_loss(targets[half:], targets[:half], cnn)
-    loss_dr = ops.adv_loss(soft_sample_ori[half:], soft_sample_ori[:half], cnn)
-    loss_df = ops.adv_loss(soft_sample_tsf[:half], soft_sample_tsf[half:], cnn)
+    loss_ds, accu_s = ops.adv_loss(targets[half:], targets[:half], cnn)
+    loss_dr, accu_r = ops.adv_loss(soft_sample_ori[half:],
+                                   soft_sample_ori[:half], cnn)
+    loss_df, accu_f = ops.adv_loss(soft_sample_tsf[:half],
+                                   soft_sample_tsf[half:], cnn)
 
     loss = loss_g + \
            input_tensors["rho_f"] * loss_df + \
@@ -208,6 +210,9 @@ class TSFClassifier:
        ("loss_ds", loss_ds),
        ("loss_df", loss_df),
        ("loss_dr", loss_dr),
+       ("accu_s", accu_s),
+       ("accu_f", accu_f),
+       ("accu_r", accu_r),
       ]
     )
 
@@ -223,43 +228,55 @@ class TSFClassifier:
     return output_tensors, loss, opt
 
   def train_d_step(self, sess, batch):
-    loss_ds, _ = sess.run(
-      [self.loss["loss_ds"], self.opt["optimizer_ds"],],
+    loss_ds, accu_s, _ = sess.run(
+      [self.loss["loss_ds"],
+       self.loss["accu_s"],
+       self.opt["optimizer_ds"]],
       self.feed_dict(batch, 0., 0., 1.))
-    return loss_ds
+    return loss_ds, accu_s
 
   def train_g_step(self, sess, batch, rho_f, rho_r, gamma):
-    loss, loss_g, ppl_g, loss_df, loss_dr, _ = sess.run(
+    loss, loss_g, ppl_g, loss_df, loss_dr, accu_f, accu_r, _ = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
        self.loss["ppl_g"],
        self.loss["loss_df"],
        self.loss["loss_dr"],
+       self.loss["accu_f"],
+       self.loss["accu_r"],
        self.opt["optimizer_all"]],
       self.feed_dict(batch, rho_f, rho_r, gamma))
-    return loss, loss_g, ppl_g, loss_df, loss_dr
+    return loss, loss_g, ppl_g, loss_df, loss_dr, accu_f, accu_r
 
   def train_ae_step(self, sess, batch, rho_f, rho_r, gamma):
-    loss, loss_g, ppl_g, loss_df, loss_dr, _ = sess.run(
+    loss, loss_g, ppl_g, loss_df, loss_dr, accu_f, accu_r, _ = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
        self.loss["ppl_g"],
        self.loss["loss_df"],
        self.loss["loss_dr"],
+       self.loss["accu_f"],
+       self.loss["accu_r"],
        self.opt["optimizer_ae"]],
       self.feed_dict(batch, rho_f, rho_r, gamma))
-    return loss, loss_g, ppl_g, loss_df, loss_dr
+    return loss, loss_g, ppl_g, loss_df, loss_dr, accu_f, accu_r
 
   def eval_step(self, sess, batch, rho_f, rho_r, gamma):
-    loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds = sess.run(
+    loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds, \
+      accu_f, accu_r, accu_s = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
        self.loss["ppl_g"],
        self.loss["loss_df"],
        self.loss["loss_dr"],
-       self.loss["loss_ds"]],
+       self.loss["loss_ds"],
+       self.loss["accu_f"],
+       self.loss["accu_r"],
+       self.loss["accu_s"],
+      ],
       self.feed_dict(batch, rho_f, rho_r, gamma, is_train=False))
-    return loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds
+    return (loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds,
+            accu_f, accu_r, accu_s)
 
   def decode_step(self, sess, batch):
     logits_ori, logits_tsf = sess.run(
