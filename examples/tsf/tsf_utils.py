@@ -7,6 +7,7 @@ import time
 import random
 import numpy as np
 
+from utils import *
 
 def get_batch(x, y, word2id, batch_size, min_len=5):
   pad = word2id["_PAD"]

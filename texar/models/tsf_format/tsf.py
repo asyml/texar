@@ -20,6 +20,7 @@ from texar.modules.encoders.conv1d_discriminator import CNN
 from texar.modules.encoders.rnn_encoders import UnidirectionalRNNEncoder
 from texar.modules.decoders.rnn_decoders import BasicRNNDecoder
 from texar.modules.decoders.rnn_decoder_helpers import *
+from texar.modules.connectors import MLPTransformConnector
 from texar.core.layers import *
 from texar.core import optimization
 from texar.losses import adv_losses
@@ -137,9 +138,9 @@ class TSF:
     z  = z[:, hparams.dim_y:]
 
     # get state
-    label_proj_g = tf.layers.Dense(hparams.dim_y, name="generator")
+    label_proj_g = MLPTransformConnector(hparams.dim_y)
     h_ori = tf.concat([label_proj_g(labels), z], 1)
-    h_tsf = tf.concat([label_proj_g(1 - labels), z], 1)
+    h_tsf = tf.concat([label_proj_g(1-labels), z], 1)
 
     output_dropout = tf.layers.Dropout(
       rate=1-switch_dropout(hparams.output_keep_prob))
@@ -171,6 +172,12 @@ class TSF:
       start_tokens,
       input_tensors["gamma"],
     )
+    # softmax_helper = SoftmaxEmbeddingHelper(
+    #   rnn_encoder.embedding,
+    #   start_tokens,
+    #   input_tensors["gamma"],
+    # )
+
 
     #TODO(zichao): hard coded end_token
     end_token = 2
@@ -182,6 +189,9 @@ class TSF:
 
     soft_outputs_ori, _, _, = rnn_decoder(gumbel_helper, h_ori)
     soft_outputs_tsf, _, _, = rnn_decoder(gumbel_helper, h_tsf)
+
+    # soft_outputs_ori, _, _, = rnn_decoder(softmax_helper, h_ori)
+    # soft_outputs_tsf, _, _, = rnn_decoder(softmax_helper, h_tsf)
 
     hard_outputs_ori, _, _, = rnn_decoder(greedy_helper, h_ori)
     hard_outputs_tsf, _, _, = rnn_decoder(greedy_helper, h_tsf)
@@ -209,7 +219,8 @@ class TSF:
     loss_d = loss_d0 + loss_d1
     loss = loss_g - input_tensors["rho"] * loss_d
 
-    var_eg = rnn_encoder.trainable_variables + rnn_decoder.trainable_variables
+    var_eg = rnn_encoder.trainable_variables + rnn_decoder.trainable_variables \
+             + label_proj_g.trainable_variables
     var_d0 = cnn0.trainable_variables
     var_d1 = cnn1.trainable_variables
 

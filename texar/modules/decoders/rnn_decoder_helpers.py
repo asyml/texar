@@ -248,7 +248,7 @@ class GumbelSoftmaxEmbeddingHelper(SoftmaxEmbeddingHelper):
         self._straight_through = straight_through
 
     def sample(self, time, outputs, state, name=None):
-        sample_ids = GumbelSoftmax(self._tau, outputs).sample()
+        sample_ids = GumbelSoftmax(self._tau, logits=outputs).sample()
         if self._straight_through:
             size = tf.shape(sample_ids)[-1]
             sample_ids_hard = tf.cast(
