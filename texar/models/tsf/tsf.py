@@ -137,10 +137,13 @@ class TSF:
     loss_g = tf.reduce_sum(loss_g) / hparams.batch_size
     # decoding 
     go = dec_inputs[:, 0, :]
-    #  soft_func = feed_softmax(softmax_proj, embedding, input_tensors["gamma"])
     soft_func = ops.sample_gumbel(softmax_proj, embedding,
                                   input_tensors["gamma"],
                                   output_keep_prob=hparams.output_keep_prob)
+    # soft_func = ops.feed_softmax(softmax_proj, embedding,
+    #                              input_tensors["gamma"],
+    #                              output_keep_prob=hparams.output_keep_prob)
+
     hard_func = ops.greedy_softmax(softmax_proj, embedding,
                                    output_keep_prob=hparams.output_keep_prob)
 
@@ -173,8 +176,8 @@ class TSF:
     cnn0 = CNN(cnn0_hparams)
     cnn1 = CNN(cnn1_hparams)
 
-    loss_d0 = ops.adv_loss(teach_h[:half], soft_h_tsf[half:], cnn0)
-    loss_d1 = ops.adv_loss(teach_h[half:], soft_h_tsf[:half], cnn1)
+    loss_d0, _ = ops.adv_loss(teach_h[:half], soft_h_tsf[half:], cnn0)
+    loss_d1, _ = ops.adv_loss(teach_h[half:], soft_h_tsf[:half], cnn1)
 
     loss_d = loss_d0 + loss_d1
     loss =loss_g - input_tensors["rho"] * loss_d
