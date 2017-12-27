@@ -96,7 +96,7 @@ class TransformerDecoder(ModuleBase):
                 dec = layers.multihead_attention(
                     queries=dec,
                     keys=dec,
-                    queries_valid_length=src_length,
+                    queries_valid_length=tgt_length,
                     keys_valid_length=tgt_length,
                     num_units=self._hparams.embedding.dim,
                     num_heads=self._hparams.num_heads,
