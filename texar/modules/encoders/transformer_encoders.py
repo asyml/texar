@@ -139,7 +139,8 @@ class TransformerEncoder(EncoderBase):
                         keys=self.enc,
                         queries_valid_length=inputs_length,
                         keys_valid_length=inputs_length,
-                        num_heads=self._hparams.num_heads, dropout_rate=self._hparams.dropout,
+                        num_heads=self._hparams.num_heads,
+                        dropout_rate=self._hparams.dropout,
                         num_units=self._hparams.embedding.dim,
                         causality=False,
                         scope='multihead_attention')
