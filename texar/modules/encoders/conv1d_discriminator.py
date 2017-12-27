@@ -22,7 +22,7 @@ class CNN(ModuleBase):
 
     self._use_embedding = use_embedding
     if self._use_embedding:
-      with self.variable_scope as scope:
+      with tf.variable_scope(self.variable_scope):
         self._embedding = tf.get_variable("embedding",
         [self._hparams.vocab_size, self._hparams.embedding_size])
     self._conv_layers = []
@@ -51,7 +51,10 @@ class CNN(ModuleBase):
       if inputs.get_shape().ndims == 2:
         inputs = tf.nn.embedding_lookup(self._embedding, inputs)
       elif inputs.get_shape().ndims == 3:
-        inupts = tf.matmul(inputs, self._embedding)
+        inputs_shape = inputs.get_shape()
+        inputs = tf.matmul(tf.reshape(inputs, [-1, inputs_shape[-1]]),
+                           self._embedding)
+        inputs = tf.reshape(inputs, [inputs_shape[0], -1, inputs.get_shape()[-1]])
 
     inputs = tf.nn.dropout(
       inputs, utils.switch_dropout(self._hparams.input_keep_prob))

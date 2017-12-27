@@ -20,7 +20,7 @@ from texar.models.tsf import ops
 from texar.models.tsf import utils
 
 
-class TSF:
+class TSFClassifierPointer:
   """Text style transfer."""
 
   def __init__(self, hparams=None):
@@ -51,6 +51,8 @@ class TSF:
       "cnn_num_filter": 128,
       "cnn_input_keep_prob": 1.,
       "cnn_output_keep_prob": 0.5,
+      "cnn_vocab_size": 10000,
+      "cnn_embedding_size": 100,
       # adam
       "adam_learning_rate": 1e-4,
       "adam_beta1": 0.9,
@@ -65,9 +67,10 @@ class TSF:
     targets = tf.placeholder(tf.int32, [batch_size, None], name="targets")
     weights = tf.placeholder(tf.float32, [batch_size, None], name="weights")
     labels = tf.placeholder(tf.float32, [batch_size], name="labels")
-    batch_len = tf.placeholder(tf.int32, name="batch_len")
-    gamma = tf.placeholder(tf.float32, name="gamma")
-    rho = tf.placeholder(tf.float32, name="rho")
+    batch_len = tf.placeholder(tf.int32, [], name="batch_len")
+    gamma = tf.placeholder(tf.float32, [], name="gamma")
+    rho_f = tf.placeholder(tf.float32, [], name="rho_f")
+    rho_r = tf.placeholder(tf.float32, [], name="rho_r")
 
     collections_input = self._hparams.collections + '/input'
     input_tensors = utils.register_collection(
@@ -79,7 +82,8 @@ class TSF:
        ("labels", labels),
        ("batch_len", batch_len),
        ("gamma", gamma),
-       ("rho", rho),
+       ("rho_f", rho_f),
+       ("rho_r", rho_r),
       ])
 
     return input_tensors
@@ -101,18 +105,15 @@ class TSF:
     labels = input_tensors["labels"]
     labels = tf.reshape(labels, [-1, 1])
 
-    # auto encoder
-    # label_proj_e = tf.layers.Dense(hparams.dim_y, name="encoder")
-    # init_state = tf.concat([label_proj_e(labels),
-    #                         tf.zeros([hparams.batch_size, hparams.dim_z])], 1)
-
     rnn_hparams = utils.filter_hparams(hparams, "rnn")
     init_state = tf.zeros([hparams.batch_size, rnn_hparams.size])
     cell_e = ops.get_rnn_cell(rnn_hparams)
 
-    _, z = tf.nn.dynamic_rnn(cell_e, enc_inputs, initial_state=init_state,
-                              scope="encoder")
+    enc_outputs, z = tf.nn.dynamic_rnn(
+      cell_e, enc_inputs, initial_state=init_state, scope="encoder")
     z  = z[:, hparams.dim_y:]
+    enc_outputs = tf.nn.dropout(
+      enc_outputs, switch_dropout(hparams.output_keep_prob))
 
     label_proj_g = tf.layers.Dense(hparams.dim_y, name="generator")
     h_ori = tf.concat([label_proj_g(labels), z], 1)
@@ -120,14 +121,18 @@ class TSF:
 
     cell_g = ops.get_rnn_cell(rnn_hparams)
     softmax_proj = tf.layers.Dense(hparams.vocab_size, name="softmax_proj")
-    g_outputs, _ = tf.nn.dynamic_rnn(cell_g, dec_inputs, initial_state=h_ori,
-                                     scope="generator")
-
-    teach_h = tf.concat([tf.expand_dims(h_ori, 1), g_outputs], 1)
-
-    g_outputs = tf.nn.dropout(
-      g_outputs, switch_dropout(hparams.output_keep_prob))
-    g_logits = softmax_proj(tf.reshape(g_outputs, [-1, rnn_hparams.size]))
+    attn_layer = ops.AttnLayer(hparams.rnn_size, name="attn")
+    pointer_layer = tf.layers.Dense(1, name="pointer")
+    # pointer decoder
+    train_pointer_decoder = ops.TrainPointerDecoder(
+      softmax_proj, attn_layer, pointer_lyaer, input_tensors["enc_inputs"],
+      enc_outputs, embedding, input_tensors["dec_inputs"],
+      output_keep_prob=hparams.output_keep_prob)
+    go = dec_inputs[:, 0, :]
+    g_outputs, g_p, _ = ops.rnn_pointer_decode(
+      h_ori, go, hparams.max_len, cell_g, train_pointer_decoder, scope="decoder")
+    g_p = g_p[:, :input_tensors["batch_len"], :]
+    g_logits = tf.log(g_p + 1e-8)
 
     loss_g = tf.nn.sparse_softmax_cross_entropy_with_logits(
       labels=tf.reshape(input_tensors["targets"], [-1]), logits=g_logits)
@@ -136,56 +141,57 @@ class TSF:
                                      + 1e-8)
     loss_g = tf.reduce_sum(loss_g) / hparams.batch_size
     # decoding 
-    go = dec_inputs[:, 0, :]
-    soft_func = ops.sample_gumbel(softmax_proj, embedding,
-                                  input_tensors["gamma"],
-                                  output_keep_prob=hparams.output_keep_prob)
-    # soft_func = ops.feed_softmax(softmax_proj, embedding,
-    #                              input_tensors["gamma"],
-    #                              output_keep_prob=hparams.output_keep_prob)
+    soft_pointer_decoder = ops.GumbelSoftmaxPointerDecoder(
+      softmax_proj, attn_layer, pointer_layer, input_tensors["enc_inputs"],
+      enc_outputs, embedding, input_tensors["gamma"],
+      output_keep_prob=hparams.output_keep_prob)
+    hard_pointer_decoder = ops.GreedyPointerDecoder(
+      softmax_proj, attn_layer, pointer_layer, input_tensors["enc_inputs"],
+      enc_outputs, embedding, output_keep_prob=hparams.output_keep_prob)
 
-    hard_func = ops.greedy_softmax(softmax_proj, embedding,
-                                   output_keep_prob=hparams.output_keep_prob)
+    soft_output_ori, soft_p_ori, soft_sample_ori \
+      = ops.rnn_pointer_decode(h_ori, go, hparams.max_len, cell_g,
+                               soft_pointer_decoder, scope="decoder",
+                               reuse=True)
+    soft_output_tsf, soft_p_tsf, soft_sample_tsf \
+      = ops.rnn_pointer_decode(h_tsf, go, hparams.max_len, cell_g,
+                               soft_pointer_decoder, scope="decoder",
+                               reuse=True)
 
-    soft_output_ori, soft_logits_ori, _ = ops.rnn_decode(
-      h_ori, go, hparams.max_len, cell_g, soft_func, scope="generator")
-    soft_output_tsf, soft_logits_tsf, _ = ops.rnn_decode(
-      h_tsf, go, hparams.max_len, cell_g, soft_func, scope="generator")
+    hard_output_ori, hard_p_ori, hard_sample_ori \
+      = ops.rnn_pointer_decode(h_ori, go, hparams.max_len, cell_g,
+                               hard_pointer_decoder, scope="decoder",
+                               reuse=True)
+    hard_output_tsf, hard_p_tsf, hard_sample_tsf \
+      = ops.rnn_pointer_decode(h_tsf, go, hparams.max_len, cell_g,
+                               hard_pointer_decoder, scope="decoder",
+                               reuse=True)
 
-    hard_output_ori, hard_logits_ori, _ = ops.rnn_decode(
-      h_ori, go, hparams.max_len, cell_g, hard_func, scope="generator")
-    hard_output_tsf, hard_logits_tsf, _ = ops.rnn_decode(
-      h_tsf, go, hparams.max_len, cell_g, hard_func, scope="generator")
-
-    with tf.variable_scope("generator", reuse=True):
-      test_output, _ = cell_g(go, h_ori)
-    test_logits = softmax_proj(test_output)
 
     # discriminator
     half = hparams.batch_size // 2
-    # plus the encoder h
-    soft_output_tsf = soft_output_tsf[:, :input_tensors["batch_len"], :]
-    soft_h_tsf = tf.concat([tf.expand_dims(h_tsf, 1), soft_output_tsf], 1)
+    soft_sample_ori = soft_sample_ori[:, :input_tensors["batch_len"], :]
+    soft_sample_tsf = soft_sample_tsf[:, :input_tensors["batch_len"], :]
 
     cnn_hparams = utils.filter_hparams(hparams, "cnn")
-    cnn0_hparams = copy.deepcopy(cnn_hparams)
-    cnn1_hparams = copy.deepcopy(cnn_hparams)
-    cnn0_hparams.name = "cnn0"
-    cnn1_hparams.name = "cnn1"
-    
-    cnn0 = CNN(cnn0_hparams)
-    cnn1 = CNN(cnn1_hparams)
+    cnn_hparams.vocab_size
+    cnn = CNN(cnn_hparams, use_embedding=True)
 
-    loss_d0, _ = ops.adv_loss(teach_h[:half], soft_h_tsf[half:], cnn0)
-    loss_d1, _ = ops.adv_loss(teach_h[half:], soft_h_tsf[:half], cnn1)
+    # classifier supervised training 
+    targets = input_tensors["targets"]
+    loss_ds, accu_s = ops.adv_loss(targets[half:], targets[:half], cnn)
+    loss_dr, accu_r = ops.adv_loss(soft_sample_ori[half:],
+                                   soft_sample_ori[:half], cnn)
+    loss_df, accu_f = ops.adv_loss(soft_sample_tsf[:half],
+                                   soft_sample_tsf[half:], cnn)
 
-    loss_d = loss_d0 + loss_d1
-    loss =loss_g - input_tensors["rho"] * loss_d
+    loss = loss_g + \
+           input_tensors["rho_f"] * loss_df + \
+           input_tensors["rho_r"] * loss_dr
 
     var_eg = ops.retrieve_variables(["encoder", "generator",
                                      "softmax_proj", "embedding"])
-    var_d0 = ops.retrieve_variables(["cnn0"])
-    var_d1 = ops.retrieve_variables(["cnn1"])
+    var_d = ops.retrieve_variables(["cnn"])
 
     # optimization
     adam_hparams = utils.filter_hparams(hparams, "adam")
@@ -193,10 +199,8 @@ class TSF:
       loss, var_list=var_eg)
     optimizer_ae = tf.train.AdamOptimizer(**adam_hparams).minimize(
       loss_g, var_list=var_eg)
-    optimizer_d0 = tf.train.AdamOptimizer(**adam_hparams).minimize(
-      loss_d0, var_list=var_d0)
-    optimizer_d1 = tf.train.AdamOptimizer(**adam_hparams).minimize(
-      loss_d1, var_list=var_d1)
+    optimizer_ds = tf.train.AdamOptimizer(**adam_hparams).minimize(
+      loss_ds, var_list=var_d)
 
     # add tensors to collections
     collections_output = hparams.collections + '/output'
@@ -204,15 +208,11 @@ class TSF:
       collections_output,
       [("h_ori", h_ori),
        ("h_tsf", h_tsf),
-       ("hard_logits_ori", hard_logits_ori),
-       ("hard_logits_tsf", hard_logits_tsf),
-       ("soft_logits_ori", soft_logits_ori),
-       ("soft_logits_tsf", soft_logits_tsf),
+       ("hard_logits_ori", tf.log(hard_p_ori + 1e-8)),
+       ("hard_logits_tsf", tf.log(hard_p_tsf + 1e-8)),
+       ("soft_logits_ori", tf.log(soft_p_ori + 1e-8)),
+       ("soft_logits_tsf", tf.log(soft_p_tsf + 1e-8)),
        ("g_logits", g_logits),
-       ("test_output", test_output),
-       ("test_logits", test_logits),
-       ("teach_h", teach_h),
-       ("soft_h_tsf", soft_h_tsf),
       ]
     )
 
@@ -222,9 +222,12 @@ class TSF:
       [("loss", loss),
        ("loss_g", loss_g),
        ("ppl_g", ppl_g),
-       ("loss_d", loss_d),
-       ("loss_d0", loss_d0),
-       ("loss_d1", loss_d1),
+       ("loss_ds", loss_ds),
+       ("loss_df", loss_df),
+       ("loss_dr", loss_dr),
+       ("accu_s", accu_s),
+       ("accu_f", accu_f),
+       ("accu_r", accu_r),
       ]
     )
 
@@ -233,54 +236,62 @@ class TSF:
       collections_opt,
       [("optimizer_all", optimizer_all),
        ("optimizer_ae", optimizer_ae),
-       ("optimizer_d0", optimizer_d0),
-       ("optimizer_d1", optimizer_d1),
+       ("optimizer_ds", optimizer_ds),
       ]
     )
 
     return output_tensors, loss, opt
 
-  def train_d0_step(self, sess, batch, rho, gamma):
-    loss_d0, _ = sess.run(
-      [self.loss["loss_d0"], self.opt["optimizer_d0"],],
-      self.feed_dict(batch, rho, gamma))
-    return loss_d0
+  def train_d_step(self, sess, batch):
+    loss_ds, accu_s, _ = sess.run(
+      [self.loss["loss_ds"],
+       self.loss["accu_s"],
+       self.opt["optimizer_ds"]],
+      self.feed_dict(batch, 0., 0., 1.))
+    return loss_ds, accu_s
 
-  def train_d1_step(self, sess, batch, rho, gamma):
-    loss_d1, _ = sess.run([self.loss["loss_d1"], self.opt["optimizer_d1"]],
-                          self.feed_dict(batch, rho, gamma))
-    return loss_d1
-
-  def train_g_step(self, sess, batch, rho, gamma):
-    loss, loss_g, ppl_g, loss_d, _ = sess.run(
+  def train_g_step(self, sess, batch, rho_f, rho_r, gamma):
+    loss, loss_g, ppl_g, loss_df, loss_dr, accu_f, accu_r, _ = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
        self.loss["ppl_g"],
-       self.loss["loss_d"],
+       self.loss["loss_df"],
+       self.loss["loss_dr"],
+       self.loss["accu_f"],
+       self.loss["accu_r"],
        self.opt["optimizer_all"]],
-      self.feed_dict(batch, rho, gamma))
-    return loss, loss_g, ppl_g, loss_d
+      self.feed_dict(batch, rho_f, rho_r, gamma))
+    return loss, loss_g, ppl_g, loss_df, loss_dr, accu_f, accu_r
 
-  def train_ae_step(self, sess, batch, rho, gamma):
-    loss, loss_g, ppl_g, loss_d, _ = sess.run(
+  def train_ae_step(self, sess, batch, rho_f, rho_r, gamma):
+    loss, loss_g, ppl_g, loss_df, loss_dr, accu_f, accu_r, _ = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
        self.loss["ppl_g"],
-       self.loss["loss_d"],
+       self.loss["loss_df"],
+       self.loss["loss_dr"],
+       self.loss["accu_f"],
+       self.loss["accu_r"],
        self.opt["optimizer_ae"]],
-      self.feed_dict(batch, rho, gamma))
-    return loss, loss_g, ppl_g, loss_d
+      self.feed_dict(batch, rho_f, rho_r, gamma))
+    return loss, loss_g, ppl_g, loss_df, loss_dr, accu_f, accu_r
 
-  def eval_step(self, sess, batch, rho, gamma):
-    loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1 = sess.run(
+  def eval_step(self, sess, batch, rho_f, rho_r, gamma):
+    loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds, \
+      accu_f, accu_r, accu_s = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
        self.loss["ppl_g"],
-       self.loss["loss_d"],
-       self.loss["loss_d0"],
-       self.loss["loss_d1"]],
-      self.feed_dict(batch, rho, gamma, is_train=False))
-    return loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1
+       self.loss["loss_df"],
+       self.loss["loss_dr"],
+       self.loss["loss_ds"],
+       self.loss["accu_f"],
+       self.loss["accu_r"],
+       self.loss["accu_s"],
+      ],
+      self.feed_dict(batch, rho_f, rho_r, gamma, is_train=False))
+    return (loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds,
+            accu_f, accu_r, accu_s)
 
   def decode_step(self, sess, batch):
     logits_ori, logits_tsf = sess.run(
@@ -293,7 +304,7 @@ class TSF:
         self.input_tensors["labels"]: batch["labels"]})
     return logits_ori, logits_tsf
 
-  def feed_dict(self, batch, rho, gamma, is_train=True):
+  def feed_dict(self, batch, rho_f, rho_r, gamma, is_train=True):
     return {
       context.is_train(): is_train,
       self.input_tensors["batch_len"]: batch["len"],
@@ -302,7 +313,8 @@ class TSF:
       self.input_tensors["targets"]: batch["targets"],
       self.input_tensors["weights"]: batch["weights"],
       self.input_tensors["labels"]: batch["labels"],
-      self.input_tensors["rho"]: rho,
+      self.input_tensors["rho_f"]: rho_f,
+      self.input_tensors["rho_r"]: rho_r,
       self.input_tensors["gamma"]: gamma,
     }
 
