@@ -96,16 +96,17 @@ class TransformerEncoder(EncoderBase):
             }
         """
         return {
+            'multiply_embedding_mode': 'sqrt_depth',
             "use_embedding": True,
             "embedding":layers.default_embedding_hparams(),
             "name":"encoder",
             "zero_pad":True,
             "max_seq_length":100000000,
-            'scale':True,
             'sinusoid':False,
             'dropout':0.1,
             'num_blocks':6,
             'num_heads':8,
+            'scale':False,
             'poswise_feedforward':None,
         }
 
@@ -114,7 +115,8 @@ class TransformerEncoder(EncoderBase):
             self.enc = tf.nn.embedding_lookup(self._embedding, inputs)
         else:
             self.enc = inputs
-        if self._hparams.scale:
+
+        if self._hparams.multiply_embedding_mode =='sqrt_depth':
             self.enc = self.enc * (self._embedding.shape.as_list()[-1]**0.5)
 
         if self._hparams.sinusoid:
@@ -131,12 +133,14 @@ class TransformerEncoder(EncoderBase):
 
         self.enc = tf.layers.dropout(self.enc, \
             rate=self._hparams.dropout, training=context.is_train())
+
         for i in range(self._hparams.num_blocks):
-            with tf.variable_scope("num_blocks_{}".format(i)):
+            with tf.variable_scope("layer_{}".format(i)):
                 with tf.variable_scope('self_attention'):
-                    self.enc = layers.multihead_attention(
-                        queries=self.enc,
-                        keys=self.enc,
+                    enc = layers.layer_normalize(self.enc)
+                    enc = layers.multihead_attention(
+                        queries=enc,
+                        keys=enc,
                         queries_valid_length=inputs_length,
                         keys_valid_length=inputs_length,
                         num_heads=self._hparams.num_heads,
@@ -144,10 +148,20 @@ class TransformerEncoder(EncoderBase):
                         num_units=self._hparams.embedding.dim,
                         causality=False,
                         scope='multihead_attention')
+                    enc = tf.layers.dropout(
+                        enc,
+                        rate=self._hparams.dropout,
+                        training=context.is_train())
+                    self.enc += enc
                 poswise_network = FeedForwardNetwork(hparams=self._hparams['poswise_feedforward'])
                 with tf.variable_scope(poswise_network.variable_scope):
-                    self.enc += poswise_network(self.enc)
-                    self.enc = layers.layer_normalize(self.enc)
+                    enc = layers.layer_normalize(self.enc)
+                    enc = poswise_network(enc)
+                    enc = tf.layers.dropout(
+                        enc,
+                        rate=self._hparams.dropout,
+                        training=context.is_train())
+                    self.enc += enc
 
         if not self._built:
             self._add_internal_trainable_variables()

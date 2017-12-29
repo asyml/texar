@@ -31,7 +31,7 @@ def create_data(source_sents, target_sents):
     # Index
     x_list, y_list, Sources, Targets = [], [], [], []
     for source_sent, target_sent in zip(source_sents, target_sents):
-        x = [de2idx[word] for word in (source_sent + u" <EOS>").split()] # 1: OOV, </S>: End of Text
+        x = [de2idx[word] for word in (source_sent + u" <EOS>").split()]
         y = [en2idx[word] for word in (target_sent + u" <EOS>").split()]
         x = x[:hp.maxlen]
         y = y[:hp.maxlen]
