@@ -11,12 +11,17 @@ import pdb
 import copy
 import numpy as np
 import tensorflow as tf
+from tensorflow.contrib.seq2seq import GreedyEmbeddingHelper
 
 from texar import context
 from texar.hyperparams import HParams
 from texar.core.utils import switch_dropout
+from texar.core.layers import *
 from texar.modules.encoders.conv1d_discriminator import CNN
+from texar.modules.decoders.rnn_decoder_helpers import *
 from texar.models.tsf import ops
+from texar.models.tsf.attention import AttentionLayerBahdanau as AttnLayer
+from texar.models.tsf.attention_decoder import PointerDecoder
 from texar.models.tsf import utils
 
 
@@ -42,9 +47,12 @@ class TSFClassifierPointer:
       "rnn_type": "GRUCell",
       "rnn_size": 700,
       "rnn_input_keep_prob": 0.5,
-      "output_keep_prob": 0.5,
+      "rnn_output_keep_prob": 0.5,
       "dim_y": 200,
       "dim_z": 500,
+      # att decoder
+      "pointer_decoder_max_decoding_length_train": 21, # go id ?
+      "pointer_decoder_max_decoding_length_infer": 20,
       # cnn
       "cnn_name": "cnn",
       "cnn_kernel_sizes": [3, 4, 5],
@@ -67,7 +75,7 @@ class TSFClassifierPointer:
     targets = tf.placeholder(tf.int32, [batch_size, None], name="targets")
     weights = tf.placeholder(tf.float32, [batch_size, None], name="weights")
     labels = tf.placeholder(tf.float32, [batch_size], name="labels")
-    batch_len = tf.placeholder(tf.int32, [], name="batch_len")
+    seq_len = tf.placeholder(tf.int32, [batch_size], name="seq_len")
     gamma = tf.placeholder(tf.float32, [], name="gamma")
     rho_f = tf.placeholder(tf.float32, [], name="rho_f")
     rho_r = tf.placeholder(tf.float32, [], name="rho_r")
@@ -80,7 +88,7 @@ class TSFClassifierPointer:
        ("targets", targets),
        ("weights", weights),
        ("labels", labels),
-       ("batch_len", batch_len),
+       ("seq_len", seq_len),
        ("gamma", gamma),
        ("rho_f", rho_f),
        ("rho_r", rho_r),
@@ -110,68 +118,65 @@ class TSFClassifierPointer:
     cell_e = ops.get_rnn_cell(rnn_hparams)
 
     enc_outputs, z = tf.nn.dynamic_rnn(
-      cell_e, enc_inputs, initial_state=init_state, scope="encoder")
+      cell_e, enc_inputs, sequence_length=input_tensors["seq_len"],
+      initial_state=init_state, scope="encoder")
     z  = z[:, hparams.dim_y:]
-    enc_outputs = tf.nn.dropout(
-      enc_outputs, switch_dropout(hparams.output_keep_prob))
 
     label_proj_g = tf.layers.Dense(hparams.dim_y, name="generator")
     h_ori = tf.concat([label_proj_g(labels), z], 1)
     h_tsf = tf.concat([label_proj_g(1 - labels), z], 1)
 
     cell_g = ops.get_rnn_cell(rnn_hparams)
-    softmax_proj = tf.layers.Dense(hparams.vocab_size, name="softmax_proj")
-    attn_layer = ops.AttnLayer(hparams.rnn_size, name="attn")
-    pointer_layer = tf.layers.Dense(1, name="pointer")
     # pointer decoder
-    train_pointer_decoder = ops.TrainPointerDecoder(
-      softmax_proj, attn_layer, pointer_lyaer, input_tensors["enc_inputs"],
-      enc_outputs, embedding, input_tensors["dec_inputs"],
-      output_keep_prob=hparams.output_keep_prob)
-    go = dec_inputs[:, 0, :]
-    g_outputs, g_p, _ = ops.rnn_pointer_decode(
-      h_ori, go, hparams.max_len, cell_g, train_pointer_decoder, scope="decoder")
-    g_p = g_p[:, :input_tensors["batch_len"], :]
-    g_logits = tf.log(g_p + 1e-8)
+    att_layer = AttnLayer(hparams.rnn_size)
+
+    pointer_decoder_hparams = utils.filter_hparams(hparams, "pointer_decoder")
+    pointer_decoder = PointerDecoder(hparams.vocab_size, enc_outputs,
+                                     enc_outputs, input_tensors["seq_len"],
+                                     att_layer, cell_g,
+                                     input_tensors["enc_inputs"],
+                                     pointer_decoder_hparams)
+    train_helper = EmbeddingTrainingHelper(input_tensors["dec_inputs"],
+                                           input_tensors["seq_len"] + 1,
+                                           embedding)
+
+    g_outputs, _, _ = pointer_decoder(train_helper, h_ori)
 
     loss_g = tf.nn.sparse_softmax_cross_entropy_with_logits(
-      labels=tf.reshape(input_tensors["targets"], [-1]), logits=g_logits)
-    loss_g *= tf.reshape(input_tensors["weights"], [-1])
+      labels=input_tensors["targets"], logits=g_outputs.logits)
+    loss_g *= input_tensors["weights"]
     ppl_g = tf.reduce_sum(loss_g) / (tf.reduce_sum(input_tensors["weights"]) \
                                      + 1e-8)
     loss_g = tf.reduce_sum(loss_g) / hparams.batch_size
+
     # decoding 
-    soft_pointer_decoder = ops.GumbelSoftmaxPointerDecoder(
-      softmax_proj, attn_layer, pointer_layer, input_tensors["enc_inputs"],
-      enc_outputs, embedding, input_tensors["gamma"],
-      output_keep_prob=hparams.output_keep_prob)
-    hard_pointer_decoder = ops.GreedyPointerDecoder(
-      softmax_proj, attn_layer, pointer_layer, input_tensors["enc_inputs"],
-      enc_outputs, embedding, output_keep_prob=hparams.output_keep_prob)
+    start_tokens = input_tensors["dec_inputs"][:, 0]
+    start_tokens = tf.reshape(start_tokens, [-1])
+    gumbel_helper = GumbelSoftmaxEmbeddingHelper(
+      embedding,
+      start_tokens,
+      input_tensors["gamma"],
+    )
 
-    soft_output_ori, soft_p_ori, soft_sample_ori \
-      = ops.rnn_pointer_decode(h_ori, go, hparams.max_len, cell_g,
-                               soft_pointer_decoder, scope="decoder",
-                               reuse=True)
-    soft_output_tsf, soft_p_tsf, soft_sample_tsf \
-      = ops.rnn_pointer_decode(h_tsf, go, hparams.max_len, cell_g,
-                               soft_pointer_decoder, scope="decoder",
-                               reuse=True)
+    #TODO(zichao): hard coded end_token
+    end_token = 2
+    greedy_helper = GreedyEmbeddingHelper(
+      embedding,
+      start_tokens,
+      end_token,
+    )
 
-    hard_output_ori, hard_p_ori, hard_sample_ori \
-      = ops.rnn_pointer_decode(h_ori, go, hparams.max_len, cell_g,
-                               hard_pointer_decoder, scope="decoder",
-                               reuse=True)
-    hard_output_tsf, hard_p_tsf, hard_sample_tsf \
-      = ops.rnn_pointer_decode(h_tsf, go, hparams.max_len, cell_g,
-                               hard_pointer_decoder, scope="decoder",
-                               reuse=True)
+    soft_outputs_ori, _, _  = pointer_decoder(gumbel_helper, h_ori)
+    soft_outputs_tsf, _, _ = pointer_decoder(gumbel_helper, h_tsf)
 
+    hard_outputs_ori, _, _  = pointer_decoder(greedy_helper, h_ori)
+    hard_outputs_tsf, _, _ = pointer_decoder(greedy_helper, h_tsf)
 
     # discriminator
     half = hparams.batch_size // 2
-    soft_sample_ori = soft_sample_ori[:, :input_tensors["batch_len"], :]
-    soft_sample_tsf = soft_sample_tsf[:, :input_tensors["batch_len"], :]
+    batch_len = tf.reduce_max(input_tensors["seq_len"]) + 1
+    soft_sample_ori = soft_outputs_ori.predicted_ids[:, :batch_len, :]
+    soft_sample_tsf = soft_outputs_tsf.predicted_ids[:, :batch_len, :]
 
     cnn_hparams = utils.filter_hparams(hparams, "cnn")
     cnn_hparams.vocab_size
@@ -189,9 +194,10 @@ class TSFClassifierPointer:
            input_tensors["rho_f"] * loss_df + \
            input_tensors["rho_r"] * loss_dr
 
-    var_eg = ops.retrieve_variables(["encoder", "generator",
-                                     "softmax_proj", "embedding"])
+    var_eg = ops.retrieve_variables(["encoder", "generator", "embedding"]) \
+             + pointer_decoder.trainable_variables
     var_d = ops.retrieve_variables(["cnn"])
+
 
     # optimization
     adam_hparams = utils.filter_hparams(hparams, "adam")
@@ -208,11 +214,12 @@ class TSFClassifierPointer:
       collections_output,
       [("h_ori", h_ori),
        ("h_tsf", h_tsf),
-       ("hard_logits_ori", tf.log(hard_p_ori + 1e-8)),
-       ("hard_logits_tsf", tf.log(hard_p_tsf + 1e-8)),
-       ("soft_logits_ori", tf.log(soft_p_ori + 1e-8)),
-       ("soft_logits_tsf", tf.log(soft_p_tsf + 1e-8)),
-       ("g_logits", g_logits),
+       ("hard_logits_ori", hard_outputs_ori.logits),
+       ("hard_logits_tsf", hard_outputs_tsf.logits),
+       ("soft_logits_ori", soft_outputs_ori.logits),
+       ("soft_logits_tsf", soft_outputs_tsf.logits),
+       ("g_logits", g_outputs.logits),
+       ("g_sample", g_outputs.predicted_ids),
       ]
     )
 
@@ -293,6 +300,31 @@ class TSFClassifierPointer:
     return (loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds,
             accu_f, accu_r, accu_s)
 
+  def debug_step(self, sess, batch, rho_f, rho_r, gamma):
+    from tensorflow.contrib.layers.python.layers import utils
+    debug_p = utils.convert_collection_to_dict("tsf/debug")
+    loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds, \
+      accu_f, accu_r, accu_s, \
+      g_sample, p_attn_seq, p_attn_dense_seq, p_pointer_seq = sess.run(
+      [self.loss["loss"],
+       self.loss["loss_g"],
+       self.loss["ppl_g"],
+       self.loss["loss_df"],
+       self.loss["loss_dr"],
+       self.loss["loss_ds"],
+       self.loss["accu_f"],
+       self.loss["accu_r"],
+       self.loss["accu_s"],
+       self.output_tensors["g_sample"],
+       debug_p["p_attn_seq"],
+       debug_p["p_attn_dense_seq"],
+       debug_p["p_pointer_seq"],
+      ],
+      self.feed_dict(batch, rho_f, rho_r, gamma, is_train=False))
+    return (loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds,
+            accu_f, accu_r, accu_s,
+            g_sample, p_attn_seq, p_attn_dense_seq, p_pointer_seq)
+
   def decode_step(self, sess, batch):
     logits_ori, logits_tsf = sess.run(
       [self.output_tensors["hard_logits_ori"],
@@ -307,7 +339,7 @@ class TSFClassifierPointer:
   def feed_dict(self, batch, rho_f, rho_r, gamma, is_train=True):
     return {
       context.is_train(): is_train,
-      self.input_tensors["batch_len"]: batch["len"],
+      self.input_tensors["seq_len"]: batch["seq_len"],
       self.input_tensors["enc_inputs"]: batch["enc_inputs"],
       self.input_tensors["dec_inputs"]: batch["dec_inputs"],
       self.input_tensors["targets"]: batch["targets"],

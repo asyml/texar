@@ -48,7 +48,6 @@ class TSFClassifierAtt:
       "rnn_size": 700,
       "rnn_input_keep_prob": 0.5,
       "rnn_output_keep_prob": 0.5,
-      "output_keep_prob": 0.5,
       "dim_y": 200,
       "dim_z": 500,
       # att decoder
