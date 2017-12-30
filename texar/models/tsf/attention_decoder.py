@@ -203,7 +203,7 @@ class PointerDecoder(AttentionDecoder):
     logits = self._output_layer(softmax_input)
     prob = tf.nn.softmax(logits)
     p_attn_dense = id_to_dense(att_scores, self._input_ids, self._vocab_size)
-    p_sum = pointer * p_attn_dense + (1. - pointer) + prob
+    p_sum = pointer * p_attn_dense + (1. - pointer) * prob
     logits = tf.log(p_sum + 1e-8)
     return softmax_input, logits, att_scores, att_context, pointer
 
