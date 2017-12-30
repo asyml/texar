@@ -182,7 +182,7 @@ class PointerDecoder(AttentionDecoder):
 
   @property
   def output_dtype(self):
-    return AttentionDecoderOutput(
+    return PointerDecoderOutput(
       logits=tf.float32,
       predicted_ids=self._helper.sample_ids_dtype,
       cell_output=tf.float32,
@@ -201,10 +201,10 @@ class PointerDecoder(AttentionDecoder):
       tf.concat([cell_output, att_context], 1))
     pointer = tf.sigmoid(self._pointer_layer(softmax_input))
     logits = self._output_layer(softmax_input)
-    prob = tf.softmax(logits)
+    prob = tf.nn.softmax(logits)
     p_attn_dense = id_to_dense(att_scores, self._input_ids, self._vocab_size)
-    p_sum = pointer * p_attn_dense + (1. -pointer) + prob
-    logits = tf.log(p_sum + 1d-8)
+    p_sum = pointer * p_attn_dense + (1. - pointer) + prob
+    logits = tf.log(p_sum + 1e-8)
     return softmax_input, logits, att_scores, att_context, pointer
 
   def step(self, time_, inputs, state, name=None):
