@@ -136,8 +136,9 @@ class TSFClassifierPointer:
                                      att_layer, cell_g,
                                      input_tensors["enc_inputs"],
                                      pointer_decoder_hparams)
+    seq_len = [tf.shape(input_tensors["dec_inputs"])[1]] * hparams.batch_size
     train_helper = EmbeddingTrainingHelper(input_tensors["dec_inputs"],
-                                           input_tensors["seq_len"] + 1,
+                                           seq_len,
                                            embedding)
 
     g_outputs, _, _ = pointer_decoder(train_helper, h_ori)
@@ -174,7 +175,7 @@ class TSFClassifierPointer:
 
     # discriminator
     half = hparams.batch_size // 2
-    batch_len = tf.reduce_max(input_tensors["seq_len"]) + 1
+    batch_len = tf.shape(input_tensors["targets"])[1]
     soft_sample_ori = soft_outputs_ori.predicted_ids[:, :batch_len, :]
     soft_sample_tsf = soft_outputs_tsf.predicted_ids[:, :batch_len, :]
 
@@ -333,7 +334,8 @@ class TSFClassifierPointer:
         context.is_train(): False,
         self.input_tensors["enc_inputs"]: batch["enc_inputs"],
         self.input_tensors["dec_inputs"]: batch["dec_inputs"],
-        self.input_tensors["labels"]: batch["labels"]})
+        self.input_tensors["labels"]: batch["labels"],
+        self.input_tensors["seq_len"]: batch["seq_len"]})
     return logits_ori, logits_tsf
 
   def feed_dict(self, batch, rho_f, rho_r, gamma, is_train=True):
