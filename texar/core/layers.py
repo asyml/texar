@@ -1016,13 +1016,11 @@ def multihead_attention(queries,
             diag_vals = tf.ones_like(outputs[0, :, :])
             tril = tf.contrib.linalg.LinearOperatorTriL(diag_vals).to_dense()
             masks = tf.tile(tf.expand_dims(tril, 0), [tf.shape(outputs)[0], 1, 1])
-
             paddings = tf.ones_like(masks)*(-2**32+1)
             outputs = tf.where(tf.equal(masks, 0), paddings, outputs)
 
         outputs = tf.nn.softmax(outputs)
 
-        max_time = tf.to_int32(tf.shape(queries))[1]
         query_masks = tf.sequence_mask(
             tf.to_int32(queries_valid_length), max_time, tf.float32)
         query_masks = tf.tile(query_masks, [num_heads,1])
@@ -1036,17 +1034,16 @@ def multihead_attention(queries,
 
         outputs = tf.layers.dense(outputs, num_units, use_bias=False, name='output_transform')
         #(batch_size, length_query, attention_size)
-
         #residual connection
         if num_units == queries.get_shape().as_list()[-1]:
             outputs += queries
-
         outputs = layer_normalize(outputs)
 
     return outputs
 
 
 def layer_normalize(inputs,
+              #epsilon=1e-6, it seems in t2t, it's 1e-6
               epsilon=1e-8,
               scope='ln',
               reuse=None):

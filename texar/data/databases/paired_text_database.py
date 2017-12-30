@@ -197,7 +197,11 @@ class PairedTextDataBase(DataBaseBase):
                 allow_smaller_final_batch=allow_smaller_final_batch,
                 name="%s/batch" % self.name)
         else:
-            input_length = data[self._src_dataset.decoder.length_tensor_name]
+            input_length = tf.maximum(
+                data[self._src_dataset.decoder.length_tensor_name],
+                data[self._tgt_dataset.decoder.length_tensor_name]
+            )
+            #input_length = data[self._src_dataset.decoder.length_tensor_name]
             _, data_batch = tf.contrib.training.bucket_by_sequence_length(
                 input_length=input_length,
                 tensors=data,
