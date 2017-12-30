@@ -5,6 +5,10 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import pdb
+
+from collections import namedtuple
+
 import tensorflow as tf
 
 from texar.modules.decoders.rnn_decoder_base import RNNDecoderBase
@@ -19,7 +23,6 @@ class AttentionDecoderOutput(
   """
   pass
 
-
 class AttentionDecoder(RNNDecoderBase):
   def __init__(self, vocab_size,
                attention_keys,
@@ -28,11 +31,13 @@ class AttentionDecoder(RNNDecoderBase):
                attention_layer,
                cell,
                hparams=None):
-    RNNDecoderBase.__init__(self, cell, None, vocab_size, hparams)
+    super(AttentionDecoder, self).__init__(cell=cell,
+                                           vocab_size=vocab_size,
+                                           hparams=hparams)
     self._attention_keys = attention_keys
     self._attention_values = attention_values
     self._attention_values_length = attention_values_length
-    self._attention_layer = self._attention_layer
+    self._attention_layer = attention_layer
     with tf.variable_scope(self.variable_scope):
       # self._input_transform = tf.layers.Dense(, name="input_transform")
       self._softmax_input = tf.layers.Dense(self._cell.output_size,
@@ -40,10 +45,13 @@ class AttentionDecoder(RNNDecoderBase):
                                             name="softmax_input")
       self._output_layer = tf.layers.Dense(vocab_size, name="output_layer")
 
+  @staticmethod
   def default_hparams():
     hparams = RNNDecoderBase.default_hparams()
     hparams["name"] = "attention_decoder"
     hparams["use_embedding"] = False
+
+    return hparams
 
   @property
   def output_size(self):
@@ -69,12 +77,12 @@ class AttentionDecoder(RNNDecoderBase):
       tf.shape(first_inputs)[0],
       self._attention_values.get_shape().as_list()[-1]
     ])
-    first_inputs = tf.concat([first_inputs, attention_context], 1)
+    # first_inputs = tf.concat([first_inputs, attention_context], 1)
 
     return finished, first_inputs, self._initial_state
 
   def _compute_output(self, cell_output):
-    att_scores, att_context = self.attention_layer(
+    att_scores, att_context = self._attention_layer(
       query=cell_output,
       keys=self._attention_keys,
       values=self._attention_values,
@@ -103,7 +111,7 @@ class AttentionDecoder(RNNDecoderBase):
     finished, next_inputs, next_state = self._helper.next_inputs(
       time=time_, outputs=outputs, state=cell_state, sample_ids=sample_ids)
 
-    next_inputs = tf.cocnat([next_inputs, att_context], 1)
+    # next_inputs = tf.cocnat([next_inputs, att_context], 1)
 
     return (outputs, next_state, next_inputs, finished)
 
