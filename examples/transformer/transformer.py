@@ -45,9 +45,8 @@ if __name__ == "__main__":
         },
         #'batch_size':50,
         #'batch_size':32,
-        'bucket_boundaries': [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 24, 26, 28, 30, 33, 36, 39, 42, 46, 50, 55, 60, 66, 72, 79, 86, 94, 103, 113, 124, 136, 149, 163, 179, 196, 215, 236],
-        'bucket_batch_size':[i // 2 for i in bucket_batch_size]
-        #'bucket_batch_size': bucket_batch_size,
+        'bucket_boundaries': boundaries,
+        'bucket_batch_size': bucket_batch_size,
     }
     hidden_dim =512
     extra_hparams = {
@@ -92,58 +91,70 @@ if __name__ == "__main__":
     ori_src_text = text_data_batch['source_text_ids']
     ori_tgt_text = text_data_batch['target_text_ids']
 
+    #ori_src_text = tf.Print(ori_src_text,
+    #        data=[tf.shape(ori_src_text), tf.shape(ori_tgt_text),
+    #            ori_src_text, ori_tgt_text])
+
     #ori_src_text = text_data_batch['source_text_ids'][:, :extra_hparams['max_seq_length']]
     #ori_tgt_text = text_data_batch['target_text_ids'][:, :extra_hparams['max_seq_length']]
 
     encoder_input = ori_src_text[:, 1:]
     decoder_input = ori_tgt_text[:, :-1]
+    labels = ori_tgt_text[:, 1:]
 
-    src_length = tf.reduce_sum(tf.to_float(tf.not_equal(encoder_input, 0)), axis=-1)
-    tgt_length = tf.reduce_sum(tf.to_float(tf.not_equal(decoder_input, 0)), axis=-1)
+    enc_input_length = tf.reduce_sum(tf.to_float(tf.not_equal(encoder_input, 0)), axis=-1)
+    dec_input_length = tf.reduce_sum(tf.to_float(tf.not_equal(decoder_input, 0)), axis=-1)
+    labels_length = tf.reduce_sum(tf.to_float(tf.not_equal(labels, 0)), axis=-1)
 
-    encoder = TransformerEncoder(vocab_size=text_database.source_vocab.vocab_size,\
+    #src_length = tf.Print(src_length,
+    #    data=[tf.shape(src_length), tf.shape(tgt_length),
+    #        src_length, tgt_length])
+
+    encoder = TransformerEncoder(
+        vocab_size=text_database.source_vocab.vocab_size,\
         hparams=extra_hparams)
-    encoder_output = encoder(encoder_input, inputs_length=src_length)
-
+    encoder_output = encoder(encoder_input, inputs_length=enc_input_length)
     decoder = TransformerDecoder(
-        vocab_size=text_database.target_vocab.vocab_size,\
         embedding = encoder._embedding,
         hparams=extra_hparams)
     logits, preds = decoder(
         decoder_input,
         encoder_output,
-        src_length=src_length,
-        tgt_length=tgt_length)
+        src_length=enc_input_length,
+        tgt_length=dec_input_length)
     print('logits:{} preds:{}'.format(logits.shape, preds.shape))
     loss_params = {
         'label_smoothing':0.1,
     }
-    labels = ori_tgt_text[:, 1:]
     smooth_labels = mle_losses.label_smoothing(labels, text_database.target_vocab.vocab_size, \
         loss_params['label_smoothing'])
     mle_loss = mle_losses.average_sequence_softmax_cross_entropy(
         labels=smooth_labels,
         logits=logits,
-        sequence_length=tgt_length)
+        sequence_length=labels_length)
 
+    istarget = tf.to_float(tf.not_equal(labels, 0))
+    acc = tf.reduce_sum(tf.to_float(tf.equal(preds, labels))*istarget) / (tf.reduce_sum(istarget))
+    tf.summary.scalar('acc', acc)
     opt_hparams = {
         'warmup_steps': 16000,
     }
     global_step = tf.Variable(0, trainable=False)
     fstep = tf.to_float(global_step)
-    learning_rate = extra_hparams['embedding']['dim']**-0.5 *\
-        (tf.minimum((fstep+1)**-0.5,
-            (fstep+1) * opt_hparams['warmup_steps']**-1.5) )
+    learning_rate = 1000 * extra_hparams['embedding']['dim']**-0.5 *(tf.minimum(
+        (fstep+1)**-0.5, (fstep+1) * opt_hparams['warmup_steps']**-1.5) )
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate,
-            beta1=0.9, beta2=0.98, epsilon=1e-8)
+            beta1=0.9, beta2=0.98, epsilon=1e-9)
     train_op = optimizer.minimize(mle_loss, global_step)
     tf.summary.scalar('lr', learning_rate)
     tf.summary.scalar('mle_loss', mle_loss)
 
     merged = tf.summary.merge_all()
-    saver = tf.train.Saver(max_to_keep=2)
-    with tf.Session(config=tf.ConfigProto(
-            allow_soft_placement=True)) as sess:
+    saver = tf.train.Saver(max_to_keep=5)
+    config = tf.ConfigProto(
+        allow_soft_placement=True)
+    config.gpu_options.allow_growth=True
+    with tf.Session(config=config) as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
@@ -165,8 +176,8 @@ if __name__ == "__main__":
                     [encoder_input, labels, preds, train_op, global_step, mle_loss, merged],
                     feed_dict={context.is_train(): True})
                 writer.add_summary(mgd, global_step=step)
-                print('step:{} source:{} target:{}'.format(step, source.shape, target.shape))
-                if step % 100 == 0:
+                #print('step:{} source:{} target:{}'.format(step, source.shape, target.shape))
+                if step % 1000 == 0:
                     print('step:{} loss:{}'.format(step, loss))
                     saver.save(sess, './logdir/my-model', global_step=step)
         except tf.errors.OutOfRangeError:
