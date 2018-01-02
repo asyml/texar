@@ -31,8 +31,10 @@ def create_data(source_sents, target_sents):
     # Index
     x_list, y_list, Sources, Targets = [], [], [], []
     for source_sent, target_sent in zip(source_sents, target_sents):
-        x = [de2idx.get(word, 1) for word in (source_sent + u" </S>").split()] # 1: OOV, </S>: End of Text
-        y = [en2idx.get(word, 1) for word in (target_sent + u" </S>").split()]
+        x = [de2idx[word] if word in de2idx else de2idx['<UNK>'] \
+                for word in (source_sent + u" </S>").split()] # 1: OOV, </S>: End of Text
+        y = [en2idx[word] if word in en2idx else en2idx['<UNK>'] \
+                for word in (target_sent + u" </S>").split()]
         if max(len(x), len(y)) <=hp.maxlen:
             x_list.append(np.array(x))
             y_list.append(np.array(y))

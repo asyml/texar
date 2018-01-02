@@ -941,12 +941,8 @@ def sinusoid_positional_encoding(inputs,
     """obtain a positional encoding of inputs
     Args:
         inputs: [Tensor] A Tensor of shape `[batch_size, max_time, hidden_dim]`
-        max_time: [Int], max time steps
-        hidden_dim: [Int], hidden size of embedding
-        scale: [Boolean], If True, the output will be multiplied by sqrt(num_units)
         variable_scope: [String], Optional scope for 'variable_scope'
     """
-    print('begin sinusoid encoding')
     length = tf.shape(inputs)[1]
     channels = tf.shape(inputs)[2]
     with tf.variable_scope(variable_scope, reuse=reuse):
@@ -961,17 +957,16 @@ def sinusoid_positional_encoding(inputs,
         signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=1)
         signal = tf.pad(signal, [[0, 0], [0, tf.mod(channels, 2)]])
         signal = tf.reshape(signal, [1, length, channels])
-        print('sinusoid encoding finished')
         return signal
 
 def multihead_attention(queries,
                         keys,
                         queries_valid_length,
                         keys_valid_length,
+                        causality,
+                        num_heads,
                         num_units=None,
-                        num_heads=8,
                         dropout_rate=0,
-                        causality=False,
                         scope='multihead_attention'):
     '''Applies multihead attention.
 
@@ -1004,9 +999,9 @@ def multihead_attention(queries,
 
         outputs = outputs / (K_.get_shape().as_list()[-1] ** 0.5)
 
-        max_time = tf.to_int32(tf.shape(keys))[1]
+        max_key_len = tf.to_int32(tf.shape(keys))[1]
         key_masks = tf.sequence_mask(
-            tf.to_int32(keys_valid_length), max_time, tf.float32)
+            tf.to_int32(keys_valid_length), max_key_len, tf.float32)
         key_masks = tf.tile(key_masks, [num_heads,1])
         key_masks = tf.tile(tf.expand_dims(key_masks, 1), [1, tf.shape(queries)[1], 1])
         paddings = tf.ones_like(outputs)*(-2**32+1)
@@ -1021,12 +1016,15 @@ def multihead_attention(queries,
 
         outputs = tf.nn.softmax(outputs)
 
+        max_query_len =tf.to_int32(tf.shape(queries))[1]
         query_masks = tf.sequence_mask(
-            tf.to_int32(queries_valid_length), max_time, tf.float32)
+            tf.to_int32(queries_valid_length), max_query_len, tf.float32)
         query_masks = tf.tile(query_masks, [num_heads,1])
         query_masks = tf.tile(tf.expand_dims(query_masks, -1), [1, 1, tf.shape(keys)[1]])
+        # batch, query_len, key_len
         outputs *= query_masks
 
+        #attention dropout
         outputs = tf.layers.dropout(outputs, rate=dropout_rate, training=context.is_train())
 
         outputs = tf.matmul(outputs, V_)
@@ -1035,10 +1033,6 @@ def multihead_attention(queries,
         outputs = tf.layers.dense(outputs, num_units, use_bias=False, name='output_transform')
         #(batch_size, length_query, attention_size)
         #residual connection
-        if num_units == queries.get_shape().as_list()[-1]:
-            outputs += queries
-        outputs = layer_normalize(outputs)
-
     return outputs
 
 
@@ -1062,8 +1056,8 @@ def layer_normalize(inputs,
     with tf.variable_scope(scope, reuse=reuse):
         filters = inputs.get_shape()[-1]
         mean, variance = tf.nn.moments(inputs, [-1], keep_dims=True)
-        alpha = tf.get_variable('layer_norm_scale', [filters], initializer=tf.ones_initializer())
-        gamma = tf.get_variable('layer_norm_bias', [filters], initializer=tf.zeros_initializer())
+        scale = tf.get_variable('layer_norm_scale', [filters], initializer=tf.ones_initializer())
+        bias = tf.get_variable('layer_norm_bias', [filters], initializer=tf.zeros_initializer())
         norm_x = (inputs - mean) * tf.rsqrt(variance + epsilon)
-        outputs = norm_x * alpha + gamma
+        outputs = norm_x * scale + bias
     return outputs

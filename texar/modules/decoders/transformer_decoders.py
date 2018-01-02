@@ -51,10 +51,13 @@ class TransformerDecoder(ModuleBase):
                     self._add_trainable_variable(self._embedding)
             if self._vocab_size is None:
                 self._vocab_size = self._embedding.get_shape().as_list()[0]
-
+            if self._hparams.share_embed_and_transform:
+                self._output_transform = tf.transpose(self._embedding)
     @staticmethod
     def default_hparams():
         return {
+            'multiply_embedding_mode': 'sqrt_depth',
+            'share_embed_and_transform': True,
             "use_embedding": True,
             "embedding": layers.default_embedding_hparams(),
             "name":"decoder",
@@ -62,7 +65,7 @@ class TransformerDecoder(ModuleBase):
             "num_blocks":6,
             "zero_pad": True,
             "max_seq_length":10,
-            "scale":True,
+            "scale":False,
             "dropout":0.1,
             "sinusoid":True,
             'poswise_feedforward':None,
@@ -70,61 +73,88 @@ class TransformerDecoder(ModuleBase):
 
     def _build(self, inputs, encoder_output, src_length, tgt_length):
         if self._embedding is not None:
-            dec = tf.nn.embedding_lookup(self._embedding, inputs)
+            self.dec = tf.nn.embedding_lookup(self._embedding, inputs)
         else:
-            dec = inputs
-        if self._hparams.scale:
-            dec = dec * (self._embedding.shape.as_list()[-1]**0.5)
+            self.dec = inputs
+
+        if self._hparams.multiply_embedding_mode == 'sqrt_depth':
+            self.dec = self.dec * (self._embedding.shape.as_list()[-1]**0.5)
 
         if self._hparams.sinusoid:
-            dec += layers.sinusoid_positional_encoding(
-                dec,
+            self.dec += layers.sinusoid_positional_encoding(
+                self.dec,
                 variable_scope='dec_pe')
         else:
             self.position_dec_embedding = layers.get_embedding(
                 hparams=self._hparams.embedding,
                 vocab_size=self._hparams.max_seq_length,
                 variable_scope='dec_pe')
-            dec += tf.nn.embedding_lookup(self.position_dec_embedding,\
+            self.dec += tf.nn.embedding_lookup(self.position_dec_embedding,\
                 tf.tile(tf.expand_dims(tf.range(tf.shape(inputs)[1]), 0), [tf.shape(inputs)[0], 1]))
-        dec = tf.layers.dropout(
-            dec,
+
+        self.dec = tf.layers.dropout(
+            self.dec,
             rate=self._hparams.dropout,
             training=context.is_train())
+
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("num_blocks_{}".format(i)):
-                dec = layers.multihead_attention(
-                    queries=dec,
-                    keys=dec,
-                    queries_valid_length=tgt_length,
-                    keys_valid_length=tgt_length,
-                    num_units=self._hparams.embedding.dim,
-                    num_heads=self._hparams.num_heads,
-                    dropout_rate=self._hparams.dropout,
-                    causality=True,
-                    scope="self_attention")
-                dec = layers.multihead_attention(
-                    queries=dec,
-                    keys=encoder_output,
-                    queries_valid_length=tgt_length,
-                    keys_valid_length=src_length,
-                    num_units=self._hparams.embedding.dim,
-                    num_heads=self._hparams.num_heads,
-                    dropout_rate=self._hparams.dropout,
-                    causality=False,
-                    scope="vanilla_attention")
+                with tf.variable_scope("self_attention"):
+                    dec = layers.layer_normalize(self.dec)
+                    dec = layers.multihead_attention(
+                        queries=dec,
+                        keys=dec,
+                        queries_valid_length=tgt_length,
+                        keys_valid_length=tgt_length,
+                        num_units=self._hparams.embedding.dim,
+                        num_heads=self._hparams.num_heads,
+                        dropout_rate=self._hparams.dropout,
+                        causality=True,
+                        scope="self_attention")
+                    dec = tf.layers.dropout(
+                        dec,
+                        rate=self._hparams.dropout,
+                        training=context.is_train())
+                    self.dec += dec
+
+                with tf.variable_scope('encdec_attention'):
+                    dec = layers.layer_normalize(self.dec)
+                    dec = layers.multihead_attention(
+                        queries=dec,
+                        keys=encoder_output,
+                        queries_valid_length=tgt_length,
+                        keys_valid_length=src_length,
+                        num_units=self._hparams.embedding.dim,
+                        num_heads=self._hparams.num_heads,
+                        dropout_rate=self._hparams.dropout,
+                        causality=False,
+                        scope="multihead_attention")
+                    dec = tf.layers.dropout(
+                        dec,
+                        rate=self._hparams.dropout,
+                        training=context.is_train())
+                    self.dec += dec
+
                 poswise_network = FeedForwardNetwork(hparams=self._hparams['poswise_feedforward'])
                 with tf.variable_scope(poswise_network.variable_scope):
-                    dec += poswise_network(dec)
-                    dec = layers.layer_normalize(dec)
-        self.dec = dec
+                    dec = layers.layer_normalize(self.dec)
+                    dec = poswise_network(dec)
+                    dec = tf.layers.dropout(
+                        dec,
+                        rate=self._hparams.dropout,
+                        training=context.is_train())
+                    self.dec += dec
 
         # share the projection weight with word embedding
-        batch_size, length= tf.shape(dec)[0], tf.shape(dec)[1]
-        depth = dec.get_shape()[2]
-        self.dec = tf.reshape(self.dec, [-1, depth])
-        self.logits = tf.matmul(self.dec, tf.transpose(self._embedding))
-        self.logits = tf.reshape(self.logits, [batch_size, length, self._vocab_size])
+
+        if self._hparams.share_embed_and_transform:
+            batch_size, length= tf.shape(self.dec)[0], tf.shape(self.dec)[1]
+            depth = self.dec.get_shape()[2]
+            self.dec = tf.reshape(self.dec, [-1, depth])
+            self.logits = tf.matmul(self.dec, self._output_transform)
+            self.logits = tf.reshape(self.logits, [batch_size, length, self._vocab_size])
+        else:
+            self.logits = tf.layers.dense(self.dec, self._vocab_size)
 
         self.preds = tf.to_int32(tf.argmax(self.logits, axis=-1))
 
