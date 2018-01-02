@@ -93,7 +93,7 @@ class TSFTrainer(TrainerBase):
         self._hparams = HParams(pkl.load(f))
 
     log_print("Start training with hparams:")
-    log_print(json.dumps(self._hparams.todict(), indent=2))
+    log_print(str(self._hparams))
     if not "config" in self._hparams.keys():
       with open(os.path.join(self._hparams.expt_dir, self._hparams.name)
                 + ".config", "w") as f:
