@@ -35,24 +35,18 @@ def binary_adversarial_losses(real_data,
         (scalar Tensor, scalar Tensor): (generator_loss, discriminator_loss).
     """
     real_logits = discriminator_fn(real_data)
-    real_loss = tf.nn.sigmoid_cross_entropy_with_logits(
-        logits=real_logits, labels=tf.ones_like(real_logits))
-    num_real_data = tf.shape(real_loss)[0]
-    ave_real_loss = tf.reduce_sum(real_loss) / tf.to_float(num_real_data)
+    real_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+        logits=real_logits, labels=tf.ones_like(real_logits)))
     fake_logits = discriminator_fn(fake_data)
-    fake_loss = tf.nn.sigmoid_cross_entropy_with_logits(
-        logits=fake_logits, labels=tf.zeros_like(fake_logits))
-    num_fake_data = tf.shape(fake_loss)[0]
-    ave_fake_loss = tf.reduce_sum(fake_loss) / tf.to_float(num_fake_data)
-    disc_loss = ave_real_loss + ave_fake_loss
+    fake_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+        logits=fake_logits, labels=tf.zeros_like(fake_logits)))
+    d_loss = real_loss + fake_loss
     if mode == "min_fake":
-        gen_loss = - ave_fake_loss
+        g_loss = - fake_loss
     elif mode == "max_real":
-        fake_loss_ = tf.nn.sigmoid_cross_entropy_with_logits(
-            logits=fake_logits, labels=tf.ones_like(fake_logits))
-        gen_loss = tf.reduce_sum(fake_loss_) / tf.to_float(num_fake_data)
+        g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+            logits=fake_logits, labels=tf.ones_like(fake_logits)))
     else:
         raise ValueError("Unknown mode: %s. Only 'min_fake' and 'max_real' "
                          "are allowed.")
-    return gen_loss, disc_loss
-
+    return g_loss, d_loss

@@ -11,4 +11,3 @@ from __future__ import print_function
 
 from texar.modules.q_nets.q_net_base import *
 from texar.modules.q_nets.q_nets import *
-

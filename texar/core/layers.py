@@ -6,10 +6,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
+import math
+
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
-import numpy as np
-
 from texar import context
 from texar.hyperparams import HParams
 from texar.core import utils
@@ -554,6 +554,33 @@ class MergeLayer(tf.layers.Layer):
         self.built = True
 
 
+class SequentialLayer(tf.layers.Layer):
+    """A layer that consists of multiple layers connected sequentially.
+
+    Args:
+        layers (list): The list of layers to be connected sequentially.
+    """
+    def __init__(self, layers,
+                 trainable=True,
+                 name=None,
+                 **kwargs):
+        super(SequentialLayer, self).__init__(
+            trainable=trainable, name=name, **kwargs)
+        self._layers = layers
+
+    def call(self, inputs):
+        for layer in self._layers:
+            outputs = layer(inputs)
+            inputs = outputs
+        return outputs
+
+    def _compute_output_shape(self, input_shape):
+        input_shape = tf.TensorShape(input_shape)
+        for layer in self._layers:
+            output_shape = layer._compute_output_shape(input_shape)
+            input_shape = output_shape
+        return output_shape
+
 def _common_default_conv_dense_kwargs():
     """Returns the default keyword argument values that are common to
     convolution layers.
@@ -907,10 +934,9 @@ def get_layer(hparams):
 
 
 def sinusoid_positional_encoding(inputs,
-                                 num_units,
-                                 scale=False,
                                  reuse=None,
-                                 max_time=None,
+                                 min_timescale=1.0,
+                                 max_timescale=1.0e4,
                                  variable_scope='sinuoid_positional_embedding'):
     """obtain a positional encoding of inputs
     Args:
@@ -920,27 +946,28 @@ def sinusoid_positional_encoding(inputs,
         scale: [Boolean], If True, the output will be multiplied by sqrt(num_units)
         variable_scope: [String], Optional scope for 'variable_scope'
     """
-    batch_size = inputs.shape.as_list()[0]
-    dynamic_max_time = tf.shape(inputs)[1]
-    hidden_dim = num_units
+    print('begin sinusoid encoding')
+    length = tf.shape(inputs)[1]
+    channels = tf.shape(inputs)[2]
     with tf.variable_scope(variable_scope, reuse=reuse):
-        position_idx = tf.tile(tf.expand_dims(tf.range(max_time), 0), [batch_size, 1])
-        position_enc = np.array([
-            [pos /np.power(10000, 2.*i/hidden_dim) for i in range(hidden_dim)]
-            for pos in range(max_time)])
-
-        position_enc[:, 0::2] = np.sin(position_enc[:, 0::2])
-        position_enc[:, 1::2] = np.cos(position_enc[:, 1::2])
-
-        lookup_table = tf.convert_to_tensor(position_enc, dtype=tf.float32)
-        outputs = tf.nn.embedding_lookup(lookup_table, position_idx)
-        if scale:
-            outputs = outputs * hidden_dim**0.5
-        outputs = outputs[:, :dynamic_max_time, :]
-        return outputs
+        position = tf.to_float(tf.range(length))
+        num_timescales = channels // 2
+        log_timescale_increment = (
+            math.log(float(max_timescale) / float(min_timescale)) /
+            (tf.to_float(num_timescales) - 1))
+        inv_timescales = min_timescale * tf.exp(
+            tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
+        scaled_time = tf.expand_dims(position, 1) * tf.expand_dims(inv_timescales, 0)
+        signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=1)
+        signal = tf.pad(signal, [[0, 0], [0, tf.mod(channels, 2)]])
+        signal = tf.reshape(signal, [1, length, channels])
+        print('sinusoid encoding finished')
+        return signal
 
 def multihead_attention(queries,
                         keys,
+                        queries_valid_length,
+                        keys_valid_length,
                         num_units=None,
                         num_heads=8,
                         dropout_rate=0,
@@ -965,9 +992,9 @@ def multihead_attention(queries,
         if num_units is None:
             num_units = queries.get_shape().as_list()[-1]
 
-        Q = tf.layers.dense(queries, num_units, activation=tf.nn.relu)
-        K = tf.layers.dense(keys, num_units, activation=tf.nn.relu)
-        V = tf.layers.dense(keys, num_units, activation=tf.nn.relu)
+        Q = tf.layers.dense(queries, num_units, use_bias=False, name='q')
+        K = tf.layers.dense(keys, num_units, use_bias=False, name='k')
+        V = tf.layers.dense(keys, num_units, use_bias=False, name='v')
 
         Q_ = tf.concat(tf.split(Q, num_heads, axis=2), axis=0)
         K_ = tf.concat(tf.split(K, num_heads, axis=2), axis=0)
@@ -977,11 +1004,11 @@ def multihead_attention(queries,
 
         outputs = outputs / (K_.get_shape().as_list()[-1] ** 0.5)
 
-        #not sure why there should be key_masks and query_masks
-        key_masks = tf.sign(tf.abs(tf.reduce_sum(keys, axis=-1)))
-        key_masks = tf.tile(key_masks, [num_heads, 1])
+        max_time = tf.to_int32(tf.shape(keys))[1]
+        key_masks = tf.sequence_mask(
+            tf.to_int32(keys_valid_length), max_time, tf.float32)
+        key_masks = tf.tile(key_masks, [num_heads,1])
         key_masks = tf.tile(tf.expand_dims(key_masks, 1), [1, tf.shape(queries)[1], 1])
-
         paddings = tf.ones_like(outputs)*(-2**32+1)
         outputs = tf.where(tf.equal(key_masks, 0), paddings, outputs)
 
@@ -989,14 +1016,14 @@ def multihead_attention(queries,
             diag_vals = tf.ones_like(outputs[0, :, :])
             tril = tf.contrib.linalg.LinearOperatorTriL(diag_vals).to_dense()
             masks = tf.tile(tf.expand_dims(tril, 0), [tf.shape(outputs)[0], 1, 1])
-
             paddings = tf.ones_like(masks)*(-2**32+1)
             outputs = tf.where(tf.equal(masks, 0), paddings, outputs)
 
         outputs = tf.nn.softmax(outputs)
 
-        query_masks = tf.sign(tf.abs(tf.reduce_sum(queries, axis=-1)))
-        query_masks = tf.tile(query_masks, [num_heads, 1])
+        query_masks = tf.sequence_mask(
+            tf.to_int32(queries_valid_length), max_time, tf.float32)
+        query_masks = tf.tile(query_masks, [num_heads,1])
         query_masks = tf.tile(tf.expand_dims(query_masks, -1), [1, 1, tf.shape(keys)[1]])
         outputs *= query_masks
 
@@ -1004,23 +1031,23 @@ def multihead_attention(queries,
 
         outputs = tf.matmul(outputs, V_)
         outputs = tf.concat(tf.split(outputs, num_heads, axis=0), axis=2)
-        #(batch_size, length_query, attention_size)
 
+        outputs = tf.layers.dense(outputs, num_units, use_bias=False, name='output_transform')
+        #(batch_size, length_query, attention_size)
         #residual connection
         if num_units == queries.get_shape().as_list()[-1]:
             outputs += queries
-
-        outputs = normalize(outputs)
+        outputs = layer_normalize(outputs)
 
     return outputs
 
 
-def normalize(inputs,
+def layer_normalize(inputs,
+              #epsilon=1e-6, it seems in t2t, it's 1e-6
               epsilon=1e-8,
               scope='ln',
               reuse=None):
-    '''Applies layer normalization.
-
+    '''Applies layer normalization. averaging over the last dimension
     Args:
       inputs: A tensor with 2 or more dimensions, where the first dimension has
         `batch_size`.
@@ -1033,11 +1060,10 @@ def normalize(inputs,
       A tensor with the same shape and data dtype as `inputs`.
     '''
     with tf.variable_scope(scope, reuse=reuse):
-        inputs_shape = inputs.get_shape()
-        params_shape = inputs_shape[-1:]
+        filters = inputs.get_shape()[-1]
         mean, variance = tf.nn.moments(inputs, [-1], keep_dims=True)
-        beta = tf.Variable(tf.zeros(params_shape))
-        gamma = tf.Variable(tf.ones(params_shape))
-        outputs = tf.nn.batch_normalization(inputs, mean, variance,\
-            offset=beta, scale=gamma, variance_epsilon=epsilon)
+        alpha = tf.get_variable('layer_norm_scale', [filters], initializer=tf.ones_initializer())
+        gamma = tf.get_variable('layer_norm_bias', [filters], initializer=tf.zeros_initializer())
+        norm_x = (inputs - mean) * tf.rsqrt(variance + epsilon)
+        outputs = norm_x * alpha + gamma
     return outputs

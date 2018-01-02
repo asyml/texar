@@ -32,6 +32,7 @@ class DataBaseBase(object):
             "name": "database",
             "num_epochs": None,
             "batch_size": 64,
+            "bucket_batch_size": None,
             "allow_smaller_final_batch": False,
             "bucket_boundaries": [],
             "shuffle": True,

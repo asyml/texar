@@ -162,7 +162,7 @@ class MonoTextDataBase(DataBaseBase):
             _, data_batch = tf.contrib.training.bucket_by_sequence_length(
                 input_length=input_length,
                 tensors=data,
-                batch_size=self._hparams.batch_size,
+                batch_size=self._hparams.bucket_batch_size or self._hparams.batch_size,
                 bucket_boundaries=self._hparams.bucket_boundaries,
                 num_threads=num_threads,
                 capacity=capacity,

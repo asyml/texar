@@ -12,8 +12,7 @@ import tensorflow as tf
 
 from texar.agents.agent_base import AgentBase
 from texar.core import optimization as opt
-from texar.core import get_instance, get_class
-from texar.losses.dqn_losses import l2_loss
+from texar.core import get_instance, get_function
 
 # pylint: disable=too-many-instance-attributes, too-many-arguments, invalid-name
 
@@ -57,13 +56,14 @@ class NatureDQNAgent(AgentBase):
                 dtype=tf.float64, shape=(None, self.actions))
 
             self.qnet_qvalue, self.target_qvalue = self.qnet(self.state_input)
-            #loss_fn =
-            self.loss = self._hparams.trainer.loss_fn(
+            loss_fn = get_function(self._hparams.loss,
+                                   ["texar.losses.dqn_losses"])
+            self.loss = loss_fn(
                 qvalue=self.qnet_qvalue, action_input=self.action_input,
                 y_input=self.y_input)
             self.trainer = opt.get_train_op(
                 loss=self.loss, variables=None,
-                hparams=self._hparams.trainer.optimization_hparams)
+                hparams=self._hparams.optimization)
 
         self.exploration = get_instance(
             self._hparams.exploration.type,
@@ -123,14 +123,19 @@ class NatureDQNAgent(AgentBase):
             self.train_qnet()
 
     def train_qnet(self):
+        """ Train the Q-Network
+        :return:
+        """
         minibatch = self.replay_memory.sample(self.batch_size)
         state_batch = np.array([data['state'] for data in minibatch])
         action_batch = np.array([data['action'] for data in minibatch])
         reward_batch = np.array([data['reward'] for data in minibatch])
-        is_terminal_batch = np.array([data['is_terminal'] for data in minibatch])
+        is_terminal_batch = \
+            np.array([data['is_terminal'] for data in minibatch])
         next_state_batch = np.array([data['next_state'] for data in minibatch])
 
-        qvalue = self.sess.run(self.target_qvalue, feed_dict={self.state_input: next_state_batch})
+        qvalue = self.sess.run(self.target_qvalue,
+                               feed_dict={self.state_input: next_state_batch})
         y_batch = reward_batch
         for i in range(self.batch_size):
             if not is_terminal_batch[i]:
@@ -146,14 +151,9 @@ class NatureDQNAgent(AgentBase):
             self.update_target()
 
     def update_target(self):
-        variable_dict = {}
-        for key in self.qnet.qnet.trainable_variables:
-            variable_dict['/'.join(key.name.split('/')[2:])] = self.sess.run(key)
-        for key in self.qnet.target.trainable_variables:
-            if '/'.join(key.name.split('/')[2:]) in variable_dict:
-                self.sess.run(tf.assign(key, variable_dict['/'.join(key.name.split('/')[2:])]))
-            else:
-                raise ValueError
+        """ Copy the parameters from qnet to target
+        """
+        self.sess.run(self.qnet.update_target())
 
     def get_action(self, state=None, action_mask=None):
         if state is None:
@@ -161,7 +161,8 @@ class NatureDQNAgent(AgentBase):
         if action_mask is None:
             action_mask = [True for _ in range(self.actions)]
 
-        qvalue = self.sess.run(self.qnet_qvalue, feed_dict={self.state_input: np.array([state])})
+        qvalue = self.sess.run(self.qnet_qvalue,
+                               feed_dict={self.state_input: np.array([state])})
         action = np.zeros(shape=(self.actions,))
         if random.random() < self.exploration.epsilon():
             while True:

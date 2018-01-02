@@ -17,9 +17,14 @@ from texar.core import utils
 
 class CNN(ModuleBase):
   """CNN for text."""
-  def __init__(self, hparams=None):
+  def __init__(self, hparams=None, use_embedding=False):
     ModuleBase.__init__(self, hparams)
 
+    self._use_embedding = use_embedding
+    if self._use_embedding:
+      with tf.variable_scope(self.variable_scope):
+        self._embedding = tf.get_variable("embedding",
+        [self._hparams.vocab_size, self._hparams.embedding_size])
     self._conv_layers = []
     for k in self._hparams.kernel_sizes:
       conv_layer = tf.layers.Conv1D(self._hparams.num_filter, k)
@@ -35,11 +40,22 @@ class CNN(ModuleBase):
       "num_filter": 128,
       "output_keep_prob": 0.5,
       "input_keep_prob": 1,
-      "leaky_relu_alpha": 0.01
+      "leaky_relu_alpha": 0.01,
+      "vocab_size": 10000,
+      "embedding_size": 100,
     }
 
 
   def _build(self, inputs):
+    if self._use_embedding:
+      if inputs.get_shape().ndims == 2:
+        inputs = tf.nn.embedding_lookup(self._embedding, inputs)
+      elif inputs.get_shape().ndims == 3:
+        inputs_shape = inputs.get_shape()
+        inputs = tf.matmul(tf.reshape(inputs, [-1, inputs_shape[-1]]),
+                           self._embedding)
+        inputs = tf.reshape(inputs, [inputs_shape[0], -1, inputs.get_shape()[-1]])
+
     inputs = tf.nn.dropout(
       inputs, utils.switch_dropout(self._hparams.input_keep_prob))
 
