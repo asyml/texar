@@ -12,14 +12,15 @@ import tensorflow as tf
 
 from texar.agents.agent_base import AgentBase
 from texar.core import optimization as opt
-from texar.core import get_instance
-from texar.losses.dqn_losses import l2_loss
+from texar.core import get_instance, get_function
 
+# pylint: disable=too-many-instance-attributes, too-many-arguments, invalid-name
 
-class NatureDQNAgent(AgentBase): # pylint: disable=too-many-instance-attributes
+class NatureDQNAgent(AgentBase):
     """TODO: docs
     """
-    def __init__(self, actions, state_shape, hparams=None):
+    def __init__(self, actions, state_shape,
+                 qnet=None, replay_memory=None, hparams=None):
         AgentBase.__init__(self, hparams=hparams)
 
         self.actions = actions
@@ -30,45 +31,46 @@ class NatureDQNAgent(AgentBase): # pylint: disable=too-many-instance-attributes
         self.observation_steps = self._hparams.observation_steps
         self.update_period = self._hparams.update_period
 
-        # network
-        self.network = get_instance(
-            self._hparams.qnetwork.type,
-            {"hparams": self._hparams.qnetwork.hparams},
-            module_paths=['texar.modules', 'texar.custom'])
+        self.qnet = qnet
+        if self.qnet is None:
+            self.qnet = get_instance(
+                self._hparams.qnet.type,
+                self._hparams.qnet.kwargs.todict(),
+                module_paths=['texar.modules', 'texar.custom'])
 
-        # replay_memory
-        self.replay_memory = get_instance(
-            self._hparams.replay_memory.type,
-            {'hparams': self._hparams.replay_memory.hparams},
-            module_paths=['texar.core.replay_memories', 'texar.custom'])
+        self.replay_memory = replay_memory
+        if self.replay_memory is None:
+            self.replay_memory = get_instance(
+                self._hparams.replay_memory.type,
+                self._hparams.replay_memory.kwargs.todict(),
+                module_paths=['texar.core', 'texar.custom'])
 
-        # loss && trainer
-        with tf.variable_scope(self.network.variable_scope):
+        # loss & trainer
+        with tf.variable_scope(None, default_name=self._hparams.name) as vs:
+            self._variable_scope = vs   # Uniquified scope
             self.state_input = tf.placeholder(
-                dtype=tf.float64, shape=[None, ] + list(state_shape))
+                dtype=tf.float64, shape=[None,] + list(state_shape))
+            self.y_input = tf.placeholder(
+                dtype=tf.float64, shape=(None,))
+            self.action_input = tf.placeholder(
+                dtype=tf.float64, shape=(None, self.actions))
 
-            self.y_input = tf.placeholder(dtype=tf.float64, shape=(None, ))
-            self.action_input = \
-                tf.placeholder(dtype=tf.float64, shape=(None, self.actions))
-
-            self.qnet_qvalue, self.target_qvalue = \
-                self.network(self.state_input)
-
-            self.loss = self._hparams.trainer.loss_fn(
-                qvalue=self.qnet_qvalue,
-                action_input=self.action_input,
+            self.qnet_qvalue, self.target_qvalue = self.qnet(self.state_input)
+            loss_fn = get_function(self._hparams.loss,
+                                   ["texar.losses.dqn_losses"])
+            self.loss = loss_fn(
+                qvalue=self.qnet_qvalue, action_input=self.action_input,
                 y_input=self.y_input)
             self.trainer = opt.get_train_op(
-                loss=self.loss,
-                variables=None,
-                hparams=self._hparams.trainer.optimization_hparams)
+                loss=self.loss, variables=None,
+                hparams=self._hparams.optimization)
 
-        # exploration
         self.exploration = get_instance(
             self._hparams.exploration.type,
-            {'hparams': self._hparams.exploration.hparams},
-            module_paths=['texar.core.explorations', 'texar.custom'])
+            self._hparams.exploration.kwargs.todict(),
+            module_paths=['texar.core', 'texar.custom'])
 
+        # TODO
         self.sess = tf.Session()
         self.sess.run(tf.global_variables_initializer())
         self.update_target()
@@ -81,21 +83,25 @@ class NatureDQNAgent(AgentBase): # pylint: disable=too-many-instance-attributes
             'discount_factor': 0.99,
             'observation_steps': 100,
             'update_period': 100,
-            'qnetwork': {
+            'qnet': {
                 'type': 'NatureQNet',
-                'hparams': None
+                'kwargs': {
+                    'hparams': None
+                }
             },
             'replay_memory': {
                 'type': 'DequeReplayMemory',
-                'hparams': None
+                'kwargs': {
+                    'hparams': None
+                }
             },
-            'trainer': {
-                'loss_fn': l2_loss,
-                'optimization_hparams': opt.default_optimization_hparams(),
-            },
+            'loss': "l2_loss",
+            'optimization': opt.default_optimization_hparams(),
             'exploration': {
                 'type': 'EpsilonDecayExploration',
-                'hparams': None
+                'kwargs': {
+                    'hparams': None
+                }
             }
         }
 
@@ -147,7 +153,7 @@ class NatureDQNAgent(AgentBase): # pylint: disable=too-many-instance-attributes
     def update_target(self):
         """ Copy the parameters from qnet to target
         """
-        self.sess.run(self.network.update_target())
+        self.sess.run(self.qnet.update_target())
 
     def get_action(self, state=None, action_mask=None):
         if state is None:

@@ -20,12 +20,12 @@ from texar.core.layers import *
 from texar.modules.encoders.conv1d_discriminator import CNN
 from texar.modules.decoders.rnn_decoder_helpers import *
 from texar.models.tsf import ops
-from texar.models.tsf.attention import AttentionLayerBahdanau as AttnLayer
-from texar.models.tsf.attention_decoder import PointerDecoder
+from texar.models.tsf.attention import AttentionLayerBahdanau as AttLayer
+from texar.models.tsf.attention_decoder import AttentionDecoder as AttDecoder
 from texar.models.tsf import utils
 
 
-class TSFClassifierPointer:
+class TSFClassifierAtt:
   """Text style transfer."""
 
   def __init__(self, hparams=None):
@@ -51,8 +51,8 @@ class TSFClassifierPointer:
       "dim_y": 200,
       "dim_z": 500,
       # att decoder
-      "pointer_decoder_max_decoding_length_train": 21, # go id ?
-      "pointer_decoder_max_decoding_length_infer": 20,
+      "att_decoder_max_decoding_length_train": 21, # go id ?
+      "att_decoder_max_decoding_length_infer": 20,
       # cnn
       "cnn_name": "cnn",
       "cnn_kernel_sizes": [3, 4, 5],
@@ -128,20 +128,19 @@ class TSFClassifierPointer:
 
     cell_g = ops.get_rnn_cell(rnn_hparams)
     # pointer decoder
-    att_layer = AttnLayer(hparams.rnn_size)
+    att_layer = AttLayer(hparams.rnn_size)
 
-    pointer_decoder_hparams = utils.filter_hparams(hparams, "pointer_decoder")
-    pointer_decoder = PointerDecoder(hparams.vocab_size, enc_outputs,
-                                     enc_outputs, input_tensors["seq_len"],
-                                     att_layer, cell_g,
-                                     input_tensors["enc_inputs"],
-                                     pointer_decoder_hparams)
+    att_decoder_hparams = utils.filter_hparams(hparams, "att_decoder")
+    att_decoder = AttDecoder(hparams.vocab_size, enc_outputs, enc_outputs,
+                             input_tensors["seq_len"], att_layer, cell_g,
+                             att_decoder_hparams)
+    # set the seq_len to be dec_inputs size
     seq_len = [tf.shape(input_tensors["dec_inputs"])[1]] * hparams.batch_size
     train_helper = EmbeddingTrainingHelper(input_tensors["dec_inputs"],
                                            seq_len,
                                            embedding)
 
-    g_outputs, _, _ = pointer_decoder(train_helper, h_ori)
+    g_outputs, _, _ = att_decoder(train_helper, h_ori)
 
     loss_g = tf.nn.sparse_softmax_cross_entropy_with_logits(
       labels=input_tensors["targets"], logits=g_outputs.logits)
@@ -167,14 +166,15 @@ class TSFClassifierPointer:
       end_token,
     )
 
-    soft_outputs_ori, _, _  = pointer_decoder(gumbel_helper, h_ori)
-    soft_outputs_tsf, _, _ = pointer_decoder(gumbel_helper, h_tsf)
+    soft_outputs_ori, _, _  = att_decoder(gumbel_helper, h_ori)
+    soft_outputs_tsf, _, _ = att_decoder(gumbel_helper, h_tsf)
 
-    hard_outputs_ori, _, _  = pointer_decoder(greedy_helper, h_ori)
-    hard_outputs_tsf, _, _ = pointer_decoder(greedy_helper, h_tsf)
+    hard_outputs_ori, _, _  = att_decoder(greedy_helper, h_ori)
+    hard_outputs_tsf, _, _ = att_decoder(greedy_helper, h_tsf)
 
     # discriminator
     half = hparams.batch_size // 2
+    # make sure input len >= 5 ?
     batch_len = tf.shape(input_tensors["targets"])[1]
     soft_sample_ori = soft_outputs_ori.predicted_ids[:, :batch_len, :]
     soft_sample_tsf = soft_outputs_tsf.predicted_ids[:, :batch_len, :]
@@ -196,7 +196,7 @@ class TSFClassifierPointer:
            input_tensors["rho_r"] * loss_dr
 
     var_eg = ops.retrieve_variables(["encoder", "generator", "embedding"]) \
-             + pointer_decoder.trainable_variables
+             + att_decoder.trainable_variables
     var_d = ops.retrieve_variables(["cnn"])
 
 

@@ -73,7 +73,7 @@ class TSF:
           },
         },
         "use_embedding": False,
-        "max_decoding_length_train": 20,
+        "max_decoding_length_train": 21,
         "max_decoding_length_infer": 20,
       },
       "output_keep_prob": 0.5,

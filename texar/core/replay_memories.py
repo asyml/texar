@@ -4,7 +4,7 @@ from collections import deque
 import random
 
 
-class ReplayMemoryBase:
+class ReplayMemoryBase(object):
     def __init__(self, hparams=None):
         self._hparams = HParams(hparams, self.default_hparams())
 

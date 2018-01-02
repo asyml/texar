@@ -1,6 +1,10 @@
+#
 """
 Base class for rl agents.
 """
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 from texar.hyperparams import HParams
 
@@ -11,6 +15,7 @@ class AgentBase(object):
     """
     def __init__(self, hparams=None):
         self._hparams = HParams(hparams, self.default_hparams())
+        self._variable_scope = None
         self.current_state = None
         self.timestep = 0
 
@@ -31,8 +36,8 @@ class AgentBase(object):
         raise NotImplementedError
 
     def perceive(self, action, reward, is_terminal, next_observation):
-        """
-        Perceive from environment
+        """Perceive from environment
+
         Args:
             action: A OneHot vector indicate the action
             reward: A number indicate the reward
@@ -42,17 +47,29 @@ class AgentBase(object):
         raise NotImplementedError
 
     def get_action(self, state=None, action_mask=None):
-        """
-        Get Action according to state and action_mask
+        """Get Action according to state and action_mask
+
         Args:
             state(numpy.array): assign a state if it is not 'None', otherwise it
                 is current state by default
-            action_mask(List): A List of True or False, indicate this time each
+            action_mask(list): A List of True or False, indicate this time each
                 action can be take or not, if it is 'None', then all the actions
                 can be take.
+
         Returns:
-            The possibility of taking each action.
-        Return Type:
-            List
+            list: The possibility of taking each action.
         """
         raise NotImplementedError
+
+    @property
+    def variable_scope(self):
+        """The variable scope of the agent.
+        """
+        return self._variable_scope
+
+    @property
+    def name(self):
+        """The uniquified name of the module.
+        """
+        # pylint: disable=protected-access
+        return self.variable_scope._pure_variable_scope._name_or_scope
