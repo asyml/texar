@@ -16,30 +16,32 @@ from texar.agents import NatureDQNAgent
 env = gym.make('CartPole-v1')
 
 if __name__ == '__main__':
-    hparams = NatureDQNAgent.default_hparams()
+    hparams = {}
     hparams['qnetwork'] = {
-        'hparams': {
-            'network_hparams': {
-                'layers': [
-                    {
-                        'type': 'Dense',
-                        'kwargs': {
-                            'units': 128,
-                            'activation': 'relu'
+        'kwargs': {
+            'hparams': {
+                'network_hparams': {
+                    'layers': [
+                        {
+                            'type': 'Dense',
+                            'kwargs': {
+                                'units': 128,
+                                'activation': 'relu'
+                            }
+                        }, {
+                            'type': 'Dense',
+                            'kwargs': {
+                                'units': 128,
+                                'activation': 'relu'
+                            }
+                        }, {
+                            'type': 'Dense',
+                            'kwargs': {
+                                'units': 2
+                            }
                         }
-                    }, {
-                        'type': 'Dense',
-                        'kwargs': {
-                            'units': 128,
-                            'activation': 'relu'
-                        }
-                    }, {
-                        'type': 'Dense',
-                        'kwargs': {
-                            'units': 2
-                        }
-                    }
-                ]
+                    ]
+                }
             }
         }
     }
