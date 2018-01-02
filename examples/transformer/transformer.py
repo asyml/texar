@@ -148,6 +148,7 @@ if __name__ == "__main__":
     tf.summary.scalar('acc', acc)
     opt_hparams = {
         'warmup_steps': 16000,
+        'max_training_steps': 250000,
     }
     global_step = tf.Variable(0, trainable=False)
 
@@ -155,10 +156,11 @@ if __name__ == "__main__":
     learning_rate = 1e-3
     #learning_rate = 1000 * encoder_hparams['embedding']['dim']**-0.5 *(tf.minimum(
     #    (fstep+1)**-0.5, (fstep+1) * opt_hparams['warmup_steps']**-1.5) )
+
     #learning_rate = tf.Print(learning_rate, data=[fstep, learning_rate])
 
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate,
-            beta1=0.9, beta2=0.98, epsilon=1e-9)
+            beta1=0.9, beta2=0.98, epsilon=1e-6)
     train_op = optimizer.minimize(mle_loss, global_step)
     tf.summary.scalar('lr', learning_rate)
     tf.summary.scalar('mle_loss', mle_loss)
@@ -206,7 +208,7 @@ if __name__ == "__main__":
                 if step % 1000 == 0:
                     print('step:{} loss:{}'.format(step, loss))
                     saver.save(sess, logdir+'my-model', global_step=step)
-                if step == 250000:
+                if step == opt_hparams['max_training_steps']:
                     coord.request_stop()
         except tf.errors.OutOfRangeError:
             print('Done -- epoch limit reached')
