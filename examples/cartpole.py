@@ -9,7 +9,7 @@ from __future__ import print_function
 import numpy as np
 import gym
 
-from texar.agents import NatureDQNAgent
+from texar.agents import DQNAgent
 
 # pylint: disable=invalid-name
 
@@ -18,34 +18,32 @@ env = gym.make('CartPole-v1')
 if __name__ == '__main__':
     hparams = {}
     hparams['qnet'] = {
-        'kwargs': {
-            'hparams': {
-                'network_hparams': {
-                    'layers': [
-                        {
-                            'type': 'Dense',
-                            'kwargs': {
-                                'units': 128,
-                                'activation': 'relu'
-                            }
-                        }, {
-                            'type': 'Dense',
-                            'kwargs': {
-                                'units': 128,
-                                'activation': 'relu'
-                            }
-                        }, {
-                            'type': 'Dense',
-                            'kwargs': {
-                                'units': 2
-                            }
+        'hparams': {
+            'network_hparams': {
+                'layers': [
+                    {
+                        'type': 'Dense',
+                        'kwargs': {
+                            'units': 128,
+                            'activation': 'relu'
                         }
-                    ]
-                }
+                    }, {
+                        'type': 'Dense',
+                        'kwargs': {
+                            'units': 128,
+                            'activation': 'relu'
+                        }
+                    }, {
+                        'type': 'Dense',
+                        'kwargs': {
+                            'units': 2
+                        }
+                    }
+                ]
             }
         }
     }
-    agent = NatureDQNAgent(actions=2, state_shape=(4, ), hparams=hparams)
+    agent = DQNAgent(actions=2, state_shape=(4, ), hparams=hparams)
 
     for i in range(5000):
         reward_sum = 0.0
