@@ -10,9 +10,10 @@ class Hyperparams:
     # data
     source_train = 'data/translation/de-en/train.tags.de-en.de'
     target_train = 'data/translation/de-en/train.tags.de-en.en'
-    source_test = 'data/translation/de-en/IWSLT16.TED.tst2014.de-en.de.xml'
-    target_test = 'data/translation/de-en/IWSLT16.TED.tst2014.de-en.en.xml'
-
+    #source_test = 'data/translation/de-en/IWSLT16.TED.tst2014.de-en.de.xml'
+    #target_test = 'data/translation/de-en/IWSLT16.TED.tst2014.de-en.en.xml'
+    source_test = '/tmp/t2t_datagen/newstest2014.tok.bpe.32000.en'
+    target_test = '/tmp/t2t_datagen/newstest2014.tok.bpe.32000.de'
     # training
     batch_size = 32 # this is used only for test
 
