@@ -40,6 +40,7 @@ class NatureQNetTest(tf.test.TestCase):
 
         inputs = tf.zeros(shape=[64, 10])
         outputs = network(inputs)
+
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
             shapes = sess.run([tf.shape(output) for output in outputs])

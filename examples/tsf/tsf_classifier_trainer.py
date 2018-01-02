@@ -14,15 +14,15 @@ import json
 import os
 
 from texar.hyperparams import HParams
-from texar.models.tsf import TSF
+from texar.models.tsf import TSFClassifier
 
 from trainer_base import TrainerBase
 from utils import *
 from tsf_utils import *
-from stats import Stats
+from stats import TSFClassifierStats as Stats
 
-class TSFTrainer(TrainerBase):
-  """TSF trainer."""
+class TSFClassifierTrainer(TrainerBase):
+  """TSFClassifier trainer."""
   def __init__(self, hparams=None):
     TrainerBase.__init__(self, hparams)
 
@@ -33,13 +33,15 @@ class TSFTrainer(TrainerBase):
       "expt_dir": "../../expt",
       "log_dir": "log",
       "name": "tsf",
-      "rho": 1.,
+      "rho_f": 1.,
+      "rho_r": 0.,
       "gamma_init": 1,
       "gamma_decay": 0.5,
       "gamma_min": 0.001,
       "disp_interval": 100,
       "batch_size": 128,
       "vocab_size": 10000,
+      "cnn_vocab_size": 10000,
       "max_len": 20,
       "max_epoch": 20,
       "sort_data": False,
@@ -58,14 +60,19 @@ class TSFTrainer(TrainerBase):
     for batch in batches:
       logits_ori, logits_tsf = model.decode_step(sess, batch)
 
-      loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1 = model.eval_step(
-        sess, batch, self._hparams.rho, self._hparams.gamma_min)
+      loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds, \
+        accu_f, accu_r, accu_s = model.eval_step(
+        sess, batch, self._hparams.rho_f, self._hparams.rho_r,
+        self._hparams.gamma_min)
       batch_size = len(batch["enc_inputs"])
       word_size = np.sum(batch["weights"])
-      losses.append(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1,
+      losses.append(loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds,
+                    accu_f, accu_r, accu_s, 
                     w_loss=batch_size, w_g=batch_size,
-                    w_ppl=word_size, w_d=batch_size,
-                    w_d0=batch_size, w_d1=batch_size)
+                    w_ppl=word_size, w_df=batch_size,
+                    w_dr=batch_size, w_ds=batch_size,
+                    w_af=batch_size, w_ar=batch_size,
+                    w_as=batch_size)
       ori = logits2word(logits_ori, vocab["id2word"])
       tsf = logits2word(logits_tsf, vocab["id2word"])
       half = self._hparams.batch_size // 2
@@ -103,11 +110,12 @@ class TSFTrainer(TrainerBase):
 
     # set vocab size
     self._hparams.vocab_size = vocab["size"]
+    self._hparams.cnn_vocab_size = vocab["size"]
 
     # set some hparams here
 
     with tf.Session() as sess:
-      model = TSF(self._hparams)
+      model = TSFClassifier(self._hparams)
       log_print("finished building model")
 
       if "model" in self._hparams.keys():
@@ -133,22 +141,25 @@ class TSFTrainer(TrainerBase):
         log_print("gamma %.3f"%(gamma))
         if self._hparams.shuffle_across_epoch:
           batches, _, _ = get_batches(train[0], train[1], vocab["word2id"],
-                                model._hparams.batch_size,
-                                sort=self._hparams.sort_data)
+                                      model._hparams.batch_size,
+                                      sort=self._hparams.sort_data)
         random.shuffle(batches)
         for batch in batches:
+          loss_ds = 0.
           for _ in range(self._hparams.d_update_freq):
-            loss_d0 = model.train_d0_step(sess, batch, self._hparams.rho, gamma)
-            loss_d1 = model.train_d1_step(sess, batch, self._hparams.rho, gamma)
+            loss_ds, accu_s = model.train_d_step(sess, batch)
 
-          if loss_d0 < 1.2 and loss_d1 < 1.2:
-            loss, loss_g, ppl_g, loss_d = model.train_g_step(
-              sess, batch, self._hparams.rho, gamma)
+          if loss_ds < 1.2:
+            (loss, loss_g, ppl_g, loss_df, loss_dr,
+             accu_f, accu_r) = model.train_g_step(
+               sess, batch, self._hparams.rho_f, self._hparams.rho_r, gamma)
           else:
-            loss, loss_g, ppl_g, loss_d = model.train_ae_step(
-              sess, batch, self._hparams.rho, gamma)
+            (loss, loss_g, ppl_g, loss_df, loss_dr,
+             accu_f, accu_r)= model.train_ae_step(
+               sess, batch, self._hparams.rho_f, self._hparams.rho_r, gamma)
 
-          losses.append(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1)
+          losses.append(loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds,
+                        accu_f, accu_r, accu_s)
 
           step += 1
           if step % self._hparams.disp_interval == 0:
@@ -174,7 +185,7 @@ class TSFTrainer(TrainerBase):
     return best_dev
 
 def main(unused_args):
-  trainer = TSFTrainer()
+  trainer = TSFClassifierTrainer()
   trainer.train()
 
 if __name__ == "__main__":

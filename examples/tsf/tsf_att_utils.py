@@ -18,23 +18,24 @@ def get_batch(x, y, word2id, batch_size, min_len=5):
   max_len = max([len(sent) for sent in x])
   max_len = max(max_len, min_len)
 
-  rev_x, go_x, x_eos, weights = [], [], [], []
+  x_, go_x, x_eos, weights, seq_len = [], [], [], [], []
   for sent in x:
     l = len(sent)
     padding = [pad] * (max_len - l)
-    rev_x.append(padding + sent[::-1])
+    x_.append(sent + padding)
     go_x.append([go] + sent + padding)
     x_eos.append(sent + [eos] + padding)
     weights.append([1.] * (l+1) + [0.] * (max_len - l))
+    seq_len.append(l)
 
   return {
-    "enc_inputs": rev_x,
+    "enc_inputs": x_,
     "dec_inputs": go_x,
     "targets": x_eos,
     "weights": weights,
     "labels": y,
     "size": len(x),
-    "len": max_len + 1
+    "seq_len": seq_len
   }
 
 def get_batches(x0, x1, word2id, batch_size, sort=False):
