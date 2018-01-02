@@ -16,7 +16,11 @@ from texar.core import get_instance, get_function
 
 # pylint: disable=too-many-instance-attributes, too-many-arguments, invalid-name
 
-class NatureDQNAgent(AgentBase):
+__all__ = [
+    "DQNAgent"
+]
+
+class DQNAgent(AgentBase):
     """TODO: docs
     """
     def __init__(self, actions, state_shape,
@@ -35,14 +39,14 @@ class NatureDQNAgent(AgentBase):
         if self.qnet is None:
             self.qnet = get_instance(
                 self._hparams.qnet.type,
-                self._hparams.qnet.kwargs.todict(),
+                {'hparams': self._hparams.qnet.hparams},
                 module_paths=['texar.modules', 'texar.custom'])
 
         self.replay_memory = replay_memory
         if self.replay_memory is None:
             self.replay_memory = get_instance(
                 self._hparams.replay_memory.type,
-                self._hparams.replay_memory.kwargs.todict(),
+                {'hparams': self._hparams.replay_memory.hparams},
                 module_paths=['texar.core', 'texar.custom'])
 
         # loss & trainer
@@ -67,7 +71,7 @@ class NatureDQNAgent(AgentBase):
 
         self.exploration = get_instance(
             self._hparams.exploration.type,
-            self._hparams.exploration.kwargs.todict(),
+            {'hparams': self._hparams.exploration.hparams},
             module_paths=['texar.core', 'texar.custom'])
 
         # TODO
@@ -78,30 +82,24 @@ class NatureDQNAgent(AgentBase):
     @staticmethod
     def default_hparams():
         return {
-            'name': 'nature_dqn_agent',
+            'name': 'dqn_agent',
             'batch_size': 32,
             'discount_factor': 0.99,
             'observation_steps': 100,
             'update_period': 100,
             'qnet': {
                 'type': 'NatureQNet',
-                'kwargs': {
-                    'hparams': None
-                }
+                'hparams': None
             },
             'replay_memory': {
                 'type': 'DequeReplayMemory',
-                'kwargs': {
-                    'hparams': None
-                }
+                'hparams': None
             },
             'loss': "l2_loss",
             'optimization': opt.default_optimization_hparams(),
             'exploration': {
-                'type': 'EpsilonDecayExploration',
-                'kwargs': {
-                    'hparams': None
-                }
+                'type': 'EpsilonLinearDecayExploration',
+                'hparams': None
             }
         }
 
@@ -153,7 +151,7 @@ class NatureDQNAgent(AgentBase):
     def update_target(self):
         """ Copy the parameters from qnet to target
         """
-        self.sess.run(self.qnet.update_target())
+        self.sess.run(self.qnet.copy_qnet_to_target())
 
     def get_action(self, state=None, action_mask=None):
         if state is None:
@@ -164,7 +162,7 @@ class NatureDQNAgent(AgentBase):
         qvalue = self.sess.run(self.qnet_qvalue,
                                feed_dict={self.state_input: np.array([state])})
         action = np.zeros(shape=(self.actions,))
-        if random.random() < self.exploration.epsilon():
+        if random.random() < self.exploration.get_epsilon(self.timestep):
             while True:
                 action_id = random.randrange(self.actions)
                 if action_mask[action_id]:
@@ -176,5 +174,4 @@ class NatureDQNAgent(AgentBase):
             action_id = np.argmax(qvalue)
         action[action_id] = 1.0
 
-        self.exploration.add_timestep()
         return action

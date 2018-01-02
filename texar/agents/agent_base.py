@@ -1,6 +1,6 @@
 #
 """
-Base class for rl agents.
+Base class for RL agents.
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -11,7 +11,10 @@ from texar.hyperparams import HParams
 
 class AgentBase(object):
     """
-    Base class inherited by rl agents.
+    Base class inherited by RL agents.
+
+    Args:
+        TODO
     """
     def __init__(self, hparams=None):
         self._hparams = HParams(hparams, self.default_hparams())
@@ -28,18 +31,18 @@ class AgentBase(object):
         }
 
     def set_initial_state(self, observation):
-        """
-        reset the current state
+        """Resets the current state.
+
         Args:
             observation: observation in the beginning
         """
         raise NotImplementedError
 
     def perceive(self, action, reward, is_terminal, next_observation):
-        """Perceive from environment
+        """Perceives from environment.
 
         Args:
-            action: A OneHot vector indicate the action
+            action: A one-hot vector indicate the action
             reward: A number indicate the reward
             is_terminal: True iff it is a terminal state
             next_observation: New Observation from environment
