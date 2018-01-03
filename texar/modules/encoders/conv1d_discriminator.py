@@ -17,14 +17,16 @@ from texar.core import utils
 
 class CNN(ModuleBase):
   """CNN for text."""
-  def __init__(self, hparams=None, use_embedding=False):
+  def __init__(self, hparams=None):
     ModuleBase.__init__(self, hparams)
 
-    self._use_embedding = use_embedding
-    if self._use_embedding:
+    if self._hparams.use_embedding:
       with tf.variable_scope(self.variable_scope):
         self._embedding = tf.get_variable("embedding",
         [self._hparams.vocab_size, self._hparams.embedding_size])
+    if self._hparams.use_gate:
+      self._gate_proj = tf.layer.Dense(self._hparams.attn_size)
+      self._gate_u = tf.get_variable("u", [self._hparams.size])
     self._conv_layers = []
     for k in self._hparams.kernel_sizes:
       conv_layer = tf.layers.Conv1D(self._hparams.num_filter, k)
@@ -36,6 +38,9 @@ class CNN(ModuleBase):
   def default_hparams():
     return {
       "name": "cnn",
+      "use_embedding": False,
+      "use_gate": False,
+      "attn_size": 100,
       "kernel_sizes": [3, 4, 5],
       "num_filter": 128,
       "output_keep_prob": 0.5,
@@ -46,8 +51,8 @@ class CNN(ModuleBase):
     }
 
 
-  def _build(self, inputs):
-    if self._use_embedding:
+  def _build(self, inputs, gamma=None):
+    if self._hparams.use_embedding:
       if inputs.get_shape().ndims == 2:
         inputs = tf.nn.embedding_lookup(self._embedding, inputs)
       elif inputs.get_shape().ndims == 3:
@@ -55,6 +60,12 @@ class CNN(ModuleBase):
         inputs = tf.matmul(tf.reshape(inputs, [-1, inputs_shape[-1]]),
                            self._embedding)
         inputs = tf.reshape(inputs, [inputs_shape[0], -1, inputs.get_shape()[-1]])
+
+    scores = tf.ones(tf.shape(inputs)[:2], tf.float32) \
+             / tf.cast(tf.shape(inputs)[1], tf.float32)
+    if self._hparams.use_gate:
+      scores = tf.nn.softmax(tf.reduce_sum(self._gate_u * proj, [2]) / gamma)
+      inputs = tf.expand_dims(scores, 2) * inputs
 
     inputs = tf.nn.dropout(
       inputs, utils.switch_dropout(self._hparams.input_keep_prob))
@@ -76,4 +87,4 @@ class CNN(ModuleBase):
     self._add_internal_trainable_variables()
     self._built = True
 
-    return logits
+    return logits, scores

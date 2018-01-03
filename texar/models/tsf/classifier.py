@@ -36,16 +36,12 @@ class Classifier:
       "embedding_size": 100,
       # cnn
       "cnn_name": "cnn",
+      "cnn_use_embedding": True,
+      "cnn_use_gate": False,
       "cnn_kernel_sizes": [3, 4, 5],
       "cnn_num_filter": 128,
       "cnn_input_keep_prob": 1.,
       "cnn_output_keep_prob": 0.5,
-      "use_self_gate": False,
-      # self_gate
-      "self_gate_name": "self_gate",
-      "self_gate_type": "Attn",
-      "self_gate_size": 100,
-      "self_gate_leaky_relu_alpha": 0.2,
       # adam
       "adam_learning_rate": 1e-4,
       "adam_beta1": 0.9,
@@ -61,19 +57,9 @@ class Classifier:
     x = tf.placeholder(tf.int32, [batch_size, None], name="x")
     y = tf.placeholder(tf.int32, [batch_size], name="y")
     gamma = tf.placeholder(tf.float32, [1], name="gamma")
-    embedding = tf.get_variable(
-      "embedding", [hparams.vocab_size,  hparams.embedding_size])
-    x_emb = tf.nn.embedding_lookup(embedding, x)
-
-    if not self._hparams.use_self_gate:
-      inputs, alpha = x_emb, x_emb
-    else:
-      self_gate_hparams = utils.filter_hparams(hparams, "self_gate")
-      self_gate = SelfGate(self_gate_hparams)
-      inputs, alpha = self_gate(x_emb, gamma)
 
     cnn = CNN(cnn_hparams)
-    logits = cnn(inputs)
+    logits, scores = cnn(x)
     logits = tf.reshape(logits, [-1])
     prob = tf.sigmoid(logits)
     pred = tf.cast(tf.greater(prob, 0.5), dtype=tf.int32)
@@ -90,7 +76,7 @@ class Classifier:
       [("x", x),
        ("y", y),
        ("gamma", gamma),
-       ("alpha", alpha),
+       ("scores", scores),
        ("logits", logits),
        ("prob", prob),
        ("pred", pred),
@@ -129,9 +115,9 @@ class Classifier:
     return loss, prob
 
   def visualize_step(self, sess, batch, gamma=1):
-    loss, prob, alpha = sess.run(
+    loss, prob, scores = sess.run(
       # return loss as vector
-      [self.tensors["losses"], self.tensors["prob"], self.tensors["alpha"]],
+      [self.tensors["losses"], self.tensors["prob"], self.tensors["scores"]],
       feed_dict={
         context.is_train(): False,
         self.tensors["x"]: batch["x"],
@@ -139,6 +125,6 @@ class Classifier:
         self.tensors["gamma"]: [gamma],
       })
 
-    return loss, prob, alpha
+    return loss, prob, scores 
 
 
