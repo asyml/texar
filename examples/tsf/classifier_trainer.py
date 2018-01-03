@@ -42,7 +42,6 @@ class ClassifierTrainer(TrainerBase):
       "gamma_init": 1,
       "gamma_decay": 0.5,
       "gamma_min": 0.1,
-      "use_self_gate": False,
       "max_len": 20,
       "max_epoch": 20,
       "disp_interval": 100,
@@ -64,7 +63,7 @@ class ClassifierTrainer(TrainerBase):
     for batch in batches:
       # loss, prob = model.eval_step(sess, batch,
       # gamma=self._hparams.gamma_min)
-      loss, prob, alpha = model.visualize_step(
+      loss, prob, scores = model.visualize_step(
         sess, batch, self._hparams.gamma_min)
       losses += loss.tolist()[:batch["actual_size"]]
       probs += prob.tolist()[:batch["actual_size"]]

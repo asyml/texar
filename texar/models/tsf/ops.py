@@ -306,14 +306,14 @@ def rnn_pointer_decode(state, inp, length, cell, pointer_decoder,
   return output_seq, p_seq, sample_seq
 
 def adv_loss(x_real, x_fake, discriminator):
-  real_logits = discriminator(x_real)
+  real_logits, real_scores = discriminator(x_real)
   real_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
     labels=tf.ones_like(real_logits), logits=real_logits))
   real_prob = tf.sigmoid(real_logits)
   real_pred = tf.cast(tf.greater(real_prob, 0.5), dtype=tf.int32)
   real_accu = tf.reduce_mean(tf.cast(tf.equal(real_pred, tf.ones_like(real_pred)),
                                      dtype=tf.float32))
-  fake_logits = discriminator(x_fake)
+  fake_logits, fake_scores = discriminator(x_fake)
   fake_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
     labels=tf.zeros_like(fake_logits), logits=fake_logits))
   fake_prob = tf.sigmoid(fake_logits)
@@ -322,7 +322,7 @@ def adv_loss(x_real, x_fake, discriminator):
                                      dtype=tf.float32))
   d_loss = real_loss + fake_loss
   accu = (real_accu + fake_accu) / 2.
-  return d_loss, accu
+  return d_loss, accu, real_scores, fake_scores
 
 def retrieve_variables(scopes):
   var = []
