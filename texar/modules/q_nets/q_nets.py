@@ -35,7 +35,7 @@ class NatureQNet(QNetBase):
             'network_hparams': FeedForwardNetwork.default_hparams()
         }
 
-    def _build(self, inputs):
+    def _build(self, inputs): # pylint: disable=arguments-differ
         qnet_result, target_result = self.qnet(inputs), self.target(inputs)
 
         if not self._built:
@@ -46,8 +46,8 @@ class NatureQNet(QNetBase):
 
         return qnet_result, target_result
 
-    def update_target(self):
-        """ Copy the parameters from qnet to target
+    def copy_qnet_to_target(self):
+        """Copy the parameters from qnet to target.
 
         Returns:
             A list of assign tensors
