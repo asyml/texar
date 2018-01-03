@@ -9,15 +9,15 @@ from __future__ import print_function
 import numpy as np
 import gym
 
-from texar.agents import NatureDQNAgent
+from texar.agents import DQNAgent
 
 # pylint: disable=invalid-name
 
 env = gym.make('CartPole-v1')
 
 if __name__ == '__main__':
-    hparams = NatureDQNAgent.default_hparams()
-    hparams['qnetwork'] = {
+    hparams = {}
+    hparams['qnet'] = {
         'hparams': {
             'network_hparams': {
                 'layers': [
@@ -43,7 +43,7 @@ if __name__ == '__main__':
             }
         }
     }
-    agent = NatureDQNAgent(actions=2, state_shape=(4, ), hparams=hparams)
+    agent = DQNAgent(actions=2, state_shape=(4, ), hparams=hparams)
 
     for i in range(5000):
         reward_sum = 0.0

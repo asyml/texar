@@ -5,8 +5,8 @@ import codecs
 
 import tensorflow as tf
 import numpy as np
-
-from data_load import load_test_data, load_de_vocab, load_en_vocab, hp
+import copy
+from data_load import load_test_data, load_shared_vocab, hp
 from nltk.translate.bleu_score import corpus_bleu
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.losses import mle_losses
@@ -14,7 +14,7 @@ from texar import context
 def evaluate():
     print("Graph loaded")
     # Load data
-    extra_hparams = {
+    encoder_hparams = {
         'max_seq_length':100000000,
         'scale':True,
         'sinusoid':True,
@@ -55,20 +55,31 @@ def evaluate():
         hp.maxlen))
     tgt_input = tf.placeholder(tf.int32, shape=(hp.batch_size, \
         hp.maxlen))
-    de2idx, _ = load_de_vocab()
-    en2idx, idx2en = load_en_vocab()
+    src_length = tf.reduce_sum(tf.to_float(tf.not_equal(src_input, 0)), axis=-1)
+
+    word2idx, idx2word = load_shared_vocab()
     decoder_input = tf.concat((tf.ones_like(tgt_input[:, :1]), tgt_input[:, :-1]), -1) # 1:<S>
+    tgt_length = tf.reduce_sum(tf.to_float(tf.not_equal(decoder_input, 0)), axis=-1)
 
-    encoder = TransformerEncoder(vocab_size=len(de2idx), hparams=extra_hparams)
-    encoder_output = encoder(src_input)
+    encoder = TransformerEncoder(vocab_size=len(word2idx), hparams=encoder_hparams)
+    encoder_output = encoder(src_input,
+        inputs_length=src_length)
 
-    decoder = TransformerDecoder(vocab_size=len(en2idx), hparams=extra_hparams)
-    logits, preds = decoder(decoder_input, encoder_output)
+    decoder_hparams = copy.deepcopy(encoder_hparams)
+    decoder_hparams['share_embed_and_transform'] = True
+    decoder = TransformerDecoder(
+        embedding = encoder._embedding,
+        hparams=decoder_hparams)
+    logits, preds = decoder(
+        decoder_input,
+        encoder_output,
+        src_length=src_length,
+        tgt_length=tgt_length)
     loss_params = {
         'label_smoothing':0.1,
     }
     is_target=tf.to_float(tf.not_equal(tgt_input, 0))
-    smoothed_labels = mle_losses.label_smoothing(tgt_input, len(idx2en), loss_params['label_smoothing'])
+    smoothed_labels = mle_losses.label_smoothing(tgt_input, len(idx2word), loss_params['label_smoothing'])
     mle_loss = mle_losses.average_sequence_softmax_cross_entropy(
         labels=smoothed_labels,
         logits=logits,
@@ -79,8 +90,8 @@ def evaluate():
     #for var in tf.trainable_variables():
     #    print('var: name:{} shape:{} dtype:{}'.format(var.name, var.shape, var.dtype))
 
-    #model_path = './logdir/'
-    model_path = './dutil_logdir/'
+    model_path = './logdir/'
+    #model_path = './dutil_logdir/'
     #model_path = '../transformer/logdir/BLEU17.66/'
 
     with tf.Session() as sess:
@@ -88,42 +99,19 @@ def evaluate():
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
-        """
-            Here we also provide an interface to load the trained model of
-                https://github.com/Kyubyong/transformer
-            What we have done here is just variabla-name matching
-        """
-        if model_path.startswith('../transformer/logdir'):
-            varlist = tf.trainable_variables()
-            namelist = [ var.name for var in varlist]
-            namelist = [name.replace('encoder_1','encoder') for name in namelist]
-            namelist = [name.replace('decoder_1','decoder') for name in namelist]
-            namelist = [name.replace('decoder/dense/', 'dense/') for name in namelist]
-            namelist = [name.replace('encoder/lookup_table','encoder/enc_embed/lookup_table') for name in namelist]
-            namelist = [name.replace('decoder/lookup_table','decoder/dec_embed/lookup_table') for name in namelist]
-            namelist = [name[:-2] if name[-2]==':' else name for name in namelist]
-            for i in range(6):
-                namelist = [name.replace('decoder/num_blocks_{}/multihead_attention_1'.format(i), \
-                    'decoder/num_blocks_{}/multihead_attention'.format(i)) for name in namelist]
-                namelist = [name.replace('encoder/num_blocks_{}/multihead_attention_1/'.format(i),
-                    'encoder/num_blocks_{}/multihead_attention/'.format(i)) for name in namelist]
-                namelist = [name.replace('encoder/num_blocks_{}/multihead_attention_1_1/ln'.format(i), \
-                    'encoder/num_blocks_{}/multihead_attention_1/ln'.format(i)) for name in namelist]
-            vardict={}
-            for var, name in zip(varlist, namelist):
-                vardict[name]=var
-            saver = tf.train.Saver(vardict)
-            saver.restore(sess, tf.train.latest_checkpoint(model_path))
-
-        elif model_path =='./logdir/' or model_path.startswith('./dutil_logdir/'):
-            saver = tf.train.Saver()
-            saver.restore(sess, tf.train.latest_checkpoint(model_path))
+        saver = tf.train.Saver()
+        saver.restore(sess, tf.train.latest_checkpoint(model_path))
         mname = tf.train.latest_checkpoint(model_path).split('/')[-1]
         print('model name:{}'.format(mname))
         ## Inference
-        resultfile = model_path + mname +'.result.txt'
+        resultfile = model_path + mname + '.result.txt'
+        outputfile = model_path + mname + '.output.txt'
         print('result:{}'.format(resultfile))
-        with codecs.open(resultfile, "w", "utf-8") as fout:
+        print('test corpus size:{} source_list:{}'.format(len(test_corpus), len(source_list)))
+        with open('extracted_test.txt', 'w+') as outfile:
+            for sent in source_list:
+                outfile.write(sent+'\n')
+        with codecs.open(resultfile, "w", "utf-8") as fout, codecs.open(outputfile, 'w+','utf-8') as oout:
             list_of_refs, hypotheses = [], []
             for i in range(len(test_corpus) // hp.batch_size):
                 src = test_corpus[i*hp.batch_size: (i+1)*hp.batch_size]
@@ -133,22 +121,25 @@ def evaluate():
                     np.int32)
                 for j in range(hp.maxlen):
                     loss, _preds = sess.run([mle_loss, preds], \
-                        feed_dict={src_input: src, tgt_input: outputs, context.is_train():False})
+                        feed_dict={
+                            src_input: src,
+                            tgt_input: outputs,
+                            context.is_train():False
+                            })
                     #fout.write('loss:{}\n'.format(loss))
                     outputs[:, j] = _preds[:, j]
                 for source, target, pred in zip(sources, targets, outputs): # sentence-wise
-                    got = " ".join(idx2en[idx] for idx in pred).split("</S>")[0].strip()
+                    got = " ".join(idx2word[idx] for idx in pred).split("<EOS>")[0].strip()
                     fout.write("- source: " + source +"\n")
                     fout.write("- expected: " + target + "\n")
                     fout.write("- got: " + got + "\n\n")
                     fout.flush()
-
+                    oout.write(got+'\n')
                     # bleu score
                     ref = target.split()
                     hypothesis = got.split()
-                    if len(ref) > 3 and len(hypothesis) > 3:
-                        list_of_refs.append([ref])
-                        hypotheses.append(hypothesis)
+                    list_of_refs.append([ref])
+                    hypotheses.append(hypothesis)
 
             ## Calculate bleu score
             score = corpus_bleu(list_of_refs, hypotheses)
