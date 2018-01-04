@@ -52,6 +52,7 @@ class AttentionDecoder(RNNDecoderBase):
                attention_values_length,
                attention_layer,
                cell,
+               mask=None,
                hparams=None):
     super(AttentionDecoder, self).__init__(cell=cell,
                                            vocab_size=vocab_size,
@@ -60,6 +61,13 @@ class AttentionDecoder(RNNDecoderBase):
     self._attention_values = attention_values
     self._attention_values_length = attention_values_length
     self._attention_layer = attention_layer
+    max_len = tf.shape(self._attention_values)[1]
+    self._mask = mask
+    if self._mask is not None:
+      self._mask = self._mask[:, :max_len]
+      _, self._mask = tf.nn.top_k(self._mask, self._hparams.mask_top_k)
+      self._mask = tf.one_hot(self._mask, max_len, dtype=tf.float32)
+      self._mask = 1. - tf.reduce_sum(self._mask, axis=1)
     with tf.variable_scope(self.variable_scope):
       # self._input_transform = tf.layers.Dense(, name="input_transform")
       self._softmax_input = tf.layers.Dense(self._cell.output_size,
@@ -72,7 +80,7 @@ class AttentionDecoder(RNNDecoderBase):
     hparams = RNNDecoderBase.default_hparams()
     hparams["name"] = "attention_decoder"
     hparams["use_embedding"] = False
-
+    hparams["mask_top_k"] = 3
     return hparams
 
   @property
@@ -108,7 +116,8 @@ class AttentionDecoder(RNNDecoderBase):
       query=cell_output,
       keys=self._attention_keys,
       values=self._attention_values,
-      values_length=self._attention_values_length)
+      values_length=self._attention_values_length,
+      mask=self._mask)
 
     softmax_input = self._softmax_input(
       tf.concat([cell_output, att_context], 1))

@@ -57,7 +57,7 @@ class AttentionLayer(tf.layers.Layer):
   def score_fn(self, keys, query):
     raise NotImplementedError
 
-  def call(self, query, keys, values, values_length):
+  def call(self, query, keys, values, values_length, mask=None):
     values_depth = values.get_shape().as_list()[-1]
 
     att_keys = tf.contrib.layers.fully_connected(
@@ -78,6 +78,8 @@ class AttentionLayer(tf.layers.Layer):
       lengths=tf.to_int32(values_length),
       maxlen=tf.to_int32(num_scores),
       dtype=tf.float32) 
+    if mask is not None:
+      scores_mask *= mask
     scores = scores * scores_mask + ((1.0 - scores_mask) * tf.float32.min)
 
     scores_normalized = tf.nn.softmax(scores, name="scores_normalized")
