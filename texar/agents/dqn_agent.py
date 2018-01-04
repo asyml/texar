@@ -27,9 +27,6 @@ class DQNAgent(AgentBase):
                  qnet=None, replay_memory=None, hparams=None):
         AgentBase.__init__(self, hparams=hparams)
 
-        self.actions = actions
-        self.state_shape = state_shape
-
         self.batch_size = self._hparams.batch_size
         self.discount_factor = self._hparams.discount_factor
         self.observation_steps = self._hparams.observation_steps
