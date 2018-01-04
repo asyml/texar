@@ -1,36 +1,82 @@
-#
 """
-Deep Q Network for the CartPole game in OpenAI gym.
+Deep Q Network/Policy Gradient/Actor-Critic for the CartPole game in OpenAI gym.
 """
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from texar.agents.ac_agent import *
+
+# pylint: disable=invalid-name
+# pylint: disable=wildcard-import
+#
+
 import numpy as np
 import gym
 
-from texar.agents import DQNAgent
+import tensorflow as tf
+from texar.agents import *
 
-# pylint: disable=invalid-name
-
-env = gym.make('CartPole-v1')
+env = gym.make('CartPole-v0')
+env = env.unwrapped
 
 if __name__ == '__main__':
-    hparams = {}
-    hparams['qnet'] = {
+    # hparams = ACAgent.default_hparams()
+    # hparams['actor_network'] = {
+    #     'hparams': {
+    #         'network_hparams': {
+    #             'layers': [
+    #                 {
+    #                     'type': 'Dense',
+    #                     'kwargs': {
+    #                         'units': 50,
+    #                         'activation': 'relu'
+    #                     }
+    #                 }, {
+    #                     'type': 'Dense',
+    #                     'kwargs': {
+    #                         'units': 2
+    #                     }
+    #                 }
+    #             ]
+    #         }
+    #     }
+    # }
+    # hparams['critic_network'] = {
+    #     'hparams': {
+    #         'network_hparams': {
+    #             'layers': [
+    #                 {
+    #                     'type': 'Dense',
+    #                     'kwargs': {
+    #                         'units': 20,
+    #                         'activation': 'relu'
+    #                     }
+    #                 }, {
+    #                     'type': 'Dense',
+    #                     'kwargs': {
+    #                         'units': 1
+    #                     }
+    #                 }
+    #             ]
+    #         }
+    #     }
+    # }
+    hparams = PGAgent.default_hparams()
+    hparams['network'] = {
         'hparams': {
             'network_hparams': {
                 'layers': [
                     {
                         'type': 'Dense',
                         'kwargs': {
-                            'units': 128,
+                            'units': 256,
                             'activation': 'relu'
                         }
                     }, {
                         'type': 'Dense',
                         'kwargs': {
-                            'units': 128,
+                            'units': 256,
                             'activation': 'relu'
                         }
                     }, {
@@ -43,19 +89,21 @@ if __name__ == '__main__':
             }
         }
     }
-    agent = DQNAgent(actions=2, state_shape=(4, ), hparams=hparams)
+    agent = PGAgent(actions=2, state_shape=(4, ), hparams=hparams)
 
     for i in range(5000):
         reward_sum = 0.0
         observation = env.reset()
         agent.set_initial_state(observation=observation)
         while True:
-            action = agent.get_action()
-            action_id = np.argmax(action)
+            action_id = agent.get_action()
 
             next_observation, reward, is_terminal, info = \
                 env.step(action=action_id)
-            agent.perceive(next_observation=next_observation, action=action,
+            if is_terminal:
+                reward = -20
+            agent.perceive(next_observation=next_observation,
+                           action_id=action_id,
                            reward=reward, is_terminal=is_terminal)
 
             reward_sum += reward

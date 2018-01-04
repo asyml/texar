@@ -57,3 +57,31 @@ class NatureQNet(QNetBase):
             result.append(tf.assign(ref=self.target.trainable_variables[i],
                                     value=self.qnet.trainable_variables[i]))
         return result
+
+
+class SimpleQNet(QNetBase):
+    """
+    Simple single DQN Qnet
+    """
+    def __init__(self, hparams=None):
+        QNetBase.__init__(self, hparams=hparams)
+        with tf.variable_scope(self.variable_scope):
+            self.qnet = FeedForwardNetwork(
+                hparams=self.hparams.network_hparams)
+
+    @staticmethod
+    def default_hparams():
+        return {
+            'name': 'simple_q_net',
+            'network_hparams': FeedForwardNetwork.default_hparams()
+        }
+
+    def _build(self, inputs): #pylint: disable=arguments-differ
+        qnet_result = self.qnet(inputs)
+
+        if not self._built:
+            self._add_internal_trainable_variables()
+            self._add_trainable_variable(self.qnet.trainable_variables)
+            self._built = True
+
+        return qnet_result
