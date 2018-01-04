@@ -25,8 +25,8 @@ class CNN(ModuleBase):
         self._embedding = tf.get_variable("embedding",
         [self._hparams.vocab_size, self._hparams.embedding_size])
     if self._hparams.use_gate:
-      self._gate_proj = tf.layer.Dense(self._hparams.attn_size)
-      self._gate_u = tf.get_variable("u", [self._hparams.size])
+      self._gate_proj = tf.layers.Dense(self._hparams.attn_size)
+      self._gate_u = tf.get_variable("u", [self._hparams.attn_size])
     self._conv_layers = []
     for k in self._hparams.kernel_sizes:
       conv_layer = tf.layers.Conv1D(self._hparams.num_filter, k)
@@ -64,6 +64,7 @@ class CNN(ModuleBase):
     scores = tf.ones(tf.shape(inputs)[:2], tf.float32) \
              / tf.cast(tf.shape(inputs)[1], tf.float32)
     if self._hparams.use_gate:
+      proj = tf.tanh(self._gate_proj(inputs))
       scores = tf.nn.softmax(tf.reduce_sum(self._gate_u * proj, [2]) / gamma)
       inputs = tf.expand_dims(scores, 2) * inputs
 

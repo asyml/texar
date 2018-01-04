@@ -59,7 +59,7 @@ class Classifier:
     gamma = tf.placeholder(tf.float32, [1], name="gamma")
 
     cnn = CNN(cnn_hparams)
-    logits, scores = cnn(x)
+    logits, scores = cnn(x, gamma)
     logits = tf.reshape(logits, [-1])
     prob = tf.sigmoid(logits)
     pred = tf.cast(tf.greater(prob, 0.5), dtype=tf.int32)
