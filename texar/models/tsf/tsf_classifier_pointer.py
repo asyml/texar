@@ -220,7 +220,24 @@ class TSFClassifierPointer:
        ("soft_logits_ori", soft_outputs_ori.logits),
        ("soft_logits_tsf", soft_outputs_tsf.logits),
        ("g_logits", g_outputs.logits),
-       ("g_sample", g_outputs.predicted_ids),
+      ]
+    )
+
+    self.debug_tensors = utils.register_collection(
+      hparams.collections + "/debug",
+      [("g_attn", g_outputs.attention_scores),
+       ("g_pointer", g_outputs.pointer),
+       ("g_logits", g_outputs.logits)]
+    )
+
+    self.debug_tensors = utils.register_collection(
+      hparams.collections + "/debug",
+      [("h_ori_attn", hard_outputs_ori.attention_scores),
+       ("h_ori_pointer", hard_outputs_ori.pointer),
+       ("h_ori_logits", hard_outputs_ori.logits),
+       ("h_tsf_attn", hard_outputs_tsf.attention_scores),
+       ("h_tsf_pointer", hard_outputs_tsf.pointer),
+       ("h_tsf_logits", hard_outputs_tsf.logits),
       ]
     )
 
@@ -302,11 +319,11 @@ class TSFClassifierPointer:
             accu_f, accu_r, accu_s)
 
   def debug_step(self, sess, batch, rho_f, rho_r, gamma):
-    from tensorflow.contrib.layers.python.layers import utils
-    debug_p = utils.convert_collection_to_dict("tsf/debug")
     loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds, \
       accu_f, accu_r, accu_s, \
-      g_sample, p_attn_seq, p_attn_dense_seq, p_pointer_seq = sess.run(
+      g_attn, g_pointer, g_logits, \
+      h_ori_attn, h_ori_pointer, h_ori_logits, \
+      h_tsf_attn, h_tsf_pointer, h_tsf_logits, = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
        self.loss["ppl_g"],
@@ -316,15 +333,22 @@ class TSFClassifierPointer:
        self.loss["accu_f"],
        self.loss["accu_r"],
        self.loss["accu_s"],
-       self.output_tensors["g_sample"],
-       debug_p["p_attn_seq"],
-       debug_p["p_attn_dense_seq"],
-       debug_p["p_pointer_seq"],
+       self.debug_tensors["g_attn"],
+       self.debug_tensors["g_pointer"],
+       self.debug_tensors["g_logits"],
+       self.debug_tensors["h_ori_attn"],
+       self.debug_tensors["h_ori_pointer"],
+       self.debug_tensors["h_ori_logits"],
+       self.debug_tensors["h_tsf_attn"],
+       self.debug_tensors["h_tsf_pointer"],
+       self.debug_tensors["h_tsf_logits"],
       ],
       self.feed_dict(batch, rho_f, rho_r, gamma, is_train=False))
     return (loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds,
             accu_f, accu_r, accu_s,
-            g_sample, p_attn_seq, p_attn_dense_seq, p_pointer_seq)
+            g_attn, g_pointer, g_logits,
+            h_ori_attn, h_ori_pointer, h_ori_logits,
+            h_tsf_attn, h_tsf_pointer, h_tsf_logits)
 
   def decode_step(self, sess, batch):
     logits_ori, logits_tsf = sess.run(
