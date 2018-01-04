@@ -16,9 +16,13 @@ class AgentBase(object):
     Args:
         TODO
     """
-    def __init__(self, hparams=None):
+    def __init__(self, actions, state_shape, hparams=None):
         self._hparams = HParams(hparams, self.default_hparams())
         self._variable_scope = None
+
+        self.actions = actions
+        self.state_shape = state_shape
+
         self.current_state = None
         self.timestep = 0
 
@@ -38,11 +42,11 @@ class AgentBase(object):
         """
         raise NotImplementedError
 
-    def perceive(self, action, reward, is_terminal, next_observation):
+    def perceive(self, action_id, reward, is_terminal, next_observation):
         """Perceives from environment.
 
         Args:
-            action: A one-hot vector indicate the action
+            action_id: A number indicate the action
             reward: A number indicate the reward
             is_terminal: True iff it is a terminal state
             next_observation: New Observation from environment
