@@ -1,27 +1,46 @@
-from texar.hyperparams import HParams
+#
+"""
+TODO: docs
+"""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 from collections import deque
 import random
 
+from texar.hyperparams import HParams
+
 
 class ReplayMemoryBase(object):
+    """TODO: docs
+    """
     def __init__(self, hparams=None):
         self._hparams = HParams(hparams, self.default_hparams())
 
-    def push(self, element):
+    def add(self, element):
+        """TODO: docs
+        """
         raise NotImplementedError
 
-    def sample(self, size):
+    def get(self, size):
+        """TODO: docs
+        """
         raise NotImplementedError
 
     @staticmethod
     def default_hparams():
+        """Returns a dictionary of default hyperparameters.
+        """
         return {
             'name': 'replay_memory'
         }
 
 
 class DequeReplayMemory(ReplayMemoryBase):
+    """TODO: docs
+    """
     def __init__(self, hparams=None):
         ReplayMemoryBase.__init__(self, hparams)
         self.deque = deque()
@@ -34,10 +53,11 @@ class DequeReplayMemory(ReplayMemoryBase):
             'capacity': 80000
         }
 
-    def push(self, element):
+    def add(self, element):
         self.deque.append(element)
         if len(self.deque) > self.capacity:
             self.deque.popleft()
 
-    def sample(self, size):
+    #TODO(zhiting): is it okay to have stand alone random generator ?
+    def get(self, size):
         return random.sample(self.deque, size)

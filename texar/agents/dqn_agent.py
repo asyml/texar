@@ -104,7 +104,7 @@ class DQNAgent(AgentBase):
         self.current_state = np.array(observation)
 
     def perceive(self, action, reward, is_terminal, next_observation):
-        self.replay_memory.push({
+        self.replay_memory.add({
             'state': self.current_state,
             'action': action,
             'reward': reward,
@@ -121,7 +121,7 @@ class DQNAgent(AgentBase):
         """ Train the Q-Network
         :return:
         """
-        minibatch = self.replay_memory.sample(self.batch_size)
+        minibatch = self.replay_memory.get(self.batch_size)
         state_batch = np.array([data['state'] for data in minibatch])
         action_batch = np.array([data['action'] for data in minibatch])
         reward_batch = np.array([data['reward'] for data in minibatch])
