@@ -77,7 +77,6 @@ class EpsilonLinearDecayExploration(ExplorationBase):
             return self._hparams.initial_epsilon
         if timestep > et:
             return self._hparams.final_epsilon
-
         r = (timestep - st) * 1.0 / nsteps
         epsilon = (1 - r) * self._hparams.initial_epsilon + \
                 r * self._hparams.final_epsilon
