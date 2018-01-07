@@ -78,7 +78,7 @@ if __name__ == "__main__":
     # Build loss
     mle_loss = mle_losses.average_sequence_sparse_softmax_cross_entropy(
         labels=data_batch['target_text_ids'][:, 1:],
-        logits=outputs.rnn_output,
+        logits=outputs.logits,
         sequence_length=sequence_lengths - 1)
 
     # Build train op. Only config the optimizer while using default settings
