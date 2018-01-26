@@ -116,6 +116,8 @@ class BasicRNNDecoderTest(tf.test.TestCase):
                 [outputs, final_state, sequence_lengths],
                 feed_dict={context.is_train(): True,
                            self._inputs_placeholder: inputs_})
+            self.assertEqual(final_state_[0].shape,
+                             (self._batch_size, cell_dim))
 
             tf_outputs_, tf_final_state_, tf_sequence_lengths_ = sess.run(
                 [tf_outputs, tf_final_state, tf_sequence_lengths],
@@ -192,9 +194,9 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
             self._max_time, size=[self._batch_size]) + 1
         encoder_values_length = tf.constant(seq_length)
         decoder = AttentionRNNDecoder(
-            vocab_size=self._vocab_size,
             memory=self._encoder_output,
             memory_sequence_length=encoder_values_length,
+            vocab_size=self._vocab_size,
             hparams=None)   # Use default hyperparameters
 
         helper_train = get_helper(
@@ -206,7 +208,6 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
 
         outputs, final_state, sequence_lengths = decoder(
             helper_train, decoder.cell.zero_state(self._batch_size, tf.float32))
-
 
         cell_dim = decoder.hparams.rnn_cell.cell.kwargs.num_units
         with self.test_session() as sess:
@@ -220,16 +221,18 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
                 (self._batch_size, self._max_time, self._vocab_size))
             self.assertEqual(
                 outputs_.sample_id.shape, (self._batch_size, self._max_time))
-            self.assertEqual(final_state_.cell_state[0].shape, (self._batch_size, cell_dim))
+            self.assertEqual(final_state_.cell_state[0].shape,
+                             (self._batch_size, cell_dim))
             np.testing.assert_array_equal(
                 sequence_lengths_,
                 [self._max_time]*self._batch_size)
 
 
     def test_decode_infer(self):
-        """Tests decoding in inferencee mode.
+        """Tests decoding in inference mode.
         """
-        seq_length = np.random.randint(self._max_time, size=[self._batch_size]) + 1
+        seq_length = np.random.randint(
+            self._max_time, size=[self._batch_size]) + 1
         encoder_values_length = tf.constant(seq_length)
         decoder = AttentionRNNDecoder(
             vocab_size=self._vocab_size,
@@ -240,15 +243,16 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
         helper_infer = get_helper(
             decoder.hparams.helper_infer.type,
             embedding=decoder.embedding,
-            start_tokens=[self._vocab_size-2]*self._batch_size,
-            end_token=self._vocab_size-1,
+            start_tokens=[1]*self._batch_size,
+            end_token=2,
             **decoder.hparams.helper_train.kwargs.todict())
 
         outputs, final_state, sequence_lengths = decoder(
             helper_infer, decoder.cell.zero_state(self._batch_size, tf.float32))
-        # 5+1 trainable variables: embedding, cell-kernel, cell-bias, fc-weight, fc-bias
-        # memory_layer: For LuongAttention, we only transform the memory layer; thus
-        # num_units **must** match expected the query depth.
+        # 5+1 trainable variables: embedding, cell-kernel, cell-bias,
+        # fc-weight, fc-bias, and
+        # memory_layer: For LuongAttention, we only transform the memory layer;
+        # thus num_units *must* match the expected query depth.
         self.assertEqual(len(decoder.trainable_variables), 6)
         cell_dim = decoder.hparams.rnn_cell.cell.kwargs.num_units
         with self.test_session() as sess:
@@ -263,8 +267,8 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
                 (self._batch_size, max_length, self._vocab_size))
             self.assertEqual(
                 outputs_.sample_id.shape, (self._batch_size, max_length))
-            print('final_state:{}'.format(final_state_))
-            self.assertEqual(final_state_.cell_state[0].shape, (self._batch_size, cell_dim))
+            self.assertEqual(final_state_.cell_state[0].shape,
+                             (self._batch_size, cell_dim))
 
 if __name__ == "__main__":
     tf.test.main()
