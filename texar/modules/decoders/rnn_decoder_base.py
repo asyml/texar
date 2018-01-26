@@ -79,6 +79,12 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                     "`embedding` (if embedding is used).")
             with tf.variable_scope(self.variable_scope):
                 self._output_layer = tf.layers.Dense(units=self._vocab_size)
+        elif self._output_layer is not tf.identity:
+            if not isinstance(self._output_layer, tf.layers.Layer):
+                raise ValueError(
+                    "`output_layer` must be either `tf.identity` or ",
+                    "instance of `tf.layers.Layer`.")
+            self._add_trainable_variable(self._output_layer.trainable_variables)
 
     @staticmethod
     def default_hparams():

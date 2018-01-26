@@ -52,6 +52,7 @@ class BasicRNNDecoderTest(tf.test.TestCase):
 
         # 5 trainable variables: embedding, cell-kernel, cell-bias,
         # fc-layer-weights, fc-layer-bias
+        print(decoder.trainable_variables)
         self.assertEqual(len(decoder.trainable_variables), 5)
 
         cell_dim = decoder.hparams.rnn_cell.cell.kwargs.num_units
