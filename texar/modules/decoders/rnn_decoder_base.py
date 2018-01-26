@@ -10,6 +10,8 @@ from __future__ import print_function
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import Decoder as TFDecoder
 from tensorflow.contrib.seq2seq import dynamic_decode
+from tensorflow.python.framework import tensor_shape
+from tensorflow.python.util import nest
 
 from texar.modules.module_base import ModuleBase
 from texar.modules.decoders import rnn_decoder_helpers
@@ -139,6 +141,23 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
 
         return outputs, final_state, sequence_lengths
 
+    def _rnn_output_size(self):
+        size = self._cell.output_size
+        if self._output_layer is tf.identity:
+            return size
+        else:
+            # To use layer's compute_output_shape, we need to convert the
+            # RNNCell's output_size entries into shapes with an unknown
+            # batch size.  We then pass this through the layer's
+            # compute_output_shape and read off all but the first (batch)
+            # dimensions to get the output size of the rnn with the layer
+            # applied to the top.
+            output_shape_with_unknown_batch = nest.map_structure(
+                lambda s: tensor_shape.TensorShape([None]).concatenate(s),
+                size)
+            layer_output_shape = self._output_layer._compute_output_shape(
+                output_shape_with_unknown_batch)
+            return nest.map_structure(lambda s: s[1:], layer_output_shape)
 
     @property
     def batch_size(self):

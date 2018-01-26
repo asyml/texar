@@ -14,7 +14,6 @@ import collections
 
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import AttentionWrapper
-from tensorflow.python.framework import tensor_shape, dtypes
 from tensorflow.python.util import nest
 
 from texar.modules.decoders.rnn_decoder_base import RNNDecoderBase
@@ -209,24 +208,6 @@ class BasicRNNDecoder(RNNDecoderBase):
         hparams["name"] = "basic_rnn_decoder"
         return hparams
 
-    def _rnn_output_size(self):
-        size = self._cell.output_size
-        if self._output_layer is tf.identity:
-            return size
-        else:
-            # To use layer's compute_output_shape, we need to convert the
-            # RNNCell's output_size entries into shapes with an unknown
-            # batch size.  We then pass this through the layer's
-            # compute_output_shape and read off all but the first (batch)
-            # dimensions to get the output size of the rnn with the layer
-            # applied to the top.
-            output_shape_with_unknown_batch = nest.map_structure(
-                lambda s: tensor_shape.TensorShape([None]).concatenate(s),
-                size)
-            layer_output_shape = self._output_layer._compute_output_shape(
-                output_shape_with_unknown_batch)
-            return nest.map_structure(lambda s: s[1:], layer_output_shape)
-
     def initialize(self, name=None):
         return self._helper.initialize() + (self._initial_state,)
 
@@ -270,12 +251,14 @@ class BasicRNNDecoder(RNNDecoderBase):
                 lambda _: dtype, self._cell.output_size))
 
 
+#TODO(zhiting): allow a list of Attention Mechanisms
 class AttentionRNNDecoder(RNNDecoderBase):
     """RNN decoder with attention mechanism.
 
     Common arguments are the same as in
-    :class:`~texar.modules.BasicRNNDecoder`, such as
-    :attr:`cell`, :attr:`embedding`, and :attr:`vocab_size`.
+    :class:`~texar.modules.BasicRNNDecoder`, including
+    :attr:`cell`, :attr:`embedding`, :attr:`vocab_size`,
+    and :attr:`output_layer`.
 
     Args:
         memory: The memory to query; usually the output of an RNN encoder.  This
@@ -308,6 +291,15 @@ class AttentionRNNDecoder(RNNDecoderBase):
         vocab_size (int, optional): Vocabulary size. Required if
             :attr:`hparams["use_embedding"]` is `False` or :attr:`embedding` is
             not provided.
+        output_layer (optional): An instance of
+            :tf_main:`tf.layers.Layer <layers/Layer>`, or
+            :tf_main:`tf.identity <identity>`. Apply to the RNN cell
+            output to get logits. If `None`, a dense layer
+            is used with output dimension set to :attr:`vocab_size`
+            if :attr:`vocab_size` is specified, otherwise inferred from
+            from :attr:`embedding` (if embedding is used and
+            :attr:`embedding` is specified). Set `output_layer=tf.identity` if
+            you do not want to have an output layer after the RNN cell outputs.
         hparams (dict, optional): Hyperparameters. If not specified, the default
             hyperparameter setting is used. See
             :meth:`~texar.modules.AttentionRNNDecoder.default_hparams` for the
@@ -321,25 +313,33 @@ class AttentionRNNDecoder(RNNDecoderBase):
                  cell=None,
                  embedding=None,
                  vocab_size=None,
+                 output_layer=None,
                  hparams=None):
-        RNNDecoderBase.__init__(self, cell, embedding, vocab_size, hparams)
+        RNNDecoderBase.__init__(self, cell, embedding, vocab_size,
+                                output_layer, hparams)
+
         attn_hparams = self._hparams['attention']
         attn_kwargs = attn_hparams['kwargs'].todict()
-        if not callable(attn_kwargs['probability_fn']):
-            attn_kwargs['probability_fn'] = get_class(
-                attn_kwargs['probability_fn'])
+
+        # Parse the 'probability_fn' argument
+        prob_fn = attn_kwargs['probability_fn']
+        if prob_fn is None:
+            prob_fn = tf.nn.softmax
+        if not callable(prob_fn):
+            prob_fn = get_class(prob_fn)
+        attn_kwargs['probability_fn'] = prob_fn
+
         attn_kwargs.update({
             "memory_sequence_length": memory_sequence_length,
             "memory": memory})
-        attn_modules = ['texar.custom', 'tensorflow.contrib.seq2seq']
-        print('attn_kwargs:{}'.format(attn_kwargs))
+        attn_modules = ['tensorflow.contrib.seq2seq', 'texar.custom']
         # Use variable_scope to ensure all trainable variables created in
-        # the attention mechanism  are collected
+        # the attention mechanism are collected
         with tf.variable_scope(self.variable_scope):
             attention_mechanism = get_instance(
                 attn_hparams["type"], attn_kwargs, attn_modules)
 
-        atten_cell_kwargs = {
+        attn_cell_kwargs = {
             "attention_layer_size": attn_hparams["attention_layer_size"],
             "alignment_history": attn_hparams["alignment_history"],
             "output_attention": attn_hparams["output_attention"],
@@ -351,7 +351,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
                 self._cell,
                 attention_mechanism,
                 cell_input_fn=cell_input_fn,
-                **atten_cell_kwargs)
+                **attn_cell_kwargs)
             self._cell = attn_cell
 
     #TODO(zhiting): fix the TODOs in the docstring
@@ -373,7 +373,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
                         "type": "LuongAttention",
                         "kwargs": {
                             "num_units": 64,
-                            "probability_fn": "tensorflow.nn.softmax"
+                            "probability_fn": None
                         },
                         "attention_layer_size": None,
                         "alignment_history": False,
@@ -427,15 +427,17 @@ class AttentionRNNDecoder(RNNDecoderBase):
 
                             {
                                 "num_units": 64,
-                                "probability_fn": "tensorflow.nn.softmax"
+                                "probability_fn": None
                             }
 
                         - :attr:`"num_units"` is the depth of the attention \
                         mechanism.
 
-                        - :attr:`"probability_fn"` is the name or full path to \
-                        a callable that converts the score to probabilities. \
-                        The default callable is :meth:`tf.nn.softmax`. Other \
+                        - :attr:`"probability_fn"` is a callable or its name \
+                        or full path to that converts the attention score to \
+                        probabilities. \
+                        If `None` (default), the callable is set to  \
+                        :meth:`tf.nn.softmax`. Other \
                         options include :meth:`tf.contrib.seq2seq.hardmax` \
                         and :meth:`tf.contrib.sparsemax.sparsemax`. \
                         Its signature should be: \
@@ -481,8 +483,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
             "type": "LuongAttention",
             "kwargs": {
                 "num_units": 64,
-                "probability_fn": "tensorflow.nn.softmax", # a callable
-                "memory_sequence_length": None
+                "probability_fn": None
             },
             "attention_layer_size": None,
             "alignment_history": False,
@@ -496,12 +497,8 @@ class AttentionRNNDecoder(RNNDecoderBase):
 
     def step(self, time, inputs, state, name=None):
         wrapper_outputs, wrapper_state = self._cell(inputs, state)
-
-        #wrapper_state is AttentionWrapperState
         cell_state = wrapper_state.cell_state
-        attention_scores = wrapper_state.alignments
-        attention_context = wrapper_state.attention
-
+        # Essentisally the same as in BasicRNNDecoder.step
         logits = self._output_layer(wrapper_outputs)
         sample_ids = self._helper.sample(
             time=time, outputs=logits, state=cell_state)
@@ -510,9 +507,13 @@ class AttentionRNNDecoder(RNNDecoderBase):
             outputs=logits,
             state=wrapper_state,
             sample_ids=sample_ids)
+
+        attention_scores = wrapper_state.alignments
+        attention_context = wrapper_state.attention
         outputs = AttentionRNNDecoderOutput(
             logits, sample_ids, wrapper_outputs,
             attention_scores, attention_context)
+
         return (outputs, next_state, next_inputs, finished)
 
     def finalize(self, outputs, final_state, sequence_lengths):
@@ -520,21 +521,28 @@ class AttentionRNNDecoder(RNNDecoderBase):
 
     @property
     def output_size(self):
-        state_size = self.cell.state_size
         return AttentionRNNDecoderOutput(
-            logits=self._vocab_size,
-            sample_id=tensor_shape.TensorShape([]),
-            #TODO(zhiting): why access `_cell` ?
-            cell_output=self.cell._cell.output_size,
-            attention_scores=state_size.alignments,
-            attention_context=state_size.attention)
+            logits=self._rnn_output_size(),
+            sample_id=self._helper.sample_ids_shape,
+            cell_output=self._cell.output_size,
+            attention_scores=self._cell.state_size.alignments,
+            attention_context=self._cell.state_size.attention)
 
-    # TODO(zhiting): fix it
     @property
     def output_dtype(self):
+        """Types of output of one step.
+        """
+        # Assume the dtype of the cell is the output_size structure
+        # containing the input_state's first component's dtype.
+        # Return that structure and the sample_ids_dtype from the helper.
+        dtype = nest.flatten(self._initial_state)[0].dtype
         return AttentionRNNDecoderOutput(
-            logits=dtypes.float32,
-            sample_id=dtypes.int32,
-            cell_output=dtypes.float32,
-            attention_scores=dtypes.float32,
-            attention_context=dtypes.float32)
+            logits=nest.map_structure(lambda _: dtype, self._rnn_output_size()),
+            sample_id=self._helper.sample_ids_dtype,
+            cell_output=nest.map_structure(
+                lambda _: dtype, self._cell.output_size),
+            attention_scores=nest.map_structure(
+                lambda _: dtype, self._cell.state_size.alignments),
+            attention_context=nest.map_structure(
+                lambda _: dtype, self._cell.state_size.attention))
+

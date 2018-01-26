@@ -188,16 +188,36 @@ class Vocab(object):  # pylint: disable=too-many-instance-attributes
         return self._bos_token
 
     @property
+    def bos_token_id(self):
+        """The int index of the special token indicating the beginning
+        of sequence.
+        """
+        return self.token_to_id_map_py[self._bos_token]
+
+    @property
     def eos_token(self):
         """A string of the special token indicating the end of sequence.
         """
         return self._eos_token
 
     @property
+    def eos_token_id(self):
+        """The int index of the special token indicating the end
+        of sequence.
+        """
+        return self.token_to_id_map_py[self._eos_token]
+
+    @property
     def unk_token(self):
-        """A string of the special token indicating unkown token.
+        """A string of the special token indicating unknown token.
         """
         return self._unk_token
+
+    @property
+    def unk_token_id(self):
+        """The int index of the special token indicating unknown token.
+        """
+        return self.token_to_id_map_py[self._unk_token]
 
     @property
     def padding_token(self):
@@ -205,6 +225,12 @@ class Vocab(object):  # pylint: disable=too-many-instance-attributes
         default padding token is an empty string.
         """
         return self._padding_token
+
+    @property
+    def padding_token_id(self):
+        """The int index of the special token indicating padding token.
+        """
+        return self.token_to_id_map_py[self._padding_token]
 
     @property
     def special_tokens(self):
