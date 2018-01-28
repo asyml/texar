@@ -322,7 +322,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
         attn_kwargs = attn_hparams['kwargs'].todict()
 
         # Parse the 'probability_fn' argument
-        prob_fn = attn_kwargs['probability_fn']
+        prob_fn = attn_kwargs.get('probability_fn', None)
         if prob_fn is None:
             prob_fn = tf.nn.softmax
         if not callable(prob_fn):
