@@ -10,7 +10,8 @@ from __future__ import print_function
 # pylint: disable=wildcard-import
 
 from texar.data.databases.database_base import *
-from texar.data.databases.mono_text_database import *
+from texar.data.databases.q_mono_text_database import *
+#from texar.data.databases.mono_text_database import *
 from texar.data.databases.paired_text_database import *
 from texar.data.databases.multi_source_text_database import *
 from texar.data.databases.multi_aligned_database import *

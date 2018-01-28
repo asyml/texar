@@ -38,6 +38,9 @@ class ScalarDataDecoder(data_decoder.DataDecoder):
         self._dtype = dtype
         self._data_name = data_name
 
+    def __call__(self, data):
+        return self.decode(data, self.list_items())
+
     def decode(self, data, items):
         """Decodes the data to return the tensors specified by the list of
         items.
@@ -121,6 +124,9 @@ class TextDataDecoder(data_decoder.DataDecoder):
         self._text_tensor_name = text_tensor_name
         self._text_id_tensor_name = text_id_tensor_name
         self._length_tensor_name = length_tensor_name
+
+    def __call__(self, data):
+        return self.decode(data, self.list_items())
 
     def decode(self, data, items):
         """Decodes the data to return the tensors specified by the list of
@@ -272,6 +278,9 @@ class MultiSentenceTextDataDecoder(data_decoder.DataDecoder):
         self._context_length_tensor_name = context_length_tensor_name
         self._sentence_delimiter = sentence_delimiter
         self._max_context_length = max_context_length
+
+    def __call__(self, data):
+        return self.decode(data, self.list_items())
 
     def decode(self, data, items):
         """Decodes the data to return the tensors specified by the list of
