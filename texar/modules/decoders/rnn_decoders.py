@@ -17,7 +17,7 @@ from tensorflow.contrib.seq2seq import AttentionWrapper
 from tensorflow.python.util import nest
 
 from texar.modules.decoders.rnn_decoder_base import RNNDecoderBase
-from texar.core.utils import get_instance, get_class
+from texar.core.utils import get_instance, get_function
 
 __all__ = [
     "BasicRNNDecoderOutput", "AttentionRNNDecoderOutput",
@@ -323,12 +323,14 @@ class AttentionRNNDecoder(RNNDecoderBase):
         attn_kwargs = attn_hparams['kwargs'].todict()
 
         # Parse the 'probability_fn' argument
-        prob_fn = attn_kwargs.get('probability_fn', None)
-        if prob_fn is None:
-            prob_fn = tf.nn.softmax
-        if not callable(prob_fn):
-            prob_fn = get_class(prob_fn)
-        attn_kwargs['probability_fn'] = prob_fn
+        if 'probability_fn' in attn_kwargs:
+            prob_fn = attn_kwargs['probability_fn']
+            if prob_fn is not None and not callable(prob_fn):
+                prob_fn = get_function(
+                    prob_fn,
+                    ['tensorflow.nn', 'tensorflow.contrib.sparsemax',
+                     'tensorflow.contrib.seq2seq'])
+            attn_kwargs['probability_fn'] = prob_fn
 
         attn_kwargs.update({
             "memory_sequence_length": memory_sequence_length,
@@ -374,7 +376,6 @@ class AttentionRNNDecoder(RNNDecoderBase):
                         "type": "LuongAttention",
                         "kwargs": {
                             "num_units": 64,
-                            "probability_fn": None
                         },
                         "attention_layer_size": None,
                         "alignment_history": False,
@@ -428,20 +429,34 @@ class AttentionRNNDecoder(RNNDecoderBase):
 
                             {
                                 "num_units": 64,
-                                "probability_fn": None
                             }
 
                         - :attr:`"num_units"` is the depth of the attention \
                         mechanism.
 
-                        - :attr:`"probability_fn"` is a callable or its name \
-                        or full path to that converts the attention score to \
-                        probabilities. \
-                        If `None` (default), the callable is set to  \
-                        :meth:`tf.nn.softmax`. Other \
-                        options include :meth:`tf.contrib.seq2seq.hardmax` \
-                        and :meth:`tf.contrib.sparsemax.sparsemax`. \
-                        Its signature should be: \
+                        E.g., We can specify :attr:`probability_fn` for
+                        :tf_main:`LuongAttention
+                        <contrib/seq2seq/LuongAttention>` or
+                        :tf_main:`BahdanauAttention
+                        <contrib/seq2seq/BahdanauAttention>` like:
+
+                        .. code-block:: python
+
+                            {
+                                "probability_fn": pf_value,
+                                ...
+                            }
+
+                        where :attr:`pf_value` is a callable or its name
+                        or full path to that converts the attention score to
+                        probabilities.
+                        The callable can be :tf_main:`tf.nn.softmax
+                        <nn/softmax>` (default),
+                        :tf_main:`tf.contrib.seq2seq.hardmax
+                        <contrib/seq2seq/hardmax>`, or
+                        :tf_main:`tf.contrib.sparsemax.sparsemax
+                        <contrib/sparsemax/sparsemax>`.
+                        Its signature should be:
                         `probabilities = probability_fn(score)`
 
                     "attention_layer_size" : int or None
@@ -484,7 +499,6 @@ class AttentionRNNDecoder(RNNDecoderBase):
             "type": "LuongAttention",
             "kwargs": {
                 "num_units": 64,
-                "probability_fn": None
             },
             "attention_layer_size": None,
             "alignment_history": False,
