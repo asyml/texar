@@ -52,7 +52,6 @@ class BasicRNNDecoderTest(tf.test.TestCase):
 
         # 5 trainable variables: embedding, cell-kernel, cell-bias,
         # fc-layer-weights, fc-layer-bias
-        print(decoder.trainable_variables)
         self.assertEqual(len(decoder.trainable_variables), 5)
 
         cell_dim = decoder.hparams.rnn_cell.cell.kwargs.num_units
@@ -194,11 +193,19 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
         seq_length = np.random.randint(
             self._max_time, size=[self._batch_size]) + 1
         encoder_values_length = tf.constant(seq_length)
+        hparams = {
+            "attention": {
+                "kwargs": {
+                    "num_units": 64,
+                    "probability_fn": "sparsemax"
+                }
+            }
+        }
         decoder = AttentionRNNDecoder(
             memory=self._encoder_output,
             memory_sequence_length=encoder_values_length,
             vocab_size=self._vocab_size,
-            hparams=None)   # Use default hyperparameters
+            hparams=hparams)   # Use default hyperparameters
 
         helper_train = get_helper(
             decoder.hparams.helper_train.type,
@@ -208,7 +215,8 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
             **decoder.hparams.helper_train.kwargs.todict())
 
         outputs, final_state, sequence_lengths = decoder(
-            helper_train, decoder.cell.zero_state(self._batch_size, tf.float32))
+            helper_train,
+            decoder.cell._cell.zero_state(self._batch_size, tf.float32))
 
         cell_dim = decoder.hparams.rnn_cell.cell.kwargs.num_units
         with self.test_session() as sess:
@@ -235,11 +243,18 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
         seq_length = np.random.randint(
             self._max_time, size=[self._batch_size]) + 1
         encoder_values_length = tf.constant(seq_length)
+        hparams = {
+            "attention": {
+                "kwargs": {
+                    "num_units": 64,
+                }
+            }
+        }
         decoder = AttentionRNNDecoder(
             vocab_size=self._vocab_size,
             memory=self._encoder_output,
             memory_sequence_length=encoder_values_length,
-            hparams=None)
+            hparams=hparams)
 
         helper_infer = get_helper(
             decoder.hparams.helper_infer.type,
@@ -249,7 +264,9 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
             **decoder.hparams.helper_train.kwargs.todict())
 
         outputs, final_state, sequence_lengths = decoder(
-            helper_infer, decoder.cell.zero_state(self._batch_size, tf.float32))
+            helper_infer,
+            decoder.cell._cell.zero_state(self._batch_size, tf.float32))
+
         # 5+1 trainable variables: embedding, cell-kernel, cell-bias,
         # fc-weight, fc-bias, and
         # memory_layer: For LuongAttention, we only transform the memory layer;
