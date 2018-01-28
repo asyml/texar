@@ -55,6 +55,7 @@ class AttentionRNNDecoderOutput(
             "AttentionRNNDecoderOutput",
             ["logits", "sample_id", "cell_output",
              "attention_scores", "attention_context"])):
+            # "attention_context"])):
     """The outputs of attention RNN decoders that additionally include attention
     results.
 
@@ -493,15 +494,21 @@ class AttentionRNNDecoder(RNNDecoderBase):
 
     def initialize(self, name=None):
         helper_init = self._helper.initialize()
-        return [helper_init[0], helper_init[1], self._initial_state]
+
+        flat_initial_state = nest.flatten(self._initial_state)
+        dtype = flat_initial_state[0].dtype
+        initial_state = self._cell.zero_state(
+            batch_size=tf.shape(flat_initial_state[0])[0], dtype=dtype)
+        initial_state = initial_state.clone(cell_state=self._initial_state)
+
+        return [helper_init[0], helper_init[1], initial_state]
 
     def step(self, time, inputs, state, name=None):
         wrapper_outputs, wrapper_state = self._cell(inputs, state)
-        cell_state = wrapper_state.cell_state
-        # Essentisally the same as in BasicRNNDecoder.step
+        # Essentisally the same as in BasicRNNDecoder.step()
         logits = self._output_layer(wrapper_outputs)
         sample_ids = self._helper.sample(
-            time=time, outputs=logits, state=cell_state)
+            time=time, outputs=logits, state=wrapper_state)
         (finished, next_inputs, next_state) = self._helper.next_inputs(
             time=time,
             outputs=logits,
@@ -519,13 +526,29 @@ class AttentionRNNDecoder(RNNDecoderBase):
     def finalize(self, outputs, final_state, sequence_lengths):
         return outputs, final_state
 
+    def _alignments_size(self):
+        # Reimplementation of the alignments_size of each of
+        # AttentionWrapper.attention_mechanisms. The original implementation
+        # of `_BaseAttentionMechanism._alignments_size`:
+        #
+        #    self._alignments_size = (self._keys.shape[1].value or
+        #                       array_ops.shape(self._keys)[1])
+        #
+        # can be `None` when the seq length of encoder outputs are priori
+        # unknown.
+        alignments_size = []
+        for am in self._cell._attention_mechanisms:
+            az = (am._keys.shape[1].value or tf.shape(am._keys)[1:-1])
+            alignments_size.append(az)
+        return self._cell._item_or_tuple(alignments_size)
+
     @property
     def output_size(self):
         return AttentionRNNDecoderOutput(
             logits=self._rnn_output_size(),
             sample_id=self._helper.sample_ids_shape,
-            cell_output=self._cell._cell.output_size, # Basic cell output size
-            attention_scores=self._cell.state_size.alignments,
+            cell_output=self._cell.output_size,
+            attention_scores=self._alignments_size(),
             attention_context=self._cell.state_size.attention)
 
     @property
@@ -540,9 +563,9 @@ class AttentionRNNDecoder(RNNDecoderBase):
             logits=nest.map_structure(lambda _: dtype, self._rnn_output_size()),
             sample_id=self._helper.sample_ids_dtype,
             cell_output=nest.map_structure(
-                lambda _: dtype, self._cell._cell.output_size),
+                lambda _: dtype, self._cell.output_size),
             attention_scores=nest.map_structure(
-                lambda _: dtype, self._cell.state_size.alignments),
+                lambda _: dtype, self._alignments_size()),
             attention_context=nest.map_structure(
                 lambda _: dtype, self._cell.state_size.attention))
 
