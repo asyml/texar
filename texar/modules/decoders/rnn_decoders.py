@@ -524,7 +524,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
         return AttentionRNNDecoderOutput(
             logits=self._rnn_output_size(),
             sample_id=self._helper.sample_ids_shape,
-            cell_output=self._cell.output_size,
+            cell_output=self._cell._cell.output_size, # Basic cell output size
             attention_scores=self._cell.state_size.alignments,
             attention_context=self._cell.state_size.attention)
 
@@ -540,9 +540,26 @@ class AttentionRNNDecoder(RNNDecoderBase):
             logits=nest.map_structure(lambda _: dtype, self._rnn_output_size()),
             sample_id=self._helper.sample_ids_dtype,
             cell_output=nest.map_structure(
-                lambda _: dtype, self._cell.output_size),
+                lambda _: dtype, self._cell._cell.output_size),
             attention_scores=nest.map_structure(
                 lambda _: dtype, self._cell.state_size.alignments),
             attention_context=nest.map_structure(
                 lambda _: dtype, self._cell.state_size.attention))
+
+    @property
+    def state_size(self):
+        """The state size of the basic cell.
+
+        Same as :attr:`decoder.cell._cell.state_size`.
+        """
+        return self._cell._cell.state_size
+
+
+    @property
+    def wrapper_state_size(self):
+        """The state size of the attention-wrapped cell.
+
+        Same as :attr:`decoder.cell.state_size`.
+        """
+        return self._cell.state_size
 
