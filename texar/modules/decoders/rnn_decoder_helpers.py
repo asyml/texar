@@ -171,7 +171,8 @@ class SoftmaxEmbeddingHelper(TFHelper):
     next input.
     """
 
-    def __init__(self, embedding, start_tokens, tau, stop_gradient=False):
+    def __init__(self, embedding, start_tokens, end_token, tau,
+                 stop_gradient=False):
         """Initializer.
 
         Args:
@@ -191,6 +192,9 @@ class SoftmaxEmbeddingHelper(TFHelper):
 
         self._start_tokens = tf.convert_to_tensor(
             start_tokens, dtype=tf.int32, name="start_tokens")
+        self._end_token = tf.convert_to_tensors(
+            end_token, dtype=tf.int32, name="end_token")
+        if end_token is not None:
         self._start_inputs = self._embedding_fn(self._start_tokens)
         self._batch_size = tf.size(self._start_tokens)
         self._tau = tau
@@ -217,7 +221,8 @@ class SoftmaxEmbeddingHelper(TFHelper):
         return sample_ids
 
     def next_inputs(self, time, outputs, state, sample_ids, name=None):
-        finished = tf.tile([False], [self._batch_size])
+        hard_ids = tf.argmax(sample_ids, axis=-1)
+        finished = tf.equal(hard_ids, self._end_token)
         if self._stop_gradient:
             sample_ids = tf.stop_gradient(sample_ids)
         next_inputs = tf.matmul(sample_ids, self._embedding)
@@ -230,8 +235,8 @@ class GumbelSoftmaxEmbeddingHelper(SoftmaxEmbeddingHelper):
     layer to get the next input.
     """
 
-    def __init__(self, embedding, start_tokens, tau, straight_through=False,
-                 stop_gradient=False):
+    def __init__(self, embedding, start_tokens, end_token, tau,
+                 straight_through=False, stop_gradient=False):
         """Initializer.
 
         Args:
