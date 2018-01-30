@@ -249,7 +249,7 @@ class GumbelSoftmaxEmbeddingHelper(SoftmaxEmbeddingHelper):
         """
 
         super(GumbelSoftmaxEmbeddingHelper, self).__init__(
-            embedding, start_tokens, tau, stop_gradient)
+            embedding, start_tokens, end_token, tau, stop_gradient)
         self._straight_through = straight_through
 
     def sample(self, time, outputs, state, name=None):
