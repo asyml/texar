@@ -16,6 +16,8 @@ from texar import context
 from texar.hyperparams import HParams
 from texar.core.utils import switch_dropout
 from texar.modules.encoders.conv1d_discriminator import CNN
+from texar.modules.decoders.rnn_decoders import BasicRNNDecoder
+from texar.modules.decoders.rnn_decoder_helpers import *
 from texar.models.tsf import ops
 from texar.models.tsf import utils
 
@@ -42,11 +44,18 @@ class TSFClassifier:
       "rnn_type": "GRUCell",
       "rnn_size": 700,
       "rnn_input_keep_prob": 0.5,
-      "output_keep_prob": 0.5,
+      "rnn_output_keep_prob": 0.5,
       "dim_y": 200,
       "dim_z": 500,
+      # rnn decoder
+      "decoder_use_embedding": False,
+      "decoder_max_decoding_length_train": 21,
+      "decoder_max_decoding_length_infer": 20,
       # cnn
       "cnn_name": "cnn",
+      "cnn_use_embedding": True,
+      "cnn_use_gate": False,
+      "cnn_attn_size": 100,
       "cnn_kernel_sizes": [3, 4, 5],
       "cnn_num_filter": 128,
       "cnn_input_keep_prob": 1.,
@@ -67,7 +76,7 @@ class TSFClassifier:
     targets = tf.placeholder(tf.int32, [batch_size, None], name="targets")
     weights = tf.placeholder(tf.float32, [batch_size, None], name="weights")
     labels = tf.placeholder(tf.float32, [batch_size], name="labels")
-    batch_len = tf.placeholder(tf.int32, [], name="batch_len")
+    seq_len = tf.placeholder(tf.int32, [batch_size], name="seq_len")
     gamma = tf.placeholder(tf.float32, [], name="gamma")
     rho_f = tf.placeholder(tf.float32, [], name="rho_f")
     rho_r = tf.placeholder(tf.float32, [], name="rho_r")
@@ -80,7 +89,7 @@ class TSFClassifier:
        ("targets", targets),
        ("weights", weights),
        ("labels", labels),
-       ("batch_len", batch_len),
+       ("seq_len", seq_len),
        ("gamma", gamma),
        ("rho_f", rho_f),
        ("rho_r", rho_r),
@@ -110,7 +119,7 @@ class TSFClassifier:
     cell_e = ops.get_rnn_cell(rnn_hparams)
 
     _, z = tf.nn.dynamic_rnn(cell_e, enc_inputs, initial_state=init_state,
-                              scope="encoder")
+                             scope="encoder")
     z  = z[:, hparams.dim_y:]
 
     label_proj_g = tf.layers.Dense(hparams.dim_y, name="generator")
@@ -122,8 +131,6 @@ class TSFClassifier:
     g_outputs, _ = tf.nn.dynamic_rnn(cell_g, dec_inputs, initial_state=h_ori,
                                      scope="generator")
 
-    g_outputs = tf.nn.dropout(
-      g_outputs, switch_dropout(hparams.output_keep_prob))
     g_logits = softmax_proj(tf.reshape(g_outputs, [-1, rnn_hparams.size]))
 
     loss_g = tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -132,50 +139,58 @@ class TSFClassifier:
     ppl_g = tf.reduce_sum(loss_g) / (tf.reduce_sum(input_tensors["weights"]) \
                                      + 1e-8)
     loss_g = tf.reduce_sum(loss_g) / hparams.batch_size
-    # decoding 
-    go = dec_inputs[:, 0, :]
-    # soft_func = ops.feed_softmax(softmax_proj, embedding,
-    #                              input_tensors["gamma"],
-    #                              output_keep_prob=hparams.output_keep_prob)
-    soft_func = ops.sample_gumbel(softmax_proj, embedding,
-                                  input_tensors["gamma"],
-                                  output_keep_prob=hparams.output_keep_prob)
-    hard_func = ops.greedy_softmax(softmax_proj, embedding,
-                                   output_keep_prob=hparams.output_keep_prob)
-
-    soft_output_ori, soft_logits_ori, soft_sample_ori = ops.rnn_decode(
-      h_ori, go, hparams.max_len, cell_g, soft_func, scope="generator")
-    soft_output_tsf, soft_logits_tsf, soft_sample_tsf = ops.rnn_decode(
-      h_tsf, go, hparams.max_len, cell_g, soft_func, scope="generator")
-
-    hard_output_ori, hard_logits_ori, _ = ops.rnn_decode(
-      h_ori, go, hparams.max_len, cell_g, hard_func, scope="generator")
-    hard_output_tsf, hard_logits_tsf, _ = ops.rnn_decode(
-      h_tsf, go, hparams.max_len, cell_g, hard_func, scope="generator")
-
-    # discriminator
-    half = hparams.batch_size // 2
-    soft_sample_ori = soft_sample_ori[:, :input_tensors["batch_len"], :]
-    soft_sample_tsf = soft_sample_tsf[:, :input_tensors["batch_len"], :]
-
-    cnn_hparams = utils.filter_hparams(hparams, "cnn")
-    cnn_hparams.vocab_size
-    cnn = CNN(cnn_hparams, use_embedding=True)
 
     # classifier supervised training 
+    half = hparams.batch_size // 2
+    cnn_hparams = utils.filter_hparams(hparams, "cnn")
+    cnn = CNN(cnn_hparams)
     targets = input_tensors["targets"]
-    loss_ds, accu_s = ops.adv_loss(targets[half:], targets[:half], cnn)
-    loss_dr, accu_r = ops.adv_loss(soft_sample_ori[half:],
-                                   soft_sample_ori[:half], cnn)
-    loss_df, accu_f = ops.adv_loss(soft_sample_tsf[:half],
-                                   soft_sample_tsf[half:], cnn)
+    loss_ds, accu_s, mask1, mask0 \
+      = ops.adv_loss(targets[half:],
+                     targets[:half],
+                     cnn,
+                     input_tensors["seq_len"][half:],
+                     input_tensors["seq_len"][:half])
+    mask = tf.concat([mask0, mask1], axis=0)
+
+    # decoding 
+    decoder_hparams = utils.filter_hparams(hparams, "decoder")
+    decoder = BasicRNNDecoder(cell=cell_g, output_layer=softmax_proj,
+                              hparams=decoder_hparams)
+    start_tokens = input_tensors["dec_inputs"][:, 0]
+    start_tokens = tf.reshape(start_tokens, [-1])
+    #TODO(zichao): hard coded end_token
+    end_token = 2
+    gumbel_helper = GumbelSoftmaxEmbeddingHelper(
+      embedding, start_tokens, end_token, input_tensors["gamma"])
+    greedy_helper = GreedyEmbeddingHelper(embedding, start_tokens, end_token)
+
+    soft_outputs_ori, _, soft_len_ori = decoder(gumbel_helper, h_ori)
+    soft_outputs_tsf, _, soft_len_tsf = decoder(gumbel_helper, h_tsf)
+
+    hard_outputs_ori, _, hard_len_ori = decoder(greedy_helper, h_ori)
+    hard_outputs_tsf, _, hard_len_tsf = decoder(greedy_helper, h_tsf)
+
+    # discriminator
+
+    loss_dr, accu_r, _, _ = ops.adv_loss(soft_sample_ori.predicted_ids[half:],
+                                         soft_sample_ori.predicted_ids[:half],
+                                         cnn,
+                                         soft_len_ori[half:],
+                                         soft_len_ori[:half])
+    loss_df, accu_f, _, _ = ops.adv_loss(soft_sample_tsf.predicted_ids[:half],
+                                         soft_sample_tsf.predicted_ids[half:],
+                                         cnn,
+                                         soft_sample_tsf[:half],
+                                         soft_sample_tsf[half:])
 
     loss = loss_g + \
            input_tensors["rho_f"] * loss_df + \
            input_tensors["rho_r"] * loss_dr
 
-    var_eg = ops.retrieve_variables(["encoder", "generator",
-                                     "softmax_proj", "embedding"])
+    var_eg = ops.retrieve_variables(["encoder", "generator", "softmax_proj",
+                                     "embedding"])
+    var_eg += decoder.trainavle_variables
     var_d = ops.retrieve_variables(["cnn"])
 
     # optimization
@@ -193,11 +208,14 @@ class TSFClassifier:
       collections_output,
       [("h_ori", h_ori),
        ("h_tsf", h_tsf),
-       ("hard_logits_ori", hard_logits_ori),
-       ("hard_logits_tsf", hard_logits_tsf),
-       ("soft_logits_ori", soft_logits_ori),
-       ("soft_logits_tsf", soft_logits_tsf),
+       ("hard_logits_ori", hard_outputs_ori.logits),
+       ("hard_logits_tsf", hard_outputs_tsf.logits),
+       ("soft_logits_ori", soft_outputs_ori.logits),
+       ("soft_logits_tsf", soft_outputs_tsf.logits),
        ("g_logits", g_logits),
+       ("mask", mask),
+       ("soft_len_ori", soft_len_ori),
+       ("soft_len_tsf", soft_len_tsf),
       ]
     )
 
@@ -292,7 +310,7 @@ class TSFClassifier:
   def feed_dict(self, batch, rho_f, rho_r, gamma, is_train=True):
     return {
       context.is_train(): is_train,
-      self.input_tensors["batch_len"]: batch["len"],
+      self.input_tensors["seq_len"]: batch["seq_len"],
       self.input_tensors["enc_inputs"]: batch["enc_inputs"],
       self.input_tensors["dec_inputs"]: batch["dec_inputs"],
       self.input_tensors["targets"]: batch["targets"],
