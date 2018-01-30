@@ -26,10 +26,12 @@ class CNN(ModuleBase):
         [self._hparams.vocab_size, self._hparams.embedding_size])
     if self._hparams.use_gate:
       self._gate_proj = tf.layers.Dense(self._hparams.attn_size)
-      self._gate_u = tf.get_variable("u", [self._hparams.attn_size])
+      with tf.variable_scope(self.variable_scope):
+        self._gate_u = tf.get_variable("u", [self._hparams.attn_size])
     self._conv_layers = []
     for k in self._hparams.kernel_sizes:
-      conv_layer = tf.layers.Conv1D(self._hparams.num_filter, k)
+      conv_layer = tf.layers.Conv1D(self._hparams.num_filter, k,
+                                    padding='same')
       self._conv_layers.append(conv_layer)
 
     self._proj_layer = tf.layers.Dense(1)
@@ -71,6 +73,7 @@ class CNN(ModuleBase):
     else:
       mask = tf.ones(tf.shape(inputs)[:2], tf.float32)
 
+
     if self._hparams.use_gate:
       proj = tf.tanh(self._gate_proj(inputs))
       if gamma is None:
@@ -80,7 +83,8 @@ class CNN(ModuleBase):
       scores = tf.nn.softmax(scores)
       inputs = tf.expand_dims(scores, 2) * inputs
     else:
-      inputs = tf.expands_dims(mask, 2) * inputs
+      inputs = tf.expand_dims(mask, 2) * inputs
+
 
     inputs = tf.nn.dropout(
       inputs, utils.switch_dropout(self._hparams.input_keep_prob))
