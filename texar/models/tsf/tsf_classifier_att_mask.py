@@ -25,7 +25,7 @@ from texar.models.tsf.attention_decoder import AttentionDecoder as AttDecoder
 from texar.models.tsf import utils
 
 
-class TSFClassifierAtt:
+class TSFClassifierAttMask:
   """Text style transfer."""
 
   def __init__(self, hparams=None):
@@ -56,6 +56,7 @@ class TSFClassifierAtt:
       # cnn
       "cnn_name": "cnn",
       "cnn_use_embedding": True,
+      "cnn_use_gate": True,
       "cnn_kernel_sizes": [3, 4, 5],
       "cnn_num_filter": 128,
       "cnn_input_keep_prob": 1.,
@@ -127,6 +128,21 @@ class TSFClassifierAtt:
     h_ori = tf.concat([label_proj_g(labels), z], 1)
     h_tsf = tf.concat([label_proj_g(1 - labels), z], 1)
 
+    # classifier
+    cnn_hparams = utils.filter_hparams(hparams, "cnn")
+    cnn = CNN(cnn_hparams)
+
+    # classifier supervised training 
+    half = hparams.batch_size // 2
+    targets = input_tensors["targets"]
+    loss_ds, accu_s, mask1, mask0 = ops.adv_loss(
+      targets[half:],
+      targets[:half],
+      cnn,
+      input_tensors["seq_len"][half:],
+      input_tensors["seq_len"][:half])
+    mask = tf.concat([mask0, mask1], axis=0)
+
     cell_g = ops.get_rnn_cell(rnn_hparams)
     # pointer decoder
     att_layer = AttLayer(hparams.rnn_size)
@@ -134,7 +150,7 @@ class TSFClassifierAtt:
     att_decoder_hparams = utils.filter_hparams(hparams, "att_decoder")
     att_decoder = AttDecoder(hparams.vocab_size, enc_outputs, enc_outputs,
                              input_tensors["seq_len"], att_layer, cell_g,
-                             hparams=att_decoder_hparams)
+                             mask, hparams=att_decoder_hparams)
     # set the seq_len to be dec_inputs size
     seq_len = [tf.shape(input_tensors["dec_inputs"])[1]] * hparams.batch_size
     train_helper = EmbeddingTrainingHelper(input_tensors["dec_inputs"],
@@ -168,27 +184,13 @@ class TSFClassifierAtt:
       end_token,
     )
 
-    soft_outputs_ori, _, soft_len_ori  = att_decoder(gumbel_helper, h_ori)
+    soft_outputs_ori, _, soft_len_ori = att_decoder(gumbel_helper, h_ori)
     soft_outputs_tsf, _, soft_len_tsf = att_decoder(gumbel_helper, h_tsf)
 
-    hard_outputs_ori, _, hard_len_ori  = att_decoder(greedy_helper, h_ori)
+    hard_outputs_ori, _, hard_len_ori = att_decoder(greedy_helper, h_ori)
     hard_outputs_tsf, _, hard_len_tsf = att_decoder(greedy_helper, h_tsf)
 
     # discriminator
-    half = hparams.batch_size // 2
-    cnn_hparams = utils.filter_hparams(hparams, "cnn")
-    cnn_hparams.vocab_size
-    cnn = CNN(cnn_hparams)
-
-    # classifier supervised training 
-    targets = input_tensors["targets"]
-    loss_ds, accu_s, mask1, mask0 = ops.adv_loss(
-      targets[half:],
-      targets[:half],
-      cnn,
-      input_tensors["seq_len"][half:],
-      input_tensors["seq_len"][:half])
-    mask = tf.concat([mask0, mask1], axis=0)
     loss_dr, accu_r, _, _ = ops.adv_loss(soft_outputs_ori.predicted_ids[half:],
                                          soft_outputs_ori.predicted_ids[:half],
                                          cnn,
@@ -207,6 +209,7 @@ class TSFClassifierAtt:
     var_eg = ops.retrieve_variables(["encoder", "generator", "embedding"]) \
              + att_decoder.trainable_variables
     var_d = ops.retrieve_variables(["cnn"])
+
 
     # optimization
     adam_hparams = utils.filter_hparams(hparams, "adam")
@@ -229,6 +232,7 @@ class TSFClassifierAtt:
        ("soft_logits_tsf", soft_outputs_tsf.logits),
        ("g_logits", g_outputs.logits),
        ("g_sample", g_outputs.predicted_ids),
+       ("mask", mask),
       ]
     )
 
