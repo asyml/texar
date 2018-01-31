@@ -347,7 +347,9 @@ class TSFClassifierAttMask:
         self.input_tensors["enc_inputs"]: batch["enc_inputs"],
         self.input_tensors["dec_inputs"]: batch["dec_inputs"],
         self.input_tensors["labels"]: batch["labels"],
-        self.input_tensors["seq_len"]: batch["seq_len"]})
+        self.input_tensors["seq_len"]: batch["seq_len"],
+        self.input_tensors["targets"]: batch["targets"],
+      })
     return logits_ori, logits_tsf
 
   def feed_dict(self, batch, rho_f, rho_r, gamma, is_train=True):
