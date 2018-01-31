@@ -11,6 +11,7 @@ import pdb
 import copy
 import numpy as np
 import tensorflow as tf
+from tensorflow.contrib.seq2seq import GreedyEmbeddingHelper
 
 from texar import context
 from texar.hyperparams import HParams
@@ -173,16 +174,16 @@ class TSFClassifier:
 
     # discriminator
 
-    loss_dr, accu_r, _, _ = ops.adv_loss(soft_sample_ori.predicted_ids[half:],
-                                         soft_sample_ori.predicted_ids[:half],
+    loss_dr, accu_r, _, _ = ops.adv_loss(soft_outputs_ori.sample_id[half:],
+                                         soft_outputs_ori.sample_id[:half],
                                          cnn,
                                          soft_len_ori[half:],
                                          soft_len_ori[:half])
-    loss_df, accu_f, _, _ = ops.adv_loss(soft_sample_tsf.predicted_ids[:half],
-                                         soft_sample_tsf.predicted_ids[half:],
+    loss_df, accu_f, _, _ = ops.adv_loss(soft_outputs_tsf.sample_id[:half],
+                                         soft_outputs_tsf.sample_id[half:],
                                          cnn,
-                                         soft_sample_tsf[:half],
-                                         soft_sample_tsf[half:])
+                                         soft_len_tsf[:half],
+                                         soft_len_tsf[half:])
 
     loss = loss_g + \
            input_tensors["rho_f"] * loss_df + \
@@ -190,7 +191,7 @@ class TSFClassifier:
 
     var_eg = ops.retrieve_variables(["encoder", "generator", "softmax_proj",
                                      "embedding"])
-    var_eg += decoder.trainavle_variables
+    # var_eg += decoder.trainable_variables
     var_d = ops.retrieve_variables(["cnn"])
 
     # optimization
@@ -212,6 +213,10 @@ class TSFClassifier:
        ("hard_logits_tsf", hard_outputs_tsf.logits),
        ("soft_logits_ori", soft_outputs_ori.logits),
        ("soft_logits_tsf", soft_outputs_tsf.logits),
+       ("soft_samples_ori", soft_outputs_ori.sample_id),
+       ("soft_samples_tsf", soft_outputs_tsf.sample_id),
+       ("soft_len_ori", soft_len_ori),
+       ("soft_len_tsf", soft_len_tsf),
        ("g_logits", g_logits),
        ("mask", mask),
        ("soft_len_ori", soft_len_ori),
@@ -322,16 +327,25 @@ class TSFClassifier:
     }
 
   def decode_step_soft(self, sess, batch, gamma=0.01):
-    logits_ori, logits_tsf, g_logits, test_output, test_logits = sess.run(
-      [self.output_tensors["soft_logits_ori"],
-       self.output_tensors["soft_logits_tsf"],
-       self.output_tensors["g_logits"],
-       self.output_tensors["test_output"],
-       self.output_tensors["test_logits"]],
-      feed_dict={
-        context.is_train(): False,
-        self.input_tensors["enc_inputs"]: batch["enc_inputs"],
-        self.input_tensors["dec_inputs"]: batch["dec_inputs"],
-        self.input_tensors["labels"]: batch["labels"],
-        self.input_tensors["gamma"]: gamma})
-    return logits_ori, logits_tsf, g_logits, test_output, test_logits
+    logits_ori, logits_tsf, g_logits, \
+      soft_samples_ori, soft_samples_tsf, soft_len_ori, soft_len_tsf, \
+      mask = sess.run(
+        [self.output_tensors["soft_logits_ori"],
+         self.output_tensors["soft_logits_tsf"],
+         self.output_tensors["g_logits"],
+         self.output_tensors["soft_samples_ori"],
+         self.output_tensors["soft_samples_tsf"],
+         self.output_tensors["soft_len_ori"],
+         self.output_tensors["soft_len_tsf"],
+         self.output_tensors["mask"]],
+        feed_dict={
+          context.is_train(): False,
+          self.input_tensors["enc_inputs"]: batch["enc_inputs"],
+          self.input_tensors["dec_inputs"]: batch["dec_inputs"],
+          self.input_tensors["labels"]: batch["labels"],
+          self.input_tensors["targets"]: batch["targets"],
+          self.input_tensors["seq_len"]: batch["seq_len"],
+          self.input_tensors["gamma"]: gamma})
+    return logits_ori, logits_tsf, g_logits, \
+      soft_samples_ori, soft_samples_tsf, soft_len_ori, soft_len_tsf, \
+      mask
