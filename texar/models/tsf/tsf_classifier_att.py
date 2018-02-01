@@ -55,6 +55,7 @@ class TSFClassifierAtt:
       "att_decoder_max_decoding_length_infer": 20,
       # cnn
       "cnn_name": "cnn",
+      "cnn_use_embedding": True,
       "cnn_kernel_sizes": [3, 4, 5],
       "cnn_num_filter": 128,
       "cnn_input_keep_prob": 1.,
@@ -133,7 +134,7 @@ class TSFClassifierAtt:
     att_decoder_hparams = utils.filter_hparams(hparams, "att_decoder")
     att_decoder = AttDecoder(hparams.vocab_size, enc_outputs, enc_outputs,
                              input_tensors["seq_len"], att_layer, cell_g,
-                             att_decoder_hparams)
+                             hparams=att_decoder_hparams)
     # set the seq_len to be dec_inputs size
     seq_len = [tf.shape(input_tensors["dec_inputs"])[1]] * hparams.batch_size
     train_helper = EmbeddingTrainingHelper(input_tensors["dec_inputs"],
@@ -152,44 +153,52 @@ class TSFClassifierAtt:
     # decoding 
     start_tokens = input_tensors["dec_inputs"][:, 0]
     start_tokens = tf.reshape(start_tokens, [-1])
+    #TODO(zichao): hard coded end_token
+    end_token = 2
     gumbel_helper = GumbelSoftmaxEmbeddingHelper(
       embedding,
       start_tokens,
+      end_token,
       input_tensors["gamma"],
     )
 
-    #TODO(zichao): hard coded end_token
-    end_token = 2
     greedy_helper = GreedyEmbeddingHelper(
       embedding,
       start_tokens,
       end_token,
     )
 
-    soft_outputs_ori, _, _  = att_decoder(gumbel_helper, h_ori)
-    soft_outputs_tsf, _, _ = att_decoder(gumbel_helper, h_tsf)
+    soft_outputs_ori, _, soft_len_ori  = att_decoder(gumbel_helper, h_ori)
+    soft_outputs_tsf, _, soft_len_tsf = att_decoder(gumbel_helper, h_tsf)
 
-    hard_outputs_ori, _, _  = att_decoder(greedy_helper, h_ori)
-    hard_outputs_tsf, _, _ = att_decoder(greedy_helper, h_tsf)
+    hard_outputs_ori, _, hard_len_ori  = att_decoder(greedy_helper, h_ori)
+    hard_outputs_tsf, _, hard_len_tsf = att_decoder(greedy_helper, h_tsf)
 
     # discriminator
     half = hparams.batch_size // 2
-    # make sure input len >= 5 ?
-    batch_len = tf.shape(input_tensors["targets"])[1]
-    soft_sample_ori = soft_outputs_ori.predicted_ids[:, :batch_len, :]
-    soft_sample_tsf = soft_outputs_tsf.predicted_ids[:, :batch_len, :]
-
     cnn_hparams = utils.filter_hparams(hparams, "cnn")
     cnn_hparams.vocab_size
-    cnn = CNN(cnn_hparams, use_embedding=True)
+    cnn = CNN(cnn_hparams)
 
     # classifier supervised training 
     targets = input_tensors["targets"]
-    loss_ds, accu_s = ops.adv_loss(targets[half:], targets[:half], cnn)
-    loss_dr, accu_r = ops.adv_loss(soft_sample_ori[half:],
-                                   soft_sample_ori[:half], cnn)
-    loss_df, accu_f = ops.adv_loss(soft_sample_tsf[:half],
-                                   soft_sample_tsf[half:], cnn)
+    loss_ds, accu_s, mask1, mask0 = ops.adv_loss(
+      targets[half:],
+      targets[:half],
+      cnn,
+      input_tensors["seq_len"][half:],
+      input_tensors["seq_len"][:half])
+    mask = tf.concat([mask0, mask1], axis=0)
+    loss_dr, accu_r, _, _ = ops.adv_loss(soft_outputs_ori.predicted_ids[half:],
+                                         soft_outputs_ori.predicted_ids[:half],
+                                         cnn,
+                                         soft_len_ori[half:],
+                                         soft_len_ori[:half])
+    loss_df, accu_f, _, _ = ops.adv_loss(soft_outputs_tsf.predicted_ids[:half],
+                                         soft_outputs_tsf.predicted_ids[half:],
+                                         cnn,
+                                         soft_len_tsf[:half],
+                                         soft_len_tsf[half:])
 
     loss = loss_g + \
            input_tensors["rho_f"] * loss_df + \
@@ -198,7 +207,6 @@ class TSFClassifierAtt:
     var_eg = ops.retrieve_variables(["encoder", "generator", "embedding"]) \
              + att_decoder.trainable_variables
     var_d = ops.retrieve_variables(["cnn"])
-
 
     # optimization
     adam_hparams = utils.filter_hparams(hparams, "adam")

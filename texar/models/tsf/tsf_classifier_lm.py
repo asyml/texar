@@ -12,6 +12,7 @@ import copy
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import GreedyEmbeddingHelper
+from tensorflow.contrib.seq2seq import TrainingHelper
 
 from texar import context
 from texar.hyperparams import HParams
@@ -23,7 +24,7 @@ from texar.models.tsf import ops
 from texar.models.tsf import utils
 
 
-class TSFClassifier:
+class TSFClassifierLM:
   """Text style transfer."""
 
   def __init__(self, hparams=None):
@@ -81,6 +82,7 @@ class TSFClassifier:
     gamma = tf.placeholder(tf.float32, [], name="gamma")
     rho_f = tf.placeholder(tf.float32, [], name="rho_f")
     rho_r = tf.placeholder(tf.float32, [], name="rho_r")
+    rho_lm = tf.placeholder(tf.float32, [], name="rho_lm")
 
     collections_input = self._hparams.collections + '/input'
     input_tensors = utils.register_collection(
@@ -94,6 +96,7 @@ class TSFClassifier:
        ("gamma", gamma),
        ("rho_f", rho_f),
        ("rho_r", rho_r),
+       ("rho_lm", rho_lm),
       ])
 
     return input_tensors
@@ -141,6 +144,7 @@ class TSFClassifier:
                                      + 1e-8)
     loss_g = tf.reduce_sum(loss_g) / hparams.batch_size
 
+
     # classifier supervised training 
     half = hparams.batch_size // 2
     cnn_hparams = utils.filter_hparams(hparams, "cnn")
@@ -172,6 +176,81 @@ class TSFClassifier:
     hard_outputs_ori, _, hard_len_ori = decoder(greedy_helper, h_ori)
     hard_outputs_tsf, _, hard_len_tsf = decoder(greedy_helper, h_tsf)
 
+    # lm part
+    lm_hparams = utils.convert_decoder_hparams(hparams)
+    lm0_hparams = copy.deepcopy(lm_hparams)
+    lm0_hparams.name = "lm0_decoder"
+    lm0_decoder = BasicRNNDecoder(vocab_size=hparams.vocab_size,
+                                  hparams=lm0_hparams)
+    
+    dec_inputs_lm0 = tf.nn.embedding_lookup(
+      lm0_decoder.embedding, input_tensors["dec_inputs"][:half])
+    seq_len = [tf.shape(input_tensors["dec_inputs"])[1]] * half
+    train_helper_lm0 = TrainingHelper(dec_inputs_lm0, seq_len)
+    zero_state = tf.zeros([half, rnn_hparams.size])
+    outputs_lm0, _, _ = lm0_decoder(train_helper_lm0, zero_state)
+
+    lm1_hparams = copy.deepcopy(lm_hparams)
+    lm1_hparams.name = "lm1_decoder"
+    lm1_decoder = BasicRNNDecoder(vocab_size=hparams.vocab_size,
+                                  hparams=lm1_hparams)
+    dec_inputs_lm1 = tf.nn.embedding_lookup(
+      lm1_decoder.embedding, input_tensors["dec_inputs"][half:])
+    seq_len = [tf.shape(input_tensors["dec_inputs"])[1]] * half
+    train_helper_lm1 = TrainingHelper(dec_inputs_lm1, seq_len)
+    outputs_lm1, _, _ = lm1_decoder(train_helper_lm1, zero_state)
+
+    loss_lm0 = tf.nn.sparse_softmax_cross_entropy_with_logits(
+      labels=input_tensors["targets"][:half], logits=outputs_lm0.logits)
+    loss_lm0 *= input_tensors["weights"][:half]
+    ppl_lm0 = tf.reduce_sum(loss_lm0) / \
+              (tf.reduce_sum(input_tensors["weights"][:half]) + 1e-8)
+    loss_lm0 = tf.reduce_sum(loss_lm0) / half
+
+    loss_lm1 = tf.nn.sparse_softmax_cross_entropy_with_logits(
+      labels=input_tensors["targets"][half:], logits=outputs_lm1.logits)
+    loss_lm1 *= input_tensors["weights"][half:]
+    ppl_lm1 = tf.reduce_sum(loss_lm1) / \
+              (tf.reduce_sum(input_tensors["weights"][half:]) + 1e-8)
+    loss_lm1 = tf.reduce_sum(loss_lm1) / half
+
+    loss_lm = (loss_lm0 + loss_lm1) / 2.
+
+    go = dec_inputs_lm0[:, 0, :]
+    dec_inputs_lmf0 = tf.tensordot(
+      soft_outputs_tsf.sample_id[half:], lm0_decoder.embedding, [[2], [0]])
+    dec_inputs_lmf0 = tf.concat([tf.expand_dims(go, 1),
+                                 dec_inputs_lmf0[:, :-1, :]], axis=1)
+    helper_lmf0 = TrainingHelper(dec_inputs_lmf0, soft_len_tsf[half:])
+    outputs_lmf0, _, _ = lm0_decoder(helper_lmf0, zero_state)
+
+    go = dec_inputs_lm1[:, 0, :]
+    dec_inputs_lmf1 = tf.tensordot(
+      soft_outputs_tsf.sample_id[:half], lm1_decoder.embedding, [[2], [0]])
+    dec_inputs_lmf1 = tf.concat([tf.expand_dims(go, 1),
+                                 dec_inputs_lmf1[:, :-1, :]], axis=1)
+    dec_inputs_lmf1 = tf.Print(dec_inputs_lmf1, [tf.shape(dec_inputs_lmf1)])
+    helper_lmf1 = TrainingHelper(dec_inputs_lmf1, soft_len_tsf[:half])
+    outputs_lmf1, _, _ = lm1_decoder(helper_lmf1, zero_state)
+
+    loss_lmf0 = tf.nn.softmax_cross_entropy_with_logits(
+      labels=soft_outputs_tsf.sample_id[half:], logits=outputs_lmf0.logits)
+    mask_lmf0 = tf.sequence_mask(soft_len_tsf[half:],
+                                 maxlen=tf.shape(loss_lmf0)[1],
+                                 dtype=tf.float32)
+    loss_lmf0 *= mask_lmf0
+    loss_lmf0 = tf.reduce_sum(loss_lmf0) / half
+
+    loss_lmf1 = tf.nn.softmax_cross_entropy_with_logits(
+      labels=soft_outputs_tsf.sample_id[:half], logits=outputs_lmf1.logits)
+    mask_lmf1 = tf.sequence_mask(soft_len_tsf[:half],
+                                 maxlen=tf.shape(loss_lmf1)[1],
+                                 dtype=tf.float32)
+    loss_lmf1 *= mask_lmf1
+    loss_lmf1 = tf.reduce_sum(loss_lmf1) / half
+
+    loss_lmf = loss_lmf0 + loss_lmf1
+
     # discriminator
 
     loss_dr, accu_r, _, _ = ops.adv_loss(soft_outputs_ori.sample_id[half:],
@@ -187,12 +266,15 @@ class TSFClassifier:
 
     loss = loss_g + \
            input_tensors["rho_f"] * loss_df + \
-           input_tensors["rho_r"] * loss_dr
+           input_tensors["rho_r"] * loss_dr + \
+           input_tensors["rho_lm"] * loss_lmf
 
     var_eg = ops.retrieve_variables(["encoder", "generator", "softmax_proj",
                                      "embedding"])
     # var_eg += decoder.trainable_variables
     var_d = ops.retrieve_variables(["cnn"])
+
+    var_lm = lm0_decoder.trainable_variables + lm1_decoder.trainable_variables
 
     # optimization
     adam_hparams = utils.filter_hparams(hparams, "adam")
@@ -202,6 +284,9 @@ class TSFClassifier:
       loss_g, var_list=var_eg)
     optimizer_ds = tf.train.AdamOptimizer(**adam_hparams).minimize(
       loss_ds, var_list=var_d)
+    optimizer_lm = tf.train.AdamOptimizer(**adam_hparams).minimize(
+      loss_lm, var_list=var_lm)
+
 
     # add tensors to collections
     collections_output = hparams.collections + '/output'
@@ -230,12 +315,18 @@ class TSFClassifier:
       [("loss", loss),
        ("loss_g", loss_g),
        ("ppl_g", ppl_g),
+       ("loss_lmf", loss_lmf),
        ("loss_ds", loss_ds),
        ("loss_df", loss_df),
        ("loss_dr", loss_dr),
        ("accu_s", accu_s),
        ("accu_f", accu_f),
        ("accu_r", accu_r),
+       ("loss_lm", loss_lm),
+       ("loss_lm0", loss_lm0),
+       ("loss_lm1", loss_lm1),
+       ("ppl_lm0", ppl_lm0),
+       ("ppl_lm1", ppl_lm1),
       ]
     )
 
@@ -245,6 +336,7 @@ class TSFClassifier:
       [("optimizer_all", optimizer_all),
        ("optimizer_ae", optimizer_ae),
        ("optimizer_ds", optimizer_ds),
+       ("optimizer_lm", optimizer_lm),
       ]
     )
 
@@ -255,51 +347,67 @@ class TSFClassifier:
       [self.loss["loss_ds"],
        self.loss["accu_s"],
        self.opt["optimizer_ds"]],
-      self.feed_dict(batch, 0., 0., 1.))
+      self.feed_dict(batch, 0., 0., 0, 1.))
     return loss_ds, accu_s
 
-  def train_g_step(self, sess, batch, rho_f, rho_r, gamma):
-    loss, loss_g, ppl_g, loss_df, loss_dr, accu_f, accu_r, _ = sess.run(
+  def train_g_step(self, sess, batch, rho_f, rho_r, rho_lm, gamma):
+    loss, loss_g, ppl_g, loss_lmf, loss_df, loss_dr, accu_f, accu_r, _ \
+      = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
        self.loss["ppl_g"],
+       self.loss["loss_lmf"],
        self.loss["loss_df"],
        self.loss["loss_dr"],
        self.loss["accu_f"],
        self.loss["accu_r"],
        self.opt["optimizer_all"]],
-      self.feed_dict(batch, rho_f, rho_r, gamma))
+      self.feed_dict(batch, rho_f, rho_r, rho_lm, gamma))
     return loss, loss_g, ppl_g, loss_df, loss_dr, accu_f, accu_r
 
-  def train_ae_step(self, sess, batch, rho_f, rho_r, gamma):
-    loss, loss_g, ppl_g, loss_df, loss_dr, accu_f, accu_r, _ = sess.run(
+  def train_ae_step(self, sess, batch, rho_f, rho_r, rho_lm, gamma):
+    loss, loss_g, ppl_g, loss_lmf, loss_df, loss_dr, accu_f, accu_r, _ \
+      = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
        self.loss["ppl_g"],
+       self.loss["loss_lmf"],
        self.loss["loss_df"],
        self.loss["loss_dr"],
        self.loss["accu_f"],
        self.loss["accu_r"],
        self.opt["optimizer_ae"]],
-      self.feed_dict(batch, rho_f, rho_r, gamma))
-    return loss, loss_g, ppl_g, loss_df, loss_dr, accu_f, accu_r
+      self.feed_dict(batch, rho_f, rho_r, rho_lm, gamma))
+    return loss, loss_g, ppl_g, loss_lmf, loss_df, loss_dr, accu_f, accu_r
+
+  def train_lm_step(self, sess, batch, rho_f, rho_r, rho_lm, gamma):
+    loss_lm, ppl_lm0, ppl_lm1, _ = sess.run(
+      [self.loss["loss_lm"],
+       self.loss["ppl_lm0"],
+       self.loss["ppl_lm1"],
+       self.opt["optimizer_lm"]],
+      self.feed_dict(batch, rho_f, rho_r, rho_lm, gamma))
+    return loss_lm, ppl_lm0, ppl_lm1
 
   def eval_step(self, sess, batch, rho_f, rho_r, gamma):
-    loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds, \
-      accu_f, accu_r, accu_s = sess.run(
+    loss, loss_g, ppl_g, loss_lmf, loss_df, loss_dr, loss_ds, \
+      accu_f, accu_r, accu_s, loss_lm, ppl_lm0, ppl_lm1 = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
        self.loss["ppl_g"],
+       self.loss["loss_lmf"],
        self.loss["loss_df"],
        self.loss["loss_dr"],
        self.loss["loss_ds"],
        self.loss["accu_f"],
        self.loss["accu_r"],
        self.loss["accu_s"],
-      ],
+       self.loss["loss_lm"],
+       self.loss["ppl_lm0"],
+       self.loss["ppl_lm1"]],
       self.feed_dict(batch, rho_f, rho_r, gamma, is_train=False))
-    return (loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds,
-            accu_f, accu_r, accu_s)
+    return (loss, loss_g, ppl_g, loss_lmf, loss_df, loss_dr, loss_ds,
+            accu_f, accu_r, accu_s, loss_lm, ppl_lm0, ppl_lm1)
 
   def decode_step(self, sess, batch):
     logits_ori, logits_tsf = sess.run(
@@ -312,7 +420,7 @@ class TSFClassifier:
         self.input_tensors["labels"]: batch["labels"]})
     return logits_ori, logits_tsf
 
-  def feed_dict(self, batch, rho_f, rho_r, gamma, is_train=True):
+  def feed_dict(self, batch, rho_f, rho_r, rho_lm, gamma, is_train=True):
     return {
       context.is_train(): is_train,
       self.input_tensors["seq_len"]: batch["seq_len"],
@@ -323,6 +431,7 @@ class TSFClassifier:
       self.input_tensors["labels"]: batch["labels"],
       self.input_tensors["rho_f"]: rho_f,
       self.input_tensors["rho_r"]: rho_r,
+      self.input_tensors["rho_lm"]: rho_lm,
       self.input_tensors["gamma"]: gamma,
     }
 
