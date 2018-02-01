@@ -28,17 +28,17 @@ class AttentionLayer(tf.layers.Layer):
   def build(self, _):
     pass
 
-  def __call__(self, query, keys, values, values_length, scope=None):
+  def __call__(self, query, keys, values, values_length, mask=None, scope=None):
     if scope is not None:
       with tf.variable_scope(scope,
                              custom_getter=self._get_variable) as scope:
         return super(AttentionLayer, self).__call__(
-          query, keys, values, values_length, scope=scope)
+          query, keys, values, values_length, mask=mask, scope=scope)
     else:
       with tf.variable_scope(tf.get_variable_scope(),
                              custom_getter=self._get_variable):
         return super(AttentionLayer, self).__call__(
-          query, keys, values, values_length)
+          query, keys, values, values_length, mask=mask)
 
   def _get_variable(self, getter, *args, **kwargs):
     variable = getter(*args, **kwargs)

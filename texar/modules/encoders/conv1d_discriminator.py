@@ -26,10 +26,12 @@ class CNN(ModuleBase):
         [self._hparams.vocab_size, self._hparams.embedding_size])
     if self._hparams.use_gate:
       self._gate_proj = tf.layers.Dense(self._hparams.attn_size)
-      self._gate_u = tf.get_variable("u", [self._hparams.attn_size])
+      with tf.variable_scope(self.variable_scope):
+        self._gate_u = tf.get_variable("u", [self._hparams.attn_size])
     self._conv_layers = []
     for k in self._hparams.kernel_sizes:
-      conv_layer = tf.layers.Conv1D(self._hparams.num_filter, k)
+      conv_layer = tf.layers.Conv1D(self._hparams.num_filter, k,
+                                    padding='same')
       self._conv_layers.append(conv_layer)
 
     self._proj_layer = tf.layers.Dense(1)
@@ -51,7 +53,7 @@ class CNN(ModuleBase):
     }
 
 
-  def _build(self, inputs, gamma=None):
+  def _build(self, inputs, seq_len=None, gamma=None):
     if self._hparams.use_embedding:
       if inputs.get_shape().ndims == 2:
         inputs = tf.nn.embedding_lookup(self._embedding, inputs)
@@ -63,10 +65,26 @@ class CNN(ModuleBase):
 
     scores = tf.ones(tf.shape(inputs)[:2], tf.float32) \
              / tf.cast(tf.shape(inputs)[1], tf.float32)
+
+    if seq_len is not None:
+      mask = tf.sequence_mask(lengths=tf.to_int32(seq_len),
+                              maxlen=tf.to_int32(tf.shape(inputs)[1]),
+                              dtype=tf.float32)
+    else:
+      mask = tf.ones(tf.shape(inputs)[:2], tf.float32)
+
+
     if self._hparams.use_gate:
       proj = tf.tanh(self._gate_proj(inputs))
-      scores = tf.nn.softmax(tf.reduce_sum(self._gate_u * proj, [2]) / gamma)
+      if gamma is None:
+        gamma = 1.
+      scores = tf.reduce_sum(self._gate_u * proj, [2]) / gamma
+      scores = scores * mask + ((1.0 - mask) * tf.float32.min)
+      scores = tf.nn.softmax(scores)
       inputs = tf.expand_dims(scores, 2) * inputs
+    else:
+      inputs = tf.expand_dims(mask, 2) * inputs
+
 
     inputs = tf.nn.dropout(
       inputs, utils.switch_dropout(self._hparams.input_keep_prob))

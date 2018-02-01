@@ -16,14 +16,16 @@ from tensorflow.contrib.seq2seq import GreedyEmbeddingHelper
 from texar import context
 from texar.hyperparams import HParams
 from texar.core.utils import switch_dropout
+from texar.core.layers import *
 from texar.modules.encoders.conv1d_discriminator import CNN
-from texar.modules.decoders.rnn_decoders import BasicRNNDecoder
 from texar.modules.decoders.rnn_decoder_helpers import *
 from texar.models.tsf import ops
+from texar.models.tsf.attention import AttentionLayerBahdanau as AttLayer
+from texar.models.tsf.attention_decoder import AttentionDecoder as AttDecoder
 from texar.models.tsf import utils
 
 
-class TSFClassifier:
+class TSFClassifierAttMask:
   """Text style transfer."""
 
   def __init__(self, hparams=None):
@@ -48,15 +50,13 @@ class TSFClassifier:
       "rnn_output_keep_prob": 0.5,
       "dim_y": 200,
       "dim_z": 500,
-      # rnn decoder
-      "decoder_use_embedding": False,
-      "decoder_max_decoding_length_train": 21,
-      "decoder_max_decoding_length_infer": 20,
+      # att decoder
+      "att_decoder_max_decoding_length_train": 21, # go id ?
+      "att_decoder_max_decoding_length_infer": 20,
       # cnn
       "cnn_name": "cnn",
       "cnn_use_embedding": True,
-      "cnn_use_gate": False,
-      "cnn_attn_size": 100,
+      "cnn_use_gate": True,
       "cnn_kernel_sizes": [3, 4, 5],
       "cnn_num_filter": 128,
       "cnn_input_keep_prob": 1.,
@@ -119,68 +119,85 @@ class TSFClassifier:
     init_state = tf.zeros([hparams.batch_size, rnn_hparams.size])
     cell_e = ops.get_rnn_cell(rnn_hparams)
 
-    _, z = tf.nn.dynamic_rnn(cell_e, enc_inputs, initial_state=init_state,
-                             scope="encoder")
+    enc_outputs, z = tf.nn.dynamic_rnn(
+      cell_e, enc_inputs, sequence_length=input_tensors["seq_len"],
+      initial_state=init_state, scope="encoder")
     z  = z[:, hparams.dim_y:]
 
     label_proj_g = tf.layers.Dense(hparams.dim_y, name="generator")
     h_ori = tf.concat([label_proj_g(labels), z], 1)
     h_tsf = tf.concat([label_proj_g(1 - labels), z], 1)
 
-    cell_g = ops.get_rnn_cell(rnn_hparams)
-    softmax_proj = tf.layers.Dense(hparams.vocab_size, name="softmax_proj")
-    g_outputs, _ = tf.nn.dynamic_rnn(cell_g, dec_inputs, initial_state=h_ori,
-                                     scope="generator")
+    # classifier
+    cnn_hparams = utils.filter_hparams(hparams, "cnn")
+    cnn = CNN(cnn_hparams)
 
-    g_logits = softmax_proj(tf.reshape(g_outputs, [-1, rnn_hparams.size]))
+    # classifier supervised training 
+    half = hparams.batch_size // 2
+    targets = input_tensors["targets"]
+    loss_ds, accu_s, mask1, mask0 = ops.adv_loss(
+      targets[half:],
+      targets[:half],
+      cnn,
+      input_tensors["seq_len"][half:],
+      input_tensors["seq_len"][:half])
+    mask = tf.concat([mask0, mask1], axis=0)
+
+    cell_g = ops.get_rnn_cell(rnn_hparams)
+    # pointer decoder
+    att_layer = AttLayer(hparams.rnn_size)
+
+    att_decoder_hparams = utils.filter_hparams(hparams, "att_decoder")
+    att_decoder = AttDecoder(hparams.vocab_size, enc_outputs, enc_outputs,
+                             input_tensors["seq_len"], att_layer, cell_g,
+                             mask, hparams=att_decoder_hparams)
+    # set the seq_len to be dec_inputs size
+    seq_len = [tf.shape(input_tensors["dec_inputs"])[1]] * hparams.batch_size
+    train_helper = EmbeddingTrainingHelper(input_tensors["dec_inputs"],
+                                           seq_len,
+                                           embedding)
+
+    g_outputs, _, _ = att_decoder(train_helper, h_ori)
 
     loss_g = tf.nn.sparse_softmax_cross_entropy_with_logits(
-      labels=tf.reshape(input_tensors["targets"], [-1]), logits=g_logits)
-    loss_g *= tf.reshape(input_tensors["weights"], [-1])
+      labels=input_tensors["targets"], logits=g_outputs.logits)
+    loss_g *= input_tensors["weights"]
     ppl_g = tf.reduce_sum(loss_g) / (tf.reduce_sum(input_tensors["weights"]) \
                                      + 1e-8)
     loss_g = tf.reduce_sum(loss_g) / hparams.batch_size
 
-    # classifier supervised training 
-    half = hparams.batch_size // 2
-    cnn_hparams = utils.filter_hparams(hparams, "cnn")
-    cnn = CNN(cnn_hparams)
-    targets = input_tensors["targets"]
-    loss_ds, accu_s, mask1, mask0 \
-      = ops.adv_loss(targets[half:],
-                     targets[:half],
-                     cnn,
-                     input_tensors["seq_len"][half:],
-                     input_tensors["seq_len"][:half])
-    mask = tf.concat([mask0, mask1], axis=0)
-
     # decoding 
-    decoder_hparams = utils.filter_hparams(hparams, "decoder")
-    decoder = BasicRNNDecoder(cell=cell_g, output_layer=softmax_proj,
-                              hparams=decoder_hparams)
     start_tokens = input_tensors["dec_inputs"][:, 0]
     start_tokens = tf.reshape(start_tokens, [-1])
     #TODO(zichao): hard coded end_token
     end_token = 2
     gumbel_helper = GumbelSoftmaxEmbeddingHelper(
-      embedding, start_tokens, end_token, input_tensors["gamma"])
-    greedy_helper = GreedyEmbeddingHelper(embedding, start_tokens, end_token)
+      embedding,
+      start_tokens,
+      end_token,
+      input_tensors["gamma"],
+    )
 
-    soft_outputs_ori, _, soft_len_ori = decoder(gumbel_helper, h_ori)
-    soft_outputs_tsf, _, soft_len_tsf = decoder(gumbel_helper, h_tsf)
+    greedy_helper = GreedyEmbeddingHelper(
+      embedding,
+      start_tokens,
+      end_token,
+    )
 
-    hard_outputs_ori, _, hard_len_ori = decoder(greedy_helper, h_ori)
-    hard_outputs_tsf, _, hard_len_tsf = decoder(greedy_helper, h_tsf)
+    soft_outputs_ori, _, soft_len_ori = att_decoder(gumbel_helper, h_ori)
+    soft_outputs_tsf, _, soft_len_tsf = att_decoder(gumbel_helper, h_tsf)
+
+    hard_outputs_ori, _, hard_len_ori = att_decoder(greedy_helper, h_ori)
+    hard_outputs_tsf, _, hard_len_tsf = att_decoder(greedy_helper, h_tsf)
 
     # discriminator
-
-    loss_dr, accu_r, _, _ = ops.adv_loss(soft_outputs_ori.sample_id[half:],
-                                         soft_outputs_ori.sample_id[:half],
+    loss_dr, accu_r, _, _ = ops.adv_loss(soft_outputs_ori.predicted_ids[half:],
+                                         soft_outputs_ori.predicted_ids[:half],
                                          cnn,
                                          soft_len_ori[half:],
                                          soft_len_ori[:half])
-    loss_df, accu_f, _, _ = ops.adv_loss(soft_outputs_tsf.sample_id[:half],
-                                         soft_outputs_tsf.sample_id[half:],
+    loss_df, accu_f, _, _ = ops.adv_loss(soft_outputs_tsf.predicted_ids[:half],
+                                         soft_outputs_tsf.predicted_ids[half:],
                                          cnn,
                                          soft_len_tsf[:half],
                                          soft_len_tsf[half:])
@@ -189,10 +206,10 @@ class TSFClassifier:
            input_tensors["rho_f"] * loss_df + \
            input_tensors["rho_r"] * loss_dr
 
-    var_eg = ops.retrieve_variables(["encoder", "generator", "softmax_proj",
-                                     "embedding"])
-    # var_eg += decoder.trainable_variables
+    var_eg = ops.retrieve_variables(["encoder", "generator", "embedding"]) \
+             + att_decoder.trainable_variables
     var_d = ops.retrieve_variables(["cnn"])
+
 
     # optimization
     adam_hparams = utils.filter_hparams(hparams, "adam")
@@ -213,14 +230,9 @@ class TSFClassifier:
        ("hard_logits_tsf", hard_outputs_tsf.logits),
        ("soft_logits_ori", soft_outputs_ori.logits),
        ("soft_logits_tsf", soft_outputs_tsf.logits),
-       ("soft_samples_ori", soft_outputs_ori.sample_id),
-       ("soft_samples_tsf", soft_outputs_tsf.sample_id),
-       ("soft_len_ori", soft_len_ori),
-       ("soft_len_tsf", soft_len_tsf),
-       ("g_logits", g_logits),
+       ("g_logits", g_outputs.logits),
+       ("g_sample", g_outputs.predicted_ids),
        ("mask", mask),
-       ("soft_len_ori", soft_len_ori),
-       ("soft_len_tsf", soft_len_tsf),
       ]
     )
 
@@ -301,6 +313,31 @@ class TSFClassifier:
     return (loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds,
             accu_f, accu_r, accu_s)
 
+  def debug_step(self, sess, batch, rho_f, rho_r, gamma):
+    from tensorflow.contrib.layers.python.layers import utils
+    debug_p = utils.convert_collection_to_dict("tsf/debug")
+    loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds, \
+      accu_f, accu_r, accu_s, \
+      g_sample, p_attn_seq, p_attn_dense_seq, p_pointer_seq = sess.run(
+      [self.loss["loss"],
+       self.loss["loss_g"],
+       self.loss["ppl_g"],
+       self.loss["loss_df"],
+       self.loss["loss_dr"],
+       self.loss["loss_ds"],
+       self.loss["accu_f"],
+       self.loss["accu_r"],
+       self.loss["accu_s"],
+       self.output_tensors["g_sample"],
+       debug_p["p_attn_seq"],
+       debug_p["p_attn_dense_seq"],
+       debug_p["p_pointer_seq"],
+      ],
+      self.feed_dict(batch, rho_f, rho_r, gamma, is_train=False))
+    return (loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds,
+            accu_f, accu_r, accu_s,
+            g_sample, p_attn_seq, p_attn_dense_seq, p_pointer_seq)
+
   def decode_step(self, sess, batch):
     logits_ori, logits_tsf = sess.run(
       [self.output_tensors["hard_logits_ori"],
@@ -309,7 +346,10 @@ class TSFClassifier:
         context.is_train(): False,
         self.input_tensors["enc_inputs"]: batch["enc_inputs"],
         self.input_tensors["dec_inputs"]: batch["dec_inputs"],
-        self.input_tensors["labels"]: batch["labels"]})
+        self.input_tensors["labels"]: batch["labels"],
+        self.input_tensors["seq_len"]: batch["seq_len"],
+        self.input_tensors["targets"]: batch["targets"],
+      })
     return logits_ori, logits_tsf
 
   def feed_dict(self, batch, rho_f, rho_r, gamma, is_train=True):
@@ -327,25 +367,16 @@ class TSFClassifier:
     }
 
   def decode_step_soft(self, sess, batch, gamma=0.01):
-    logits_ori, logits_tsf, g_logits, \
-      soft_samples_ori, soft_samples_tsf, soft_len_ori, soft_len_tsf, \
-      mask = sess.run(
-        [self.output_tensors["soft_logits_ori"],
-         self.output_tensors["soft_logits_tsf"],
-         self.output_tensors["g_logits"],
-         self.output_tensors["soft_samples_ori"],
-         self.output_tensors["soft_samples_tsf"],
-         self.output_tensors["soft_len_ori"],
-         self.output_tensors["soft_len_tsf"],
-         self.output_tensors["mask"]],
-        feed_dict={
-          context.is_train(): False,
-          self.input_tensors["enc_inputs"]: batch["enc_inputs"],
-          self.input_tensors["dec_inputs"]: batch["dec_inputs"],
-          self.input_tensors["labels"]: batch["labels"],
-          self.input_tensors["targets"]: batch["targets"],
-          self.input_tensors["seq_len"]: batch["seq_len"],
-          self.input_tensors["gamma"]: gamma})
-    return logits_ori, logits_tsf, g_logits, \
-      soft_samples_ori, soft_samples_tsf, soft_len_ori, soft_len_tsf, \
-      mask
+    logits_ori, logits_tsf, g_logits, test_output, test_logits = sess.run(
+      [self.output_tensors["soft_logits_ori"],
+       self.output_tensors["soft_logits_tsf"],
+       self.output_tensors["g_logits"],
+       self.output_tensors["test_output"],
+       self.output_tensors["test_logits"]],
+      feed_dict={
+        context.is_train(): False,
+        self.input_tensors["enc_inputs"]: batch["enc_inputs"],
+        self.input_tensors["dec_inputs"]: batch["dec_inputs"],
+        self.input_tensors["labels"]: batch["labels"],
+        self.input_tensors["gamma"]: gamma})
+    return logits_ori, logits_tsf, g_logits, test_output, test_logits
