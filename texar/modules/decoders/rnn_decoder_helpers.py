@@ -16,6 +16,7 @@ from tensorflow.contrib.distributions import RelaxedOneHotCategorical \
 from texar.core import utils
 
 # pylint: disable=not-context-manager, too-many-arguments
+# pylint: disable=too-many-instance-attributes
 
 __all__ = [
     "default_helper_train_hparams",
@@ -136,9 +137,9 @@ class EmbeddingTrainingHelper(TFTrainingHelper):
             indexes.
         sequence_length (1D integer list or Tensor): Lengths of input token
             sequences.
-        embedding: A callable that takes a vector tensor of integer indexes,,
-            or the `params` argument for `embedding_lookup` (e.g., the embedding
-            Tensor).
+        embedding: The `params` argument of :tf_main:`tf.nn.embedding_lookup
+        <nn/embedding_lookup>` (e.g., the embedding Tensor); or a callable that
+        takes a vector of integer indexes and returns respective embedding.
         time_major (bool): Whether the tensors in `inputs` are time major.
             If `False` (default), they are assumed to be batch major.
         name (string): Name scope for any created operations.
