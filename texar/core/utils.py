@@ -377,7 +377,7 @@ def _bucket_boundaries(max_length, min_length=8, length_bucket_step=1.1):
         x = max(x+1, int(x*length_bucket_step))
     return boundaries
 
-def sequence_embedding_soft_mix(soft_sequence, embedding):
+def soft_sequence_embedding(soft_sequence, embedding):
     """Mixes sequences of soft vectors with a embedding tensor.
 
     Args:
@@ -388,6 +388,12 @@ def sequence_embedding_soft_mix(soft_sequence, embedding):
 
     Returns:
         A Tensor of shape `[batch_size, max_time, emb_dim]`
+
+    Example::
+
+        decoder_outputs, ... = decoder(...)
+        soft_seq_emb = soft_sequence_embedding(
+            tf.nn.softmax(decoder_outputs.logits), embedding)
     """
     return tf.matmul(soft_sequence, embedding)
 
