@@ -395,7 +395,7 @@ def soft_sequence_embedding(soft_sequence, embedding):
         soft_seq_emb = soft_sequence_embedding(
             tf.nn.softmax(decoder_outputs.logits), embedding)
     """
-    return tf.matmul(soft_sequence, embedding)
+    return tf.tensordot(soft_sequence, embedding, [2, 0])
 
 def straight_through(fw_tensor, bw_tensor):
     """Use a tensor in forward pass while backpropagating gradient to another.
