@@ -9,6 +9,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import os
+import shutil
 import re
 import subprocess
 import tempfile
@@ -80,5 +81,6 @@ def bleu(hypotheses, references, lowercase=False):
                 tf.logging.warning(error.output)
             bleu_score = np.float32(0.0)
 
+    shutil.rmtree(result_path)
 
     return np.float32(bleu_score)
