@@ -397,3 +397,16 @@ def soft_sequence_embedding(soft_sequence, embedding):
     """
     return tf.matmul(soft_sequence, embedding)
 
+def straight_through(fw_tensor, bw_tensor):
+    """Use a tensor in forward pass while backpropagating gradient to another.
+
+    Args:
+        fw_tensor: A tensor to be used in the forward pass.
+        bw_tensor: A tensor to which gradient is backpropagated. Must have the
+            same shape and type with :attr:`fw_tensor`.
+
+    Returns:
+        A tensor of the same shape and value with :attr:`fw_tensor` but will
+            direct gradient to bw_tensor.
+    """
+    return tf.stop_gradient(fw_tensor) + bw_tensor - tf.stop_gradient(bw_tensor)
