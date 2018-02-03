@@ -33,6 +33,14 @@ MAX_SEQ_LENGTH = np.iinfo(np.int32).max  #TODO (zhiting): move to constants
 #    'tensorflow.train', 'tensorflow.keras.regularizers'
 #}
 
+def _expand_name(name):
+    """Replaces common shorthands with respective full names.
+
+        "tf.xxx" --> "tensorflow.xxx"
+        "tx.xxx" --> "texar.xxx"
+    """
+    return name
+
 def get_class(class_name, module_paths=None):
     """Returns the class based on class name.
 
@@ -377,14 +385,14 @@ def _bucket_boundaries(max_length, min_length=8, length_bucket_step=1.1):
         x = max(x+1, int(x*length_bucket_step))
     return boundaries
 
-def soft_sequence_embedding(soft_sequence, embedding):
+def soft_sequence_embedding(embedding, soft_sequence):
     """Mixes sequences of soft vectors with a embedding tensor.
 
     Args:
-        soft_sequence: A Tensor of shape `[batch_size, max_time, num_classes]`
-            containing the weights (probabilities) of embedding vectors.
         embedding: A Tensor of shape `[num_classes, emb_dim]` containing
             the embedding vectors.
+        soft_sequence: A Tensor of shape `[batch_size, max_time, num_classes]`
+            containing the weights (probabilities) of embedding vectors.
 
     Returns:
         A Tensor of shape `[batch_size, max_time, emb_dim]`
