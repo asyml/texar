@@ -7,16 +7,16 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
+# pylint: disable=invalid-name, no-member, no-name-in-module
+
 #import importlib
 import inspect
 from pydoc import locate
 import copy
+import sys
 import numpy as np
 
-# pylint: disable=invalid-name, no-member, no-name-in-module
-
 import tensorflow as tf
-import sys
 from tensorflow.python.framework import ops
 from tensorflow.python.util import nest
 from tensorflow.python.ops import rnn
@@ -26,11 +26,20 @@ from texar import context
 
 MAX_SEQ_LENGTH = np.iinfo(np.int32).max  #TODO (zhiting): move to constants
 
-## Some modules can be imported directly, e.g., `import tensorflow.train` fails.
+## Some modules cannot be imported directly,
+## e.g., `import tensorflow.train` fails.
 ## Such modules are treated in a special way in utils like `get_class` as below.
 #_unimportable_modules = {
 #    'tensorflow.train', 'tensorflow.keras.regularizers'
 #}
+
+def _expand_name(name):
+    """Replaces common shorthands with respective full names.
+
+        "tf.xxx" --> "tensorflow.xxx"
+        "tx.xxx" --> "texar.xxx"
+    """
+    return name
 
 def get_class(class_name, module_paths=None):
     """Returns the class based on class name.
@@ -98,7 +107,7 @@ def get_instance(class_name, kwargs, module_paths=None):
     for key in kwargs.keys():
         if key not in class_args:
             raise ValueError(
-                    "Invalid argument for class %s.%s: %s, valid args:%s" %
+                "Invalid argument for class %s.%s: %s, valid args:%s" %
                 (class_.__module__, class_.__name__, key, class_args))
 
     return class_(**kwargs)
@@ -336,7 +345,7 @@ def is_str_or_unicode(x):
     """Returns `True` if :attr:`x` is either a str or unicode. Returns `False`
     otherwise.
     """
-    if sys.version_info[0]<3:
+    if sys.version_info[0] < 3:
         return isinstance(x, str) or isinstance(x, unicode)
     else:
         return isinstance(x, str)
@@ -367,10 +376,45 @@ def uniquify_str(str_, str_set):
     raise ValueError("Fails to uniquify string: " + str_)
 
 def _bucket_boundaries(max_length, min_length=8, length_bucket_step=1.1):
-    assert length_bucket_step > 1.0
+    if length_bucket_step <= 1.0:
+        raise ValueError("length_bucket_step must > 1.0")
     x = min_length
     boundaries = []
     while x < max_length:
         boundaries.append(x)
-        x = max( x+1 , int(x * length_bucket_step))
+        x = max(x+1, int(x*length_bucket_step))
     return boundaries
+
+def soft_sequence_embedding(embedding, soft_sequence):
+    """Mixes sequences of soft vectors with a embedding tensor.
+
+    Args:
+        embedding: A Tensor of shape `[num_classes, emb_dim]` containing
+            the embedding vectors.
+        soft_sequence: A Tensor of shape `[batch_size, max_time, num_classes]`
+            containing the weights (probabilities) of embedding vectors.
+
+    Returns:
+        A Tensor of shape `[batch_size, max_time, emb_dim]`
+
+    Example::
+
+        decoder_outputs, ... = decoder(...)
+        soft_seq_emb = soft_sequence_embedding(
+            tf.nn.softmax(decoder_outputs.logits), embedding)
+    """
+    return tf.tensordot(soft_sequence, embedding, [2, 0])
+
+def straight_through(fw_tensor, bw_tensor):
+    """Use a tensor in forward pass while backpropagating gradient to another.
+
+    Args:
+        fw_tensor: A tensor to be used in the forward pass.
+        bw_tensor: A tensor to which gradient is backpropagated. Must have the
+            same shape and type with :attr:`fw_tensor`.
+
+    Returns:
+        A tensor of the same shape and value with :attr:`fw_tensor` but will
+            direct gradient to bw_tensor.
+    """
+    return tf.stop_gradient(fw_tensor) + bw_tensor - tf.stop_gradient(bw_tensor)
