@@ -88,7 +88,7 @@ class RNNEncoderBase(EncoderBase):
             "use_embedding" : bool
                 Whether token embedding is used.
 
-                If `True` (default), input to the encoder should contain integer
+                If `True` (default), input to the encoder can be integer
                 indexes and will be used to look up the embedding vectors.
                 If `False`, the input is directly fed into the RNN to encode.
 
@@ -232,7 +232,7 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
         return hparams
 
     def _build(self, inputs, sequence_length=None, initial_state=None,
-               **kwargs):
+               use_embedding=None, **kwargs):
         """Encodes the inputs.
 
         Args:
@@ -246,6 +246,13 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                 of the batch inputs. Used to copy-through state and zero-out
                 outputs when past a batch element's sequence length.
             initial_state (optional): Initial state of the RNN.
+            use_embedding (bool, optional): Whether token embedding is used. If
+                `None` (default), the value is set to
+                :attr:`hparams["use_embedding"]`.
+                If `True`, input to the encoder should contain integer
+                indexes and will be used to look up the embedding vectors. In
+                this case, :attr:`hparams["use_embedding"]` must also be `True`.
+                If `False`, the input is directly fed into the RNN to encode.
             **kwargs: Optional keyword arguments of
                 :tf_main:`tf.nn.dynamic_rnn <nn/dynamic_rnn>`,
                 such as `time_major`, `dtype`, etc.
@@ -254,7 +261,15 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
             Outputs and final state of the encoder.
         """
         #TODO(zhiting): add docs of 'Returns'
-        if self._embedding is not None:
+        if use_embedding is None:
+            use_embedding = self.hparams["use_embedding"]
+        if use_embedding:
+            if self._embedding is None:
+                if not self.hparams["use_embedding"]:
+                    raise ValueError(
+                        'Cannot use embedding as hparams["use_embedding"] is '
+                        'set to False.')
+                raise ValueError("Embedding is None.")
             embedded_inputs = tf.nn.embedding_lookup(self._embedding, inputs)
         else:
             embedded_inputs = inputs
@@ -393,7 +408,7 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
             "use_embedding" : bool
                 Whether token embedding is used.
 
-                If `True` (default), input to the encoder should contain integer
+                If `True` (default), input to the encoder can be integer
                 indexes and will be used to look up the embedding vectors.
                 If `False`, the input is directly fed into the RNN to encode.
 
@@ -422,9 +437,8 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
         hparams["name"] = "bidirectional_rnn_encoder"
         return hparams
 
-    def _build(self, inputs, sequence_length=None,
-               initial_state_fw=None, initial_state_bw=None,
-               **kwargs):
+    def _build(self, inputs, sequence_length=None, initial_state_fw=None,
+               initial_state_bw=None, use_embedding=None, **kwargs):
         """Encodes the inputs.
 
         Args:
@@ -438,6 +452,13 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
                 of the batch inputs. Used to copy-through state and zero-out
                 outputs when past a batch element's sequence length.
             initial_state (optional): Initial state of the RNN.
+            use_embedding (bool, optional): Whether token embedding is used. If
+                `None` (default), the value is set to
+                :attr:`hparams["use_embedding"]`.
+                If `True`, input to the encoder should contain integer
+                indexes and will be used to look up the embedding vectors. In
+                this case, :attr:`hparams["use_embedding"]` must also be `True`.
+                If `False`, the input is directly fed into the RNN to encode.
             **kwargs: Optional keyword arguments of
                 :tf_main:`tf.nn.dynamic_rnn <nn/dynamic_rnn>`,
                 such as `time_major`, `dtype`, etc.
@@ -446,7 +467,15 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
             Outputs and final state of the encoder.
         """
         #TODO(zhiting): add docs of 'Returns'
-        if self._embedding is not None:
+        if use_embedding is None:
+            use_embedding = self.hparams["use_embedding"]
+        if use_embedding:
+            if self._embedding is None:
+                if not self.hparams["use_embedding"]:
+                    raise ValueError(
+                        'Cannot use embedding as hparams["use_embedding"] is '
+                        'set to False.')
+                raise ValueError("Embedding is None.")
             embedded_inputs = tf.nn.embedding_lookup(self._embedding, inputs)
         else:
             embedded_inputs = inputs

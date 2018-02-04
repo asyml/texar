@@ -174,6 +174,9 @@ class ConstantConnector(ConnectorBase):
         output = nest.map_structure(
             lambda x: tf.constant(value_, shape=[batch_size, x]),
             self._output_size)
+
+        self._built = True
+
         return output
 
 
