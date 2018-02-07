@@ -241,9 +241,8 @@ class TSFClassifierLM:
     lmf0_logits = outputs_lmf0.logits
     if hparams.lm_stop_gradient:
       lmf0_logits = tf.stop_gradient(lmf0_logits)
-    loss_lmf0 = -tf.reduce_sum(
-      soft_outputs_tsf.sample_id[half:] * tf.log(tf.nn.softmax(lmf0_logits)),
-      axis=2)
+    loss_lmf0 = -tf.reduce_sum( soft_outputs_tsf.sample_id[half:] *
+                                tf.nn.log_softmax(lmf0_logits), axis=2)
     mask_lmf0 = tf.sequence_mask(soft_len_tsf[half:],
                                  maxlen=tf.shape(loss_lmf0)[1],
                                  dtype=tf.float32)
@@ -259,7 +258,7 @@ class TSFClassifierLM:
     if hparams.lm_stop_gradient:
       lmf1_logits = tf.stop_gradient(lmf1_logits)
     loss_lmf1 = -tf.reduce_sum(
-      soft_outputs_tsf.sample_id[:half] * tf.log(tf.nn.softmax(lmf1_logits)),
+      soft_outputs_tsf.sample_id[:half] * tf.nn.log_softmax(lmf1_logits),
       axis=2)
     mask_lmf1 = tf.sequence_mask(soft_len_tsf[:half],
                                  maxlen=tf.shape(loss_lmf1)[1],
