@@ -193,13 +193,13 @@ class TSFClassifierAtt:
       input_tensors["seq_len"][half:],
       input_tensors["seq_len"][:half])
     mask = tf.concat([mask0, mask1], axis=0)
-    loss_dr, accu_r, _, _ = ops.adv_loss(soft_outputs_ori.predicted_ids[half:],
-                                         soft_outputs_ori.predicted_ids[:half],
+    loss_dr, accu_r, _, _ = ops.adv_loss(soft_outputs_ori.sample_id[half:],
+                                         soft_outputs_ori.sample_id[:half],
                                          cnn,
                                          soft_len_ori[half:],
                                          soft_len_ori[:half])
-    loss_df, accu_f, _, _ = ops.adv_loss(soft_outputs_tsf.predicted_ids[:half],
-                                         soft_outputs_tsf.predicted_ids[half:],
+    loss_df, accu_f, _, _ = ops.adv_loss(soft_outputs_tsf.sample_id[:half],
+                                         soft_outputs_tsf.sample_id[half:],
                                          cnn,
                                          soft_len_tsf[:half],
                                          soft_len_tsf[half:])
@@ -232,7 +232,7 @@ class TSFClassifierAtt:
        ("soft_logits_ori", soft_outputs_ori.logits),
        ("soft_logits_tsf", soft_outputs_tsf.logits),
        ("g_logits", g_outputs.logits),
-       ("g_sample", g_outputs.predicted_ids),
+       ("g_sample", g_outputs.sample_id),
       ]
     )
 

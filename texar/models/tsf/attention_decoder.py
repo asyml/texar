@@ -29,7 +29,7 @@ def id_to_dense(p, word_id, vocab_size):
 
 class AttentionDecoderOutput(
     namedtuple("DecoderOutput", [
-        "logits", "predicted_ids", "cell_output", "attention_scores",
+        "logits", "sample_id", "cell_output", "attention_scores",
         "attention_context"
     ])):
   """Augmented decoder output that also includes the attention scores.
