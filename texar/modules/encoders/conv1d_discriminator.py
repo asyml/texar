@@ -42,6 +42,7 @@ class CNN(ModuleBase):
       "name": "cnn",
       "use_embedding": False,
       "use_gate": False,
+      "scale_attn": False,
       "attn_size": 100,
       "kernel_sizes": [3, 4, 5],
       "num_filter": 128,
@@ -81,6 +82,8 @@ class CNN(ModuleBase):
       scores = tf.reduce_sum(self._gate_u * proj, [2]) / gamma
       scores = scores * mask + ((1.0 - mask) * tf.float32.min)
       scores = tf.nn.softmax(scores)
+      if self._hparams.scale_attn:
+        scores = scores * tf.reduce_sum(mask, axis=1, keep_dims=True)
       inputs = tf.expand_dims(scores, 2) * inputs
     else:
       inputs = tf.expand_dims(mask, 2) * inputs
