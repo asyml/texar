@@ -43,6 +43,7 @@ class TSFClassifierAtt:
       "collections": "tsf",
       "batch_size": 128,
       "embedding_size": 100,
+      "ave_seq_len": False,
       # rnn hprams
       "rnn_type": "GRUCell",
       "rnn_size": 700,
@@ -148,7 +149,10 @@ class TSFClassifierAtt:
     loss_g *= input_tensors["weights"]
     ppl_g = tf.reduce_sum(loss_g) / (tf.reduce_sum(input_tensors["weights"]) \
                                      + 1e-8)
-    loss_g = tf.reduce_sum(loss_g) / hparams.batch_size
+    if hparams.ave_seq_len:
+      loss_g = ppl_g
+    else:
+      loss_g = tf.reduce_sum(loss_g) / hparams.batch_size
 
     # decoding 
     start_tokens = input_tensors["dec_inputs"][:, 0]
