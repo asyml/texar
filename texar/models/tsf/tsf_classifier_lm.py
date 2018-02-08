@@ -52,7 +52,7 @@ class TSFClassifierLM:
       # rnn decoder
       "decoder_use_embedding": False,
       "decoder_max_decoding_length_train": 21,
-      "decoder_max_decoding_length_infer": 20,
+      "decoder_max_decoding_length_infer": 20, # change to 21 when eval LM
       # cnn
       "cnn_name": "cnn",
       "cnn_use_embedding": True,
@@ -66,6 +66,7 @@ class TSFClassifierLM:
       "cnn_embedding_size": 100,
       "lm_stop_gradient": False,
       "lm_ave_len": False,
+      "lm_reverse_label": False,
       # adam
       "adam_learning_rate": 1e-4,
       "adam_beta1": 0.9,
@@ -205,6 +206,7 @@ class TSFClassifierLM:
     loss_lm0 = tf.nn.sparse_softmax_cross_entropy_with_logits(
       labels=input_tensors["targets"][:half], logits=outputs_lm0.logits)
     loss_lm0 *= input_tensors["weights"][:half]
+    loss_lm0_mask = loss_lm0
     ppl_lm0 = tf.reduce_sum(loss_lm0) / \
               (tf.reduce_sum(input_tensors["weights"][:half]) + 1e-8)
     loss_lm0 = tf.reduce_sum(loss_lm0) / half
@@ -212,6 +214,7 @@ class TSFClassifierLM:
     loss_lm1 = tf.nn.sparse_softmax_cross_entropy_with_logits(
       labels=input_tensors["targets"][half:], logits=outputs_lm1.logits)
     loss_lm1 *= input_tensors["weights"][half:]
+    loss_lm1_mask = loss_lm1
     ppl_lm1 = tf.reduce_sum(loss_lm1) / \
               (tf.reduce_sum(input_tensors["weights"][half:]) + 1e-8)
     loss_lm1 = tf.reduce_sum(loss_lm1) / half
@@ -236,33 +239,56 @@ class TSFClassifierLM:
     helper_lmf1 = TrainingHelper(dec_inputs_lmf1, seq_len)
     outputs_lmf1, _, _ = lm1_decoder(helper_lmf1, zero_state)
 
-    # loss_lmf0 = tf.nn.softmax_cross_entropy_with_logits(
-    #   labels=soft_outputs_tsf.sample_id[half:], logits=outputs_lmf0.logits)
     lmf0_logits = outputs_lmf0.logits
     if hparams.lm_stop_gradient:
       lmf0_logits = tf.stop_gradient(lmf0_logits)
-    loss_lmf0 = -tf.reduce_sum( soft_outputs_tsf.sample_id[half:] *
-                                tf.nn.log_softmax(lmf0_logits), axis=2)
-    mask_lmf0 = tf.sequence_mask(soft_len_tsf[half:],
+
+    if hparams.lm_reverse_label:
+      loss_lmf0 = -tf.reduce_sum(
+        tf.nn.softmax(lmf0_logits) *
+        tf.log(soft_outputs_tsf.sample_id[half:] + 1e-6),
+        axis=2)
+    else:
+      loss_lmf0 = -tf.reduce_sum(soft_outputs_tsf.sample_id[half:] *
+                                 tf.nn.log_softmax(lmf0_logits), axis=2)
+    # mask out the first and last
+    seq_len_lmf0 = tf.maximum(soft_len_tsf[half:] - 1, 0)
+    mask_lmf0 = tf.sequence_mask(seq_len_lmf0,
                                  maxlen=tf.shape(loss_lmf0)[1],
                                  dtype=tf.float32)
+    mask_lmf0 = tf.concat(
+      [tf.zeros([half, 1], tf.float32),
+       mask_lmf0[:, 1:]],
+      axis=1)
     loss_lmf0 *= mask_lmf0
     if hparams.lm_ave_len:
       loss_lmf0 = tf.reduce_sum(loss_lmf0, axis=1) \
                   / (tf.reduce_sum(mask_lmf0, axis=1) + 1e-8)
     loss_lmf0 = tf.reduce_sum(loss_lmf0) / half
 
-    # loss_lmf1 = tf.nn.softmax_cross_entropy_with_logits(
-    #   labels=soft_outputs_tsf.sample_id[:half], logits=outputs_lmf1.logits)
     lmf1_logits = outputs_lmf1.logits
     if hparams.lm_stop_gradient:
       lmf1_logits = tf.stop_gradient(lmf1_logits)
-    loss_lmf1 = -tf.reduce_sum(
-      soft_outputs_tsf.sample_id[:half] * tf.nn.log_softmax(lmf1_logits),
-      axis=2)
-    mask_lmf1 = tf.sequence_mask(soft_len_tsf[:half],
+
+    if hparams.lm_reverse_label:
+      loss_lmf1 = -tf.reduce_sum(
+        tf.nn.softmax(lmf1_logits) *
+        tf.log(soft_outputs_tsf.sample_id[:half] + 1e-6),
+        axis=2)
+    else:
+      loss_lmf1 = -tf.reduce_sum(
+        soft_outputs_tsf.sample_id[:half] * tf.nn.log_softmax(lmf1_logits),
+        axis=2)
+    # mask out the first and last
+    seq_len_lmf1 = tf.maximum(soft_len_tsf[:half] - 1, 0)
+    mask_lmf1 = tf.sequence_mask(seq_len_lmf1,
                                  maxlen=tf.shape(loss_lmf1)[1],
                                  dtype=tf.float32)
+    mask_lmf1 = tf.concat(
+      [tf.zeros([half, 1], tf.float32),
+       mask_lmf1[:, 1:]],
+      axis=1)
+    
     loss_lmf1 *= mask_lmf1
     if hparams.lm_ave_len:
       loss_lmf1 = tf.reduce_sum(loss_lmf1, axis=1) \
@@ -320,6 +346,8 @@ class TSFClassifierLM:
        ("soft_logits_tsf", soft_outputs_tsf.logits),
        ("soft_samples_ori", soft_outputs_ori.sample_id),
        ("soft_samples_tsf", soft_outputs_tsf.sample_id),
+       ("lmf0_logits", tf.nn.log_softmax(lmf0_logits)),
+       ("lmf1_logits", tf.nn.log_softmax(lmf1_logits)),
        ("soft_len_ori", soft_len_ori),
        ("soft_len_tsf", soft_len_tsf),
        ("g_logits", g_logits),
@@ -429,6 +457,14 @@ class TSFClassifierLM:
     return (loss, loss_g, ppl_g, loss_lmf, loss_df, loss_dr, loss_ds,
             accu_f, accu_r, accu_s, loss_lm, ppl_lm0, ppl_lm1)
 
+  def eval_lm_step(self, sess, batch, rho_f, rho_r, rho_lm, gamma):
+    loss_lm, ppl_lm0, ppl_lm1 = sess.run(
+      [self.loss["loss_lm"],
+       self.loss["ppl_lm0"],
+       self.loss["ppl_lm1"]],
+      self.feed_dict(batch, rho_f, rho_r, rho_lm, gamma, is_train=False))
+    return (loss_lm, ppl_lm0, ppl_lm1)
+
   def decode_step(self, sess, batch):
     logits_ori, logits_tsf = sess.run(
       [self.output_tensors["hard_logits_ori"],
@@ -458,7 +494,7 @@ class TSFClassifierLM:
   def decode_step_soft(self, sess, batch, gamma=0.01):
     logits_ori, logits_tsf, g_logits, \
       soft_samples_ori, soft_samples_tsf, soft_len_ori, soft_len_tsf, \
-      mask = sess.run(
+      mask, lmf0_logits, lmf1_logits = sess.run(
         [self.output_tensors["soft_logits_ori"],
          self.output_tensors["soft_logits_tsf"],
          self.output_tensors["g_logits"],
@@ -466,7 +502,10 @@ class TSFClassifierLM:
          self.output_tensors["soft_samples_tsf"],
          self.output_tensors["soft_len_ori"],
          self.output_tensors["soft_len_tsf"],
-         self.output_tensors["mask"]],
+         self.output_tensors["mask"],
+         self.output_tensors["lmf0_logits"],
+         self.output_tensors["lmf1_logits"],
+        ],
         feed_dict={
           context.is_train(): False,
           self.input_tensors["enc_inputs"]: batch["enc_inputs"],
@@ -477,4 +516,4 @@ class TSFClassifierLM:
           self.input_tensors["gamma"]: gamma})
     return logits_ori, logits_tsf, g_logits, \
       soft_samples_ori, soft_samples_tsf, soft_len_ori, soft_len_tsf, \
-      mask
+      mask, lmf0_logits, lmf1_logits
