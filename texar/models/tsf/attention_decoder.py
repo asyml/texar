@@ -38,7 +38,7 @@ class AttentionDecoderOutput(
 
 class PointerDecoderOutput(
     namedtuple("DecoderOutput", [
-        "logits", "predicted_ids", "cell_output", "attention_scores",
+        "logits", "sample_id", "cell_output", "attention_scores",
         "attention_context", "pointer"
     ])):
   """Augmented decoder output that also includes the attention scores.
@@ -75,6 +75,12 @@ class AttentionDecoder(RNNDecoderBase):
                                             name="softmax_input")
       self._output_layer = tf.layers.Dense(vocab_size, name="output_layer")
 
+  def set_attention_inputs(self, attention_keys, attention_values,
+                           attention_values_length):
+    self._attention_keys = attention_keys
+    self._attention_values = attention_values
+    self._attention_values_length = attention_values_length
+
   @staticmethod
   def default_hparams():
     hparams = RNNDecoderBase.default_hparams()
@@ -87,7 +93,7 @@ class AttentionDecoder(RNNDecoderBase):
   def output_size(self):
     return AttentionDecoderOutput(
       logits=self._vocab_size,
-      predicted_ids=self._helper.sample_ids_shape,
+      sample_id=self._helper.sample_ids_shape,
       cell_output=self._cell.output_size,
       attention_scores=tf.shape(self._attention_values)[1:-1],
       attention_context=self._attention_values.get_shape()[-1])
@@ -96,7 +102,7 @@ class AttentionDecoder(RNNDecoderBase):
   def output_dtype(self):
     return AttentionDecoderOutput(
       logits=tf.float32,
-      predicted_ids=self._helper.sample_ids_dtype,
+      sample_id=self._helper.sample_ids_dtype,
       cell_output=tf.float32,
       attention_scores=tf.float32,
       attention_context=tf.float32)
@@ -134,7 +140,7 @@ class AttentionDecoder(RNNDecoderBase):
 
     outputs = AttentionDecoderOutput(
       logits=logits,
-      predicted_ids=sample_ids,
+      sample_id=sample_ids,
       cell_output=cell_output_new,
       attention_scores=att_scores,
       attention_context=att_context)
@@ -183,7 +189,7 @@ class PointerDecoder(AttentionDecoder):
   def output_size(self):
     return PointerDecoderOutput(
       logits=self._vocab_size,
-      predicted_ids=self._helper.sample_ids_shape,
+      sample_id=self._helper.sample_ids_shape,
       cell_output=self._cell.output_size,
       attention_scores=tf.shape(self._attention_values)[1:-1],
       attention_context=self._attention_values.get_shape()[-1],
@@ -193,7 +199,7 @@ class PointerDecoder(AttentionDecoder):
   def output_dtype(self):
     return PointerDecoderOutput(
       logits=tf.float32,
-      predicted_ids=self._helper.sample_ids_dtype,
+      sample_id=self._helper.sample_ids_dtype,
       cell_output=tf.float32,
       attention_scores=tf.float32,
       attention_context=tf.float32,
@@ -226,7 +232,7 @@ class PointerDecoder(AttentionDecoder):
 
     outputs = PointerDecoderOutput(
       logits=logits,
-      predicted_ids=sample_ids,
+      sample_id=sample_ids,
       cell_output=cell_output_new,
       attention_scores=att_scores,
       attention_context=att_context,

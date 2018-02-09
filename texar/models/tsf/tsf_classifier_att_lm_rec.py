@@ -12,12 +12,14 @@ import copy
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import GreedyEmbeddingHelper
+from tensorflow.contrib.seq2seq import TrainingHelper
 
 from texar import context
 from texar.hyperparams import HParams
 from texar.core.utils import switch_dropout
 from texar.core.layers import *
 from texar.modules.encoders.conv1d_discriminator import CNN
+from texar.modules.decoders.rnn_decoders import BasicRNNDecoder
 from texar.modules.decoders.rnn_decoder_helpers import *
 from texar.models.tsf import ops
 from texar.models.tsf.attention import AttentionLayerBahdanau as AttLayer
@@ -59,12 +61,17 @@ class TSFClassifierAttLMRec:
       # cnn
       "cnn_name": "cnn",
       "cnn_use_embedding": True,
+      "cnn_use_gate": False,
+      "cnn_attn_size": 100,
       "cnn_kernel_sizes": [3, 4, 5],
       "cnn_num_filter": 128,
       "cnn_input_keep_prob": 1.,
       "cnn_output_keep_prob": 0.5,
       "cnn_vocab_size": 10000,
       "cnn_embedding_size": 100,
+      "lm_stop_gradient": False,
+      "lm_ave_len": False,
+      "lm_reverse_label": False,
       # adam
       "adam_learning_rate": 1e-4,
       "adam_beta1": 0.9,
@@ -165,6 +172,8 @@ class TSFClassifierAttLMRec:
     else:
       loss_g = tf.reduce_sum(loss_g) / hparams.batch_size
 
+
+
     # decoding 
     start_tokens = input_tensors["dec_inputs"][:, 0]
     start_tokens = tf.reshape(start_tokens, [-1])
@@ -193,6 +202,7 @@ class TSFClassifierAttLMRec:
     # # lm part #
     #############
 
+    half = hparams.batch_size // 2
     lm_hparams = utils.convert_decoder_hparams(hparams)
     lm0_hparams = copy.deepcopy(lm_hparams)
     lm0_hparams.name = "lm0_decoder"
@@ -351,7 +361,6 @@ class TSFClassifierAttLMRec:
       loss_rec = tf.reduce_sum(loss_rec) / hparams.batch_size
 
     # discriminator
-    half = hparams.batch_size // 2
     cnn_hparams = utils.filter_hparams(hparams, "cnn")
     cnn_hparams.vocab_size
     cnn = CNN(cnn_hparams)
@@ -386,6 +395,8 @@ class TSFClassifierAttLMRec:
              + att_decoder.trainable_variables
     var_d = ops.retrieve_variables(["cnn"])
 
+    var_lm = lm0_decoder.trainable_variables + lm1_decoder.trainable_variables
+
     # optimization
     adam_hparams = utils.filter_hparams(hparams, "adam")
     optimizer_all = tf.train.AdamOptimizer(**adam_hparams).minimize(
@@ -394,6 +405,9 @@ class TSFClassifierAttLMRec:
       loss_g, var_list=var_eg)
     optimizer_ds = tf.train.AdamOptimizer(**adam_hparams).minimize(
       loss_ds, var_list=var_d)
+    optimizer_lm = tf.train.AdamOptimizer(**adam_hparams).minimize(
+      loss_lm, var_list=var_lm)
+
 
     # add tensors to collections
     collections_output = hparams.collections + '/output'
@@ -438,6 +452,7 @@ class TSFClassifierAttLMRec:
       [("optimizer_all", optimizer_all),
        ("optimizer_ae", optimizer_ae),
        ("optimizer_ds", optimizer_ds),
+       ("optimizer_lm", optimizer_lm),
       ]
     )
 
@@ -448,7 +463,7 @@ class TSFClassifierAttLMRec:
       [self.loss["loss_ds"],
        self.loss["accu_s"],
        self.opt["optimizer_ds"]],
-      self.feed_dict(batch, 0., 0., 1.))
+      self.feed_dict(batch, 0., 0., 0, 0, 1.))
     return loss_ds, accu_s
 
   def train_g_step(self, sess, batch, rho_f, rho_r, rho_lm, rho_rec, gamma):
@@ -565,7 +580,7 @@ class TSFClassifierAttLMRec:
         self.input_tensors["seq_len"]: batch["seq_len"]})
     return logits_ori, logits_tsf
 
-  def feed_dict(self, batch, rho_f, rho_r, rho_lmf, rho_rec, gamma,
+  def feed_dict(self, batch, rho_f, rho_r, rho_lm, rho_rec, gamma,
                 is_train=True):
     return {
       context.is_train(): is_train,
@@ -577,7 +592,7 @@ class TSFClassifierAttLMRec:
       self.input_tensors["labels"]: batch["labels"],
       self.input_tensors["rho_f"]: rho_f,
       self.input_tensors["rho_r"]: rho_r,
-      self.input_tensors["rho_lmf"]: rho_lmf,
+      self.input_tensors["rho_lm"]: rho_lm,
       self.input_tensors["rho_rec"]: rho_rec,
       self.input_tensors["gamma"]: gamma,
     }
