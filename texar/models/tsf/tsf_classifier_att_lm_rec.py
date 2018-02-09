@@ -83,6 +83,8 @@ class TSFClassifierAttLMRec:
     gamma = tf.placeholder(tf.float32, [], name="gamma")
     rho_f = tf.placeholder(tf.float32, [], name="rho_f")
     rho_r = tf.placeholder(tf.float32, [], name="rho_r")
+    rho_lm = tf.placeholder(tf.float32, [], name="rho_lm")
+    rho_rec = tf.placeholder(tf.float32, [], name="rho_rec")
 
     collections_input = self._hparams.collections + '/input'
     input_tensors = utils.register_collection(
@@ -96,6 +98,8 @@ class TSFClassifierAttLMRec:
        ("gamma", gamma),
        ("rho_f", rho_f),
        ("rho_r", rho_r),
+       ("rho_lm", rho_lm),
+       ("rho_rec", rho_rec),
       ])
 
     return input_tensors
@@ -318,6 +322,7 @@ class TSFClassifierAttLMRec:
 
     soft_sample_id = soft_outputs_tsf.sample_id
     rec_enc_inputs = tf.tensordot(soft_sample_id, embedding, [[2], [0]])
+    # remove the EOS
     rec_seq_len = tf.maximum(soft_len_tsf - 1, 0)
 
     rec_enc_outputs, rec_z = tf.nn.dynamic_rnn(
@@ -411,12 +416,19 @@ class TSFClassifierAttLMRec:
       [("loss", loss),
        ("loss_g", loss_g),
        ("ppl_g", ppl_g),
+       ("loss_lmf", loss_lmf),
+       ("loss_rec", loss_rec),
        ("loss_ds", loss_ds),
        ("loss_df", loss_df),
        ("loss_dr", loss_dr),
        ("accu_s", accu_s),
        ("accu_f", accu_f),
        ("accu_r", accu_r),
+       ("loss_lm", loss_lm),
+       ("loss_lm0", loss_lm0),
+       ("loss_lm1", loss_lm1),
+       ("ppl_lm0", ppl_lm0),
+       ("ppl_lm1", ppl_lm1),
       ]
     )
 
@@ -439,48 +451,82 @@ class TSFClassifierAttLMRec:
       self.feed_dict(batch, 0., 0., 1.))
     return loss_ds, accu_s
 
-  def train_g_step(self, sess, batch, rho_f, rho_r, gamma):
-    loss, loss_g, ppl_g, loss_df, loss_dr, accu_f, accu_r, _ = sess.run(
+  def train_g_step(self, sess, batch, rho_f, rho_r, rho_lm, rho_rec, gamma):
+    loss, loss_g, ppl_g, loss_lmf, loss_rec, \
+      loss_df, loss_dr, accu_f, accu_r, _ = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
        self.loss["ppl_g"],
+       self.loss["loss_lmf"],
+       self.loss["loss_rec"],
        self.loss["loss_df"],
        self.loss["loss_dr"],
        self.loss["accu_f"],
        self.loss["accu_r"],
        self.opt["optimizer_all"]],
-      self.feed_dict(batch, rho_f, rho_r, gamma))
-    return loss, loss_g, ppl_g, loss_df, loss_dr, accu_f, accu_r
+      self.feed_dict(batch, rho_f, rho_r, rho_lm, rho_rec, gamma))
+    return (loss, loss_g, ppl_g, loss_lmf, loss_rec,
+            loss_df, loss_dr, accu_f, accu_r)
 
-  def train_ae_step(self, sess, batch, rho_f, rho_r, gamma):
-    loss, loss_g, ppl_g, loss_df, loss_dr, accu_f, accu_r, _ = sess.run(
+  def train_ae_step(self, sess, batch, rho_f, rho_r, rho_lm, rho_rec, gamma):
+    loss, loss_g, ppl_g, loss_lmf, loss_rec, \
+      loss_df, loss_dr, accu_f, accu_r, _ = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
        self.loss["ppl_g"],
+       self.loss["loss_lmf"],
+       self.loss["loss_rec"],
        self.loss["loss_df"],
        self.loss["loss_dr"],
        self.loss["accu_f"],
        self.loss["accu_r"],
        self.opt["optimizer_ae"]],
-      self.feed_dict(batch, rho_f, rho_r, gamma))
-    return loss, loss_g, ppl_g, loss_df, loss_dr, accu_f, accu_r
+      self.feed_dict(batch, rho_f, rho_r, rho_lm, rho_rec, gamma))
+    return (loss, loss_g, ppl_g, loss_lmf, loss_rec,
+            loss_df, loss_dr, accu_f, accu_r)
+
+  def train_lm_step(self, sess, batch, rho_f, rho_r, rho_lm, rho_rec, gamma):
+    loss_lm, ppl_lm0, ppl_lm1, _ = sess.run(
+      [self.loss["loss_lm"],
+       self.loss["ppl_lm0"],
+       self.loss["ppl_lm1"],
+       self.opt["optimizer_lm"]],
+      self.feed_dict(batch, rho_f, rho_r, rho_lm, rho_rec, gamma))
+    return loss_lm, ppl_lm0, ppl_lm1
 
   def eval_step(self, sess, batch, rho_f, rho_r, gamma):
-    loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds, \
-      accu_f, accu_r, accu_s = sess.run(
+    loss, loss_g, ppl_g, loss_lmf, loss_rec, \
+      loss_df, loss_dr, loss_ds, accu_f, accu_r, accu_s, \
+      loss_lm, ppl_lm0, ppl_lm1 = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
        self.loss["ppl_g"],
+       self.loss["loss_lmf"],
+       self.loss["loss_rec"],
        self.loss["loss_df"],
        self.loss["loss_dr"],
        self.loss["loss_ds"],
        self.loss["accu_f"],
        self.loss["accu_r"],
        self.loss["accu_s"],
+       self.loss["loss_lm"],
+       self.loss["ppl_lm0"],
+       self.loss["ppl_lm1"],
       ],
-      self.feed_dict(batch, rho_f, rho_r, gamma, is_train=False))
-    return (loss, loss_g, ppl_g, loss_df, loss_dr, loss_ds,
-            accu_f, accu_r, accu_s)
+      self.feed_dict(batch, rho_f, rho_r, rho_lm, rho_rec,
+                     gamma, is_train=False))
+    return (loss, loss_g, ppl_g, loss_lmf, loss_rec,
+            loss_df, loss_dr, loss_ds, accu_f, accu_r, accu_s,
+            loss_lm, ppl_lm0, ppl_lm1)
+
+  def eval_lm_step(self, sess, batch, rho_f, rho_r, rho_lm, rho_rec, gamma):
+    loss_lm, ppl_lm0, ppl_lm1 = sess.run(
+      [self.loss["loss_lm"],
+       self.loss["ppl_lm0"],
+       self.loss["ppl_lm1"]],
+      self.feed_dict(batch, rho_f, rho_r, rho_lm, rho_rec,
+                     gamma, is_train=False))
+    return (loss_lm, ppl_lm0, ppl_lm1)
 
   def debug_step(self, sess, batch, rho_f, rho_r, gamma):
     from tensorflow.contrib.layers.python.layers import utils
@@ -519,7 +565,8 @@ class TSFClassifierAttLMRec:
         self.input_tensors["seq_len"]: batch["seq_len"]})
     return logits_ori, logits_tsf
 
-  def feed_dict(self, batch, rho_f, rho_r, gamma, is_train=True):
+  def feed_dict(self, batch, rho_f, rho_r, rho_lmf, rho_rec, gamma,
+                is_train=True):
     return {
       context.is_train(): is_train,
       self.input_tensors["seq_len"]: batch["seq_len"],
@@ -530,6 +577,8 @@ class TSFClassifierAttLMRec:
       self.input_tensors["labels"]: batch["labels"],
       self.input_tensors["rho_f"]: rho_f,
       self.input_tensors["rho_r"]: rho_r,
+      self.input_tensors["rho_lmf"]: rho_lmf,
+      self.input_tensors["rho_rec"]: rho_rec,
       self.input_tensors["gamma"]: gamma,
     }
 
@@ -545,5 +594,7 @@ class TSFClassifierAttLMRec:
         self.input_tensors["enc_inputs"]: batch["enc_inputs"],
         self.input_tensors["dec_inputs"]: batch["dec_inputs"],
         self.input_tensors["labels"]: batch["labels"],
+        self.input_tensors["targets"]: batch["targets"],
+        self.input_tensors["seq_len"]: batch["seq_len"],
         self.input_tensors["gamma"]: gamma})
     return logits_ori, logits_tsf, g_logits, test_output, test_logits
