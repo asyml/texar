@@ -47,7 +47,7 @@ class CNN(ModuleBase):
       "kernel_sizes": [3, 4, 5],
       "num_filter": 128,
       "output_keep_prob": 0.5,
-      "input_keep_prob": 1,
+      "input_keep_prob": 1.,
       "leaky_relu_alpha": 0.01,
       "vocab_size": 10000,
       "embedding_size": 100,
@@ -89,6 +89,7 @@ class CNN(ModuleBase):
       inputs = tf.expand_dims(mask, 2) * inputs
 
 
+    # input keep prob??
     inputs = tf.nn.dropout(
       inputs, utils.switch_dropout(self._hparams.input_keep_prob))
 

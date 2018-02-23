@@ -38,10 +38,13 @@ class Classifier:
       "cnn_name": "cnn",
       "cnn_use_embedding": True,
       "cnn_use_gate": False,
+      "cnn_scale_attn": False,
       "cnn_kernel_sizes": [3, 4, 5],
       "cnn_num_filter": 128,
       "cnn_input_keep_prob": 1.,
       "cnn_output_keep_prob": 0.5,
+      "cnn_vocab_size": 10000,
+      "cnn_embedding_size": 100,
       # adam
       "adam_learning_rate": 1e-4,
       "adam_beta1": 0.9,
@@ -56,10 +59,11 @@ class Classifier:
 
     x = tf.placeholder(tf.int32, [batch_size, None], name="x")
     y = tf.placeholder(tf.int32, [batch_size], name="y")
+    seq_len = tf.placeholder(tf.int32, [batch_size], name="seq_len")
     gamma = tf.placeholder(tf.float32, [1], name="gamma")
 
     cnn = CNN(cnn_hparams)
-    logits, scores = cnn(x, gamma)
+    logits, scores = cnn(x, seq_len=seq_len, gamma=gamma)
     logits = tf.reshape(logits, [-1])
     prob = tf.sigmoid(logits)
     pred = tf.cast(tf.greater(prob, 0.5), dtype=tf.int32)
@@ -75,6 +79,7 @@ class Classifier:
       hparams.collections,
       [("x", x),
        ("y", y),
+       ("seq_len", seq_len),
        ("gamma", gamma),
        ("scores", scores),
        ("logits", logits),
@@ -96,10 +101,11 @@ class Classifier:
         context.is_train(): True,
         self.tensors["x"]: batch["x"],
         self.tensors["y"]: batch["y"],
+        self.tensors["seq_len"]: batch["seq_len"],
         self.tensors["gamma"]: [gamma],
       })
 
-    return loss, accu
+    return loss, accu 
 
   def eval_step(self, sess, batch, gamma=1):
     loss, prob = sess.run(
@@ -109,6 +115,7 @@ class Classifier:
         context.is_train(): False,
         self.tensors["x"]: batch["x"],
         self.tensors["y"]: batch["y"],
+        self.tensors["seq_len"]: batch["seq_len"],
         self.tensors["gamma"]: [gamma],
       })
 
@@ -122,6 +129,7 @@ class Classifier:
         context.is_train(): False,
         self.tensors["x"]: batch["x"],
         self.tensors["y"]: batch["y"],
+        self.tensors["seq_len"]: batch["seq_len"],
         self.tensors["gamma"]: [gamma],
       })
 
