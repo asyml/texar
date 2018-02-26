@@ -17,6 +17,7 @@ from tensorflow.contrib.seq2seq import TrainingHelper
 from texar import context
 from texar.hyperparams import HParams
 from texar.core.utils import switch_dropout
+from texar.core.layers import *
 from texar.modules.encoders.conv1d_discriminator import CNN
 from texar.modules.decoders.rnn_decoders import BasicRNNDecoder
 from texar.modules.decoders.rnn_decoder_helpers import *
@@ -138,8 +139,14 @@ class TSFClassifierLMRecAdv:
     h_ori = tf.concat([label_proj_g(labels), z], 1)
     h_tsf = tf.concat([label_proj_g(1 - labels), z], 1)
 
-    cell_g = ops.get_rnn_cell(rnn_hparams)
+    g_rnn_hparams = copy.deepcopy(rnn_hparams)
+    # set output drop prob = 1.
+    g_rnn_hparams.output_keep_prob = 1.
+    cell_g = ops.get_rnn_cell(g_rnn_hparams)
+    output_dropout = tf.layers.Dropout(
+      rate=1-switch_dropout(hparams.rnn_output_keep_prob))
     softmax_proj = tf.layers.Dense(hparams.vocab_size, name="softmax_proj")
+    softmax_proj = SequentialLayer([output_dropout, softmax_proj], name="softmax_proj")
     g_outputs, _ = tf.nn.dynamic_rnn(cell_g, dec_inputs, initial_state=h_ori,
                                      scope="generator")
 
@@ -165,7 +172,7 @@ class TSFClassifierLMRecAdv:
     #TODO(zichao): hard coded end_token
     end_token = 2
     gumbel_helper = GumbelSoftmaxEmbeddingHelper(
-      embedding, start_tokens, end_token, input_tensors["gamma"])
+      embedding, start_tokens, end_token, input_tensors["gamma"], use_finish=False)
     greedy_helper = GreedyEmbeddingHelper(embedding, start_tokens, end_token)
 
     soft_outputs_ori, _, soft_len_ori = decoder(gumbel_helper, h_ori)
@@ -363,19 +370,21 @@ class TSFClassifierLMRecAdv:
     cnn0 = CNN(cnn0_hparams)
     cnn1 = CNN(cnn1_hparams)
 
+    h_len = tf.shape(g_outputs)[1]
     teach_h = tf.concat([tf.expand_dims(h_ori, 1), g_outputs], 1)
     soft_h_tsf = tf.concat([tf.expand_dims(h_tsf, 1),
-                            soft_outputs_tsf.cell_output], 1)
+                            soft_outputs_tsf.cell_output[:, :h_len, :]], 1)
     loss_d0, _, _, _ = ops.adv_loss(teach_h[:half],
                                     soft_h_tsf[half:],
-                                    cnn0,
-                                    input_tensors["seq_len"][:half] + 2,
-                                    soft_len_tsf[half:] + 1) # soft_len_tsf include EOS
+                                    cnn0,)
+                                    # input_tensors["seq_len"][:half] + 2,
+                                    # soft_len_tsf[half:] + 1) # soft_len_tsf include EOS
     loss_d1, _, _, _ = ops.adv_loss(teach_h[half:],
                                     soft_h_tsf[:half],
-                                    cnn1,
-                                    input_tensors["seq_len"][half:] + 2,
-                                    soft_len_tsf[:half] + 1)
+                                    cnn1,)
+                                    # input_tensors["seq_len"][half:] + 2,
+                                    # soft_len_tsf[:half] + 1)
+
     loss_d = loss_d0 + loss_d1
 
     loss = loss_g
@@ -484,16 +493,16 @@ class TSFClassifierLMRecAdv:
       self.feed_dict(batch, 0., 0., 0, 0., 0., 1.))
     return loss_ds, accu_s
 
-  def train_d0_step(self, sess, batch):
+  def train_d0_step(self, sess, batch, gamma):
     loss_d0, _ = sess.run(
       [self.loss["loss_d0"], self.opt["optimizer_d0"],],
-      self.feed_dict(batch, 0., 0., 0., 0., 0., 1.))
+      self.feed_dict(batch, 0., 0., 0., 0., 0., gamma))
     return loss_d0
 
-  def train_d1_step(self, sess, batch):
+  def train_d1_step(self, sess, batch, gamma):
     loss_d1, _ = sess.run(
       [self.loss["loss_d1"], self.opt["optimizer_d1"]],
-      self.feed_dict(batch, 0., 0., 0., 0., 0., 1.))
+      self.feed_dict(batch, 0., 0., 0., 0., 0., gamma))
     return loss_d1
 
   def train_g_step(self, sess, batch, rho_f, rho_r, rho_lm, rho_rec, rho_adv,
