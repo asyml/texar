@@ -443,6 +443,8 @@ class TSFClassifierLMRecAdv:
        ("mask", mask),
        ("soft_len_ori", soft_len_ori),
        ("soft_len_tsf", soft_len_tsf),
+       ("teach_h", teach_h),
+       ("soft_h_tsf", soft_h_tsf),
       ]
     )
 
@@ -527,7 +529,7 @@ class TSFClassifierLMRecAdv:
   def train_ae_step(self, sess, batch, rho_f, rho_r, rho_lm, rho_rec, rho_adv,
                     gamma):
     loss, loss_g, ppl_g, loss_lmf, loss_rec,\
-      loss_df, loss_dr, accu_f, accu_r, loss_d, _ = sess.run(
+      loss_df, loss_dr, accu_f, accu_r, loss_d, teach_h, soft_h_tsf, _ = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
        self.loss["ppl_g"],
@@ -538,10 +540,12 @@ class TSFClassifierLMRecAdv:
        self.loss["accu_f"],
        self.loss["accu_r"],
        self.loss["loss_d"],
+       self.output_tensors["teach_h"],
+       self.output_tensors["soft_h_tsf"],
        self.opt["optimizer_ae"]],
       self.feed_dict(batch, rho_f, rho_r, rho_lm, rho_rec, rho_adv, gamma))
     return (loss, loss_g, ppl_g, loss_lmf, loss_rec,
-            loss_df, loss_dr, accu_f, accu_r, loss_d)
+            loss_df, loss_dr, accu_f, accu_r, loss_d, teach_h, soft_h_tsf)
 
   def train_lm_step(self, sess, batch, rho_f, rho_r, rho_lm, rho_rec, rho_adv,
                     gamma):
