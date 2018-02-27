@@ -20,6 +20,7 @@ from texar.hyperparams import HParams
 from texar.core.utils import switch_dropout
 from texar.models.tsf import utils
 
+
 def get_rnn_cell(hparams=None):
   default_hparams = {
     "type": "BasicLSTMCell",
@@ -136,16 +137,48 @@ def id_to_dense(p, word_id, vocab_size):
   return dense_p
 
 
+def get_length(sample_id, end_token=2):
+  if sample_id.get_shape().ndims == 3:
+    sample_id = tf.argmax(sample_id, axis=-1, output_type=tf.int32)
+  else:
+    sample_id = tf.to_int32(sample_id)
+
+  batch_size = sample_id.get_shape()[0]
+
+  def condition(time, finished, sequence_lenghts):
+    return tf.less(time, tf.shape(sample_id)[1])
+
+  def loop(time, finished, sequence_lengths):
+    next_finished = tf.equal(sample_id[:, time], end_token)
+    next_finished = tf.logical_or(next_finished, finished)
+    next_finished = tf.logical_or(next_finished, time + 1 >= tf.shape(sample_id)[1])
+    next_sequence_lengths = tf.where(
+      tf.logical_and(tf.logical_not(finished), next_finished),
+      tf.fill(tf.shape(sequence_lengths), time+1),
+      sequence_lengths)
+    return (time + 1, next_finished, next_sequence_lengths)
+
+  initial_time = tf.constant(0, dtype=tf.int32)
+  initial_finished = tf.tile([False], [batch_size])
+  initial_sequence_lengths = tf.zeros_like(initial_finished, dtype=tf.int32)
+  res = tf.while_loop(
+    condition,
+    loop,
+    loop_vars=[
+      initial_time, initial_finished, initial_sequence_lengths,
+    ]
+  )
+  return res[2]
 
 def adv_loss(x_real, x_fake, discriminator, real_len=None, fake_len=None):
-  real_logits, real_scores = discriminator(x_real, real_len)
+  real_logits, real_scores = discriminator(x_real, seq_len=real_len)
   real_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
     labels=tf.ones_like(real_logits), logits=real_logits))
   real_prob = tf.sigmoid(real_logits)
   real_pred = tf.cast(tf.greater(real_prob, 0.5), dtype=tf.int32)
   real_accu = tf.reduce_mean(tf.cast(tf.equal(real_pred, tf.ones_like(real_pred)),
                                      dtype=tf.float32))
-  fake_logits, fake_scores = discriminator(x_fake, fake_len)
+  fake_logits, fake_scores = discriminator(x_fake, seq_len=fake_len)
   fake_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
     labels=tf.zeros_like(fake_logits), logits=fake_logits))
   fake_prob = tf.sigmoid(fake_logits)
@@ -175,4 +208,6 @@ def feed_dict(model, batch, rho, gamma, dropout, learning_rate):
     model.input_tensors["weights"]: batch["weights"],
     model.input_tensprs["labels"]: batch["labels"],
   }
+
+
 
