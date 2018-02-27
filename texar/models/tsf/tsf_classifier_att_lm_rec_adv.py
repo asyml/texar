@@ -404,19 +404,20 @@ class TSFClassifierAttLMRecAdv:
     cnn0 = CNN(cnn0_hparams)
     cnn1 = CNN(cnn1_hparams)
 
+    h_len = tf.shape(g_outputs.cell_output)[1]
     teach_h = tf.concat([tf.expand_dims(h_ori, 1), g_outputs.cell_output], 1)
     soft_h_tsf = tf.concat([tf.expand_dims(h_tsf, 1),
-                            soft_outputs_tsf.cell_output], 1)
+                            soft_outputs_tsf.cell_output[:, :h_len, :]], 1)
     loss_d0, _, _, _ = ops.adv_loss(teach_h[:half],
                                     soft_h_tsf[half:],
-                                    cnn0,
-                                    input_tensors["seq_len"][:half] + 2,
-                                    soft_len_tsf[half:] + 1) # soft_len_tsf include EOS
+                                    cnn0,)
+                                    # input_tensors["seq_len"][:half] + 2,
+                                    # soft_len_tsf[half:] + 1) # soft_len_tsf include EOS
     loss_d1, _, _, _ = ops.adv_loss(teach_h[half:],
                                     soft_h_tsf[:half],
-                                    cnn1,
-                                    input_tensors["seq_len"][half:] + 2,
-                                    soft_len_tsf[:half] + 1)
+                                    cnn1,)
+                                    # input_tensors["seq_len"][half:] + 2,
+                                    # soft_len_tsf[:half] + 1)
     loss_d = loss_d0 + loss_d1
 
     loss = loss_g
@@ -517,16 +518,16 @@ class TSFClassifierAttLMRecAdv:
       self.feed_dict(batch, 0., 0., 0., 0., 0., 1.))
     return loss_ds, accu_s
 
-  def train_d0_step(self, sess, batch):
+  def train_d0_step(self, sess, batch, gamma):
     loss_d0, _ = sess.run(
       [self.loss["loss_d0"], self.opt["optimizer_d0"],],
-      self.feed_dict(batch, 0., 0., 0., 0., 0., 1.))
+      self.feed_dict(batch, 0., 0., 0., 0., 0., gamma))
     return loss_d0
 
-  def train_d1_step(self, sess, batch):
+  def train_d1_step(self, sess, batch, gamma):
     loss_d1, _ = sess.run(
       [self.loss["loss_d1"], self.opt["optimizer_d1"]],
-      self.feed_dict(batch, 0., 0., 0., 0., 0., 1.))
+      self.feed_dict(batch, 0., 0., 0., 0., 0., gamma))
     return loss_d1
 
   def train_g_step(self, sess, batch, rho_f, rho_r, rho_lm, rho_rec, rho_adv,
