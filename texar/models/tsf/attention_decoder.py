@@ -52,6 +52,7 @@ class AttentionDecoder(RNNDecoderBase):
                attention_values_length,
                attention_layer,
                cell,
+               output_layer=None,
                mask=None,
                hparams=None):
     super(AttentionDecoder, self).__init__(cell=cell,
@@ -73,7 +74,10 @@ class AttentionDecoder(RNNDecoderBase):
       self._softmax_input = tf.layers.Dense(self._cell.output_size,
                                             activation=tf.nn.tanh,
                                             name="softmax_input")
-      self._output_layer = tf.layers.Dense(vocab_size, name="output_layer")
+      if output_layer is None:
+        self._output_layer = tf.layers.Dense(vocab_size, name="output_layer")
+      else:
+        self._output_layer = output_layer
 
   def set_attention_inputs(self, attention_keys, attention_values,
                            attention_values_length):

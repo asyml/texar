@@ -217,7 +217,10 @@ class TSFClassifierLMRecAdv:
     loss_lm0_mask = loss_lm0
     ppl_lm0 = tf.reduce_sum(loss_lm0) / \
               (tf.reduce_sum(input_tensors["weights"][:half]) + 1e-8)
-    loss_lm0 = tf.reduce_sum(loss_lm0) / half
+    if hparams.ave_seq_len:
+      loss_lm0 = ppl_lm0
+    else:
+      loss_lm0 = tf.reduce_sum(loss_lm0) / half
 
     loss_lm1 = tf.nn.sparse_softmax_cross_entropy_with_logits(
       labels=input_tensors["targets"][half:], logits=outputs_lm1.logits)
@@ -225,7 +228,10 @@ class TSFClassifierLMRecAdv:
     loss_lm1_mask = loss_lm1
     ppl_lm1 = tf.reduce_sum(loss_lm1) / \
               (tf.reduce_sum(input_tensors["weights"][half:]) + 1e-8)
-    loss_lm1 = tf.reduce_sum(loss_lm1) / half
+    if hparams.ave_seq_len:
+      loss_lm1 = ppl_lm1
+    else:
+      loss_lm1 = tf.reduce_sum(loss_lm1) / half
 
     loss_lm = (loss_lm0 + loss_lm1) / 2.
 
@@ -391,7 +397,7 @@ class TSFClassifierLMRecAdv:
 
     loss = loss_g
     if hparams.rho_f > 0.:
-     loss +=  input_tensors["rho_f"] * loss_df
+      loss +=  input_tensors["rho_f"] * loss_df
     if hparams.rho_r > 0.:
       loss += input_tensors["rho_r"] * loss_dr
     if hparams.rho_lm > 0.:
