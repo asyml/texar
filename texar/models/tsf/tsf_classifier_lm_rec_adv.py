@@ -69,6 +69,7 @@ class TSFClassifierLMRecAdv:
       "lm_stop_gradient": False,
       "lm_ave_len": False,
       "lm_reverse_label": False,
+      "lm_use_real_len": True,
       # adam
       "adam_learning_rate": 1e-4,
       "adam_beta1": 0.9,
@@ -177,6 +178,11 @@ class TSFClassifierLMRecAdv:
 
     soft_outputs_ori, _, soft_len_ori = decoder(gumbel_helper, h_ori)
     soft_outputs_tsf, _, soft_len_tsf = decoder(gumbel_helper, h_tsf)
+    # be careful on the length
+    if hparams.lm_use_real_len:
+      soft_len_tsf = ops.get_length(soft_outputs_tsf.sample_id)
+    else:
+      soft_len_tsf = tf.tile(tf.shape(g_outputs)[1], [hparams.batch_size])
 
     hard_outputs_ori, _, hard_len_ori = decoder(greedy_helper, h_ori)
     hard_outputs_tsf, _, hard_len_tsf = decoder(greedy_helper, h_tsf)
@@ -342,13 +348,13 @@ class TSFClassifierLMRecAdv:
       = ops.adv_loss(targets[half:],
                      targets[:half],
                      cnns,
-                     input_tensors["seq_len"][half:],
+                     input_tensors["seq_len"][half:], # no EOS
                      input_tensors["seq_len"][:half])
     mask = tf.concat([mask0, mask1], axis=0)
     loss_dr, accu_r, _, _ = ops.adv_loss(soft_outputs_ori.sample_id[half:],
                                          soft_outputs_ori.sample_id[:half],
                                          cnns,
-                                         soft_len_ori[half:],
+                                         soft_len_ori[half:], # include EOS
                                          soft_len_ori[:half])
     loss_df, accu_f, _, _ = ops.adv_loss(soft_outputs_tsf.sample_id[:half],
                                          soft_outputs_tsf.sample_id[half:],
@@ -377,14 +383,10 @@ class TSFClassifierLMRecAdv:
     loss_d0, _, _, _ = ops.adv_loss(teach_h[:half],
                                     soft_h_tsf[half:],
                                     cnn0,)
-                                    # input_tensors["seq_len"][:half] + 2,
-                                    # soft_len_tsf[half:] + 1) # soft_len_tsf include EOS
     loss_d1, _, _, _ = ops.adv_loss(teach_h[half:],
                                     soft_h_tsf[:half],
                                     cnn1,)
-                                    # input_tensors["seq_len"][half:] + 2,
-                                    # soft_len_tsf[:half] + 1)
-
+    
     loss_d = loss_d0 + loss_d1
 
     loss = loss_g
@@ -529,7 +531,7 @@ class TSFClassifierLMRecAdv:
   def train_ae_step(self, sess, batch, rho_f, rho_r, rho_lm, rho_rec, rho_adv,
                     gamma):
     loss, loss_g, ppl_g, loss_lmf, loss_rec,\
-      loss_df, loss_dr, accu_f, accu_r, loss_d, teach_h, soft_h_tsf, _ = sess.run(
+      loss_df, loss_dr, accu_f, accu_r, loss_d, _ = sess.run(
       [self.loss["loss"],
        self.loss["loss_g"],
        self.loss["ppl_g"],
@@ -540,12 +542,10 @@ class TSFClassifierLMRecAdv:
        self.loss["accu_f"],
        self.loss["accu_r"],
        self.loss["loss_d"],
-       self.output_tensors["teach_h"],
-       self.output_tensors["soft_h_tsf"],
        self.opt["optimizer_ae"]],
       self.feed_dict(batch, rho_f, rho_r, rho_lm, rho_rec, rho_adv, gamma))
     return (loss, loss_g, ppl_g, loss_lmf, loss_rec,
-            loss_df, loss_dr, accu_f, accu_r, loss_d, teach_h, soft_h_tsf)
+            loss_df, loss_dr, accu_f, accu_r, loss_d)
 
   def train_lm_step(self, sess, batch, rho_f, rho_r, rho_lm, rho_rec, rho_adv,
                     gamma):
