@@ -339,6 +339,7 @@ class TSFClassifierAttLMRec:
       cell_e, rec_enc_inputs, sequence_length=rec_seq_len,
       initial_state=init_state, scope="encoder")
     rec_z = rec_z[:, hparams.dim_y:]
+    rec_h_ori = tf.concat([label_proj_g(labels), rec_z], 1)
 
     att_decoder.set_attention_inputs(
       rec_enc_outputs,
@@ -348,7 +349,7 @@ class TSFClassifierAttLMRec:
     seq_len = [tf.shape(input_tensors["dec_inputs"])[1]] * hparams.batch_size
     rec_train_helper = TrainingHelper(dec_inputs, seq_len)
 
-    rec_g_outputs, _, _ = att_decoder(rec_train_helper, h_ori)
+    rec_g_outputs, _, _ = att_decoder(rec_train_helper, rec_h_ori)
 
     loss_rec = tf.nn.sparse_softmax_cross_entropy_with_logits(
       labels=input_tensors["targets"], logits=rec_g_outputs.logits)

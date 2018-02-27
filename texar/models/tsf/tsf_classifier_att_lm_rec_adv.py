@@ -56,9 +56,7 @@ class TSFClassifierAttLMRecAdv:
       # att decoder
       "att_decoder_max_decoding_length_train": 21, # go id ?
       "att_decoder_max_decoding_length_infer": 20,
-      "decoder_max_decoding_length_train": 21, # go id ?
-      "decoder_max_decoding_length_infer": 20,
-      # cnn
+      
       "cnn_name": "cnn",
       "cnn_use_embedding": True,
       "cnn_use_gate": False,
@@ -72,6 +70,7 @@ class TSFClassifierAttLMRecAdv:
       "lm_stop_gradient": False,
       "lm_ave_len": False,
       "lm_reverse_label": False,
+      "lm_use_real_len": True,
       # adam
       "adam_learning_rate": 1e-4,
       "adam_beta1": 0.9,
@@ -136,6 +135,8 @@ class TSFClassifierAttLMRecAdv:
     labels = tf.reshape(labels, [-1, 1])
 
     rnn_hparams = utils.filter_hparams(hparams, "rnn")
+    # set the output keep prob to be 1.
+    rnn_hparams.output_keep_prob = 1.
     init_state = tf.zeros([hparams.batch_size, rnn_hparams.size])
     cell_e = ops.get_rnn_cell(rnn_hparams)
 
@@ -149,12 +150,16 @@ class TSFClassifierAttLMRecAdv:
     h_tsf = tf.concat([label_proj_g(1 - labels), z], 1)
 
     cell_g = ops.get_rnn_cell(rnn_hparams)
-    # pointer decoder
-    att_layer = AttLayer(hparams.rnn_size)
+    output_dropout = tf.layers.Dropout(
+      rate=1-switch_dropout(hparams.rnn_output_keep_prob))
+    softmax_proj = tf.layers.Dense(hparams.vocab_size, name="softmax_proj")
+    softmax_proj = SequentialLayer([output_dropout, softmax_proj], name="softmax_proj")
 
+    att_layer = AttLayer(hparams.rnn_size)
     att_decoder_hparams = utils.filter_hparams(hparams, "att_decoder")
     att_decoder = AttDecoder(hparams.vocab_size, enc_outputs, enc_outputs,
                              input_tensors["seq_len"], att_layer, cell_g,
+                             output_layer=softmax_proj,
                              hparams=att_decoder_hparams)
     # set the seq_len to be dec_inputs size
     seq_len = [tf.shape(input_tensors["dec_inputs"])[1]] * hparams.batch_size
@@ -175,7 +180,6 @@ class TSFClassifierAttLMRecAdv:
       loss_g = tf.reduce_sum(loss_g) / hparams.batch_size
 
 
-
     # decoding 
     start_tokens = input_tensors["dec_inputs"][:, 0]
     start_tokens = tf.reshape(start_tokens, [-1])
@@ -186,6 +190,7 @@ class TSFClassifierAttLMRecAdv:
       start_tokens,
       end_token,
       input_tensors["gamma"],
+      use_finish=False,
     )
 
     greedy_helper = GreedyEmbeddingHelper(
@@ -196,6 +201,11 @@ class TSFClassifierAttLMRecAdv:
 
     soft_outputs_ori, _, soft_len_ori  = att_decoder(gumbel_helper, h_ori)
     soft_outputs_tsf, _, soft_len_tsf = att_decoder(gumbel_helper, h_tsf)
+    # be careful on the length
+    if hparams.lm_use_real_len:
+      soft_len_tsf = ops.get_length(soft_outputs_tsf.sample_id)
+    else:
+      soft_len_tsf = tf.tile(tf.shape(g_outputs)[1], [hparams.batch_size])
 
     hard_outputs_ori, _, hard_len_ori  = att_decoder(greedy_helper, h_ori)
     hard_outputs_tsf, _, hard_len_tsf = att_decoder(greedy_helper, h_tsf)
@@ -411,13 +421,9 @@ class TSFClassifierAttLMRecAdv:
     loss_d0, _, _, _ = ops.adv_loss(teach_h[:half],
                                     soft_h_tsf[half:],
                                     cnn0,)
-                                    # input_tensors["seq_len"][:half] + 2,
-                                    # soft_len_tsf[half:] + 1) # soft_len_tsf include EOS
     loss_d1, _, _, _ = ops.adv_loss(teach_h[half:],
                                     soft_h_tsf[:half],
                                     cnn1,)
-                                    # input_tensors["seq_len"][half:] + 2,
-                                    # soft_len_tsf[:half] + 1)
     loss_d = loss_d0 + loss_d1
 
     loss = loss_g
@@ -440,6 +446,7 @@ class TSFClassifierAttLMRecAdv:
 
     var_lm = lm0_decoder.trainable_variables + lm1_decoder.trainable_variables
 
+    pdb.set_trace()
     # optimization
     adam_hparams = utils.filter_hparams(hparams, "adam")
     optimizer_all = tf.train.AdamOptimizer(**adam_hparams).minimize(
