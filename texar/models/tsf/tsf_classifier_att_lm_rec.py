@@ -72,6 +72,7 @@ class TSFClassifierAttLMRec:
       "lm_stop_gradient": False,
       "lm_ave_len": False,
       "lm_reverse_label": False,
+      "lm_use_real_len": True,
       # adam
       "adam_learning_rate": 1e-4,
       "adam_beta1": 0.9,
@@ -184,6 +185,7 @@ class TSFClassifierAttLMRec:
       start_tokens,
       end_token,
       input_tensors["gamma"],
+      use_finish=hparams.lm_use_real_len,
     )
 
     greedy_helper = GreedyEmbeddingHelper(
@@ -194,6 +196,8 @@ class TSFClassifierAttLMRec:
 
     soft_outputs_ori, _, soft_len_ori  = att_decoder(gumbel_helper, h_ori)
     soft_outputs_tsf, _, soft_len_tsf = att_decoder(gumbel_helper, h_tsf)
+    if not hparams.lm_use_real_len:
+      soft_len_tsf = input_tensors["seq_len"] + 1
 
     hard_outputs_ori, _, hard_len_ori  = att_decoder(greedy_helper, h_ori)
     hard_outputs_tsf, _, hard_len_tsf = att_decoder(greedy_helper, h_tsf)
@@ -428,6 +432,8 @@ class TSFClassifierAttLMRec:
        ("soft_len_tsf", soft_len_tsf),
        ("g_logits", g_outputs.logits),
        ("g_sample", g_outputs.sample_id),
+       ("lmf0_logits", lmf0_logits),
+       ("lmf1_logits", lmf1_logits),
       ]
     )
 
@@ -605,9 +611,11 @@ class TSFClassifierAttLMRec:
     }
 
   def decode_step_soft(self, sess, batch, gamma=0.01):
-    soft_samples_tsf, soft_len_tsf = sess.run(
+    soft_samples_tsf, soft_len_tsf, lmf0_logits, lmf1_logits = sess.run(
       [self.output_tensors["soft_samples_tsf"],
-       self.output_tensors["soft_len_tsf"]
+       self.output_tensors["soft_len_tsf"],
+       self.output_tensors["lmf0_logits"],
+       self.output_tensors["lmf1_logits"],
       ],
       feed_dict={
         context.is_train(): False,
@@ -617,4 +625,4 @@ class TSFClassifierAttLMRec:
         self.input_tensors["targets"]: batch["targets"],
         self.input_tensors["seq_len"]: batch["seq_len"],
         self.input_tensors["gamma"]: gamma})
-    return soft_samples_tsf, soft_len_tsf
+    return soft_samples_tsf, soft_len_tsf, lmf0_logits, lmf1_logits
