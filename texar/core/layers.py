@@ -17,6 +17,41 @@ from texar.core import utils
 # pylint: disable=not-context-manager, redefined-variable-type, invalid-name
 # pylint: disable=too-many-branches, too-many-arguments, too-many-lines
 
+__all__ = [
+    "default_rnn_cell_hparams",
+    "get_rnn_cell",
+    "get_rnn_cell_trainable_variables",
+    "default_regularizer_hparams",
+    "get_regularizer",
+    "get_initializer",
+    "get_activation_fn",
+    "get_constraint_fn",
+    "default_embedding_hparams",
+    "get_embedding",
+    "get_layer",
+    "MergeLayer",
+    "SequentialLayer",
+    "default_conv1d_kwargs",
+    "default_conv2d_kwargs",
+    "default_conv3d_kwargs",
+    "default_conv2d_transpose_kwargs",
+    "default_conv3d_transpose_kwargs",
+    "default_dense_kwargs",
+    "default_dropout_kwargs",
+    "default_flatten_kwargs",
+    "default_max_pooling1d_kwargs",
+    "default_max_pooling2d_kwargs",
+    "default_max_pooling3d_kwargs",
+    "default_separable_conv2d_kwargs",
+    "default_batch_normalization_kwargs",
+    "default_average_pooling1d_kwargs",
+    "default_average_pooling2d_kwargs",
+    "default_average_pooling3d_kwargs",
+    "sinusoid_positional_encoding",
+    "multihead_attention",
+    "layer_normalize"
+]
+
 def default_rnn_cell_hparams():
     """Returns default hyperparameters of an RNN cell.
 
@@ -197,7 +232,7 @@ def get_rnn_cell_trainable_variables(cell):
         # (tf==v1.3). So try to access through the cell in the wrapper.
             cell_ = cell._cell  # pylint: disable=protected-access
 
-def _default_regularizer_hparams():
+def default_regularizer_hparams():
     """Returns the hyperparameters and their default values of a variable
     regularizer:
 
@@ -225,7 +260,7 @@ def _default_regularizer_hparams():
 def get_regularizer(hparams=None):
     """Returns a variable regularizer instance.
 
-    See :meth:`~texar.core.layers.default_regularizer_hparams` for all
+    See :func:`~texar.core.layers.default_regularizer_hparams` for all
     hyperparameters and default values.
 
     Args:
@@ -245,7 +280,7 @@ def get_regularizer(hparams=None):
         return None
 
     if isinstance(hparams, dict):
-        hparams = HParams(hparams, _default_regularizer_hparams())
+        hparams = HParams(hparams, default_regularizer_hparams())
     if utils.is_str_or_unicode(hparams.type):
         rgl = utils.get_instance(
             hparams.type, hparams.kwargs.todict(),
@@ -292,7 +327,8 @@ def get_activation_fn(fn_name="identity"):
     """Returns an activation function based on its name or full path.
 
     Args:
-        fn_name (str): The name or full path to the activation function.
+        fn_name (str or callable): The name or full path to the activation
+            function.
             The function can be:
 
             - Built-in function defined in :mod:`tf` or \
@@ -301,13 +337,16 @@ def get_activation_fn(fn_name="identity"):
             - External activation functions. Must provide the full path, \
               e.g., "my_module.my_activation_fn".
 
-            The default value is "identity".
+            If a callable is provided, then it is returned directly.
 
     Returns:
         The activation function. `None` if :attr:`fn_name` is `None`.
     """
     if fn_name is None:
         return None
+
+    if callable(fn_name):
+        return fn_name
 
     fn_modules = ['tensorflow', 'tensorflow.nn', 'texar.custom']
     activation_fn = utils.get_function(fn_name, fn_modules)
@@ -317,7 +356,8 @@ def get_constraint_fn(fn_name="NonNeg"):
     """Returns a constraint function based on its name or full path.
 
     Args:
-        fn_name (str): The name or full path to the constraint function.
+        fn_name (str or callable): The name or full path to the
+            constraint function.
             The function can be:
 
             - Built-in constraint functions defined in \
@@ -329,11 +369,16 @@ def get_constraint_fn(fn_name="NonNeg"):
             - Externally defined function. Must provide the full path, \
             e.g., :attr:`"my_module.my_constraint_fn"`.
 
+            If a callable is provided, then it is returned directly.
+
     Returns:
         The constraint function. `None` if :attr:`fn_name` is `None`.
     """
     if fn_name is None:
         return None
+
+    if callable(fn_name):
+        return fn_name
 
     fn_modules = ['tensorflow.keras.constraints', 'tensorflow',
                   'tensorflow.nn', 'texar.custom']
@@ -454,7 +499,7 @@ def default_embedding_hparams():
                 "seed": None
             }
         },
-        "regularizer": _default_regularizer_hparams(),
+        "regularizer": default_regularizer_hparams(),
         "trainable": True
     }
 
@@ -501,6 +546,101 @@ def get_embedding(hparams=None,
                                    initializer=tf.to_float(init_values),
                                    regularizer=regularizer,
                                    trainable=hparams["trainable"])
+
+#TODO: allow flat `type` and `kwargs` arguments.
+def get_layer(hparams):
+    """Makes a layer instance.
+
+    The layer must be an instance of :tf_main:`Layer <layers/Layer>`.
+
+    Args:
+        hparams (dict or HParams): Hyperparameters of the layer, with
+            structure:
+
+            .. code-block:: python
+
+                {
+                    "type": "LayerClass",
+                    "kwargs": {
+                        # Keyword arguments of the layer class
+                        # ...
+                    }
+                }
+
+            Here:
+
+            "type" : str or layer instance
+                Name, full path, or instance of the layer class. The
+                class can be
+
+                - Built-in layer defined in \
+                  :tf_main:`tf.layers <layers>` (e.g., \
+                  :tf_main:`tf.layers.Conv2D <layers/Conv2D>`), or \
+                  :mod:`tx.core <texar.core>` (e.g., \
+                  :class:`tx.core.MergeLayer <texar.core.MergeLayer>`)
+                - User-defined layer class in :mod:`tx.custom <texar.custom>`.\
+                  The class must inherit :tf_main:`Layer <layers/Layer>`.
+                - External layer. If str, must provide the full path, \
+                  e.g., :attr:`"my_module.MyInitializer"`.
+
+            "kwargs" : dict
+                A dictionary of arguments for constructor of the
+                layer class. Ignored if :attr:`"type"` is a layer instance.
+
+                - Arguments named "activation" can be a callable, \
+                or a `str` of \
+                the name or full path to the activation function. \
+                - Arguments named "*_regularizer" and "*_initializer" \
+                can be a class instance, or a `dict` of \
+                hyperparameters of \
+                respective regularizers and initializers.
+                - Arguments named "*_constraint" can be a callable, or a `str` \
+                of the name or full path to the constraint function. \
+
+    Returns:
+        A layer instance. If :attr:`hparams["type"]` is already a layer
+        instance, returns it directly.
+
+    Raises:
+        ValueError: If :attr:`hparams` is `None`.
+        ValueError: If the resulting layer is not an instance of
+            :tf_main:`Layer <layers/Layer>`.
+    """
+    if hparams is None:
+        raise ValueError("`hparams` must not be `None`.")
+
+    layer_type = hparams["type"]
+    if not utils.is_str_or_unicode(layer_type):
+        layer = layer_type
+    else:
+        layer_modules = ["tensorflow.layers", "texar.core", "texar.costum"]
+        layer_class = utils.get_class(layer_type, layer_modules)
+        if isinstance(hparams, dict):
+            default_kwargs = _layer_class_to_default_kwargs_map.get(layer_class,
+                                                                    {})
+            default_hparams = {"type": layer_type, "kwargs": default_kwargs}
+            hparams = HParams(hparams, default_hparams)
+
+        kwargs = {}
+        for k, v in hparams.kwargs.items():
+            if k.endswith('_regularizer'):
+                kwargs[k] = get_regularizer(v)
+            elif k.endswith('_initializer'):
+                kwargs[k] = get_initializer(v)
+            elif k.endswith('activation'):
+                kwargs[k] = get_activation_fn(v)
+            elif k.endswith('_constraint'):
+                kwargs[k] = get_constraint_fn(v)
+            else:
+                kwargs[k] = v
+
+        layer = utils.get_instance(layer_type, kwargs, layer_modules)
+
+    if not isinstance(layer, tf.layers.Layer):
+        raise ValueError("layer must be an instance of `tf.layers.Layer`.")
+
+    return layer
+
 
 #TODO(zhiting): checkout
 # https://github.com/Lasagne/Lasagne/blob/master/lasagne/layers/merge.py#L243
@@ -596,9 +736,9 @@ def _common_default_conv_dense_kwargs():
             "type": "zeros_initializer",
             "kwargs": {}
         },
-        "kernel_regularizer": _default_regularizer_hparams(),
-        "bias_regularizer": _default_regularizer_hparams(),
-        "activity_regularizer": _default_regularizer_hparams(),
+        "kernel_regularizer": default_regularizer_hparams(),
+        "bias_regularizer": default_regularizer_hparams(),
+        "activity_regularizer": default_regularizer_hparams(),
         "kernel_constraint": None,
         "bias_constraint": None,
         "trainable": True,
@@ -839,98 +979,6 @@ _layer_class_to_default_kwargs_map = {
     tf.layers.AveragePooling3D: default_average_pooling3d_kwargs(),
 }
 
-def get_layer(hparams):
-    """Makes a layer instance.
-
-    The layer must be an instance of :tf_main:`Layer <layers/Layer>`.
-
-    Args:
-        hparams (dict or HParams): Hyperparameters of the layer, with
-            structure:
-
-            .. code-block:: python
-
-                {
-                    "type": "layer_class",
-                    "kwargs": {
-                        # Keyword arguments of the layer class
-                        # ...
-                    }
-                }
-
-            Here:
-
-            "type" : str or layer instance
-                Name, full path, or instance of the layer class. The
-                class can be
-
-                - Built-in layer defined in \
-                  :tf_main:`tf.layers <layers>`, e.g., \
-                  :tf_main:`tf.layers.Conv2D <layers/Conv2D>`. \
-                - User-defined layer class in :mod:`texar.custom`. The class \
-                  must inherit :tf_main:`Layer <layers/Layer>`.
-                - External layer. Must provide the full path, \
-                  e.g., :attr:`"my_module.MyInitializer"`, or the instance.
-
-            "kwargs" : dict
-                A dictionary of arguments for constructor of the
-                layer class. Ignored if :attr:`"type"` is a layer instance.
-
-                - Arguments named "activation" have values of type `str` that \
-                specify the name or full path to the activation function. \
-                The activation function will be used for making the layer.
-                - Arguments named "*_regularizer" and "*_initializer" \
-                have values of type `dict` that specifiy hyperparameters of \
-                respective regularizers and initializers. Regularizer and \
-                initializer instances will be created accordingly and used for \
-                making the layer.
-                - Arguments named "*_constraint" have values of type `str` \
-                that specify the name or full path to the constant function. \
-                The constraint function will be used.
-
-    Returns:
-        A layer instance. If :attr:`hparams["type"]` is already a layer
-        instance, returns it directly.
-
-    Raises:
-        ValueError: If :attr:`hparams` is `None`.
-        ValueError: If the resulting layer is not an instance of
-            :tf_main:`Layer <layers/Layer>`.
-    """
-    if hparams is None:
-        raise ValueError("`hparams` must not be `None`.")
-
-    layer_type = hparams["type"]
-    if not utils.is_str_or_unicode(layer_type):
-        layer = layer_type
-    else:
-        layer_modules = ["tensorflow.layers", "texar.costum"]
-        layer_class = utils.get_class(layer_type, layer_modules)
-        if isinstance(hparams, dict):
-            default_kwargs = _layer_class_to_default_kwargs_map.get(layer_class,
-                                                                    {})
-            default_hparams = {"type": layer_type, "kwargs": default_kwargs}
-            hparams = HParams(hparams, default_hparams)
-
-        kwargs = {}
-        for k, v in hparams.kwargs.items():
-            if k.endswith('_regularizer'):
-                kwargs[k] = get_regularizer(v)
-            elif k.endswith('_initializer'):
-                kwargs[k] = get_initializer(v)
-            elif k.endswith('activation'):
-                kwargs[k] = get_activation_fn(v)
-            elif k.endswith('_constraint'):
-                kwargs[k] = get_constraint_fn(v)
-            else:
-                kwargs[k] = v
-
-        layer = utils.get_instance(layer_type, kwargs, layer_modules)
-
-    if not isinstance(layer, tf.layers.Layer):
-        raise ValueError("layer must be an instance of `tf.layers.Layer`.")
-
-    return layer
 
 
 def sinusoid_positional_encoding(inputs,

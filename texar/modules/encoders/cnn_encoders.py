@@ -1,6 +1,6 @@
 #
 """
-Various CNN encoders.
+Various convolutional network encoders.
 """
 
 from __future__ import absolute_import
