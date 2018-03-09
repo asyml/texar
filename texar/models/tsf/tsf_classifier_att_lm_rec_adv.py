@@ -54,8 +54,10 @@ class TSFClassifierAttLMRecAdv:
       "dim_y": 200,
       "dim_z": 500,
       # att decoder
-      "att_decoder_max_decoding_length_train": 21, # go id ?
+      "att_decoder_max_decoding_length_train": 20, # go id ?
       "att_decoder_max_decoding_length_infer": 20,
+      "decoder_max_decoding_length_train": 20, # kept for LM
+      "decoder_max_decoding_length_infer": 20, # change to 21 when eval LM
       
       "cnn_name": "cnn",
       "cnn_use_embedding": True,
@@ -205,7 +207,7 @@ class TSFClassifierAttLMRecAdv:
     if hparams.lm_use_real_len:
       soft_len_tsf = ops.get_length(soft_outputs_tsf.sample_id)
     else:
-      soft_len_tsf = tf.tile(tf.shape(g_outputs)[1], [hparams.batch_size])
+      soft_len_tsf = input_tensors["seq_len"] + 1
 
     hard_outputs_ori, _, hard_len_ori  = att_decoder(greedy_helper, h_ori)
     hard_outputs_tsf, _, hard_len_tsf = att_decoder(greedy_helper, h_tsf)
@@ -446,7 +448,6 @@ class TSFClassifierAttLMRecAdv:
 
     var_lm = lm0_decoder.trainable_variables + lm1_decoder.trainable_variables
 
-    pdb.set_trace()
     # optimization
     adam_hparams = utils.filter_hparams(hparams, "adam")
     optimizer_all = tf.train.AdamOptimizer(**adam_hparams).minimize(

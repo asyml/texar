@@ -182,7 +182,7 @@ class TSFClassifierLMRecAdv:
     if hparams.lm_use_real_len:
       soft_len_tsf = ops.get_length(soft_outputs_tsf.sample_id)
     else:
-      soft_len_tsf = tf.tile(tf.shape(g_outputs)[1], [hparams.batch_size])
+      soft_len_tsf = input_tensors["seq_len"] + 1
 
     hard_outputs_ori, _, hard_len_ori = decoder(greedy_helper, h_ori)
     hard_outputs_tsf, _, hard_len_tsf = decoder(greedy_helper, h_tsf)
