@@ -65,6 +65,7 @@ def gumbel_softmax(gamma, logits=None, probs=None, straight_through=False):
   sample = GumbelSoftmax(gamma, logits=logits, probs=probs).sample()
   if straight_through:
     sample_hard = tf.cast(tf.equal(
+      # haoran: I think it had better be 'tf.reduce_max(sample, -1, keep_dims=True)' ?
       sample, tf.reduce_max(sample, 1, keep_dims=True)), tf.float32)
     sample = tf.stop_gradient(sample_hard - sample) + sample
   return sample
