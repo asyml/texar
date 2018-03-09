@@ -1,11 +1,25 @@
+.. role:: hidden
+    :class: hidden
+
 Core
 ****
 
+.. automodule:: texar.core
+
 Layers
 ======
-.. automodule:: texar.core.layers
-    :members:
 
+:hidden:`default_helper_train_hparams`
+--------------------------------------
+
+.. autofunction:: texar.core.get_layer
+
+
+:hidden:`MergeLayer`
+------------------------
+
+.. autoclass:: texar.core.MergeLayer
+    :members:
 
 Networks
 ========

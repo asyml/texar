@@ -74,6 +74,9 @@ class GetRNNCellTest(tf.test.TestCase):
                 self.assertEqual(state_.shape[1],
                                  hparams_.cell.kwargs.num_units)
 
+class GetEmbeddingTest(tf.test.TestCase):
+    """Tests embedding creator.
+    """
     def test_get_embedding(self):
         """Tests :func:`texar.core.layers.get_embedding`.
         """
@@ -97,6 +100,10 @@ class GetRNNCellTest(tf.test.TestCase):
         self.assertEqual(emb.shape[1].value,
                          layers.default_embedding_hparams()["dim"])
 
+
+class GetLayerTest(tf.test.TestCase):
+    """Tests layer creator.
+    """
     def test_get_layer(self):
         """Tests :func:`texar.core.layers.get_layer`.
         """
@@ -106,12 +113,14 @@ class GetRNNCellTest(tf.test.TestCase):
         layer = layers.get_layer(hparams)
         self.assertTrue(isinstance(layer, tf.layers.Conv1D))
 
+
 class SequentialLayerTest(tf.test.TestCase):
-    """Test sequential layer.
+    """Tests sequential layer.
     """
 
     def test_seq_layer(self):
-        #TODO(zichao): add docstring
+        """Test sequential layer.
+        """
         layers_ = []
         layers_.append(tf.layers.Dense(100))
         layers_.append(tf.layers.Dense(200))
@@ -121,7 +130,7 @@ class SequentialLayerTest(tf.test.TestCase):
 
         inputs = tf.zeros([10, 20], dtype=tf.float32)
         outputs = seq_layer(inputs)
-        with tf.Session() as sess:
+        with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
             outputs_ = sess.run(outputs)
             self.assertEqual(outputs_.shape[0], 10)
