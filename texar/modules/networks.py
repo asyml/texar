@@ -56,7 +56,7 @@ class FeedForwardNetwork(ModuleBase):
                 self._layers = []
                 for layer_id in range(len(self._hparams.layers)):
                     self._layers.append(
-                        get_layer(self._hparams.layers[layer_id]))
+                        get_layer(hparams=self._hparams.layers[layer_id]))
 
         for layer in self._layers:
             layer_name = uniquify_str(layer.name, self._layer_names)
