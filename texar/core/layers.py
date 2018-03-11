@@ -7,7 +7,6 @@ from __future__ import print_function
 from __future__ import division
 
 import math
-import numpy as np
 
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
@@ -670,15 +669,46 @@ def _compute_concat_output_shape(input_shape, axis):
     return output_shape
 
 
-#TODO(zhiting): checkout
-# https://github.com/Lasagne/Lasagne/blob/master/lasagne/layers/merge.py#L243
 class MergeLayer(tf.layers.Layer):
     """A layer that consists of multiple layers in parallel. Input is fed to
     each of the parallel layers, and the outputs are merged with a
     specified mode.
 
     Args:
-        layers (list):
+        layers (list, optional): A list of :tf_main:`tf.layers.Layer
+            <layers/layer>` instances, or a list of hyperparameter dicts
+            each of which specifying type and kwargs of each layer (see
+            the :attr:`hparams` argument of :func:`get_layer`). If `None`,
+            inputs to the merge-layer directly merged.
+        mode (str): Mode of the merge op. This can be:
+
+            - :attr:`'concat'`: Concatenates layer outputs along one axis. \
+              Tensors must have the same shape except for the dimension \
+              specified in axis, which can have different sizes.
+            - :attr:`'elemwise_sum'`: Outputs element-wise sum.
+            - :attr:`'elemwise_mul'`: Outputs element-wise product.
+            - :attr:`'sum'`: Computes the sum of layer outputs along the \
+              dimension given in :attr:`axis`. E.g., given `axis=1`, \
+              two tensors of shape `[a, b]` and `[a, c]` respectively \
+              will result in a merged tensor of shape `[a]`.
+            - :attr:`'mean'`: Computes the mean of layer outputs along the \
+              dimension given in :attr:`axis`.
+            - :attr:`'prod'`: Computes the product of layer outputs along the \
+              dimension given in :attr:`axis`.
+            - :attr:`'max'`: Computes the maximum of layer outputs along the \
+              dimension given in :attr:`axis`.
+            - :attr:`'min'`: Computes the minimum of layer outputs along the \
+              dimension given in :attr:`axis`.
+            - :attr:`'and'`: Computes the `logical and` of layer outputs along \
+              the dimension given in :attr:`axis`.
+            - :attr:`'or'`: Computes the `logical or` of layer outputs along \
+              the dimension given in :attr:`axis`.
+            - :attr:`'logsumexp'`: Computes \
+              log(sum(exp(elements across the dimension of layer outputs)))
+        axis (int): The axis to use in merging. Ignored in modes
+            :attr:`'elemwise_sum'` and :attr:`'elemwise_mul'`.
+        trainable (bool): Whether the layer should be trained.
+        name (str, optional): Name of the layer.
     """
 
     def __init__(self,
@@ -739,6 +769,25 @@ class MergeLayer(tf.layers.Layer):
 
         return tf.TensorShape(output_shape)
 
+    def build(self, _):
+        """Does not set :attr:`self.built` as this point.
+        """
+        pass
+
+    def _collect_weights(self):
+        """Collects (non-)trainable weights of each of the parallel layers.
+        """
+        if self._layers is None:
+            pass
+        for layer in self._layers:
+            if self.trainable:
+                utils.add_variable(
+                    layer._trainable_weights, self._trainable_weights)
+            else:
+                utils.add_variable(
+                    layer._trainable_weights, self._non_trainable_weights)
+            utils.add_variable(
+                layer._non_trainable_weights, self._non_trainable_weights)
 
     def call(self, inputs):
         if self._layers is None:
@@ -788,17 +837,20 @@ class MergeLayer(tf.layers.Layer):
         else:
             raise ValueError("Unknown merge mode: '%s'" % self._mode)
 
+        if not self.built:
+            self._collect_weights()
+
         return outputs
 
 
-#TODO(zhiting): override trainable_variables
 class SequentialLayer(tf.layers.Layer):
     """A layer that consists of multiple layers connected sequentially.
 
     Args:
         layers (list): The list of layers to be connected sequentially.
     """
-    def __init__(self, layers,
+    def __init__(self,
+                 layers,
                  trainable=True,
                  name=None,
                  **kwargs):
@@ -806,18 +858,42 @@ class SequentialLayer(tf.layers.Layer):
             trainable=trainable, name=name, **kwargs)
         self._layers = layers
 
-    def call(self, inputs):
-        for layer in self._layers:
-            outputs = layer(inputs)
-            inputs = outputs
-        return outputs
-
     def _compute_output_shape(self, input_shape):
         input_shape = tf.TensorShape(input_shape)
         for layer in self._layers:
             output_shape = layer._compute_output_shape(input_shape)
             input_shape = output_shape
         return output_shape
+
+    def build(self, _):
+        """Does not set :attr:`self.built` as this point.
+        """
+        pass
+
+    def _collect_weights(self):
+        """Collects (non-)trainable weights of each of the layers.
+        """
+        for layer in self._layers:
+            if self.trainable:
+                utils.add_variable(
+                    layer._trainable_weights, self._trainable_weights)
+            else:
+                utils.add_variable(
+                    layer._trainable_weights, self._non_trainable_weights)
+            utils.add_variable(
+                layer._non_trainable_weights, self._non_trainable_weights)
+
+    def call(self, inputs):
+        outputs = inputs
+        for layer in self._layers:
+            outputs = layer(inputs)
+            inputs = outputs
+
+        if not self.built:
+            self._collect_weights()
+
+        return outputs
+
 
 def _common_default_conv_dense_kwargs():
     """Returns the default keyword argument values that are common to
