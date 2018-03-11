@@ -158,6 +158,22 @@ class MergeLayerTest(tf.test.TestCase):
                 outputs_.shape,
                 m_layer._compute_output_shape(inputs.shape.as_list()))
 
+    def test_trainable_variables(self):
+        """Test the trainable_variables of the layer.
+        """
+        layers_ = []
+        layers_.append(tf.layers.Conv1D(filters=200, kernel_size=3))
+        layers_.append(tf.layers.Conv1D(filters=200, kernel_size=4))
+        layers_.append(tf.layers.Conv1D(filters=200, kernel_size=5))
+        layers_.append(tf.layers.Dense(200))
+        layers_.append(tf.layers.Dense(200))
+        m_layer = layers.MergeLayer(layers_)
+
+        inputs = tf.zeros([64, 16, 1024], dtype=tf.float32)
+        _ = m_layer(inputs)
+
+        num_vars = sum([len(layer.trainable_variables) for layer in layers_])
+        self.assertEqual(num_vars, len(m_layer.trainable_variables))
 
 class SequentialLayerTest(tf.test.TestCase):
     """Tests sequential layer.
@@ -170,11 +186,16 @@ class SequentialLayerTest(tf.test.TestCase):
         layers_.append(tf.layers.Dense(100))
         layers_.append(tf.layers.Dense(200))
         seq_layer = layers.SequentialLayer(layers_)
+
         output_shape = seq_layer._compute_output_shape([None, 10])
         self.assertEqual(output_shape[1].value, 200)
 
         inputs = tf.zeros([10, 20], dtype=tf.float32)
         outputs = seq_layer(inputs)
+
+        num_vars = sum([len(layer.trainable_variables) for layer in layers_])
+        self.assertEqual(num_vars, len(seq_layer.trainable_variables))
+
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
             outputs_ = sess.run(outputs)
