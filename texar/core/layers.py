@@ -7,6 +7,7 @@ from __future__ import print_function
 from __future__ import division
 
 import math
+import numpy as np
 
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
@@ -16,6 +17,7 @@ from texar.core import utils
 
 # pylint: disable=not-context-manager, redefined-variable-type, invalid-name
 # pylint: disable=too-many-branches, too-many-arguments, too-many-lines
+# pylint: disable=protected-access
 
 __all__ = [
     "default_rnn_cell_hparams",
@@ -642,58 +644,154 @@ def get_layer(hparams):
     return layer
 
 
+def _compute_concat_output_shape(input_shape, axis):
+    """Infers the output shape of concat given the input shape.
+
+    The code is adapted from the ConcatLayer of lasagne
+    (https://github.com/Lasagne/Lasagne/blob/master/lasagne/layers/merge.py)
+
+    Args:
+        input_shape (list): A list of shapes, each of which is in turn a
+            list or TensorShape.
+        axis (int): Axis of the concat operation.
+
+    Returns:
+        list: Output shape of concat.
+    """
+    # The size of each axis of the output shape equals the first
+    # input size of respective axis that is not `None`
+    input_shape = [tf.TensorShape(s).as_list() for s in input_shape]
+    output_shape = [next((s for s in sizes if s is not None), None)
+                    for sizes in zip(*input_shape)]
+    axis_sizes = [s[axis] for s in input_shape]
+    concat_axis_size = None if any(s is None for s in axis_sizes) \
+            else sum(axis_sizes)
+    output_shape[axis] = concat_axis_size
+    return output_shape
+
+
 #TODO(zhiting): checkout
 # https://github.com/Lasagne/Lasagne/blob/master/lasagne/layers/merge.py#L243
 class MergeLayer(tf.layers.Layer):
     """A layer that consists of multiple layers in parallel. Input is fed to
-    each of the sub-layers, and the outputs are merged with a specified mode.
+    each of the parallel layers, and the outputs are merged with a
+    specified mode.
 
     Args:
         layers (list):
     """
 
     def __init__(self,
-                 layers,
+                 layers=None,
                  mode='concat',
-                 axis=0,
+                 axis=1,
                  trainable=True,
                  name=None,
                  **kwargs):
         super(MergeLayer, self).__init__(
             trainable=trainable, name=name, **kwargs)
-        self._layers = layers
         self._mode = mode
         self._axis = axis
 
-    def build(self, input_shape):
-        """Creates the variables of the layer.
+        self._layers = None
+        if layers is not None:
+            if len(layers) == 0:
+                raise ValueError(
+                    "'layers' must be either None or a non-empty list.")
+            self._layers = []
+            for layer in layers:
+                if isinstance(layer, tf.layers.Layer):
+                    self._layers.append(layer)
+                else:
+                    self._layers.append(get_layer(hparams=layer))
 
-        Overloads the base class :tf_main:`tf.layers.Layer <layers/Layer>`.
-        """
-        #input_shape = tensor_shape.TensorShape(input_shape)
-        #if input_shape[-1].value is None:
-        #  raise ValueError('The last dimension of the inputs to `Dense` '
-        #                   'should be defined. Found `None`.')
-        #self.input_spec = base.InputSpec(min_ndim=2,
-        #                                 axes={-1: input_shape[-1].value})
-        #self.kernel = self.add_variable('kernel',
-        #                                shape=[input_shape[-1].value, self.units],
-        #                                initializer=self.kernel_initializer,
-        #                                regularizer=self.kernel_regularizer,
-        #                                dtype=self.dtype,
-        #                                trainable=True)
-        #if self.use_bias:
-        #  self.bias = self.add_variable('bias',
-        #                                shape=[self.units,],
-        #                                initializer=self.bias_initializer,
-        #                                regularizer=self.bias_regularizer,
-        #                                dtype=self.dtype,
-        #                                trainable=True)
-        #else:
-        #  self.bias = None
-        self.built = True
+    def _compute_output_shape(self, input_shape):
+        if self._layers is None:
+            _shapes = input_shape
+            if not isinstance(_shapes, (list, tuple)):
+                _shapes = [_shapes]
+        else:
+            _shapes = []
+            for layer in self._layers:
+                layer_output_shape = layer._compute_output_shape(input_shape)
+                _shapes.append(layer_output_shape)
+        _shapes = [tf.TensorShape(s) for s in _shapes]
+
+        if self._mode == 'concat':
+            output_shape = _compute_concat_output_shape(_shapes, self._axis)
+        elif self._mode in ['sum', 'mean', 'prod', 'max', 'min',
+                            'and', 'or', 'logsumexp']:
+            output_shape = _compute_concat_output_shape(_shapes, self._axis)
+            output_shape.pop(self._axis)
+        elif self._mode in ['elemwise_sum', 'elemwise_mul']:
+            # Simply infer the output shape as the input shape of highest rank
+            _ranks = [s.ndims for s in _shapes]
+            max_rank = max(_ranks)
+            max_ranked_shapes = []
+            for i, s in enumerate(_shapes):
+                if _ranks[i] == max_rank:
+                    max_ranked_shapes.append(s.as_list())
+            # Grab the first size of each axis that is not `None`
+            output_shape = [next((s for s in sizes if s is not None), None)
+                            for sizes in zip(*max_ranked_shapes)]
+        else:
+            raise ValueError("Unknown merge mode: '%s'" % self._mode)
+
+        return tf.TensorShape(output_shape)
 
 
+    def call(self, inputs):
+        if self._layers is None:
+            layer_outputs = inputs
+            if not isinstance(layer_outputs, (list, tuple)):
+                layer_outputs = [layer_outputs]
+        else:
+            layer_outputs = []
+            for layer in self._layers:
+                layer_output = layer(inputs)
+                layer_outputs.append(layer_output)
+
+        if self._mode == 'concat':
+            outputs = tf.concat(values=layer_outputs, axis=self._axis)
+        elif self._mode == 'elemwise_sum':
+            outputs = layer_outputs[0]
+            for i in range(1, len(layer_outputs)):
+                outputs = tf.add(outputs, layer_outputs[i])
+        elif self._mode == 'elemwise_mul':
+            outputs = layer_outputs[0]
+            for i in range(1, len(layer_outputs)):
+                outputs = tf.multiply(outputs, layer_outputs[i])
+        elif self._mode == 'sum':
+            _concat = tf.concat(values=layer_outputs, axis=self._axis)
+            outputs = tf.reduce_sum(_concat, axis=self._axis)
+        elif self._mode == 'mean':
+            _concat = tf.concat(values=layer_outputs, axis=self._axis)
+            outputs = tf.reduce_mean(_concat, axis=self._axis)
+        elif self._mode == 'prod':
+            _concat = tf.concat(values=layer_outputs, axis=self._axis)
+            outputs = tf.reduce_prod(_concat, axis=self._axis)
+        elif self._mode == 'max':
+            _concat = tf.concat(values=layer_outputs, axis=self._axis)
+            outputs = tf.reduce_max(_concat, axis=self._axis)
+        elif self._mode == 'min':
+            _concat = tf.concat(values=layer_outputs, axis=self._axis)
+            outputs = tf.reduce_min(_concat, axis=self._axis)
+        elif self._mode == 'and':
+            _concat = tf.concat(values=layer_outputs, axis=self._axis)
+            outputs = tf.reduce_all(_concat, axis=self._axis)
+        elif self._mode == 'or':
+            _concat = tf.concat(values=layer_outputs, axis=self._axis)
+            outputs = tf.reduce_any(_concat, axis=self._axis)
+        elif self._mode == 'logsumexp':
+            _concat = tf.concat(values=layer_outputs, axis=self._axis)
+            outputs = tf.reduce_logsumexp(_concat, axis=self._axis)
+        else:
+            raise ValueError("Unknown merge mode: '%s'" % self._mode)
+
+        return outputs
+
+
+#TODO(zhiting): override trainable_variables
 class SequentialLayer(tf.layers.Layer):
     """A layer that consists of multiple layers connected sequentially.
 
