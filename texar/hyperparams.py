@@ -65,7 +65,8 @@ class HParams(object):
             Hyperparameters are fully defined by :attr:`hparams`.
         allow_new_hparam (bool): If `False` (default), :attr:`hparams` cannot
             contain hyperparameters that are not included in
-            :attr:`default_hparams`, except the case as below.
+            :attr:`default_hparams`, except the case of :attr:`"kwargs"` as
+            above.
     """
 
     def __init__(self, hparams, default_hparams, allow_new_hparam=False):
@@ -91,7 +92,7 @@ class HParams(object):
                 If `None`,Hyperparameters are fully defined by :attr:`hparams`.
             allow_new_hparam (bool): If `False` (default), :attr:`hparams`
                 cannot contain hyperparameters that are not included in
-                :attr:`default_hparams`, except the case as below.
+                :attr:`default_hparams`, except the case of :attr:`"kwargs"`.
 
         Return:
             A dictionary of parsed hyperparameters. Returns `None` if both
@@ -112,6 +113,7 @@ class HParams(object):
         if default_hparams is None:
             raise ValueError("`default_hparams` cannot be `None` if `hparams` "
                              "is not `None`.")
+        no_typecheck_names = default_hparams.get("@no_typecheck", [])
 
         if "kwargs" in default_hparams and "type" not in default_hparams:
             raise ValueError("Ill-defined hyperparameter structure: 'kwargs' "
@@ -154,7 +156,8 @@ class HParams(object):
 
             # Parse recursively for params of type dictionary.
             if isinstance(value, dict):
-                if not isinstance(default_value, dict):
+                if name not in no_typecheck_names \
+                        and not isinstance(default_value, dict):
                     raise ValueError(
                         "Hyperparameter '%s' must have type %s, got %s" %
                         (name, _type_name(default_value), _type_name(value)))
@@ -180,7 +183,9 @@ class HParams(object):
                 parsed_hparams[name] = value
                 continue
 
-            if isinstance(value, type(default_value)):
+            if name in no_typecheck_names:
+                parsed_hparams[name] = value
+            elif isinstance(value, type(default_value)):
                 parsed_hparams[name] = value
             elif _is_callable(value) and _is_callable(default_value):
                 parsed_hparams[name] = value

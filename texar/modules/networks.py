@@ -41,6 +41,8 @@ class FeedForwardNetwork(ModuleBase):
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
+
+        TODO
         """
         return {
             "layers": [],
