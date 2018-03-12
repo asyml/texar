@@ -121,7 +121,7 @@ def default_embedding_hparams():
     """
     return {
         "name": "embedding",
-        "dim": 50,
+        "dim": 100,
         "initializer": {
             "type": "random_uniform_initializer",
             "kwargs": {
