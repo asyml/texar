@@ -69,6 +69,35 @@ class WordEmbedder(ModuleBase):
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
+
+        Returns:
+            A dictionary with the following structure and values.
+
+            .. code-block:: python
+
+                {
+                    "name": "word_embedder",
+                    "dim": 100,
+                    "initializer": {
+                        "type": "random_uniform_initializer",
+                        "kwargs": {
+                            "minval": -0.1,
+                            "maxval": 0.1,
+                            "seed": None
+                        }
+                    },
+                    "regularizer": {
+                        "type": "L1L2",
+                        "kwargs": {
+                            "l1": 0.,
+                            "l2": 0.
+                        }
+                    }
+                    "trainable": True,
+                }
+
+            See :func:`~texar.modules.default_embedding_hparams` for more
+            details.
         """
         hparams = embedder_utils.default_embedding_hparams()
         hparams["name"] = "word_embedder"
