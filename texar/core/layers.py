@@ -344,7 +344,7 @@ def get_activation_fn(fn_name="identity"):
     if fn_name is None:
         return None
 
-    if callable(fn_name):
+    if utils.is_callable(fn_name):
         return fn_name
 
     fn_modules = ['tensorflow', 'tensorflow.nn', 'texar.custom']
@@ -376,7 +376,7 @@ def get_constraint_fn(fn_name="NonNeg"):
     if fn_name is None:
         return None
 
-    if callable(fn_name):
+    if utils.is_callable(fn_name):
         return fn_name
 
     fn_modules = ['tensorflow.keras.constraints', 'tensorflow',

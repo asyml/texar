@@ -10,19 +10,14 @@ from __future__ import division
 import copy
 import json
 
+from texar.core.utils import is_callable
+
 __all__ = [
     "HParams"
 ]
 
 def _type_name(value):
     return type(value).__name__
-
-def _is_callable(x): # pylint: disable=invalid-name
-    try:
-        is_callable = callable(x)
-    except: # pylint: disable=bare-except
-        is_callable = hasattr(x, '__call__')
-    return is_callable
 
 class HParams(object):
     """Hyperparameters.
@@ -80,7 +75,7 @@ class HParams(object):
         super(HParams, self).__setattr__('_hparams', parsed_hparams)
 
     @staticmethod
-    def _parse(hparams, # pylint: disable=too-many-branches
+    def _parse(hparams, # pylint: disable=too-many-branches, too-many-statements
                default_hparams,
                allow_new_hparam=False):
         """Parses hyperparameters.
@@ -187,7 +182,7 @@ class HParams(object):
                 parsed_hparams[name] = value
             elif isinstance(value, type(default_value)):
                 parsed_hparams[name] = value
-            elif _is_callable(value) and _is_callable(default_value):
+            elif is_callable(value) and is_callable(default_value):
                 parsed_hparams[name] = value
             else:
                 try:

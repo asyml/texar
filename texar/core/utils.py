@@ -239,6 +239,16 @@ def add_variable(variable, var_list):
             var_list.append(variable)
 
 
+def is_callable(x):
+    """Return `True` if :attr:`x` is callable.
+    """
+    try:
+        _is_callable = callable(x)
+    except: # pylint: disable=bare-except
+        _is_callable = hasattr(x, '__call__')
+    return _is_callable
+
+
 def switch_dropout(dropout_keep_prob, is_train=None):
     """Turns off dropout when not in training mode.
 
