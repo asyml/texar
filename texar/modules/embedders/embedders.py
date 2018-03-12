@@ -17,6 +17,8 @@ __all__ = [
     "WordEmbedder"
 ]
 
+#TODO(zhiting): add soft-embedder, position-embedder, embedder combiner
+
 #class EmbedderBase(ModuleBase):
 #    """TODO
 #    """

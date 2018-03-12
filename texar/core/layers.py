@@ -914,21 +914,26 @@ def default_conv1d_kwargs():
         "filters": 100,
         "strides": 1,
         "dilation_rate": 1,
+        "data_format": "channels_last"
     })
     return kwargs
 
 def default_conv2d_kwargs():
+    """TODO
+    """
     return {}
-    #raise NotImplementedError
 def default_conv3d_kwargs():
+    """TODO
+    """
     return {}
-    #raise NotImplementedError
 def default_conv2d_transpose_kwargs():
+    """TODO
+    """
     return {}
-    #raise NotImplementedError
 def default_conv3d_transpose_kwargs():
+    """TODO
+    """
     return {}
-    #raise NotImplementedError
 
 def default_dense_kwargs():
     """Returns the default keyword argument values of dense layer
@@ -941,33 +946,53 @@ def default_dense_kwargs():
     return kwargs
 
 def default_dropout_kwargs():
+    """TODO
+    """
     return {}
     #raise NotImplementedError
 def default_flatten_kwargs():
+    """TODO
+    """
     return {}
     #raise NotImplementedError
 def default_max_pooling1d_kwargs():
+    """TODO
+    """
     return {}
     #raise NotImplementedError
 def default_max_pooling2d_kwargs():
+    """TODO
+    """
     return {}
     #raise NotImplementedError
 def default_max_pooling3d_kwargs():
+    """TODO
+    """
     return {}
     #raise NotImplementedError
 def default_separable_conv2d_kwargs():
+    """TODO
+    """
     return {}
     #raise NotImplementedError
 def default_batch_normalization_kwargs():
+    """TODO
+    """
     return {}
     #raise NotImplementedError
 def default_average_pooling1d_kwargs():
+    """TODO
+    """
     return {}
     #raise NotImplementedError
 def default_average_pooling2d_kwargs():
+    """TODO
+    """
     return {}
     #raise NotImplementedError
 def default_average_pooling3d_kwargs():
+    """TODO
+    """
     return {}
     #raise NotImplementedError
 
