@@ -7,10 +7,12 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from texar.modules.encoders.encoder_base import EncoderBase
-from texar.modules.networks import FeedForwardNetwork
+
 from texar.core import layers
 from texar import context
+from texar.modules.encoders.encoder_base import EncoderBase
+from texar.modules.networks import FeedForwardNetwork
+from texar.modules.embedders import embedder_utils
 
 class TransformerEncoder(EncoderBase):
     """Base class for all encoder classes.
@@ -50,7 +52,7 @@ class TransformerEncoder(EncoderBase):
             if isinstance(embedding, tf.Variable):
                 self._embedding = embedding
             else:
-                self._embedding = layers.get_embedding(
+                self._embedding = embedder_utils.get_embedding(
                     self._hparams.embedding, embedding, vocab_size,
                     self.variable_scope)
             embed_dim = self._embedding.get_shape().as_list()[-1]
@@ -98,7 +100,7 @@ class TransformerEncoder(EncoderBase):
         return {
             'multiply_embedding_mode': 'sqrt_depth',
             "use_embedding": True,
-            "embedding":layers.default_embedding_hparams(),
+            "embedding": embedder_utils.default_embedding_hparams(),
             "name":"encoder",
             "zero_pad":True,
             "max_seq_length":100000000,
@@ -124,7 +126,7 @@ class TransformerEncoder(EncoderBase):
                 self.enc,
                 variable_scope='enc_pe')
         else:
-            self.position_enc_embedding = layers.get_embedding(
+            self.position_enc_embedding = embedder_utils.get_embedding(
                 hparams=self._hparams.embedding,
                 vocab_size=self._hparams.max_seq_length,
                 variable_scope='enc_pe')

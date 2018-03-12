@@ -11,6 +11,7 @@ import tensorflow as tf
 
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.core import layers
+from texar.modules.embedders import embedder_utils
 
 # pylint: disable=not-context-manager, too-many-arguments
 
@@ -62,7 +63,7 @@ class RNNEncoderBase(EncoderBase):
             if isinstance(embedding, tf.Variable):
                 self._embedding = embedding
             else:
-                self._embedding = layers.get_embedding(
+                self._embedding = embedder_utils.get_embedding(
                     self._hparams.embedding, embedding, self._vocab_size,
                     self.variable_scope)
             if self._hparams.embedding.trainable:
@@ -112,7 +113,7 @@ class RNNEncoderBase(EncoderBase):
         """
         return {
             "use_embedding": True,
-            "embedding": layers.default_embedding_hparams(),
+            "embedding": embedder_utils.default_embedding_hparams(),
             "name": "rnn_encoder"
         }
 

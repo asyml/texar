@@ -13,6 +13,7 @@ from tensorflow.contrib.rnn import LSTMStateTuple
 
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.core import layers
+from texar.modules.embedders import embedder_utils
 
 #TODO(zhiting): this is incomplete
 __all__ = [
@@ -52,7 +53,7 @@ class HierarchicalEncoder(EncoderBase):
             if isinstance(embedding, tf.Variable):
                 self._embedding = embedding
             else:
-                self._embedding = layers.get_embedding(
+                self._embedding = embedder_utils.get_embedding(
                     self._hparams.embedding, embedding, vocab_size,
                     self.variable_scope)
             if self._hparams.embedding.trainable:
@@ -112,7 +113,7 @@ class HierarchicalEncoder(EncoderBase):
         """
         hparams = {
             "use_embedding": True,
-            "embedding": layers.default_embedding_hparams(),
+            "embedding": embedder_utils.default_embedding_hparams(),
             "minor_type": "rnn",
             "minor_cell": layers.default_rnn_cell_hparams(),
             "major_cell": layers.default_rnn_cell_hparams(),

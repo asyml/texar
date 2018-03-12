@@ -19,6 +19,7 @@ __all__ = [
     "FeedForwardNetwork"
 ]
 
+#TDDO(zhiting): complete the docs
 class FeedForwardNetwork(ModuleBase):
     """Feed forward neural network that consists of a sequence of layers.
 

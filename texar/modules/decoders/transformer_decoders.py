@@ -6,15 +6,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import collections
 # pylint: disable=no-name-in-module, too-many-arguments, too-many-locals
 # pylint: disable=not-context-manager
+
+import collections
+
 import tensorflow as tf
 from tensorflow.python.framework import tensor_shape, dtypes
-from texar.modules.networks import FeedForwardNetwork
-from texar.modules.module_base import ModuleBase
+
 from texar.core import layers
 from texar import context
+from texar.modules.networks import FeedForwardNetwork
+from texar.modules.module_base import ModuleBase
+from texar.modules.embedders import embedder_utils
 
 class TransformerDecoderOutput(
         collections.namedtuple("TransformerDecoderOutput",\
@@ -40,7 +44,7 @@ class TransformerDecoder(ModuleBase):
                 self._embedding = embedding
                 print('embedding shared between encoder and decoder')
             else:
-                self._embedding = layers.get_embedding(
+                self._embedding = embedder_utils.get_embedding(
                     self._hparams.embedding, embedding, vocab_size,
                     variable_scope=self.variable_scope)
                 self._embed_dim = self._embedding.get_shape().as_list()[-1]
@@ -59,7 +63,7 @@ class TransformerDecoder(ModuleBase):
             'multiply_embedding_mode': 'sqrt_depth',
             'share_embed_and_transform': True,
             "use_embedding": True,
-            "embedding": layers.default_embedding_hparams(),
+            "embedding": embedder_utils.default_embedding_hparams(),
             "name":"decoder",
             "num_heads":8,
             "num_blocks":6,
@@ -85,7 +89,7 @@ class TransformerDecoder(ModuleBase):
                 self.dec,
                 variable_scope='dec_pe')
         else:
-            self.position_dec_embedding = layers.get_embedding(
+            self.position_dec_embedding = embedder_utils.get_embedding(
                 hparams=self._hparams.embedding,
                 vocab_size=self._hparams.max_seq_length,
                 variable_scope='dec_pe')

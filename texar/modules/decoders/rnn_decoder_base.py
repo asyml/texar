@@ -7,18 +7,20 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+# pylint: disable=not-context-manager, too-many-arguments, no-name-in-module
+# pylint: disable=too-many-branches, protected-access
+
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import Decoder as TFDecoder
 from tensorflow.contrib.seq2seq import dynamic_decode
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.util import nest
 
-from texar.modules.module_base import ModuleBase
-from texar.modules.decoders import rnn_decoder_helpers
 from texar.core import layers, utils
 from texar import context
-
-# pylint: disable=not-context-manager, too-many-arguments
+from texar.modules.module_base import ModuleBase
+from texar.modules.decoders import rnn_decoder_helpers
+from texar.modules.embedders import embedder_utils
 
 __all__ = [
     "RNNDecoderBase"
@@ -61,7 +63,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             if isinstance(embedding, tf.Variable):
                 self._embedding = embedding
             else:
-                self._embedding = layers.get_embedding(
+                self._embedding = embedder_utils.get_embedding(
                     self._hparams.embedding, embedding, self._vocab_size,
                     self.variable_scope)
             if self._hparams.embedding.trainable:
@@ -98,7 +100,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         return {
             "rnn_cell": layers.default_rnn_cell_hparams(),
             "use_embedding": True,
-            "embedding": layers.default_embedding_hparams(),
+            "embedding": embedder_utils.default_embedding_hparams(),
             "helper_train": rnn_decoder_helpers.default_helper_train_hparams(),
             "helper_infer": rnn_decoder_helpers.default_helper_infer_hparams(),
             "max_decoding_length_train": None,
