@@ -57,11 +57,6 @@ class UnidirectionalRNNEncoderTest(tf.test.TestCase):
         cell_dim = encoder.hparams.rnn_cell.cell.kwargs.num_units
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
-
-            tf.summary.FileWriter('', sess.graph)
-            print(tf.trainable_variables())
-            exit()
-
             outputs_, state_ = sess.run([outputs, state])
             self.assertEqual(outputs_.shape, (batch_size, max_time, cell_dim))
             self.assertEqual(state_[0].shape, (batch_size, cell_dim))

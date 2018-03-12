@@ -17,6 +17,6 @@ from texar.core import layers
 __all__ = [
 ]
 
-class CNNEncoderBase(EncoderBase):
-    """Base class for all CNN encoder classes."""
+class ConvEncoderBase(EncoderBase):
+    """Base class for all conv encoder classes."""
     raise NotImplementedError

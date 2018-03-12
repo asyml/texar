@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
 
+import texar as tx
 from texar import context
 from texar.hyperparams import HParams
 from texar.core import layers
@@ -112,6 +113,18 @@ class GetLayerTest(tf.test.TestCase):
         }
         layer = layers.get_layer(hparams)
         self.assertTrue(isinstance(layer, tf.layers.Conv1D))
+
+        hparams = {
+            "type": "MergeLayer",
+            "kwargs": {
+                "layers": [
+                    {"type": "Conv1D"},
+                    {"type": "Conv1D"}
+                ]
+            }
+        }
+        layer = layers.get_layer(hparams)
+        self.assertTrue(isinstance(layer, tx.core.MergeLayer))
 
 
 class MergeLayerTest(tf.test.TestCase):
