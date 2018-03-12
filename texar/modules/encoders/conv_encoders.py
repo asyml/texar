@@ -18,8 +18,8 @@ from texar.core import layers
 __all__ = [
 ]
 
-class SimpleConvEncoder(EncoderBase):
-    """Simple conv encoder.
+class SimpleConv1DEncoder(EncoderBase):
+    """Simple Conv-1D encoder.
     """
 
     def __init__(self, hparams=None):
@@ -31,22 +31,28 @@ class SimpleConvEncoder(EncoderBase):
         """
         return {
             # Conv layers
-            "conv_dim": 1,
             "num_conv_layers": 1,
             "filters": 128,
             "kernel_size": [3, 4, 5],
             "conv_activation": "identity",
             "other_conv_kwargs": {},
             # Pooling layers
+            "pooling": "MaxPooling1D",
+            "pool_size": 1,
+            "pool_strides": 1,
+            "other_pool_kwargs": {},
             # Dense layers
             "num_dense_layers": 1,
-            "dense_units": 128,
+            "dense_size": 128,
             "dense_activation": "identity",
             "other_dense_kwargs": {},
             # Dropout
-            "dropout_conv_layers": 0,
-            "dropout_dense_layers": 0,
+            "dropout_conv": 1,
+            "dropout_dense": [],
+            "dropout_rate": 0.75,
+            # Others
             "name": "conv_encoder",
-            "@no_typecheck": ["filters", "kernel_size"]
+            "@no_typecheck": ["filters", "kernel_size",
+                              "dropout_conv", "dropout_dense"]
         }
 
