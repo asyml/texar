@@ -11,6 +11,7 @@ import re
 
 import tensorflow as tf
 
+from texar.utils.exceptions import TexarError
 from texar.hyperparams import HParams
 
 
@@ -113,7 +114,7 @@ class ModuleBase(object):
         """The list of trainable variables of the module.
         """
         if not self._built:
-            raise ValueError(
+            raise TexarError(
                 "Attempting to access trainable_variables before module %s "
                 "was fully built. The module is built once it is called, "
                 "e.g., with `%s(...)`" % (self.name, self.name))
