@@ -607,8 +607,9 @@ class MergeLayer(tf.layers.Layer):
         return tf.TensorShape(output_shape)
 
     def build(self, _):
-        """Does not set :attr:`self.built` as this point.
+        """Dumb method.
         """
+        # Does not set :attr:`self.built` as this point.
         pass
 
     def _collect_weights(self):
@@ -684,7 +685,11 @@ class SequentialLayer(tf.layers.Layer):
     """A layer that consists of multiple layers connected sequentially.
 
     Args:
-        layers (list): The list of layers to be connected sequentially.
+        layers (list): A list of :tf_main:`tf.layers.Layer
+            <layers/layer>` instances, or a list of hyperparameter dicts
+            each of which specifying type and kwargs of each layer (see
+            the :attr:`hparams` argument of :func:`get_layer`). The layers are
+            connected sequentially.
     """
     def __init__(self,
                  layers,
@@ -693,7 +698,15 @@ class SequentialLayer(tf.layers.Layer):
                  **kwargs):
         super(SequentialLayer, self).__init__(
             trainable=trainable, name=name, **kwargs)
-        self._layers = layers
+
+        if len(layers) == 0:
+            raise ValueError("'layers' must be a non-empty list.")
+        self._layers = []
+        for layer in layers:
+            if isinstance(layer, tf.layers.Layer):
+                self._layers.append(layer)
+            else:
+                self._layers.append(get_layer(hparams=layer))
 
     def _compute_output_shape(self, input_shape):
         input_shape = tf.TensorShape(input_shape)
@@ -703,8 +716,9 @@ class SequentialLayer(tf.layers.Layer):
         return output_shape
 
     def build(self, _):
-        """Does not set :attr:`self.built` as this point.
+        """Dumb method.
         """
+        # Does not set :attr:`self.built` as this point.
         pass
 
     def _collect_weights(self):
