@@ -337,7 +337,7 @@ def uniquify_str(str_, str_set):
     """Uniquifies :attr:`str_` if :attr:`str_` is included in :attr:`str_set`.
 
     This is done by appending '_[digits]' to :attr:`str_`. Returns
-    :attr:`str_set` directly if :attr:`str_` is not included in :attr:`str_set`.
+    :attr:`str_` directly if :attr:`str_` is not included in :attr:`str_set`.
 
     Args:
         str_ (string): A string to uniquify.
