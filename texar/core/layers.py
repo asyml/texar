@@ -680,6 +680,12 @@ class MergeLayer(tf.layers.Layer):
 
         return outputs
 
+    @property
+    def layers(self):
+        """The list of parallel layers.
+        """
+        return self._layers
+
 
 class SequentialLayer(tf.layers.Layer):
     """A layer that consists of multiple layers connected sequentially.
@@ -744,6 +750,12 @@ class SequentialLayer(tf.layers.Layer):
             self._collect_weights()
 
         return outputs
+
+    @property
+    def layers(self):
+        """The list of layers connected sequentially.
+        """
+        return self._layers
 
 
 def _common_default_conv_dense_kwargs():
@@ -965,10 +977,7 @@ def default_dropout_kwargs():
     return {}
     #raise NotImplementedError
 def default_flatten_kwargs():
-    """TODO
-    """
     return {}
-    #raise NotImplementedError
 def default_max_pooling1d_kwargs():
     """TODO
     """
