@@ -10,14 +10,23 @@ from __future__ import division
 import copy
 import json
 
-from texar.core.utils import is_callable
-
 __all__ = [
     "HParams"
 ]
 
 def _type_name(value):
     return type(value).__name__
+
+#TODO: to delete
+def is_callable(x):
+    """Return `True` if :attr:`x` is callable.
+    """
+    try:
+        _is_callable = callable(x)
+    except: # pylint: disable=bare-except
+        _is_callable = hasattr(x, '__call__')
+    return _is_callable
+
 
 class HParams(object):
     """Hyperparameters.

@@ -9,6 +9,7 @@ from __future__ import division
 
 import tensorflow as tf
 
+from texar import context
 from texar.modules.module_base import ModuleBase
 from texar.core.layers import get_layer
 from texar.core.utils import uniquify_str
@@ -66,7 +67,7 @@ class FeedForwardNetwork(ModuleBase):
             self._layer_names.append(layer_name)
             self.layers_by_name[layer_name] = layer
 
-    def _build(self, inputs):
+    def _build(self, inputs, mode=None):
         """
 
         Args:
@@ -74,9 +75,17 @@ class FeedForwardNetwork(ModuleBase):
 
         Returns:
         """
+        training = context.is_train()
+        if mode is not None and mode == tf.estimator.ModeKeys.TRAIN:
+            training = True
+
         prev_outputs = inputs
         for layer_id, layer in enumerate(self._layers):
-            outputs = layer(prev_outputs)
+            if isinstance(layer, tf.layers.Dropout) or \
+                    isinstance(layer, tf.layers.BatchNormalization):
+                outputs = layer(prev_outputs, training=training)
+            else:
+                outputs = layer(prev_outputs)
             self._layer_outputs.append(outputs)
             self._layer_outputs_by_name[self._layer_names[layer_id]] = outputs
             prev_outputs = outputs
