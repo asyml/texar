@@ -9,6 +9,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
+from texar.utils.exceptions import TexarError
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.networks import FeedForwardNetwork
 from texar.core.utils import uniquify_str
@@ -16,7 +17,7 @@ from texar.core.utils import uniquify_str
 # pylint: disable=not-context-manager, too-many-arguments, too-many-locals
 
 __all__ = [
-    "SimpleConv1DEncoder"
+    "Conv1DEncoder"
 ]
 
 def _to_list(value, name=None, list_length=None):
@@ -36,7 +37,7 @@ def _to_list(value, name=None, list_length=None):
                          % (name, list_length))
     return value
 
-class SimpleConv1DEncoder(EncoderBase):
+class Conv1DEncoder(EncoderBase):
     """Simple Conv-1D encoder.
     """
 
@@ -49,6 +50,8 @@ class SimpleConv1DEncoder(EncoderBase):
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
+
+        TODO
         """
         return {
             # Conv layers
@@ -92,7 +95,7 @@ class SimpleConv1DEncoder(EncoderBase):
 
         other_kwargs = {}
         if self._hparams.other_pool_kwargs is not None:
-            if not isinstance(other_kwargs, dict):
+            if not isinstance(self._hparams.other_pool_kwargs, dict):
                 raise ValueError("hparams['other_pool_kwargs'] must be a dict.")
             other_kwargs = self._hparams.other_pool_kwargs
 
@@ -125,7 +128,7 @@ class SimpleConv1DEncoder(EncoderBase):
 
         other_kwargs = {}
         if self._hparams.other_conv_kwargs is not None:
-            if not isinstance(other_kwargs, dict):
+            if not isinstance(self._hparams.other_conv_kwargs, dict):
                 raise ValueError("hparams['other_conv_kwargs'] must be a dict.")
             other_kwargs = self._hparams.other_conv_kwargs
 
@@ -166,7 +169,7 @@ class SimpleConv1DEncoder(EncoderBase):
 
         other_kwargs = {}
         if self._hparams.other_dense_kwargs is not None:
-            if not isinstance(other_kwargs, dict):
+            if not isinstance(self._hparams.other_dense_kwargs, dict):
                 raise ValueError(
                     "hparams['other_dense_kwargs'] must be a dict.")
             other_kwargs = self._hparams.other_dense_kwargs
@@ -204,9 +207,10 @@ class SimpleConv1DEncoder(EncoderBase):
                 layers_hparams.append(conv_pool_hparams[conv_i])
         if nconv in dropout_conv:
             layers_hparams.append(_dropout_hparams(nconv))
-        # Add flatten layers before dense layers
-        layers_hparams.append({"type": "Flatten"})
+
         ndense = self._hparams.num_dense_layers
+        if ndense > 0: # Add flatten layers before dense layers
+            layers_hparams.append({"type": "Flatten"})
         for dense_i in range(ndense):
             if dense_i in dropout_dense:
                 layers_hparams.append(_dropout_hparams(dense_i + nconv))
@@ -225,7 +229,18 @@ class SimpleConv1DEncoder(EncoderBase):
     def trainable_variables(self):
         """The list of trainable variables of the module.
         """
+        if not self._built:
+            raise TexarError(
+                "Attempting to access trainable_variables before module %s "
+                "was fully built. The module is built once it is called, "
+                "e.g., with `%s(...)`" % (self.name, self.name))
         return self._nn.trainable_variables
+
+    @property
+    def nn(self): # pylint: disable=invalid-name
+        """The neural network.
+        """
+        return self._nn
 
     def has_layer(self, layer_name):
         """Returns `True` if the network with the name exists. Returns `False`
@@ -234,7 +249,7 @@ class SimpleConv1DEncoder(EncoderBase):
         Args:
             layer_name (str): Name of the layer.
         """
-        return layer_name in self.layers_by_name
+        return self._nn.has_layer(layer_name)
 
     def layer_by_name(self, layer_name):
         """Returns the layer with the name. Returns 'None' if the layer name

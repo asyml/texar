@@ -11,18 +11,18 @@ from __future__ import unicode_literals
 import tensorflow as tf
 
 import texar as tx
-from texar.modules.encoders.conv_encoders import SimpleConv1DEncoder
+from texar.modules.encoders.conv_encoders import Conv1DEncoder
 
 
 
-class SimpleConv1DEncoderTest(tf.test.TestCase):
-    """Tests :class:`~texar.modules.SimpleConv1DEncoder` class.
+class Conv1DEncoderTest(tf.test.TestCase):
+    """Tests :class:`~texar.modules.Conv1DEncoder` class.
     """
 
     def test_encode(self):
         """Tests encode.
         """
-        encoder_1 = SimpleConv1DEncoder()
+        encoder_1 = Conv1DEncoder()
         self.assertEqual(len(encoder_1.layers), 4)
         self.assertTrue(isinstance(encoder_1.layer_by_name("conv_pool_1"),
                                    tx.core.MergeLayer))
@@ -52,7 +52,7 @@ class SimpleConv1DEncoderTest(tf.test.TestCase):
             "dropout_conv": [0, 1, 2],
             "dropout_dense": 2
         }
-        encoder_2 = SimpleConv1DEncoder(hparams)
+        encoder_2 = Conv1DEncoder(hparams)
         # nlayers = nconv-pool + nconv + npool + ndense + ndropout + flatten
         self.assertEqual(len(encoder_2.layers), 1+1+1+3+4+1)
         self.assertTrue(isinstance(encoder_2.layer_by_name("conv_pool_1"),

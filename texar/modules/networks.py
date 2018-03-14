@@ -10,6 +10,7 @@ from __future__ import division
 import tensorflow as tf
 
 from texar import context
+from texar.utils import TexarError
 from texar.modules.module_base import ModuleBase
 from texar.core.layers import get_layer
 from texar.core.utils import uniquify_str
@@ -92,14 +93,34 @@ class FeedForwardNetwork(ModuleBase):
 
         if not self._built:
             self._add_internal_trainable_variables()
-            # Add trainable variables of `self._layers` which may be constructed
-            # externally.
+            # Add trainable variables of `self._layers` which may be
+            # constructed externally.
             for layer in self._layers:
                 self._add_trainable_variable(layer.trainable_variables)
             self._built = True
 
         return outputs
 
+    def _append_layer(self, layer):
+        """Appends a layer to the end of the network. The method is only
+        feasible before :attr:`_build` is called.
+
+        Args:
+            layer: A :tf_main:`tf.layers.Layer <layers/Layer>` instance, or
+                a dict of layer hyperparameters.
+        """
+        if self._built:
+            raise TexarError("`FeedForwardNetwork._append_layer` can be "
+                             "called only before `_build` is called.")
+
+        with tf.variable_scope(self.variable_scope):
+            layer_ = layer
+            if not isinstance(layer_, tf.layers.Layer):
+                layer_ = get_layer(hparams=layer_)
+            self._layers.append(layer_)
+            layer_name = uniquify_str(layer_.name, self._layer_names)
+            self._layer_names.append(layer_name)
+            self.layers_by_name[layer_name] = layer_
 
     def has_layer(self, layer_name):
         """Returns `True` if the network with the name exists. Returns `False`
