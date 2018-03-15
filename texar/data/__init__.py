@@ -9,7 +9,8 @@ from __future__ import print_function
 
 # pylint: disable=wildcard-import
 
-from texar.data.databases import *
+#from texar.data.databases import *
+from texar.data.q_data import *
 from texar.data.vocabulary import *
 from texar.data.embedding import *
 from texar.data.constants import *

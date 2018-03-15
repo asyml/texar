@@ -23,7 +23,7 @@ import numpy as np
 np.random.seed(rseed)
 
 # We shall wrap all these modules
-from texar.data import MonoTextDataBase
+from texar.data import qMonoTextData
 from texar.modules import ConstantConnector
 from texar.modules import BasicRNNDecoder, get_helper
 from texar.losses import mle_losses
@@ -47,7 +47,7 @@ def load_data():
         }
     }
     # Construct the database
-    text_db = MonoTextDataBase(data_hparams)
+    text_db = qMonoTextData(data_hparams)
     # Get data minibatch, which is a dictionary:
     # {
     #   "text": text_tensor,     # text string minibatch,
@@ -86,7 +86,6 @@ def train():
     outputs, final_state, sequence_lengths = decoder(
         helper=helper_train, initial_state=connector(batch_size))
 
-    print('decoder done')
     # Build loss
     mle_loss = mle_losses.average_sequence_sparse_softmax_cross_entropy(
         labels=data_batch['text_ids'][:, 1:],
@@ -115,7 +114,6 @@ def train():
         sess.run(tf.tables_initializer())
 
         tf.summary.FileWriter('language_models', sess.graph)
-        exit()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 

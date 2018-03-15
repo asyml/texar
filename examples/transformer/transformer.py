@@ -12,7 +12,7 @@ import pprint
 import numpy as np
 import tensorflow as tf
 import logging
-from texar.data import PairedTextDataBase
+from texar.data import qPairedTextData
 from texar.core.utils import _bucket_boundaries
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.losses import mle_losses
@@ -101,7 +101,7 @@ if __name__ == "__main__":
         },
     }
     # Construct the database
-    text_database = PairedTextDataBase(data_hparams)
+    text_database = qPairedTextData(data_hparams)
     text_data_batch = text_database()
     ori_src_text = text_data_batch['source_text_ids']
     ori_tgt_text = text_data_batch['target_text_ids']

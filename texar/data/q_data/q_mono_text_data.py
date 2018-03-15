@@ -13,8 +13,8 @@ import tensorflow as tf
 import tensorflow.contrib.slim as tf_slim
 
 from texar.core import utils
-from texar.data.databases.database_base import DataBaseBase
-from texar.data.databases.data_decoders import TextDataDecoder
+from texar.data.q_data.q_data_base import qDataBase
+from texar.data.q_data.q_data_decoders import TextDataDecoder
 from texar.data.vocabulary import Vocab
 from texar.data.embedding import Embedding
 
@@ -22,7 +22,7 @@ from texar.data.embedding import Embedding
 
 __all__ = [
     "_default_mono_text_dataset_hparams",
-    "MonoTextDataBase"
+    "qMonoTextData"
 ]
 
 def _default_mono_text_dataset_hparams():
@@ -48,7 +48,7 @@ def _default_mono_text_dataset_hparams():
 
 # pylint: disable=no-member
 
-class MonoTextDataBase(DataBaseBase):
+class qMonoTextData(qDataBase):
     """Text data base that reads single set of text files.
 
     This is for the use of, e.g., language models, auto-encoders, etc. For
@@ -61,7 +61,7 @@ class MonoTextDataBase(DataBaseBase):
     """
 
     def __init__(self, hparams):
-        DataBaseBase.__init__(self, hparams)
+        qDataBase.__init__(self, hparams)
 
         # pylint: disable=not-context-manager
         with tf.name_scope(self.name, self.default_hparams()["name"]):
@@ -72,7 +72,7 @@ class MonoTextDataBase(DataBaseBase):
     def default_hparams():
         """Returns a dicitionary of default hyperparameters.
         """
-        hparams = DataBaseBase.default_hparams()
+        hparams = qDataBase.default_hparams()
         hparams["name"] = "mono_text_database"
         hparams.update({
             "dataset": _default_mono_text_dataset_hparams()
@@ -159,11 +159,13 @@ class MonoTextDataBase(DataBaseBase):
                 name="%s/batch" % self.name)
         else:
             input_length = data[self._dataset.decoder.length_tensor_name]
+            batch_size = self._hparams.bucket_batch_size
+            if batch_size is None:
+                batch_size = self._hparams.batch_size
             _, data_batch = tf.contrib.training.bucket_by_sequence_length(
                 input_length=input_length,
                 tensors=data,
-                # TODO(zhiing): what's bucket_batch_size ?
-                batch_size=self._hparams.bucket_batch_size or self._hparams.batch_size,
+                batch_size=batch_size,
                 bucket_boundaries=self._hparams.bucket_boundaries,
                 num_threads=num_threads,
                 capacity=capacity,

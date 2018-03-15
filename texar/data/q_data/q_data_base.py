@@ -10,13 +10,15 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+# pylint: disable=invalid-name
+
 from texar.hyperparams import HParams
 
 __all__ = [
-    "DataBaseBase"
+    "qDataBase"
 ]
 
-class DataBaseBase(object):
+class qDataBase(object):
     """Base class of all data classes.
     """
 

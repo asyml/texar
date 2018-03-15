@@ -11,7 +11,7 @@ from __future__ import print_function
 import tensorflow as tf
 
 # We shall wrap all these modules
-from texar.data import MultiSourceTextDataBase
+from texar.data import qMultiSourceTextData
 from texar.modules import ForwardConnector
 from texar.modules import BasicRNNDecoder, get_helper
 from texar.modules import HierarchicalEncoder
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     }
 
     # Construct the database
-    dialog_db = MultiSourceTextDataBase(data_hparams)
+    dialog_db = qMultiSourceTextData(data_hparams)
     data_batch = dialog_db()
 
     # builder encoder
