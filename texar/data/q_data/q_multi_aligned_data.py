@@ -14,10 +14,10 @@ import tensorflow.contrib.slim as tf_slim
 
 from texar.hyperparams import HParams
 from texar.core import utils
-from texar.data.databases.database_base import DataBaseBase
-from texar.data.databases import mono_text_database
-from texar.data.databases import data_decoders
-from texar.data.databases.data_providers import ParallelDataProvider
+from texar.data.q_data.q_data_base import qDataBase
+from texar.data.q_data import q_mono_text_data
+from texar.data.q_data import q_data_decoders
+from texar.data.q_data.q_data_providers import ParallelDataProvider
 from texar.data.vocabulary import Vocab
 from texar.data.embedding import Embedding
 from texar.data import constants
@@ -28,14 +28,14 @@ from texar.data import constants
 
 __all__ = [
     "_default_dataset_hparams",
-    "MultiAlignedDataBase"
+    "qMultiAlignedData"
 ]
 
 def _default_dataset_hparams():
     """Returns hyperparameters of a dataset with default values.
     """
     # TODO(zhiting): add more docs
-    hparams = mono_text_database._default_mono_text_dataset_hparams()
+    hparams = q_mono_text_data._default_mono_text_dataset_hparams()
     hparams.update({
         "data_type": "text",
         "data_name_prefix": None,
@@ -46,7 +46,7 @@ def _default_dataset_hparams():
     })
     return hparams
 
-class MultiAlignedDataBase(DataBaseBase):
+class qMultiAlignedData(qDataBase):
     """Text data base that reads source and target text.
 
     Args:
@@ -55,7 +55,7 @@ class MultiAlignedDataBase(DataBaseBase):
     """
 
     def __init__(self, hparams):
-        DataBaseBase.__init__(self, hparams)
+        qDataBase.__init__(self, hparams)
         # Defaultizes hparams of each dataset
         datasets_hparams = self._hparams.datasets
         defaultized_datasets_hparams = []
@@ -72,7 +72,7 @@ class MultiAlignedDataBase(DataBaseBase):
     def default_hparams():
         """Returns a dicitionary of default hyperparameters.
         """
-        hparams = DataBaseBase.default_hparams()
+        hparams = qDataBase.default_hparams()
         hparams["name"] = "multi_aligned_database"
         hparams["datasets"] = [_default_dataset_hparams()]
         return hparams
@@ -142,7 +142,7 @@ class MultiAlignedDataBase(DataBaseBase):
         if hparams["data_name_prefix"]:
             data_name_prefix += "_" + hparams["data_name_prefix"]
 
-        decoder = data_decoders.TextDataDecoder(
+        decoder = q_data_decoders.TextDataDecoder(
             split_level=proc_hparams["split_level"],
             delimiter=proc_hparams["delimiter"],
             bos_token=proc_hparams["bos_token"],
@@ -218,7 +218,7 @@ class MultiAlignedDataBase(DataBaseBase):
         else:
             raise ValueError("Unknown data type: " + hparams["data_type"])
 
-        decoder = data_decoders.ScalarDataDecoder(dtype, data_name_prefix)
+        decoder = q_data_decoders.ScalarDataDecoder(dtype, data_name_prefix)
 
         # Create the dataset
         dataset = tf_slim.dataset.Dataset(
@@ -235,10 +235,10 @@ class MultiAlignedDataBase(DataBaseBase):
         datasets = []
         for ds_hp in datasets_hparams:
             if ds_hp["data_type"] == "text":
-                dataset = MultiAlignedDataBase._make_text_dataset(
+                dataset = qMultiAlignedData._make_text_dataset(
                     ds_hp, datasets_hparams, datasets)
             elif ds_hp["data_type"] == "int" or ds_hp["data_type"] == "float":
-                dataset = MultiAlignedDataBase._make_scalar_dataset(
+                dataset = qMultiAlignedData._make_scalar_dataset(
                     ds_hp, datasets_hparams, datasets)
             else:
                 raise ValueError("Unknown data type: " + ds_hp["data_type"])

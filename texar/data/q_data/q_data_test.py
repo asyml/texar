@@ -18,12 +18,12 @@ import texar.data
 
 # pylint: disable=too-many-locals
 
-class TextDataBaseTest(tf.test.TestCase):
+class TextDataTest(tf.test.TestCase):
     """Tests text database class.
     """
 
-    def test_mono_text_database(self):
-        """Tests the logics of MonoTextDataBase.
+    def test_q_mono_text_data(self):
+        """Tests the logics of qMonoTextData.
         """
         # Create test data
         vocab_list = ['word', '词']
@@ -46,7 +46,7 @@ class TextDataBaseTest(tf.test.TestCase):
             }
         }
 
-        text_database = texar.data.MonoTextDataBase(hparams)
+        text_database = texar.data.qMonoTextData(hparams)
         text_data_batch = text_database()
 
         with self.test_session() as sess:
@@ -73,7 +73,7 @@ class TextDataBaseTest(tf.test.TestCase):
             coord.join(threads)
 
     def test_paired_text_database(self):
-        """Tests the logics of PairedTextDataBase.
+        """Tests the logics of PairedTextData.
         """
         # Create test data
         vocab_list = ['This', 'is', 'a', 'word', '词']
@@ -109,7 +109,7 @@ class TextDataBaseTest(tf.test.TestCase):
             }
         }
 
-        text_database = texar.data.PairedTextDataBase(hparams)
+        text_database = texar.data.qPairedTextData(hparams)
         text_data_batch = text_database()
 
         with self.test_session() as sess:
@@ -148,7 +148,7 @@ class TextDataBaseTest(tf.test.TestCase):
             coord.join(threads)
 
     def test_multi_aligned_database(self):
-        """Tests the logics of MultiAlignedDataBase.
+        """Tests the logics of MultiAlignedData.
         """
         # Create test data
         vocab_list = ['This', 'is', 'a', 'word', '词']
@@ -196,7 +196,7 @@ class TextDataBaseTest(tf.test.TestCase):
             ]
         }
 
-        database = texar.data.MultiAlignedDataBase(hparams)
+        database = texar.data.qMultiAlignedData(hparams)
         data_batch = database()
 
         self.assertEqual(len(database.datasets), len(hparams["datasets"]))
@@ -245,7 +245,7 @@ class TextDataBaseTest(tf.test.TestCase):
 
 
     def test_multi_source_text_database(self):
-        """Tests the logics of MultiSourceTextDataBase.
+        """Tests the logics of MultiSourceTextData.
         """
         # Create test data
         vocab_list = ['word', 'sentence', '词', 'response', 'dialog', '1', '2']
@@ -292,7 +292,7 @@ class TextDataBaseTest(tf.test.TestCase):
             }
         }
 
-        text_database = texar.data.MultiSourceTextDataBase(hparams)
+        text_database = texar.data.qMultiSourceTextData(hparams)
         text_data_batch = text_database()
 
         with tf.Session() as sess:

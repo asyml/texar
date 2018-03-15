@@ -9,7 +9,6 @@ from __future__ import print_function
 import random
 import numpy as np
 import tensorflow as tf
-from texar.data import PairedTextDataBase
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.losses import mle_losses
 from texar.core import optimization as opt
