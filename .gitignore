@@ -218,3 +218,4 @@ doc/_build
 ### Project ###
 /data/
 checkpoints/
+/language_models/
