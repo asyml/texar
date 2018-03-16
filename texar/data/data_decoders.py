@@ -126,7 +126,8 @@ class TextDataDecoder(data_decoder.DataDecoder):
         self._length_tensor_name = length_tensor_name
 
     def __call__(self, data):
-        return self.decode(data, self.list_items())
+        outputs = self.decode(data, self.list_items())
+        return dict(zip(self.list_items(), outputs))
 
     def decode(self, data, items):
         """Decodes the data to return the tensors specified by the list of

@@ -94,7 +94,7 @@ class MonoTextData(TextDataBase):
         return embedding
 
     def _make_dataset(self):
-        dataset = tf.data.TextLineDataset(self._hparams.dataset_files)
+        dataset = tf.data.TextLineDataset(self._hparams.dataset.files)
         return dataset
 
     @staticmethod
@@ -157,10 +157,12 @@ class MonoTextData(TextDataBase):
         batch_size = hparams["batch_size"]
         if len(bucket_boundaries) == 0:
             if hparams["allow_smaller_final_batch"]:
-                dataset = dataset.batch(batch_size)
+                dataset = dataset.padded_batch(
+                    batch_size, dataset.output_shapes)
             else:
                 dataset = dataset.apply(
-                    tf.contrib.data.batch_and_drop_remainder(batch_size))
+                    tf.contrib.data.padded_batch_and_drop_remainder(
+                        batch_size, dataset.output_shapes))
         else:
             bucket_batch_size = dataset["bucket_batch_sizes"]
             if bucket_batch_size is None:
@@ -180,25 +182,26 @@ class MonoTextData(TextDataBase):
         dataset = self._shuffle_dataset(
             dataset, self._hparams, self._hparams.dataset.files)
 
+        # Processing
         dataset, self._decoder = self._process_dataset(dataset)
 
+        # Batching
         length_func = lambda x: x[self._decoder.length_tensor_name]
-        self._dataset = self._make_batch(
+        dataset = self._make_batch(
             dataset, self._hparams, length_func)
 
+        if self._hparams.prefetch_buffer_size > 0:
+            dataset = dataset.prefetch(self._hparams.prefetch_buffer_size)
 
-    # TODO
+        self._dataset = dataset
+
     def list_items(self):
-        """Returns the list of item names that the database can produce.
+        """Returns the list of item names that the data can produce.
 
         Returns:
             A list of strings.
         """
-        items = list(self._data_provider.list_items())
-        # Discard extra tensors inserted by DatasetDataProvider
-        if 'record_key' in items:
-            items.remove('record_key')
-        return items
+        return list(self._decoder.list_items())
 
     @property
     def dataset(self):
@@ -210,6 +213,14 @@ class MonoTextData(TextDataBase):
     def vocab(self):
         """The vocabulary defined in :class:`~texar.data.Vocab`.
         """
-        return self.dataset.vocab
+        return self._vocab
 
+    @property
+    def embedding_init_value(self):
+        """The `Tensor` containing the embedding value loaded from file.
+        `None` if embedding is not specified.
+        """
+        if self._embedding is None:
+            return None
+        return self._embedding.word_vecs
 
