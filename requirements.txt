@@ -1,5 +1,5 @@
-tensorflow >= 1.4.0
-tensorflow-gpu >= 1.4.0
+tensorflow >= 1.6.0
+tensorflow-gpu >= 1.6.0
 sphinxcontrib-napoleon >= 0.6.1
 sphinx-rtd-theme >= 0.2.4
 Pygments >= 2.1.1
