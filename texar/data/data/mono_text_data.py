@@ -94,7 +94,9 @@ class MonoTextData(TextDataBase):
         return embedding
 
     def _make_dataset(self):
-        dataset = tf.data.TextLineDataset(self._hparams.dataset.files)
+        dataset = tf.data.TextLineDataset(
+            self._hparams.dataset.files,
+            compression_type=self._hparams.dataset.compression_type)
         return dataset
 
     @staticmethod
@@ -139,16 +141,21 @@ class MonoTextData(TextDataBase):
         dataset = dataset.map(
             decoder, num_parallel_calls=num_parallel_calls)
 
-        other_trans = dataset_hparams["other_transformations"]
-        if len(other_trans) > 0:
-            for tran in other_trans:
-                tran_fn = utils.get_function(tran, ["texar.custom"])
-                other_trans.append(tran_fn)
-                dataset = dataset.map(
-                    lambda x: other_trans[-1](x, self),
-                    num_parallel_calls=num_parallel_calls)
-
         return dataset, decoder
+
+    def _perform_other_transformations(self, dataset):
+        other_trans_hparams = self._hparams.dataset.other_transformations
+        num_parallel_calls = self._hparams.num_parallel_calls
+        other_trans = []
+        for tran in other_trans_hparams:
+            if not utils.is_callable(tran):
+                tran = utils.get_function(tran, ["texar.custom"])
+            other_trans.append(tran)
+            dataset = dataset.map(
+                lambda x: other_trans[-1](x, self),
+                num_parallel_calls=num_parallel_calls)
+
+        return dataset
 
     @staticmethod
     def _make_batch(dataset, hparams, element_length_func):
@@ -164,7 +171,7 @@ class MonoTextData(TextDataBase):
                     tf.contrib.data.padded_batch_and_drop_remainder(
                         batch_size, dataset.output_shapes))
         else:
-            bucket_batch_size = dataset["bucket_batch_sizes"]
+            bucket_batch_size = hparams["bucket_batch_sizes"]
             if bucket_batch_size is None:
                 bucket_batch_size = [batch_size] * (len(bucket_boundaries) + 1)
             dataset = tf.contrib.data.bucket_by_sequence_length(
@@ -183,17 +190,21 @@ class MonoTextData(TextDataBase):
             dataset, self._hparams, self._hparams.dataset.files)
 
         # Processing
-        dataset, self._decoder = self._process_dataset(dataset)
+        self._dataset, self._decoder = self._process_dataset(dataset)
+        # Try to ensure all class attributes are created before this part,
+        # so that the transformation func can have access to
+        # them when called with `transformation_func(data, self)`
+        self._dataset = self._perform_other_transformations(self._dataset)
 
         # Batching
         length_func = lambda x: x[self._decoder.length_tensor_name]
-        dataset = self._make_batch(
-            dataset, self._hparams, length_func)
+        self._dataset = self._make_batch(
+            self._dataset, self._hparams, length_func)
 
         if self._hparams.prefetch_buffer_size > 0:
-            dataset = dataset.prefetch(self._hparams.prefetch_buffer_size)
+            self._dataset = self._dataset.prefetch(
+                self._hparams.prefetch_buffer_size)
 
-        self._dataset = dataset
 
     def list_items(self):
         """Returns the list of item names that the data can produce.
@@ -223,4 +234,22 @@ class MonoTextData(TextDataBase):
         if self._embedding is None:
             return None
         return self._embedding.word_vecs
+
+    @property
+    def text_tensor_name(self):
+        """The name of text tensor.
+        """
+        return self._decoder.text_tensor_name
+
+    @property
+    def length_tensor_name(self):
+        """The name of length tensor.
+        """
+        return self._decoder.length_tensor_name
+
+    @property
+    def text_id_tensor_name(self):
+        """The name of text index tensor.
+        """
+        return self._decoder.text_id_tensor_name
 

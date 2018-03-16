@@ -26,8 +26,8 @@ def random_shard_dataset(dataset_size, shard_size, seed=None):
     dataset.
     """
     num_shards = utils.ceildiv(dataset_size, shard_size)
-    boundaries = np.linspace(
-        0, dataset_size, num=num_shards, endpoint=False)
+    boundaries = np.linspace(0, dataset_size, num=num_shards, endpoint=False,
+                             dtype=np.int64) #pylint: disable=no-member
 
     def _shard_fn(dataset):
         sharded_dataset = (
