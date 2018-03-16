@@ -53,10 +53,10 @@ class TextDataBase(object):
         """
         raise NotImplementedError
 
-    def __call__(self):
-        """Returns a batch of data.
-        """
-        raise NotImplementedError
+    #def __call__(self):
+    #    """Returns a batch of data.
+    #    """
+    #    raise NotImplementedError
 
     @property
     def batch_size(self):
