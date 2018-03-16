@@ -1,7 +1,7 @@
 #
 """
-Base database class that is enherited by all database classes.
-A database defines data reading, parsing, batching, and other
+Base data class that is enherited by all data classes.
+A data defines data reading, parsing, batching, and other
 preprocessing operations.
 """
 
@@ -10,15 +10,13 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-# pylint: disable=invalid-name
-
 from texar.hyperparams import HParams
 
 __all__ = [
-    "qDataBase"
+    "TextDataBase"
 ]
 
-class qDataBase(object):
+class TextDataBase(object):
     """Base class of all data classes.
     """
 
@@ -34,30 +32,24 @@ class qDataBase(object):
             "name": "data",
             "num_epochs": None,
             "batch_size": 64,
-            "bucket_batch_size": None,
-            "allow_smaller_final_batch": False,
+            "allow_smaller_final_batch": True,
             "bucket_boundaries": [],
+            "bucket_batch_sizes": None,
             "shuffle": True,
+            "shuffle_buffer_size": None,
+            "shard_and_shuffle": False,
+            "num_parallel_calls": 1,
+            "prefetch_buffer_size": 0,
             "seed": None
         }
 
-    @staticmethod
-    def make_dataset(dataset_hparams):
-        """Creates a Dataset instance that defines source filenames, data
+    def _make_dataset(self):
+        """Creates Dataset instance that defines source filenames, data
         reading and decoding methods, vocabulary, and embedding initial
         values.
 
         Args:
             dataset_hparams (dict or HParams): Dataset hyperparameters.
-        """
-        raise NotImplementedError
-
-    def _make_data_provider(self, dataset):
-        """Creates a DataProvider instance that provides a single example of
-        requested data.
-
-        Args:
-            dataset (Dataset): The dataset used to provide data examples.
         """
         raise NotImplementedError
 
@@ -75,7 +67,7 @@ class qDataBase(object):
     @property
     def hparams(self):
         """A :class:`~texar.hyperparams.HParams` instance of the
-        database hyperparameters.
+        data hyperparameters.
         """
         return self._hparams
 
@@ -83,5 +75,5 @@ class qDataBase(object):
     def name(self):
         """The name of the data base.
         """
-        return self.hparams.name
+        return self._hparams.name
 

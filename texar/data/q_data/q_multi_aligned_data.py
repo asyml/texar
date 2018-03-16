@@ -16,8 +16,8 @@ from texar.hyperparams import HParams
 from texar.core import utils
 from texar.data.q_data.q_data_base import qDataBase
 from texar.data.q_data import q_mono_text_data
-from texar.data.q_data import q_data_decoders
 from texar.data.q_data.q_data_providers import ParallelDataProvider
+from texar.data import data_decoders
 from texar.data.vocabulary import Vocab
 from texar.data.embedding import Embedding
 from texar.data import constants
@@ -27,15 +27,15 @@ from texar.data import constants
 # pylint: disable=too-many-branches
 
 __all__ = [
-    "_default_dataset_hparams",
+    "_default_q_dataset_hparams",
     "qMultiAlignedData"
 ]
 
-def _default_dataset_hparams():
+def _default_q_dataset_hparams():
     """Returns hyperparameters of a dataset with default values.
     """
     # TODO(zhiting): add more docs
-    hparams = q_mono_text_data._default_mono_text_dataset_hparams()
+    hparams = q_mono_text_data._default_q_mono_text_dataset_hparams()
     hparams.update({
         "data_type": "text",
         "data_name_prefix": None,
@@ -60,7 +60,7 @@ class qMultiAlignedData(qDataBase):
         datasets_hparams = self._hparams.datasets
         defaultized_datasets_hparams = []
         for ds_hp in datasets_hparams:
-            defaultized_ds_hp = HParams(ds_hp, _default_dataset_hparams())
+            defaultized_ds_hp = HParams(ds_hp, _default_q_dataset_hparams())
             defaultized_datasets_hparams.append(defaultized_ds_hp)
         self._hparams.datasets = defaultized_datasets_hparams
 
@@ -73,8 +73,8 @@ class qMultiAlignedData(qDataBase):
         """Returns a dicitionary of default hyperparameters.
         """
         hparams = qDataBase.default_hparams()
-        hparams["name"] = "multi_aligned_database"
-        hparams["datasets"] = [_default_dataset_hparams()]
+        hparams["name"] = "multi_aligned_data"
+        hparams["datasets"] = [_default_q_dataset_hparams()]
         return hparams
 
     @staticmethod
@@ -142,7 +142,7 @@ class qMultiAlignedData(qDataBase):
         if hparams["data_name_prefix"]:
             data_name_prefix += "_" + hparams["data_name_prefix"]
 
-        decoder = q_data_decoders.TextDataDecoder(
+        decoder = data_decoders.TextDataDecoder(
             split_level=proc_hparams["split_level"],
             delimiter=proc_hparams["delimiter"],
             bos_token=proc_hparams["bos_token"],
@@ -218,7 +218,7 @@ class qMultiAlignedData(qDataBase):
         else:
             raise ValueError("Unknown data type: " + hparams["data_type"])
 
-        decoder = q_data_decoders.ScalarDataDecoder(dtype, data_name_prefix)
+        decoder = data_decoders.ScalarDataDecoder(dtype, data_name_prefix)
 
         # Create the dataset
         dataset = tf_slim.dataset.Dataset(

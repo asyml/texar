@@ -401,3 +401,18 @@ def straight_through(fw_tensor, bw_tensor):
             direct gradient to bw_tensor.
     """
     return tf.stop_gradient(fw_tensor) + bw_tensor - tf.stop_gradient(bw_tensor)
+
+def ceildiv(a, b):
+    """Divides with ceil.
+
+    E.g., `5 / 2 = 2.5`, `ceildiv(5, 2) = 3`.
+
+    Args:
+        a (int): Dividend integer.
+        b (int): Divisor integer.
+
+    Returns:
+        int: Ceil quotient.
+    """
+    return -(-a // b)
+

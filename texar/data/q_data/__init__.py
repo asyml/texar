@@ -15,4 +15,3 @@ from texar.data.q_data.q_paired_text_data import *
 from texar.data.q_data.q_multi_source_text_data import *
 from texar.data.q_data.q_multi_aligned_data import *
 from texar.data.q_data.q_data_providers import *
-from texar.data.q_data.q_data_decoders import *
