@@ -415,6 +415,8 @@ class MultiSentenceTextDataDecoder(data_decoder.DataDecoder):
 
     @property
     def context_length_tensor_name(self):
+        """The name of context length tensor.
+        """
         return self._context_length_tensor_name
 
     @property

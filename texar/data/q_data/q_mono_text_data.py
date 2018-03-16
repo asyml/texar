@@ -14,18 +14,18 @@ import tensorflow.contrib.slim as tf_slim
 
 from texar.core import utils
 from texar.data.q_data.q_data_base import qDataBase
-from texar.data.q_data.q_data_decoders import TextDataDecoder
+from texar.data.data_decoders import TextDataDecoder
 from texar.data.vocabulary import Vocab
 from texar.data.embedding import Embedding
 
 # pylint: disable=invalid-name, arguments-differ, not-context-manager
 
 __all__ = [
-    "_default_mono_text_dataset_hparams",
+    "_default_q_mono_text_dataset_hparams",
     "qMonoTextData"
 ]
 
-def _default_mono_text_dataset_hparams():
+def _default_q_mono_text_dataset_hparams():
     """Returns hyperparameters of a mono text dataset with default values.
     """
     # TODO(zhiting): add more docs
@@ -73,9 +73,9 @@ class qMonoTextData(qDataBase):
         """Returns a dicitionary of default hyperparameters.
         """
         hparams = qDataBase.default_hparams()
-        hparams["name"] = "mono_text_database"
+        hparams["name"] = "mono_text_data"
         hparams.update({
-            "dataset": _default_mono_text_dataset_hparams()
+            "dataset": _default_q_mono_text_dataset_hparams()
         })
         return hparams
 

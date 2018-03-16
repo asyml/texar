@@ -15,8 +15,8 @@ import tensorflow.contrib.slim as tf_slim
 from texar.core import utils
 from texar.data.q_data.q_data_base import qDataBase
 from texar.data.q_data import q_mono_text_data
-from texar.data.q_data.q_data_decoders import TextDataDecoder
 from texar.data.q_data.q_data_providers import ParallelDataProvider
+from texar.data.data_decoders import TextDataDecoder
 from texar.data.vocabulary import Vocab
 from texar.data.embedding import Embedding
 from texar.data import constants
@@ -25,17 +25,17 @@ from texar.data import constants
 # pylint: disable=protected-access, no-member
 
 __all__ = [
-    "_default_paired_text_dataset_hparams",
+    "_default_q_paired_text_dataset_hparams",
     "qPairedTextData"
 ]
 
-def _default_paired_text_dataset_hparams():
+def _default_q_paired_text_dataset_hparams():
     """Returns hyperparameters of a paired text dataset with default values.
     """
     # TODO(zhiting): add more docs
-    source_hparams = q_mono_text_data._default_mono_text_dataset_hparams()
+    source_hparams = q_mono_text_data._default_q_mono_text_dataset_hparams()
     source_hparams["processing"]["bos_token"] = None
-    target_hparams = q_mono_text_data._default_mono_text_dataset_hparams()
+    target_hparams = q_mono_text_data._default_q_mono_text_dataset_hparams()
     target_hparams.update(
         {
             "vocab_share": False,
@@ -74,8 +74,8 @@ class qPairedTextData(qDataBase):
         """Returns a dicitionary of default hyperparameters.
         """
         hparams = qDataBase.default_hparams()
-        hparams["name"] = "paired_text_database"
-        hparams.update(_default_paired_text_dataset_hparams())
+        hparams["name"] = "paired_text_data"
+        hparams.update(_default_q_paired_text_dataset_hparams())
         return hparams
 
     @staticmethod

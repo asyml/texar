@@ -16,8 +16,8 @@ from texar.core import utils
 from texar.data.q_data import q_mono_text_data
 from texar.data.q_data.q_data_base import qDataBase
 from texar.data.q_data.q_paired_text_data import qPairedTextData
-from texar.data.q_data.q_data_decoders import TextDataDecoder
-from texar.data.q_data.q_data_decoders import MultiSentenceTextDataDecoder
+from texar.data.data_decoders import TextDataDecoder
+from texar.data.data_decoders import MultiSentenceTextDataDecoder
 from texar.data.vocabulary import Vocab
 from texar.data.embedding import Embedding
 
@@ -25,17 +25,17 @@ from texar.data.embedding import Embedding
 # pylint: disable=protected-access, no-member
 
 __all__ = [
-    "_default_multi_source_text_dataset_hparams",
+    "_default_q_multi_source_text_dataset_hparams",
     "qMultiSourceTextData"
 ]
 
-def _default_multi_source_text_dataset_hparams():
+def _default_q_multi_source_text_dataset_hparams():
     """Returns hyperparameters of a multi source text dataset with defaults.
     """
-    source_hparams = q_mono_text_data._default_mono_text_dataset_hparams()
+    source_hparams = q_mono_text_data._default_q_mono_text_dataset_hparams()
     source_hparams["processing"]["bos_token"] = None
     source_hparams["processing"]["max_context_length"] = 5
-    target_hparams = q_mono_text_data._default_mono_text_dataset_hparams()
+    target_hparams = q_mono_text_data._default_q_mono_text_dataset_hparams()
     target_hparams.update(
         {
             "vocab_share": False,
@@ -73,8 +73,8 @@ class qMultiSourceTextData(qPairedTextData):
         """Returns a dicitionary of default hyperparameters.
         """
         hparams = qDataBase.default_hparams()
-        hparams["name"] = "multi_source_text_database"
-        hparams.update(_default_multi_source_text_dataset_hparams())
+        hparams["name"] = "multi_source_text_data"
+        hparams.update(_default_q_multi_source_text_dataset_hparams())
         return hparams
 
     @staticmethod
