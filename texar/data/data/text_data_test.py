@@ -32,7 +32,7 @@ class MonoTextDataTest(tf.test.TestCase):
         vocab_file.write('\n'.join(vocab_list).encode("utf-8"))
         vocab_file.flush()
         self._vocab_file = vocab_file
-        self._vocab_size = 2
+        self._vocab_size = len(vocab_list)
 
         text = ['This is a test sentence .', '词 词 。']
         text_file = tempfile.NamedTemporaryFile()
@@ -126,6 +126,7 @@ class MonoTextDataTest(tf.test.TestCase):
         hparams = copy.copy(self._hparams)
         hparams["dataset"].update({"other_transformations": [_transform]})
         self._run_and_test(hparams)
+
 
 if __name__ == "__main__":
     tf.test.main()
