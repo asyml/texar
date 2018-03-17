@@ -18,6 +18,7 @@ from texar.data.data import data_utils
 from texar.data.vocabulary import Vocab
 from texar.data.embedding import Embedding
 from texar.data.constants import BOS_TOKEN, EOS_TOKEN
+
 # pylint: disable=invalid-name, arguments-differ, not-context-manager
 
 __all__ = [
