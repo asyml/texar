@@ -34,6 +34,11 @@ class ModelBase(ModuleBase):
         """
         raise NotImplementedError
 
+    def get_loss(self):
+        """Computes the loss of the model.
+        """
+        raise NotImplementedError
+
     def get_train_op(self):
         """Creates the train op of the model.
         """
