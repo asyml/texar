@@ -11,7 +11,7 @@ import tensorflow as tf
 
 from texar import context
 from texar.utils import TexarError
-from texar.modules.module_base import ModuleBase
+from texar.module_base import ModuleBase
 from texar.core.layers import get_layer
 from texar.core.utils import uniquify_str
 

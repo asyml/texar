@@ -9,7 +9,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from texar.modules.module_base import ModuleBase
+from texar.module_base import ModuleBase
 from texar.modules.embedders import embedder_utils
 
 __all__ = [
