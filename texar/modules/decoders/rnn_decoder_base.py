@@ -64,9 +64,6 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 raise ValueError(
                     "`output_layer` must be either `tf.identity` or "
                     "an instance of `tf.layers.Layer`.")
-            self._add_trainable_variable(self._output_layer.trainable_variables)
-            print("============")
-            print(len(self._trainable_variables))
 
     @staticmethod
     def default_hparams():

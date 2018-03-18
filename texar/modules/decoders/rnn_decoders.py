@@ -57,7 +57,6 @@ class AttentionRNNDecoderOutput(
             "AttentionRNNDecoderOutput",
             ["logits", "sample_id", "cell_output",
              "attention_scores", "attention_context"])):
-            # "attention_context"])):
     """The outputs of attention RNN decoders that additionally include attention
     results.
 

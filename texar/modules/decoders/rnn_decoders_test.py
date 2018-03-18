@@ -52,7 +52,7 @@ class BasicRNNDecoderTest(tf.test.TestCase):
         outputs, final_state, sequence_lengths = decoder(
             helper_train, decoder.cell.zero_state(self._batch_size, tf.float32))
 
-        # 5 trainable variables: cell-kernel, cell-bias,
+        # 4 trainable variables: cell-kernel, cell-bias,
         # fc-layer-weights, fc-layer-bias
         self.assertEqual(len(decoder.trainable_variables), 4)
 
