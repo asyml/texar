@@ -18,7 +18,7 @@ from tensorflow.python.util import nest
 
 from texar.core import layers, utils
 from texar import context
-from texar.modules.module_base import ModuleBase
+from texar.module_base import ModuleBase
 from texar.modules.decoders import rnn_decoder_helpers
 from texar.modules.embedders import embedder_utils
 
@@ -163,7 +163,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             output_shape_with_unknown_batch = nest.map_structure(
                 lambda s: tensor_shape.TensorShape([None]).concatenate(s),
                 size)
-            layer_output_shape = self._output_layer._compute_output_shape(
+            layer_output_shape = self._output_layer.compute_output_shape(
                 output_shape_with_unknown_batch)
             return nest.map_structure(lambda s: s[1:], layer_output_shape)
 
