@@ -1116,7 +1116,7 @@ def multihead_attention(queries,
 
         if causality:
             diag_vals = tf.ones_like(outputs[0, :, :])
-            tril = tf.contrib.linalg.LinearOperatorTriL(diag_vals).to_dense()
+            tril = tf.contrib.linalg.LinearOperatorLowerTriangular(diag_vals).to_dense()
             masks = tf.tile(tf.expand_dims(tril, 0), [tf.shape(outputs)[0], 1, 1])
             paddings = tf.ones_like(masks)*(-2**32+1)
             outputs = tf.where(tf.equal(masks, 0), paddings, outputs)

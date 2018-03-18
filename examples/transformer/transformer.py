@@ -41,22 +41,16 @@ if __name__ == "__main__":
         "seed": 123,
         "shuffle": True,
         "source_dataset": {
-            "files": ['/home/zhiting/t2t_data/train_ende_wmt_bpe32k_en.txt.filter'],
-            #"files": ['/home/zhiting/t2t_data/train_ende_wmt_bpe32k_en.txt.debug'],
-            "vocab_file": '/home/zhiting/t2t_data/vocab.bpe.32000.filtered',
+            "files": ['/home/hzt/shr/t2t_data/train_ende_wmt_bpe32k_en.txt.filtered'],
+            "vocab_file": '/home/hzt/shr/t2t_data/vocab.bpe.32000.filtered',
             "processing": {
                 "bos_token": "<BOS>",
                 "eos_token": "<EOS>",
             }
         },
         "target_dataset": {
-            "files": ['/home/zhiting/t2t_data/train_ende_wmt_bpe32k_de.txt.filter'],
-            #"files": ['/home/zhiting/t2t_data/train_ende_wmt_bpe32k_de.txt.debug'],
+            "files": ['/home/hzt/shr/t2t_data/train_ende_wmt_bpe32k_de.txt.filtered'],
             "vocab_share":True,
-            #"processing":{
-            #    "bos_token": "<BOS>",
-            #    "eos_token": "<EOS>",
-            #},
         },
         'bucket_boundaries': boundaries,
         #'bucket_batch_size': [i // 4 for i  in bucket_batch_size],
@@ -132,7 +126,6 @@ if __name__ == "__main__":
         encoder_output,
         src_length=enc_input_length,
         tgt_length=dec_input_length)
-    print('logits:{} preds:{}'.format(logits.shape, preds.shape))
     loss_params = {
         'label_smoothing':0.1,
     }
@@ -147,18 +140,20 @@ if __name__ == "__main__":
     acc = tf.reduce_sum(tf.to_float(tf.equal(tf.to_int64(preds), labels))*istarget) / tf.to_float((tf.reduce_sum(labels_length)))
     tf.summary.scalar('acc', acc)
     opt_hparams = {
+        'learning_rate_schedule': 'linear_warmup_rsqrt_decay',
+        #'learning_rate_schedule': 'static',
         'warmup_steps': 16000,
         'max_training_steps': 250000,
     }
     global_step = tf.Variable(0, trainable=False)
 
     fstep = tf.to_float(global_step)
-    learning_rate = 1e-3
-    #learning_rate = 1000 * encoder_hparams['embedding']['dim']**-0.5 *(tf.minimum(
-    #    (fstep+1)**-0.5, (fstep+1) * opt_hparams['warmup_steps']**-1.5) )
-
-    #learning_rate = tf.Print(learning_rate, data=[fstep, learning_rate])
-
+    if opt_hparams['learning_rate_schedule'] == 'static':
+        learning_rate = 1e-3
+    else:
+        learning_rate = 2 * tf.minimum(1.0, (fstep / opt_hparams['warmup_steps'])) \
+            * tf.rsqrt(tf.maximum(fstep, opt_hparams['warmup_steps'])) \
+            * encoder_hparams['embedding']['dim']**-0.5
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate,
             beta1=0.9, beta2=0.98, epsilon=1e-6)
     train_op = optimizer.minimize(mle_loss, global_step)
@@ -193,17 +188,13 @@ if __name__ == "__main__":
                 source, dec_in, target, predict, _, step, loss, mgd = sess.run(
                     [encoder_input, decoder_input, labels, preds, train_op, global_step, mle_loss, merged],
                     feed_dict={context.is_train(): True})
+                if step % 100 == 0:
+                    logging.info('step:{} source:{} targets:{} loss:{}'.format(\
+                        step, source.shape, target.shape, loss))
                 source, dec_in, target = source.tolist(), dec_in.tolist(), target.tolist()
                 swords = [ ' '.join([vocab._id_to_token_map_py[i] for i in sent]) for sent in source ]
                 dwords = [ ' '.join([vocab._id_to_token_map_py[i] for i in sent]) for sent in dec_in ]
                 twords = [ ' '.join([vocab._id_to_token_map_py[i] for i in sent]) for sent in target ]
-                if step < 1000:
-                    logging.info('source:{}'.format(source))
-                    logging.info('swords:{}'.format(swords))
-                    logging.info('dec_in:{}'.format(dec_in))
-                    logging.info('dwords:{}'.format(dwords))
-                    logging.info('target:{}'.format(target))
-                    logging.info('twords:{}'.format(twords))
                 writer.add_summary(mgd, global_step=step)
                 if step % 1000 == 0:
                     print('step:{} loss:{}'.format(step, loss))
