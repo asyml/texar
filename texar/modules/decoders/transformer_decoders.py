@@ -99,15 +99,15 @@ class TransformerDecoder(ModuleBase):
         self.dec = tf.layers.dropout(
             self.dec,
             rate=self._hparams.dropout,
-            training=context.is_train())
+            training=context.is_train()
+        )
 
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("num_blocks_{}".format(i)):
                 with tf.variable_scope("self_attention"):
-                    dec = layers.layer_normalize(self.dec)
-                    dec = layers.multihead_attention(
-                        queries=dec,
-                        keys=dec,
+                    selfatt_output = layers.multihead_attention(
+                        queries=layers.layer_normalize(self.dec),
+                        keys=None,
                         queries_valid_length=tgt_length,
                         keys_valid_length=tgt_length,
                         num_units=self._hparams.embedding.dim,
@@ -115,16 +115,15 @@ class TransformerDecoder(ModuleBase):
                         dropout_rate=self._hparams.dropout,
                         causality=True,
                         scope="self_attention")
-                    dec = tf.layers.dropout(
-                        dec,
+                    self.dec = self.dec + tf.layers.dropout(
+                        selfatt_output,
                         rate=self._hparams.dropout,
-                        training=context.is_train())
-                    self.dec += dec
+                        training=context.is_train()
+                    )
 
                 with tf.variable_scope('encdec_attention'):
-                    dec = layers.layer_normalize(self.dec)
-                    dec = layers.multihead_attention(
-                        queries=dec,
+                    encdec_output = layers.multihead_attention(
+                        queries=layers.layer_normalize(self.dec),
                         keys=encoder_output,
                         queries_valid_length=tgt_length,
                         keys_valid_length=src_length,
@@ -133,22 +132,20 @@ class TransformerDecoder(ModuleBase):
                         dropout_rate=self._hparams.dropout,
                         causality=False,
                         scope="multihead_attention")
-                    dec = tf.layers.dropout(
-                        dec,
+                    self.dec = self.dec + tf.layers.dropout(encdec_output, \
                         rate=self._hparams.dropout,
-                        training=context.is_train())
-                    self.dec += dec
-
+                        training=context.is_train()
+                    )
                 poswise_network = FeedForwardNetwork(hparams=self._hparams['poswise_feedforward'])
                 with tf.variable_scope(poswise_network.variable_scope):
-                    dec = layers.layer_normalize(self.dec)
-                    dec = poswise_network(dec)
-                    dec = tf.layers.dropout(
-                        dec,
+                    sub_output = tf.layers.dropout(
+                        poswise_network(layers.layer_normalize(self.dec)),
                         rate=self._hparams.dropout,
-                        training=context.is_train())
-                    self.dec += dec
+                        training=context.is_train()
+                    )
+                    self.dec = self.dec + sub_output
 
+        self.dec = layers.layer_normalize(self.dec)
         # share the projection weight with word embedding
 
         if self._hparams.share_embed_and_transform:

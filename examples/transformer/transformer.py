@@ -7,17 +7,15 @@ from __future__ import print_function
 
 # pylint: disable=invalid-name, no-name-in-module
 import random
-import copy
 import numpy as np
 import tensorflow as tf
 import logging
 from texar.data import qPairedTextData
-from texar.core.utils import _bucket_boundaries
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.losses import mle_losses
 #from texar.core import optimization as opt
 from texar import context
-from hyperparams import dataset_hparams, encoder_hparams, decoder_hparams, \
+from hyperparams import train_dataset_hparams, encoder_hparams, decoder_hparams, \
     opt_hparams, loss_hparams
 def config_logging(filepath):
     logging.basicConfig(filename = filepath+'logging.txt', \
@@ -35,7 +33,7 @@ if __name__ == "__main__":
     random.seed(123)
     hidden_dim = 512
     # Construct the database
-    text_database = qPairedTextData(data_hparams)
+    text_database = qPairedTextData(train_dataset_hparams)
     text_data_batch = text_database()
     ori_src_text = text_data_batch['source_text_ids']
     ori_tgt_text = text_data_batch['target_text_ids']
@@ -48,8 +46,8 @@ if __name__ == "__main__":
     dec_input_length = tf.reduce_sum(tf.to_float(tf.not_equal(decoder_input, 0)), axis=-1)
     labels_length = tf.reduce_sum(tf.to_float(tf.not_equal(labels, 0)), axis=-1)
 
-    enc_input_length = tf.Print(enc_input_length,
-        data=[tf.shape(ori_src_text), tf.shape(ori_tgt_text), enc_input_length, dec_input_length, labels_length])
+    #enc_input_length = tf.Print(enc_input_length,
+    #    data=[tf.shape(ori_src_text), tf.shape(ori_tgt_text), enc_input_length, dec_input_length, labels_length])
 
     encoder = TransformerEncoder(
         vocab_size=text_database.source_vocab.vocab_size,\
@@ -63,13 +61,15 @@ if __name__ == "__main__":
         decoder_input,
         encoder_output,
         src_length=enc_input_length,
-        tgt_length=dec_input_length)
+        tgt_length=dec_input_length
+    )
     smooth_labels = mle_losses.label_smoothing(labels, text_database.target_vocab.vocab_size, \
         loss_hparams['label_smoothing'])
     mle_loss = mle_losses.average_sequence_softmax_cross_entropy(
         labels=smooth_labels,
         logits=logits,
-        sequence_length=labels_length)
+        sequence_length=labels_length
+    )
 
     istarget = tf.to_float(tf.not_equal(labels, 0))
     acc = tf.reduce_sum(tf.to_float(tf.equal(tf.to_int64(preds), labels))*istarget) / tf.to_float((tf.reduce_sum(labels_length)))

@@ -1093,6 +1093,8 @@ def multihead_attention(queries,
     with tf.variable_scope(scope):
         if num_units is None:
             num_units = queries.get_shape().as_list()[-1]
+        if keys is None:
+            keys = queries
 
         Q = tf.layers.dense(queries, num_units, use_bias=False, name='q')
         K = tf.layers.dense(keys, num_units, use_bias=False, name='k')
@@ -1119,7 +1121,7 @@ def multihead_attention(queries,
             diag_vals = tf.ones_like(outputs[0, :, :])
             if tf.__version__.startswith('1.4'):
                 tril = tf.contrib.linalg.LinearOperatorTriL(diag_vals).to_dense()
-            elif tf.__version.startswith('1.6'):
+            elif tf.__version__.startswith('1.6'):
                 tril = tf.contrib.linalg.LinearOperatorLowerTriangular(diag_vals).to_dense()
             masks = tf.tile(tf.expand_dims(tril, 0), [tf.shape(outputs)[0], 1, 1])
             paddings = tf.ones_like(masks)*(-2**32+1)
