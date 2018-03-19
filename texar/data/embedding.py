@@ -103,16 +103,15 @@ class Embedding(object):
                 :meth:`~texar.data.embedding.load_word2vec` and
                 :meth:`~texar.data.embedding.load_glove` for examples.
         """
-        self._vocab = vocab
         self._hparams = HParams(hparams, self.default_hparams())
 
         # Initialize embeddings
         init_fn_kwargs = self._hparams.init_fn.kwargs.todict()
         if "shape" in init_fn_kwargs or "size" in init_fn_kwargs:
-            raise ValueError("Argument 'shape' or 'size' must not be specified."
-                             " It is inferred automatically.")
+            raise ValueError("Argument 'shape' or 'size' must not be "
+                             "specified. They are inferred automatically.")
         init_fn = utils.get_function(self._hparams.init_fn.type,
-                                     ["texar.custom", "numpy.random", "numpy"])
+                                     ["numpy.random", "numpy", "texar.custom"])
         try:
             self._word_vecs = init_fn(size=[len(vocab), self._hparams.dim],
                                       **init_fn_kwargs)
@@ -127,7 +126,7 @@ class Embedding(object):
                 ["texar.custom", "texar.data.embedding"])
 
             self._word_vecs = \
-                read_fn(self._hparams.file, self._vocab, self._word_vecs)
+                read_fn(self._hparams.file, vocab, self._word_vecs)
 
     @staticmethod
     def default_hparams():
@@ -149,8 +148,7 @@ class Embedding(object):
 
     @property
     def word_vecs(self):
-        """Returns a 2D numpy array where the 1st dimension is the word index
-        and the 2nd dimension is the embedding vector.
+        """Returns a 2D numpy array of shape `[vocab_size, embedding_dim]`.
         """
         return self._word_vecs
 
@@ -162,4 +160,3 @@ class Embedding(object):
             An integer.
         """
         return self._hparams.dim
-
