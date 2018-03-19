@@ -21,6 +21,67 @@ __all__ = [
     "count_file_lines"
 ]
 
+
+def make_partial(fn, *args, **kwargs):
+    """Returns a new function with single argument by freezing other arguments
+    of :attr:`fn`.
+    """
+    def _new_fn(data):
+        return fn(data, *args, **kwargs)
+    return _new_fn
+
+def make_chained_transformation(tran_fns, *args, **kwargs):
+    """Returns a dataset transformation function that applies a list of
+    transformations sequentially.
+
+    Args:
+        tran_fns (list): A list of dataset transformation.
+        *args: Extra arguments for each of the transformation function.
+        **kwargs: Extra keyword arguments for each of the transformation
+            function.
+
+    Returns:
+        A transformation function to be used in
+        :tf_main:`tf.data.Dataset.map <data/Dataset#map>`.
+    """
+    def _chained_fn(data):
+        for tran_fns_i in tran_fns:
+            data = tran_fns_i(data, *args, **kwargs)
+        return data
+
+    return _chained_fn
+
+def make_combined_transformation(tran_fns, *args, **kwargs):
+    """Returns a dataset transformation function that applies a list of
+    transformations to each component of the data.
+
+    The data to be transformed must be a tuple of the same length
+    of :attr:`tran_fns`.
+
+    Args:
+        tran_fns (list): A list of elements where each element is a
+            transformation function or a list of transformation functions.
+        *args: Extra arguments for each of the transformation function.
+        **kwargs: Extra keyword arguments for each of the transformation
+            function.
+
+    Returns:
+        A transformation function to be used in
+        :tf_main:`tf.data.Dataset.map <data/Dataset#map>`.
+    """
+    def _combined_fn(data):
+        transformed_data = []
+        for i, tran_fns_i in enumerate(tran_fns):
+            data_i = data[i]
+            if not isinstance(tran_fns_i, (list, tuple)):
+                tran_fns_i = [tran_fns_i]
+            for tran_fns_ij in tran_fns_i:
+                data_i = tran_fns_ij(data_i, *args, **kwargs)
+            transformed_data.append(data_i)
+        return transformed_data
+
+    return _combined_fn
+
 def random_shard_dataset(dataset_size, shard_size, seed=None):
     """Returns a dataset transformation function that randomly shards a
     dataset.
@@ -52,5 +113,6 @@ def count_file_lines(filenames):
         filenames = [filenames]
     num_lines = np.sum([_count_lines(fn) for fn in filenames])
     return num_lines
+
 
 

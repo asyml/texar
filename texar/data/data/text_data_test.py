@@ -49,7 +49,7 @@ class MonoTextDataTest(tf.test.TestCase):
             }
         }
 
-    def _run_and_test(self, hparams, test_batch_size=False):
+    def _run_and_test(self, hparams, test_batch_size=False, length_inc=None):
         # Construct database
         text_data = tx.data.MonoTextData(hparams)
         self.assertEqual(text_data.vocab.vocab_size,
@@ -73,6 +73,12 @@ class MonoTextDataTest(tf.test.TestCase):
                     if test_batch_size:
                         self.assertEqual(len(data_batch_['text']),
                                          hparams['batch_size'])
+                    if length_inc:
+                        for i in range(len(data_batch_['text'])):
+                            text_ = data_batch_['text'][i].tolist()
+                            self.assertEqual(
+                                text_.index('<EOS>') + 1,
+                                data_batch_['length'][i] - length_inc)
 
                 except tf.errors.OutOfRangeError:
                     print('Done -- epoch limit reached')
@@ -119,13 +125,14 @@ class MonoTextDataTest(tf.test.TestCase):
     def test_other_transformations(self):
         """Tests use of other transformations
         """
-        def _transform(x, data): # pylint: disable=invalid-name
-            x[data.length_tensor_name] += 1
+        def _transform(x, text_data): # pylint: disable=invalid-name
+            x[text_data.length_tensor_name] += 1
             return x
 
         hparams = copy.copy(self._hparams)
-        hparams["dataset"].update({"other_transformations": [_transform]})
-        self._run_and_test(hparams)
+        hparams["dataset"].update(
+            {"other_transformations": [_transform, _transform]})
+        self._run_and_test(hparams, length_inc=2)
 
 
 if __name__ == "__main__":
