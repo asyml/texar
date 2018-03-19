@@ -5,51 +5,16 @@ import codecs
 
 import tensorflow as tf
 import numpy as np
-import copy
 from data_load import load_test_data, load_shared_vocab, hp
 from nltk.translate.bleu_score import corpus_bleu
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.losses import mle_losses
 from texar import context
+from hyperparams import encoder_hparams, decoder_hparams
+
 def evaluate():
     print("Graph loaded")
     # Load data
-    encoder_hparams = {
-        'max_seq_length':100000000,
-        'scale':True,
-        'sinusoid':True,
-        'embedding': {
-            'name':'lookup_table',
-            'initializer': {
-                'type':'uniform_unit_scaling',
-                },
-            'dim': 512,
-            },
-        'num_blocks': 6,
-        'num_heads': 8,
-        'poswise_feedforward': {
-            'name':'ffn',
-            'layers':[
-                {
-                    'type':'Conv1D',
-                    'kwargs': {
-                        'filters':512*4,
-                        'kernel_size':1,
-                        'activation':'relu',
-                        'use_bias':True,
-                    }
-                },
-                {
-                    'type':'Conv1D',
-                    'kwargs': {
-                        'filters':512,
-                        'kernel_size':1,
-                        'use_bias':True,
-                    }
-                }
-            ],
-        },
-    }
     test_corpus, source_list, target_list = load_test_data()
     src_input = tf.placeholder(tf.int32, shape=(hp.batch_size, \
         hp.maxlen))
@@ -65,8 +30,6 @@ def evaluate():
     encoder_output = encoder(src_input,
         inputs_length=src_length)
 
-    decoder_hparams = copy.deepcopy(encoder_hparams)
-    decoder_hparams['share_embed_and_transform'] = True
     decoder = TransformerDecoder(
         embedding = encoder._embedding,
         hparams=decoder_hparams)
@@ -111,36 +74,45 @@ def evaluate():
         with open('extracted_test.txt', 'w+') as outfile:
             for sent in source_list:
                 outfile.write(sent+'\n')
+        overall_sources, overall_targets, overall_outputs = [], [], []
         with codecs.open(resultfile, "w", "utf-8") as fout, codecs.open(outputfile, 'w+','utf-8') as oout:
             list_of_refs, hypotheses = [], []
             for i in range(len(test_corpus) // hp.batch_size):
-                print('i:{}'.format(i))
+                print('i:{} instance:{}'.format(i, i*hp.batch_size))
                 src = test_corpus[i*hp.batch_size: (i+1)*hp.batch_size]
                 sources = source_list[i*hp.batch_size: (i+1)*hp.batch_size]
                 targets = target_list[i*hp.batch_size: (i+1)*hp.batch_size]
-                outputs = np.zeros((hp.batch_size, hp.maxlen),\
-                    np.int32)
+                outputs = np.zeros((hp.batch_size, hp.maxlen),np.int32)
+                finished = [False] * hp.batch_size
                 for j in range(hp.maxlen):
-                    loss, _preds = sess.run([mle_loss, preds], \
+                    _, _preds = sess.run([mle_loss, preds], \
                         feed_dict={
                             src_input: src,
                             tgt_input: outputs,
                             context.is_train():False
-                            })
-                    #fout.write('loss:{}\n'.format(loss))
+                        })
+                    for k in range(hp.batch_size):
+                        if _preds[k][j] == word2idx['<EOS>']:
+                            finished[k] = True
                     outputs[:, j] = _preds[:, j]
-                for source, target, pred in zip(sources, targets, outputs): # sentence-wise
-                    got = " ".join(idx2word[idx] for idx in pred).split("<EOS>")[0].strip()
-                    fout.write("- source: " + source +"\n")
-                    fout.write("- expected: " + target + "\n")
-                    fout.write("- got: " + got + "\n\n")
-                    fout.flush()
-                    oout.write(got+'\n')
-                    # bleu score
-                    ref = target.split()
-                    hypothesis = got.split()
-                    list_of_refs.append([ref])
-                    hypotheses.append(hypothesis)
+                    if False not in finished:
+                        break
+                overall_sources.extend(sources)
+                overall_targets.extend(targets)
+                overall_outputs.extend(outputs)
+
+            for source, target, pred in zip(overall_sources, overall_targets, overall_outputs): # sentence-wise
+                got = " ".join(idx2word[idx] for idx in pred).split("<EOS>")[0].strip()
+                fout.write("- source: " + source +"\n")
+                fout.write("- expected: " + target + "\n")
+                fout.write("- got: " + got + "\n\n")
+                fout.flush()
+                oout.write(got+'\n')
+                # bleu score
+                ref = target.split()
+                hypothesis = got.split()
+                list_of_refs.append([ref])
+                hypotheses.append(hypothesis)
 
             ## Calculate bleu score
             score = corpus_bleu(list_of_refs, hypotheses)

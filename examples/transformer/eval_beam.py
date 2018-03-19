@@ -11,45 +11,11 @@ from nltk.translate.bleu_score import corpus_bleu
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.losses import mle_losses
 from texar import context
+from hyperparams import encoder_hparams, decoder_hparams
+
 def evaluate():
     print("Graph loaded")
     # Load data
-    encoder_hparams = {
-        'max_seq_length':100000000,
-        'scale':True,
-        'sinusoid':True,
-        'embedding': {
-            'name':'lookup_table',
-            'initializer': {
-                'type':'uniform_unit_scaling',
-                },
-            'dim': 512,
-            },
-        'num_blocks': 6,
-        'num_heads': 8,
-        'poswise_feedforward': {
-            'name':'ffn',
-            'layers':[
-                {
-                    'type':'Conv1D',
-                    'kwargs': {
-                        'filters':512*4,
-                        'kernel_size':1,
-                        'activation':'relu',
-                        'use_bias':True,
-                    }
-                },
-                {
-                    'type':'Conv1D',
-                    'kwargs': {
-                        'filters':512,
-                        'kernel_size':1,
-                        'use_bias':True,
-                    }
-                }
-            ],
-        },
-    }
     test_corpus, source_list, target_list = load_test_data()
     src_input = tf.placeholder(tf.int32, shape=(hp.batch_size, \
         hp.maxlen))
@@ -64,9 +30,6 @@ def evaluate():
     encoder = TransformerEncoder(vocab_size=len(word2idx), hparams=encoder_hparams)
     encoder_output = encoder(src_input,
         inputs_length=src_length)
-
-    decoder_hparams = copy.deepcopy(encoder_hparams)
-    decoder_hparams['share_embed_and_transform'] = True
     decoder = TransformerDecoder(
         embedding = encoder._embedding,
         hparams=decoder_hparams)
@@ -152,8 +115,8 @@ def evaluate():
                 if len(completed_hyp) == 0:
                     completed_hyp = active_hyp
                 #beam_utils.normalize_completed(completed_hyp, x_length)
-                result = [sorted(completed_hyp, key=lambda x:x.score, reverse=True)[0]]
-                for source, target, pred in zip(sources, targets, result): # sentence-wise
+                results = [sorted(completed_hyp, key=lambda x:x.score, reverse=True)[0]]
+                for source, target, pred in zip(sources, targets, results): # sentence-wise
                     pred = pred.output
                     got = " ".join(idx2word[idx] for idx in pred).split("<EOS>")[0].strip()
                     fout.write("- source: " + source +"\n")

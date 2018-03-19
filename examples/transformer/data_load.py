@@ -6,14 +6,14 @@ kbpark.linguist@gmail.com.
 https://www.github.com/kyubyong/transformer
 '''
 from __future__ import print_function
-from hyperparams import Hyperparams as hp
+from hyperparams import args as hp
 import tensorflow as tf
 import numpy as np
 import codecs
 import regex
 
 def load_shared_vocab():
-    vocab = [line.split()[0] for line in codecs.open('/home/zhiting/t2t_data/vocab.bpe.32000.eval').read().splitlines()]
+    vocab = [line.split()[0] for line in codecs.open(hp.vocab_dir + 'vocab.bpe.32000.eval').read().splitlines()]
     word2idx = {word: idx for idx, word in enumerate(vocab)}
     idx2word = {idx: word for idx, word in enumerate(vocab)}
     return word2idx, idx2word
@@ -52,17 +52,14 @@ def load_train_data():
     return X, Y
 
 def load_test_data():
-    de_sents = [line for line in codecs.open(hp.source_test, 'r', 'utf-8').read().split("\n") if line]
-    en_sents = [line for line in codecs.open(hp.target_test, 'r', 'utf-8').read().split("\n") if line]
+    src_sents = [line for line in codecs.open(hp.source_test, 'r', 'utf-8').read().split("\n") if line]
+    tgt_sents = [line for line in codecs.open(hp.target_test, 'r', 'utf-8').read().split("\n") if line]
 
-    X, Y, Sources, Targets = create_data(de_sents, en_sents)
+    #all_sents = list(zip(src_sents, tgt_sents))
+    #all_sents = sorted(all_sents, key=lambda x:len(x[1]))
+    #src_sents, tgt_sents = list(zip(*all_sents))
+    X, Y, Sources, Targets = create_data(src_sents, tgt_sents)
     return X, Sources, Targets # (1064, 150)
-
-def load_test_wmt_data(data_hparams):
-    en_sents = [line.strip() for line in codecs.open(hp.source_test, 'r', 'utf_8').read().split('\n')]
-    de_sents = [line.strip() for line in codecs.open(hp.target_test, 'r', 'utf-8').read().split('\n')]
-    X, Y, Sources, Targets = create_data(en_sents, de_sents)
-    return X, Sources, Targets
 
 def get_batch_data():
     # Load data
