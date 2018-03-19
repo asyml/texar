@@ -12,9 +12,9 @@ from __future__ import unicode_literals
 import tensorflow as tf
 
 from texar.core import utils
+from texar.data.data import data_utils
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data_decoders import TextDataDecoder
-from texar.data.data import data_utils
 from texar.data.vocabulary import Vocab
 from texar.data.embedding import Embedding
 from texar.data.constants import BOS_TOKEN, EOS_TOKEN
@@ -100,84 +100,32 @@ class MonoTextData(TextDataBase):
             compression_type=self._hparams.dataset.compression_type)
         return dataset
 
-    @staticmethod
-    def _shuffle_dataset(dataset, hparams, dataset_files):
-        shuffle_buffer_size = hparams["shuffle_buffer_size"]
-        if hparams["shard_and_shuffle"]:
-            if shuffle_buffer_size is None:
-                raise ValueError(
-                    "Dataset hyperparameter 'shuffle_buffer_size' "
-                    "must not be `None` if 'shard_and_shuffle'=`True`.")
-            dataset_size = data_utils.count_file_lines(dataset_files)
-            if shuffle_buffer_size >= dataset_size:
-                raise ValueError(
-                    "Dataset size (%d) <= shuffle_buffer_size (%d). Set "
-                    "shuffle_and_shard to `False`." %
-                    (dataset_size, shuffle_buffer_size))
-            #TODO(zhiting): Use a different seed?
-            dataset = dataset.apply(data_utils.random_shard_dataset(
-                dataset_size, shuffle_buffer_size, hparams["seed"]))
-            dataset = dataset.shuffle(shuffle_buffer_size + 16, # add a margin
-                                      seed=hparams["seed"])
-        elif hparams["shuffle"]:
-            if shuffle_buffer_size is None:
-                shuffle_buffer_size = data_utils.count_file_lines(dataset_files)
-            dataset = dataset.shuffle(shuffle_buffer_size, seed=hparams["seed"])
-
-        return dataset
-
-    def _process_dataset(self, dataset):
+    def _process_dataset(self):
+        # pylint: disable=attribute-defined-outside-init
         dataset_hparams = self._hparams.dataset
 
         # Create data decoder
-        decoder = TextDataDecoder(
+        self._decoder = TextDataDecoder(
             delimiter=dataset_hparams["delimiter"],
             bos_token=dataset_hparams["bos_token"],
             eos_token=dataset_hparams["eos_token"],
             max_seq_length=dataset_hparams["max_seq_length"],
             token_to_id_map=self._vocab.token_to_id_map)
 
-        # Process data
-        num_parallel_calls = self._hparams.num_parallel_calls
-        dataset = dataset.map(
-            decoder, num_parallel_calls=num_parallel_calls)
-
-        return dataset, decoder
-
-    def _perform_other_transformations(self, dataset):
-        other_trans_hparams = self._hparams.dataset.other_transformations
-        num_parallel_calls = self._hparams.num_parallel_calls
+        # Create other transformations
+        other_trans_hparams = dataset_hparams["other_transformations"]
         other_trans = []
         for tran in other_trans_hparams:
             if not utils.is_callable(tran):
                 tran = utils.get_function(tran, ["texar.custom"])
-            other_trans.append(tran)
-            dataset = dataset.map(
-                lambda x: other_trans[-1](x, self),
-                num_parallel_calls=num_parallel_calls)
+            other_trans.append(data_utils.make_partial(tran, self))
 
-        return dataset
-
-    @staticmethod
-    def _make_batch(dataset, hparams, element_length_func):
-        dataset = dataset.repeat(hparams.num_epochs)
-        bucket_boundaries = hparams["bucket_boundaries"]
-        batch_size = hparams["batch_size"]
-        if len(bucket_boundaries) == 0:
-            if hparams["allow_smaller_final_batch"]:
-                dataset = dataset.padded_batch(
-                    batch_size, dataset.output_shapes)
-            else:
-                dataset = dataset.apply(
-                    tf.contrib.data.padded_batch_and_drop_remainder(
-                        batch_size, dataset.output_shapes))
-        else:
-            bucket_batch_size = hparams["bucket_batch_sizes"]
-            if bucket_batch_size is None:
-                bucket_batch_size = [batch_size] * (len(bucket_boundaries) + 1)
-            dataset = tf.contrib.data.bucket_by_sequence_length(
-                element_length_func, bucket_boundaries, bucket_batch_size)
-        return dataset
+        # Process data
+        chained_tran = data_utils.make_chained_transformation(
+            [self._decoder] + other_trans)
+        num_parallel_calls = self._hparams.num_parallel_calls
+        self._dataset = self._dataset.map(
+            chained_tran, num_parallel_calls=num_parallel_calls)
 
     def _make_data(self):
         dataset_hparams = self._hparams.dataset
@@ -187,15 +135,16 @@ class MonoTextData(TextDataBase):
 
         # Create dataset
         dataset = self._make_dataset()
-        dataset = self._shuffle_dataset(
+        dataset, dataset_size = self._shuffle_dataset(
             dataset, self._hparams, self._hparams.dataset.files)
+        self._dataset = dataset
+        self._dataset_size = dataset_size
 
-        # Processing
-        self._dataset, self._decoder = self._process_dataset(dataset)
+        # Processing.
         # Try to ensure all class attributes are created before this part,
         # so that the transformation func can have access to
         # them when called with `transformation_func(data, self)`
-        self._dataset = self._perform_other_transformations(self._dataset)
+        self._process_dataset()
 
         # Batching
         length_func = lambda x: x[self._decoder.length_tensor_name]
@@ -220,6 +169,15 @@ class MonoTextData(TextDataBase):
         """The dataset.
         """
         return self._dataset
+
+    def dataset_size(self):
+        """Returns the number of data instances in the dataset.
+        """
+        if not self._dataset_size:
+            # pylint: disable=attribute-defined-outside-init
+            self._dataset_size = data_utils.count_file_lines(
+                self._hparams.dataset.files)
+        return self._dataset_size
 
     @property
     def vocab(self):
