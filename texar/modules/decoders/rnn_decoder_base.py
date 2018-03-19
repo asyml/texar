@@ -18,9 +18,8 @@ from tensorflow.python.util import nest
 
 from texar.core import layers, utils
 from texar import context
-from texar.modules.module_base import ModuleBase
+from texar.module_base import ModuleBase
 from texar.modules.decoders import rnn_decoder_helpers
-from texar.modules.embedders import embedder_utils
 
 __all__ = [
     "RNNDecoderBase"
@@ -34,7 +33,6 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
 
     def __init__(self,
                  cell=None,
-                 embedding=None,
                  vocab_size=None,
                  output_layer=None,
                  hparams=None):
@@ -50,43 +48,22 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             else:
                 self._cell = layers.get_rnn_cell(self._hparams.rnn_cell)
 
-        # Make embedding
-        if vocab_size is None:
-            if self._hparams.use_embedding and embedding is None:
-                raise ValueError(
-                    "`vocab_size` is required if embedding is used and"
-                    "`embedding` is None.")
-
-        self._vocab_size = vocab_size
-        self._embedding = None
-        if self._hparams.use_embedding:
-            if isinstance(embedding, tf.Variable):
-                self._embedding = embedding
-            else:
-                self._embedding = embedder_utils.get_embedding(
-                    self._hparams.embedding, embedding, self._vocab_size,
-                    self.variable_scope)
-            if self._hparams.embedding.trainable:
-                self._add_trainable_variable(self._embedding)
-            if self._vocab_size is None:
-                self._vocab_size = self._embedding.get_shape().as_list()[0]
-
         # Make the output layer
+        self._vocab_size = vocab_size
         self._output_layer = output_layer
-        if self._output_layer is None:
+        if output_layer is None:
             if self._vocab_size is None:
                 raise ValueError(
-                    "Output layer size cannot be inferred automatically. "
-                    "Must specify either `vocab_size` or "
-                    "`embedding` (if embedding is used).")
+                    "Either `output_layer` or `vocab_size` must be provided. "
+                    "Set `output_layer=tf.identity` if no output layer is "
+                    "wanted.")
             with tf.variable_scope(self.variable_scope):
                 self._output_layer = tf.layers.Dense(units=self._vocab_size)
-        elif self._output_layer is not tf.identity:
-            if not isinstance(self._output_layer, tf.layers.Layer):
+        elif output_layer is not tf.identity:
+            if not isinstance(output_layer, tf.layers.Layer):
                 raise ValueError(
-                    "`output_layer` must be either `tf.identity` or ",
-                    "instance of `tf.layers.Layer`.")
-            self._add_trainable_variable(self._output_layer.trainable_variables)
+                    "`output_layer` must be either `tf.identity` or "
+                    "an instance of `tf.layers.Layer`.")
 
     @staticmethod
     def default_hparams():
@@ -99,8 +76,6 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         """
         return {
             "rnn_cell": layers.default_rnn_cell_hparams(),
-            "use_embedding": True,
-            "embedding": embedder_utils.default_embedding_hparams(),
             "helper_train": rnn_decoder_helpers.default_helper_train_hparams(),
             "helper_infer": rnn_decoder_helpers.default_helper_infer_hparams(),
             "max_decoding_length_train": None,
@@ -140,12 +115,16 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         outputs, final_state, sequence_lengths = dynamic_decode(
             decoder=self, maximum_iterations=max_decoding_length)
 
-        self._add_internal_trainable_variables()
-        # Add trainable variables of `self._cell` which may be constructed
-        # externally.
-        self._add_trainable_variable(
-            layers.get_rnn_cell_trainable_variables(self._cell))
-        self._built = True
+        if not self._built:
+            self._add_internal_trainable_variables()
+            # Add trainable variables of `self._cell` which may be
+            # constructed externally.
+            self._add_trainable_variable(
+                layers.get_rnn_cell_trainable_variables(self._cell))
+            if isinstance(self._output_layer, tf.layers.Layer):
+                self._add_trainable_variable(
+                    self._output_layer.trainable_variables)
+            self._built = True
 
         return outputs, final_state, sequence_lengths
 
@@ -163,7 +142,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             output_shape_with_unknown_batch = nest.map_structure(
                 lambda s: tensor_shape.TensorShape([None]).concatenate(s),
                 size)
-            layer_output_shape = self._output_layer._compute_output_shape(
+            layer_output_shape = self._output_layer.compute_output_shape(
                 output_shape_with_unknown_batch)
             return nest.map_structure(lambda s: s[1:], layer_output_shape)
 
@@ -197,12 +176,6 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         # Inherits from TFDecoder
         # All RNN decoder classes must implement this
         raise NotImplementedError
-
-    @property
-    def embedding(self):
-        """The embedding variable.
-        """
-        return self._embedding
 
     @property
     def cell(self):

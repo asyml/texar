@@ -108,7 +108,6 @@ class TransformerEncoder(EncoderBase):
             'dropout':0.1,
             'num_blocks':6,
             'num_heads':8,
-            'scale':False,
             'poswise_feedforward':None,
         }
 

@@ -8,7 +8,7 @@ from __future__ import division
 from __future__ import print_function
 
 # pylint: disable=no-name-in-module, too-many-arguments, too-many-locals
-# pylint: disable=not-context-manager, protected-access
+# pylint: disable=not-context-manager, protected-access, invalid-name
 
 import collections
 
@@ -20,8 +20,10 @@ from texar.modules.decoders.rnn_decoder_base import RNNDecoderBase
 from texar.core.utils import get_instance, get_function
 
 __all__ = [
-    "BasicRNNDecoderOutput", "AttentionRNNDecoderOutput",
-    "BasicRNNDecoder", "AttentionRNNDecoder"
+    "BasicRNNDecoderOutput",
+    "AttentionRNNDecoderOutput",
+    "BasicRNNDecoder",
+    "AttentionRNNDecoder"
 ]
 
 class BasicRNNDecoderOutput(
@@ -39,7 +41,7 @@ class BasicRNNDecoderOutput(
         sample_id: The sampled results at each step. E.g., in
             :class:`~texar.modules.BasicRNNDecoder`
             with default helpers (e.g.,
-            :class:`~texar.modules.EmbeddingTrainingHelper`), this is a Tensor
+            :class:`~texar.modules.TrainingHelper`), this is a Tensor
             of shape `[batch_size, max_time]` containing the sampled token
             index at each step.
         cell_output: The output of RNN cell at each step. This is the results
@@ -55,7 +57,6 @@ class AttentionRNNDecoderOutput(
             "AttentionRNNDecoderOutput",
             ["logits", "sample_id", "cell_output",
              "attention_scores", "attention_context"])):
-            # "attention_context"])):
     """The outputs of attention RNN decoders that additionally include attention
     results.
 
@@ -66,7 +67,7 @@ class AttentionRNNDecoderOutput(
             shape `[batch_size, max_time, vocab_size]`.
         sample_id: The sampled results at each step. E.g., in
             :class:`~texar.modules.AttentionRNNDecoder` with default helpers
-            (e.g., :class:`~texar.modules.EmbeddingTrainingHelper`), this
+            (e.g., :class:`~texar.modules.TrainingHelper`), this
             is a Tensor of shape `[batch_size, max_time]` containing the
             sampled token index at each step.
         cell_output: The output of RNN cell at each step. E.g., in
@@ -88,32 +89,15 @@ class BasicRNNDecoder(RNNDecoderBase):
             (default), a cell is created as specified in
             :attr:`hparams["rnn_cell"]` (see
             :meth:`~texar.modules.BasicRNNDecoder.default_hparams`).
-        embedding (optional): A `Variable` or a 2D Tensor (or array)
-            of shape `[vocab_size, embedding_dim]` that contains the token
-            embeddings.
-
-            Ignore if :attr:`hparams["use_embedding"]` is `False`. Otherwise:
-
-            - If a `Variable`, this is directly used in decoding.
-
-            - If a Tensor or array, a new `Variable` of token embedding is
-              created using it as initialization value.
-
-            - If `None` (default), a new `Variable` is created as specified in
-              :attr:`hparams["embedding"]`.
-
         vocab_size (int, optional): Vocabulary size. Required if
-            :attr:`hparams["use_embedding"]` is `False` or :attr:`embedding` is
-            not provided.
+            :attr:`output_layer:` is `None`.
         output_layer (optional): An instance of
             :tf_main:`tf.layers.Layer <layers/Layer>`, or
             :tf_main:`tf.identity <identity>`. Apply to the RNN cell
             output to get logits. If `None`, a dense layer
-            is used with output dimension set to :attr:`vocab_size`
-            if :attr:`vocab_size` is specified, otherwise inferred from
-            from :attr:`embedding` (if embedding is used and
-            :attr:`embedding` is specified). Set `output_layer=tf.identity` if
-            you do not want to have an output layer after the RNN cell outputs.
+            is used with output dimension set to :attr:`vocab_size`.
+            Set `output_layer=tf.identity` if you do not want to have an
+            output layer after the RNN cell outputs.
         hparams (dict, optional): Hyperparameters. If not specified, the default
             hyperparameter setting is used. See
             :meth:`~texar.modules.BasicRNNDecoder.default_hparams` for the
@@ -122,12 +106,11 @@ class BasicRNNDecoder(RNNDecoderBase):
 
     def __init__(self,
                  cell=None,
-                 embedding=None,
                  vocab_size=None,
                  output_layer=None,
                  hparams=None):
-        RNNDecoderBase.__init__(self, cell, embedding, vocab_size,
-                                output_layer, hparams)
+        RNNDecoderBase.__init__(
+            self, cell, vocab_size, output_layer, hparams)
 
     @staticmethod
     def default_hparams():
@@ -138,8 +121,6 @@ class BasicRNNDecoder(RNNDecoderBase):
 
                 {
                     "rnn_cell": default_rnn_cell_hparams(),
-                    "use_embedding": True,
-                    "embedding": default_embedding_hparams(),
                     "helper_train": default_helper_train_hparams(),
                     "helper_infer": default_helper_infer_hparams(),
                     "max_decoding_length_train": None,
@@ -155,24 +136,6 @@ class BasicRNNDecoder(RNNDecoderBase):
 
                 The default value is defined in
                 :meth:`~texar.core.layers.default_rnn_cell_hparams`.
-
-            "use_embedding" : bool
-                Whether token embedding is used.
-
-                The default value is `True`.
-
-            "embedding" : dict
-                A dictionary of token embedding hyperparameters for
-                embedding initialization.
-
-                Ignored if :attr:`embedding` is given and is `Variable`
-                when constructing the decoder.
-
-                If :attr:`embedding` is given and is a Tensor or array, the
-                "dim" and "initializer" specs of "embedding" are ignored.
-
-                The default value is defined in
-                :meth:`~texar.core.layers.default_embedding_hparams`.
 
             "helper_train" : dict
                 A dictionary of :class:`Helper` hyperparameters. The
@@ -258,8 +221,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
 
     Common arguments are the same as in
     :class:`~texar.modules.BasicRNNDecoder`, including
-    :attr:`cell`, :attr:`embedding`, :attr:`vocab_size`,
-    and :attr:`output_layer`.
+    :attr:`cell`, :attr:`vocab_size`, and :attr:`output_layer`.
 
     Args:
         memory: The memory to query; usually the output of an RNN encoder.  This
@@ -275,32 +237,15 @@ class AttentionRNNDecoder(RNNDecoderBase):
             (default), a cell is created as specified in
             :attr:`hparams["rnn_cell"]` (see
             :meth:`~texar.modules.AttentionRNNDecoder.default_hparams`).
-        embedding (optional): A `Variable` or a 2D Tensor (or array)
-            of shape `[vocab_size, embedding_dim]` that contains the token
-            embeddings.
-
-            Ignore if :attr:`hparams["use_embedding"]` is `False`. Otherwise:
-
-            - If a `Variable`, this is directly used in decoding.
-
-            - If a Tensor or array, a new `Variable` of token embedding is
-              created using it as initialization value.
-
-            - If `None` (default), a new `Variable` is created as specified in
-              :attr:`hparams["embedding"]`.
-
         vocab_size (int, optional): Vocabulary size. Required if
-            :attr:`hparams["use_embedding"]` is `False` or :attr:`embedding` is
-            not provided.
+            :attr:`output_layer:` is `None`.
         output_layer (optional): An instance of
             :tf_main:`tf.layers.Layer <layers/Layer>`, or
             :tf_main:`tf.identity <identity>`. Apply to the RNN cell
             output to get logits. If `None`, a dense layer
-            is used with output dimension set to :attr:`vocab_size`
-            if :attr:`vocab_size` is specified, otherwise inferred from
-            from :attr:`embedding` (if embedding is used and
-            :attr:`embedding` is specified). Set `output_layer=tf.identity` if
-            you do not want to have an output layer after the RNN cell outputs.
+            is used with output dimension set to :attr:`vocab_size`.
+            Set `output_layer=tf.identity` if you do not want to have an
+            output layer after the RNN cell outputs.
         hparams (dict, optional): Hyperparameters. If not specified, the default
             hyperparameter setting is used. See
             :meth:`~texar.modules.AttentionRNNDecoder.default_hparams` for the
@@ -312,12 +257,11 @@ class AttentionRNNDecoder(RNNDecoderBase):
                  memory_sequence_length=None,
                  cell_input_fn=None,
                  cell=None,
-                 embedding=None,
                  vocab_size=None,
                  output_layer=None,
                  hparams=None):
-        RNNDecoderBase.__init__(self, cell, embedding, vocab_size,
-                                output_layer, hparams)
+        RNNDecoderBase.__init__(
+            self, cell, vocab_size, output_layer, hparams)
 
         attn_hparams = self._hparams['attention']
         attn_kwargs = attn_hparams['kwargs'].todict()
@@ -384,8 +328,6 @@ class AttentionRNNDecoder(RNNDecoderBase):
                     # The following hyperparameters are common with
                     # `BasicRNNDecoder`
                     "rnn_cell": default_rnn_cell_hparams(),
-                    "use_embedding": True,
-                    "embedding": default_embedding_hparams(),
                     "helper_train": default_helper_train_hparams(),
                     "helper_infer": default_helper_infer_hparams(),
                     "max_decoding_length_train": None,

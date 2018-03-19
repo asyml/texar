@@ -42,7 +42,7 @@ def default_helper_train_hparams():
             {
                 # The `helper_type` argument for `get_helper`, i.e., the name
                 # or full path to the helper class.
-                "type": "EmbeddingTrainingHelper",
+                "type": "TrainingHelper",
 
                 # The `**kwargs` argument for `get_helper`, i.e., additional
                 # keyword arguments for constructing the helper.
@@ -50,7 +50,7 @@ def default_helper_train_hparams():
             }
     """
     return {
-        "type": "EmbeddingTrainingHelper",
+        "type": "TrainingHelper",
         "kwargs": {}
     }
 

@@ -14,6 +14,13 @@ import tensorflow as tf
 from texar.hyperparams import HParams
 from texar.core import utils
 
+__all__ = [
+    "default_optimization_hparams",
+    "get_optimizer",
+    "get_learning_rate_decay_fn",
+    "get_gradient_clip_fn",
+    "get_train_op"
+]
 
 def default_optimization_hparams():
     """Returns default hyperparameters of optimization.
@@ -224,9 +231,6 @@ def get_train_op(loss, variables=None, global_step=None,
 
     if variables is None:
         variables = tf.trainable_variables()
-        #for var in variables:
-        #    print('var name:{} shape:{} dtype:{}'.format(var.name, var.shape, var.dtype))
-        #exit()
     if global_step is None:
         global_step_name = None
         if hparams["name"] is not None:
