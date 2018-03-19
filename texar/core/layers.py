@@ -1093,6 +1093,8 @@ def multihead_attention(queries,
     with tf.variable_scope(scope):
         if num_units is None:
             num_units = queries.get_shape().as_list()[-1]
+        if keys is None:
+            keys = queries
 
         Q = tf.layers.dense(queries, num_units, use_bias=False, name='q')
         K = tf.layers.dense(keys, num_units, use_bias=False, name='k')
@@ -1104,6 +1106,7 @@ def multihead_attention(queries,
 
         outputs = tf.matmul(Q_, tf.transpose(K_, [0, 2, 1]))
 
+        # attention scale
         outputs = outputs / (K_.get_shape().as_list()[-1] ** 0.5)
 
         max_key_len = tf.to_int32(tf.shape(keys))[1]
@@ -1116,12 +1119,16 @@ def multihead_attention(queries,
 
         if causality:
             diag_vals = tf.ones_like(outputs[0, :, :])
-            tril = tf.contrib.linalg.LinearOperatorTriL(diag_vals).to_dense()
+            if tf.__version__.startswith('1.4'):
+                tril = tf.contrib.linalg.LinearOperatorTriL(diag_vals).to_dense()
+            elif tf.__version__.startswith('1.6'):
+                tril = tf.contrib.linalg.LinearOperatorLowerTriangular(diag_vals).to_dense()
             masks = tf.tile(tf.expand_dims(tril, 0), [tf.shape(outputs)[0], 1, 1])
             paddings = tf.ones_like(masks)*(-2**32+1)
             outputs = tf.where(tf.equal(masks, 0), paddings, outputs)
 
         outputs = tf.nn.softmax(outputs)
+        # outputs => probability simplex
 
         max_query_len =tf.to_int32(tf.shape(queries))[1]
         query_masks = tf.sequence_mask(
