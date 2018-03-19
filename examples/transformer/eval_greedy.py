@@ -2,7 +2,7 @@
 #/usr/bin/python2
 from __future__ import print_function
 import codecs
-import beam_utils
+
 import tensorflow as tf
 import numpy as np
 import copy
@@ -54,7 +54,7 @@ def evaluate():
     src_input = tf.placeholder(tf.int32, shape=(hp.batch_size, \
         hp.maxlen))
     tgt_input = tf.placeholder(tf.int32, shape=(hp.batch_size, \
-        None))
+        hp.maxlen))
     src_length = tf.reduce_sum(tf.to_float(tf.not_equal(src_input, 0)), axis=-1)
 
     word2idx, idx2word = load_shared_vocab()
@@ -75,7 +75,6 @@ def evaluate():
         encoder_output,
         src_length=src_length,
         tgt_length=tgt_length)
-    likelihoods = tf.nn.log_softmax(logits, dim=-1)
     loss_params = {
         'label_smoothing':0.1,
     }
@@ -116,45 +115,21 @@ def evaluate():
             list_of_refs, hypotheses = [], []
             for i in range(len(test_corpus) // hp.batch_size):
                 print('i:{}'.format(i))
-                assert hp.batch_size == 1, 'batch beam search is not supported'
-                active_hyp = [beam_utils.Hypothesis(0, [], None)]
-                completed_hyp = []
-                length = 0
                 src = test_corpus[i*hp.batch_size: (i+1)*hp.batch_size]
                 sources = source_list[i*hp.batch_size: (i+1)*hp.batch_size]
                 targets = target_list[i*hp.batch_size: (i+1)*hp.batch_size]
-                #outputs = np.ones((hp.batch_size, hp.maxlen), np.int32) #这里应该从BOS开始
-                while len(completed_hyp) < hp.beam_size and length < hp.maxlen:
-                    new_set = []
-                    for hyp in active_hyp:
-                        if length > 0 :
-                            if hyp.output[-1] == 2: #EOS
-                                hyp.output = hyp.output[:-1]
-                                completed_hyp.append(hyp)
-                                continue
-                        tmp_tgt_input = [ [1] + hyp.output]
-                        _, _scores, _preds = sess.run([mle_loss, likelihoods[0], preds[0]], \
-                            feed_dict={
-                                src_input: src,
-                                tgt_input: tmp_tgt_input,
-                                context.is_train():False,
+                outputs = np.zeros((hp.batch_size, hp.maxlen),\
+                    np.int32)
+                for j in range(hp.maxlen):
+                    loss, _preds = sess.run([mle_loss, preds], \
+                        feed_dict={
+                            src_input: src,
+                            tgt_input: outputs,
+                            context.is_train():False
                             })
-                        _scores = _scores[length]
-                        #print(_scores.shape)
-                        top_ids = np.argpartition(_scores, max(-len(_scores), -2*hp.beam_size))[-2*hp.beam_size:]
-                        for cur_id in top_ids.tolist():
-                            new_list = list(hyp.output)
-                            new_list.append(cur_id)
-                            log_score = beam_utils.default_len_normalize_partial(hyp.score, _scores[cur_id], len(new_list))
-                            new_set.append(beam_utils.Hypothesis(log_score, new_list, None))
-                    length += 1
-                    active_hyp = sorted(new_set, key=lambda x: x.score, reverse=True)[:hp.beam_size]
-                if len(completed_hyp) == 0:
-                    completed_hyp = active_hyp
-                #beam_utils.normalize_completed(completed_hyp, x_length)
-                result = [sorted(completed_hyp, key=lambda x:x.score, reverse=True)[0]]
-                for source, target, pred in zip(sources, targets, result): # sentence-wise
-                    pred = pred.output
+                    #fout.write('loss:{}\n'.format(loss))
+                    outputs[:, j] = _preds[:, j]
+                for source, target, pred in zip(sources, targets, outputs): # sentence-wise
                     got = " ".join(idx2word[idx] for idx in pred).split("<EOS>")[0].strip()
                     fout.write("- source: " + source +"\n")
                     fout.write("- expected: " + target + "\n")
