@@ -100,6 +100,27 @@ class MonoTextData(TextDataBase):
             compression_type=self._hparams.dataset.compression_type)
         return dataset
 
+    @staticmethod
+    def _make_other_transformations(other_trans_hparams, text_data):
+        """Creates a list of tranformation functions based on the
+        hyperparameters.
+
+        Args:
+            other_trans_hparams (list): A list of transformation functions,
+                names, or full paths.
+            text_data: An instance of :class:`texar.data.TextDataBase` to
+                be passed to transformation functions.
+
+        Returns:
+            A list of transformation functions.
+        """
+        other_trans = []
+        for tran in other_trans_hparams:
+            if not utils.is_callable(tran):
+                tran = utils.get_function(tran, ["texar.custom"])
+            other_trans.append(data_utils.make_partial(tran, text_data))
+        return other_trans
+
     def _process_dataset(self):
         # pylint: disable=attribute-defined-outside-init
         dataset_hparams = self._hparams.dataset
@@ -113,12 +134,8 @@ class MonoTextData(TextDataBase):
             token_to_id_map=self._vocab.token_to_id_map)
 
         # Create other transformations
-        other_trans_hparams = dataset_hparams["other_transformations"]
-        other_trans = []
-        for tran in other_trans_hparams:
-            if not utils.is_callable(tran):
-                tran = utils.get_function(tran, ["texar.custom"])
-            other_trans.append(data_utils.make_partial(tran, self))
+        other_trans = self._make_other_transformations(
+            dataset_hparams["other_transformations"], self)
 
         # Process data
         chained_tran = data_utils.make_chained_transformation(
@@ -162,7 +179,7 @@ class MonoTextData(TextDataBase):
         Returns:
             A list of strings.
         """
-        return list(self._decoder.list_items())
+        return list(self._dataset.output_types.keys())
 
     @property
     def dataset(self):
@@ -195,19 +212,19 @@ class MonoTextData(TextDataBase):
         return self._embedding.word_vecs
 
     @property
-    def text_tensor_name(self):
+    def text_name(self):
         """The name of text tensor.
         """
         return self._decoder.text_tensor_name
 
     @property
-    def length_tensor_name(self):
+    def length_name(self):
         """The name of length tensor.
         """
         return self._decoder.length_tensor_name
 
     @property
-    def text_id_tensor_name(self):
+    def text_id_name(self):
         """The name of text index tensor.
         """
         return self._decoder.text_id_tensor_name
