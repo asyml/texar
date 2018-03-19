@@ -1,7 +1,7 @@
 #
 """
-Various database classes that define data reading, parsing, batching, and other
-preprocessing operations.
+Paired text data that consists of source text and target text. Implemented
+with queue-based data input pipeline.
 """
 
 from __future__ import absolute_import
@@ -98,7 +98,7 @@ class qPairedTextData(qDataBase):
                                          constants.EOS_TOKEN)
         if tgt_hparams["vocab_share"]:
             if bos_token == src_dataset.vocab.bos_token and \
-                            eos_token == src_dataset.vocab.eos_token:
+                    eos_token == src_dataset.vocab.eos_token:
                 tgt_vocab = src_dataset.vocab
             else:
                 tgt_vocab = Vocab(src_hparams["vocab_file"],

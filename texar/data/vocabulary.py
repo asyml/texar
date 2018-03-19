@@ -44,8 +44,8 @@ class Vocab(object):  # pylint: disable=too-many-instance-attributes
 
     Args:
         filename (str): Path to the vocabulary file where each line contains
-            one word. Each word is indexed with its line number (starting from
-            0).
+            one word. Each word is indexed with its line number (starting
+            from 0).
         bos_token (str): A special token that will be added to the beginning of
             sequences.
         eos_token (str): A special token that will be added to the end of
@@ -55,7 +55,8 @@ class Vocab(object):  # pylint: disable=too-many-instance-attributes
                                 default to be a empty string.
     """
 
-    def __init__(self, filename, bos_token=BOS_TOKEN, eos_token=EOS_TOKEN,
+    def __init__(self, filename, # pylint: disable=too-many-arguments
+                 bos_token=BOS_TOKEN, eos_token=EOS_TOKEN,
                  unk_token=UNK_TOKEN, padding_token=PADDING_TOKEN):
         self._filename = filename
         self._bos_token = bos_token
