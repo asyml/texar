@@ -8,13 +8,15 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-# pylint: disable=invalid-name
+import six
 
 import tensorflow as tf
 
 import numpy as np
 
 from texar.core import utils
+
+# pylint: disable=invalid-name
 
 __all__ = [
     "random_shard_dataset",
@@ -51,8 +53,8 @@ def make_chained_transformation(tran_fns, *args, **kwargs):
 
     return _chained_fn
 
-def make_combined_transformation(tran_fns, *args, **kwargs):
-    """Returns a dataset transformation function that applies a list of
+def make_combined_transformation(tran_fns, name_prefix=None, *args, **kwargs):
+    """Returns a dataset transformation function that applies
     transformations to each component of the data.
 
     The data to be transformed must be a tuple of the same length
@@ -61,6 +63,10 @@ def make_combined_transformation(tran_fns, *args, **kwargs):
     Args:
         tran_fns (list): A list of elements where each element is a
             transformation function or a list of transformation functions.
+        name_prefix (list, optional): Prefix to the field names of each
+            component of the data, to prevent fields with the same name
+            in different components from overriding each other. If not `None`,
+            must be of the same length of :attr:`tran_fns`.
         *args: Extra arguments for each of the transformation function.
         **kwargs: Extra keyword arguments for each of the transformation
             function.
@@ -69,15 +75,28 @@ def make_combined_transformation(tran_fns, *args, **kwargs):
         A transformation function to be used in
         :tf_main:`tf.data.Dataset.map <data/Dataset#map>`.
     """
+    if name_prefix and len(name_prefix) != len(tran_fns):
+        raise ValueError("`name_prefix`, if provided, must be of the same "
+                         "length of `tran_fns`.")
+
     def _combined_fn(data):
-        transformed_data = []
+        transformed_data = {}
         for i, tran_fns_i in enumerate(tran_fns):
             data_i = data[i]
+            # Process data_i
             if not isinstance(tran_fns_i, (list, tuple)):
                 tran_fns_i = [tran_fns_i]
             for tran_fns_ij in tran_fns_i:
                 data_i = tran_fns_ij(data_i, *args, **kwargs)
-            transformed_data.append(data_i)
+            # Add to dict by appending name prefix
+            for name, value in six.iteritems(data_i):
+                new_name = name
+                if name_prefix:
+                    new_name = "{}_{}".format(name_prefix[i], name)
+                if new_name in transformed_data:
+                    raise ValueError(
+                        "Field name already exists: {}".format(new_name))
+                transformed_data[new_name] = value
         return transformed_data
 
     return _combined_fn

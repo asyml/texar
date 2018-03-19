@@ -121,12 +121,11 @@ class MonoTextDataTest(tf.test.TestCase):
         hparams.update({"prefetch_buffer_size": 2})
         self._run_and_test(hparams)
 
-
     def test_other_transformations(self):
         """Tests use of other transformations
         """
         def _transform(x, text_data): # pylint: disable=invalid-name
-            x[text_data.length_tensor_name] += 1
+            x[text_data.length_name] += 1
             return x
 
         hparams = copy.copy(self._hparams)
@@ -134,6 +133,12 @@ class MonoTextDataTest(tf.test.TestCase):
             {"other_transformations": [_transform, _transform]})
         self._run_and_test(hparams, length_inc=2)
 
+    def test_list_items(self):
+        """Tests the item names of the output data.
+        """
+        text_data = tx.data.MonoTextData(self._hparams)
+        self.assertSetEqual(set(text_data.list_items()),
+                            {"text", "text_ids", "length"})
 
 if __name__ == "__main__":
     tf.test.main()
