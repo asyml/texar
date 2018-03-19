@@ -75,32 +75,6 @@ class GetRNNCellTest(tf.test.TestCase):
                 self.assertEqual(state_.shape[1],
                                  hparams_.cell.kwargs.num_units)
 
-class GetEmbeddingTest(tf.test.TestCase):
-    """Tests embedding creator.
-    """
-    def test_get_embedding(self):
-        """Tests :func:`texar.core.layers.get_embedding`.
-        """
-        vocab_size = 100
-        emb = layers.get_embedding(vocab_size=vocab_size)
-        self.assertEqual(emb.shape[0].value, vocab_size)
-        self.assertEqual(emb.shape[1].value,
-                         layers.default_embedding_hparams()["dim"])
-
-        hparams = {
-            "name": "embedding_2",
-            "initializer": {
-                "type": tf.random_uniform_initializer(minval=-0.1, maxval=0.1)
-            },
-            "regularizer": {
-                "type": tf.keras.regularizers.L1L2(0.1, 0.1)
-            }
-        }
-        emb = layers.get_embedding(hparams=hparams, vocab_size=vocab_size)
-        self.assertEqual(emb.shape[0].value, vocab_size)
-        self.assertEqual(emb.shape[1].value,
-                         layers.default_embedding_hparams()["dim"])
-
 
 class GetLayerTest(tf.test.TestCase):
     """Tests layer creator.
@@ -132,21 +106,21 @@ class MergeLayerTest(tf.test.TestCase):
     """
 
     def test_output_shape(self):
-        """Tests MergeLayer._compute_output_shape function.
+        """Tests MergeLayer.compute_output_shape function.
         """
         input_shapes = [[None, 1, 2], [64, 2, 2], [None, 3, 2]]
 
         concat_layer = layers.MergeLayer(mode='concat', axis=1)
-        concat_output_shape = concat_layer._compute_output_shape(input_shapes)
+        concat_output_shape = concat_layer.compute_output_shape(input_shapes)
         self.assertEqual(concat_output_shape, [64, 6, 2])
 
         sum_layer = layers.MergeLayer(mode='sum', axis=1)
-        sum_output_shape = sum_layer._compute_output_shape(input_shapes)
+        sum_output_shape = sum_layer.compute_output_shape(input_shapes)
         self.assertEqual(sum_output_shape, [64, 2])
 
         input_shapes = [[None, 5, 2], [64, None, 2], [2]]
         esum_layer = layers.MergeLayer(mode='elemwise_sum')
-        esum_output_shape = esum_layer._compute_output_shape(input_shapes)
+        esum_output_shape = esum_layer.compute_output_shape(input_shapes)
         self.assertEqual(esum_output_shape, [64, 5, 2])
 
     def test_layer_logics(self):
@@ -169,7 +143,7 @@ class MergeLayerTest(tf.test.TestCase):
             self.assertEqual(outputs_.shape[2], 200)
             self.assertEqual(
                 outputs_.shape,
-                m_layer._compute_output_shape(inputs.shape.as_list()))
+                m_layer.compute_output_shape(inputs.shape.as_list()))
 
     def test_trainable_variables(self):
         """Test the trainable_variables of the layer.
@@ -200,7 +174,7 @@ class SequentialLayerTest(tf.test.TestCase):
         layers_.append(tf.layers.Dense(200))
         seq_layer = layers.SequentialLayer(layers_)
 
-        output_shape = seq_layer._compute_output_shape([None, 10])
+        output_shape = seq_layer.compute_output_shape([None, 10])
         self.assertEqual(output_shape[1].value, 200)
 
         inputs = tf.zeros([10, 20], dtype=tf.float32)

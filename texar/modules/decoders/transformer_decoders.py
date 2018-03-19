@@ -16,8 +16,8 @@ from tensorflow.python.framework import tensor_shape, dtypes
 
 from texar.core import layers
 from texar import context
+from texar.module_base import ModuleBase
 from texar.modules.networks import FeedForwardNetwork
-from texar.modules.module_base import ModuleBase
 from texar.modules.embedders import embedder_utils
 
 class TransformerDecoderOutput(

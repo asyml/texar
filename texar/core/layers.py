@@ -572,7 +572,7 @@ class MergeLayer(tf.layers.Layer):
                 else:
                     self._layers.append(get_layer(hparams=layer))
 
-    def _compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape):
         if self._layers is None:
             _shapes = input_shape
             if not isinstance(_shapes, (list, tuple)):
@@ -580,7 +580,7 @@ class MergeLayer(tf.layers.Layer):
         else:
             _shapes = []
             for layer in self._layers:
-                layer_output_shape = layer._compute_output_shape(input_shape)
+                layer_output_shape = layer.compute_output_shape(input_shape)
                 _shapes.append(layer_output_shape)
         _shapes = [tf.TensorShape(s) for s in _shapes]
 
@@ -714,10 +714,10 @@ class SequentialLayer(tf.layers.Layer):
             else:
                 self._layers.append(get_layer(hparams=layer))
 
-    def _compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape):
         input_shape = tf.TensorShape(input_shape)
         for layer in self._layers:
-            output_shape = layer._compute_output_shape(input_shape)
+            output_shape = layer.compute_output_shape(input_shape)
             input_shape = output_shape
         return output_shape
 
@@ -1116,7 +1116,7 @@ def multihead_attention(queries,
 
         if causality:
             diag_vals = tf.ones_like(outputs[0, :, :])
-            tril = tf.contrib.linalg.LinearOperatorTriL(diag_vals).to_dense()
+            tril = tf.contrib.linalg.LinearOperatorLowerTriangular(diag_vals).to_dense()
             masks = tf.tile(tf.expand_dims(tril, 0), [tf.shape(outputs)[0], 1, 1])
             paddings = tf.ones_like(masks)*(-2**32+1)
             outputs = tf.where(tf.equal(masks, 0), paddings, outputs)
