@@ -44,7 +44,6 @@ class TransformerEncoder(EncoderBase):
         self._embedding = None
         self.enc = None
         self.position_enc_embedding = None
-        #with tf.variable_scope(self.variable_scope):
         if self._hparams.use_embedding:
             if embedding is None and self._vocab_size is None:
                 raise ValueError("If `embedding` is not provided, "
@@ -63,7 +62,12 @@ class TransformerEncoder(EncoderBase):
                 self._add_trainable_variable(self._embedding)
             if self._vocab_size is None:
                 self._vocab_size = self._embedding.get_shape().as_list()[0]
-
+        with tf.variable_scope(self.variable_scope):
+            if self._hparams.target_space_id is not None:
+                space_embedding = tf.get_variable('target_space_embedding', \
+                    [32, embed_dim])
+                self.target_symbol_embedding = tf.gather(space_embedding, \
+                    self._hparams.target_space_id)
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
@@ -102,13 +106,14 @@ class TransformerEncoder(EncoderBase):
             "use_embedding": True,
             "embedding": embedder_utils.default_embedding_hparams(),
             "name":"encoder",
-            "zero_pad":True,
+            "zero_pad":False,
             "max_seq_length":100000000,
             'sinusoid':False,
             'dropout':0.1,
             'num_blocks':6,
             'num_heads':8,
             'poswise_feedforward':None,
+            'target_space_id': 1,
         }
 
     def _build(self, inputs, inputs_length, **kwargs):
@@ -119,6 +124,9 @@ class TransformerEncoder(EncoderBase):
 
         if self._hparams.multiply_embedding_mode =='sqrt_depth':
             self.enc = self.enc * (self._embedding.shape.as_list()[-1]**0.5)
+
+        emb_target_space = tf.reshape(self.target_symbol_embedding, [1,1,-1])
+        self.enc = self.enc + emb_target_space
 
         if self._hparams.sinusoid:
             self.enc += layers.sinusoid_positional_encoding(
@@ -138,32 +146,31 @@ class TransformerEncoder(EncoderBase):
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("layer_{}".format(i)):
                 with tf.variable_scope('self_attention'):
-                    enc = layers.layer_normalize(self.enc)
-                    enc = layers.multihead_attention(
-                        queries=enc,
-                        keys=enc,
+                    selfatt_output = layers.multihead_attention(
+                        queries=layers.layer_normalize(self.enc),
+                        keys=None,
                         queries_valid_length=inputs_length,
                         keys_valid_length=inputs_length,
                         num_heads=self._hparams.num_heads,
                         dropout_rate=self._hparams.dropout,
                         num_units=self._hparams.embedding.dim,
                         causality=False,
-                        scope='multihead_attention')
-                    enc = tf.layers.dropout(
-                        enc,
+                        scope='multihead_attention'
+                    )
+                    self.enc = self.enc + tf.layers.dropout(
+                        selfatt_output,
                         rate=self._hparams.dropout,
-                        training=context.is_train())
-                    self.enc += enc
+                        training=context.is_train()
+                    )
                 poswise_network = FeedForwardNetwork(hparams=self._hparams['poswise_feedforward'])
                 with tf.variable_scope(poswise_network.variable_scope):
-                    enc = layers.layer_normalize(self.enc)
-                    enc = poswise_network(enc)
-                    enc = tf.layers.dropout(
-                        enc,
+                    sub_output = tf.layers.dropout(
+                        poswise_network(layers.layer_normalize(self.enc)),
                         rate=self._hparams.dropout,
                         training=context.is_train())
-                    self.enc += enc
+                    self.enc = self.enc + sub_output
 
+        self.enc = layers.layer_normalize(self.enc)
         if not self._built:
             self._add_internal_trainable_variables()
             self._built = True

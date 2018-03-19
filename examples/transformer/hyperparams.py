@@ -64,14 +64,20 @@ encoder_hparams = {
         {
             'type':'Conv1D',
             'kwargs': {
-            'filters':hidden_dim*4,
-            'kernel_size':1,
-            'activation':'relu',
-            'use_bias':True,
+                'filters':hidden_dim*4,
+                'kernel_size':1,
+                'activation':'relu',
+                'use_bias':True,
             }
         },
         {
-        'type':'Conv1D',
+            'type':'Dropout',
+            'kwargs': {
+                'rate': 0.1,
+            }
+        },
+        {
+            'type':'Conv1D',
             'kwargs': {
                 'filters':hidden_dim,
                 'kernel_size':1,
