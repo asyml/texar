@@ -54,10 +54,6 @@ def load_train_data():
 def load_test_data():
     src_sents = [line for line in codecs.open(hp.source_test, 'r', 'utf-8').read().split("\n") if line]
     tgt_sents = [line for line in codecs.open(hp.target_test, 'r', 'utf-8').read().split("\n") if line]
-
-    #all_sents = list(zip(src_sents, tgt_sents))
-    #all_sents = sorted(all_sents, key=lambda x:len(x[1]))
-    #src_sents, tgt_sents = list(zip(*all_sents))
     X, Y, Sources, Targets = create_data(src_sents, tgt_sents)
     return X, Sources, Targets # (1064, 150)
 

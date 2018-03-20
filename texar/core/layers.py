@@ -1145,8 +1145,7 @@ def multihead_attention(queries,
         outputs = tf.concat(tf.split(outputs, num_heads, axis=0), axis=2)
 
         outputs = tf.layers.dense(outputs, num_units, use_bias=False, name='output_transform')
-        #(batch_size, length_query, attention_size)
-        #residual connection
+        #(batch_size, length_query, attention_depth)
     return outputs
 
 
