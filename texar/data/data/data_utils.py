@@ -19,9 +19,69 @@ from texar.core import utils
 # pylint: disable=invalid-name
 
 __all__ = [
+    "_DataSpec",
+    "maybe_tuple",
+    "make_partial",
+    "make_chained_transformation",
+    "make_combined_transformation",
     "random_shard_dataset",
     "count_file_lines"
 ]
+
+
+#TODO(zhiting): unit test
+class _DataSpec(object): # pylint: disable=too-few-public-methods
+    """Dataset specification. Used to pass necessary info to
+    user-defined tranformation functions.
+
+    Args:
+        dataset: Instance of :tf_main:`tf.data.Dataset <data/Dataset>`.
+        dataset_size (int): Number of data samples.
+        decoder: A (list of) data decoder.
+        vocab: A (list of) :class:`texar.data.Vocab` instance.
+        embeddidng: A (list of) :class:`texar.data.Embedding` instance.
+        **kwargs: Any remaining dataset-specific fields.
+    """
+    # pylint: disable=too-many-arguments
+    def __init__(self, dataset=None, dataset_size=None, decoder=None,
+                 vocab=None, embedding=None, **kwargs):
+        kwargs['dataset'] = dataset
+        kwargs['dataset_size'] = dataset_size
+        kwargs['decoder'] = decoder
+        kwargs['vocab'] = vocab
+        kwargs['embedding'] = embedding
+        self.__dict__.update(kwargs)
+
+
+    def add_spec(self, **kwargs):
+        """Adds new field.
+        """
+        self.__dict__.update(kwargs)
+
+    def get_ith_data_spec(self, i):
+        """Returns an instance of :class:`DataSpec` that contains the
+        :attr:`i`-th specifications.
+        """
+        kwargs = {}
+        for k, v in six.iteritems(self.__dict__):
+            kwargs[k] = v[i] if isinstance(v, (tuple, list)) else v
+        return _DataSpec(**kwargs)
+
+    def set_ith_data_spec(self, i, data_spec, num):
+        """Sets the i-th specification to respective values in
+        :attr:`data_spec`.
+        """
+        for k, v in six.iteritems(data_spec.__dict__):
+            if k in self.__dict__:
+                v_ = self.__dict__[k]
+                if isinstance(v_, (tuple, list)):
+                    v_[i] = v
+                else:
+                    self.__dict__[k] = v
+            else:
+                v_ = [None] * num
+                v_[i] = v
+                self.__dict__[k] = v_
 
 
 def maybe_tuple(data):

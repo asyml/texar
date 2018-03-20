@@ -94,10 +94,11 @@ class MonoTextData(TextDataBase):
             embedding = Embedding(token_to_id_map, emb_hparams)
         return embedding
 
-    def _make_dataset(self):
+    @staticmethod
+    def _make_mono_text_dataset(dataset_hparams):
         dataset = tf.data.TextLineDataset(
-            self._hparams.dataset.files,
-            compression_type=self._hparams.dataset.compression_type)
+            dataset_hparams["files"],
+            compression_type=dataset_hparams["compression_type"])
         return dataset
 
     @staticmethod
@@ -121,29 +122,45 @@ class MonoTextData(TextDataBase):
             other_trans.append(data_utils.make_partial(tran, text_data))
         return other_trans
 
-    def _process_dataset(self):
-        # pylint: disable=attribute-defined-outside-init
-        dataset_hparams = self._hparams.dataset
-
+    @staticmethod
+    def _make_processor(dataset_hparams, data_spec):
         # Create data decoder
-        self._decoder = TextDataDecoder(
+        decoder = TextDataDecoder(
             delimiter=dataset_hparams["delimiter"],
             bos_token=dataset_hparams["bos_token"],
             eos_token=dataset_hparams["eos_token"],
             max_seq_length=dataset_hparams["max_seq_length"],
-            token_to_id_map=self._vocab.token_to_id_map)
+            token_to_id_map=data_spec.vocab.token_to_id_map)
 
         # Create other transformations
-        other_trans = self._make_other_transformations(
-            dataset_hparams["other_transformations"], self)
+        data_spec.add_spec(decoder=decoder)
+        other_trans = MonoTextData._make_other_transformations(
+            dataset_hparams["other_transformations"], data_spec)
 
         # Process data
         chained_tran = data_utils.make_chained_transformation(
-            [self._decoder] + other_trans)
-        num_parallel_calls = self._hparams.num_parallel_calls
-        self._dataset = self._dataset.map(
+            [decoder] + other_trans)
+
+        return chained_tran, data_spec
+
+    @staticmethod
+    def _process_dataset(dataset, hparams, data_spec):
+        chained_tran, data_spec = MonoTextData._make_processor(
+            hparams["dataset"], data_spec)
+        num_parallel_calls = hparams["num_parallel_calls"]
+        dataset = dataset.map(
             lambda *args: chained_tran(data_utils.maybe_tuple(args)),
             num_parallel_calls=num_parallel_calls)
+        return dataset, data_spec
+
+    def _make_length_fn(self):
+        length_fn = self._hparams.bucket_length_fn
+        if not length_fn:
+            length_fn = lambda x: x[self._decoder.length_tensor_name]
+        elif not utils.is_callable(length_fn):
+            # pylint: disable=redefined-variable-type
+            length_fn = utils.get_function(length_fn, ["texar.custom"])
+        return length_fn
 
     def _make_data(self):
         dataset_hparams = self._hparams.dataset
@@ -151,28 +168,31 @@ class MonoTextData(TextDataBase):
         self._embedding = self.make_embedding(
             dataset_hparams["embedding_init"], self._vocab.token_to_id_map_py)
 
-        # Create dataset
-        dataset = self._make_dataset()
+        # Create and shuffle dataset
+        dataset = self._make_mono_text_dataset(dataset_hparams)
         dataset, dataset_size = self._shuffle_dataset(
             dataset, self._hparams, self._hparams.dataset.files)
-        self._dataset = dataset
         self._dataset_size = dataset_size
 
-        # Processing.
-        # Try to ensure all class attributes are created before this part,
-        # so that the transformation func can have access to
-        # them when called with `transformation_func(data, self)`
-        self._process_dataset()
+        # Processing
+        # pylint: disable=protected-access
+        data_spec = data_utils._DataSpec(dataset=dataset,
+                                         dataset_size=self._dataset_size,
+                                         vocab=self._vocab,
+                                         embedding=self._embedding)
+        dataset, data_spec = self._process_dataset(dataset, self._hparams,
+                                                   data_spec)
+        self._data_spec = data_spec
 
         # Batching
-        length_func = lambda x: x[self._decoder.length_tensor_name]
-        self._dataset = self._make_batch(
-            self._dataset, self._hparams, length_func)
+        length_fn = self._make_length_fn()
+        dataset = self._make_batch(dataset, self._hparams, length_fn)
 
+        # Prefetching
         if self._hparams.prefetch_buffer_size > 0:
-            self._dataset = self._dataset.prefetch(
-                self._hparams.prefetch_buffer_size)
+            dataset = dataset.prefetch(self._hparams.prefetch_buffer_size)
 
+        self._dataset = dataset
 
     def list_items(self):
         """Returns the list of item names that the data can produce.
