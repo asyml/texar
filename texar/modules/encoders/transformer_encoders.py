@@ -56,8 +56,12 @@ class TransformerEncoder(EncoderBase):
                     self.variable_scope)
             embed_dim = self._embedding.get_shape().as_list()[-1]
             if self._hparams.zero_pad: # TODO(zhiting): vocab has zero pad
-                self._embedding = tf.concat((tf.zeros(shape=[1, embed_dim]),
-                                             self._embedding[1:, :]), 0)
+                if not self._hparams.bos_pad:
+                    self._embedding = tf.concat((tf.zeros(shape=[1, embed_dim]),
+                        self._embedding[1:, :]), 0)
+                else:
+                    self._embedding = tf.concat((tf.zeros(shape=[2, embed_dim]),
+                        self._embedding[2:, :]), 0)
             if self._hparams.embedding.trainable:
                 self._add_trainable_variable(self._embedding)
             if self._vocab_size is None:
@@ -106,7 +110,10 @@ class TransformerEncoder(EncoderBase):
             "use_embedding": True,
             "embedding": embedder_utils.default_embedding_hparams(),
             "name":"encoder",
-            "zero_pad":False,
+            "zero_pad":True,
+            "bos_pad":True,
+            #https://github.com/tensorflow/tensor2tensor/blob/master/tensor2tensor/layers/common_attention.py
+            #Line678
             "max_seq_length":100000000,
             'sinusoid':False,
             'dropout':0.1,

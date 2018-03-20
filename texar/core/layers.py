@@ -1114,7 +1114,7 @@ def multihead_attention(queries,
             tf.to_int32(keys_valid_length), max_key_len, tf.float32)
         key_masks = tf.tile(key_masks, [num_heads,1])
         key_masks = tf.tile(tf.expand_dims(key_masks, 1), [1, tf.shape(queries)[1], 1])
-        paddings = tf.ones_like(outputs)*(-2**32+1)
+        paddings = tf.ones_like(outputs)*(-1e9)
         outputs = tf.where(tf.equal(key_masks, 0), paddings, outputs)
 
         if causality:
