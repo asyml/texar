@@ -1,22 +1,10 @@
 import tensorflow as tf
-import argparse
 import os
+from hyperparams import args
 from tensor2tensor.data_generators import text_encoder
-class Args():
-    pass
-args = Args()
-argparser = argparse.ArgumentParser()
-argparser.add_argument('--in_vocab', type=str, default='vocab.bpe.32000')
-argparser.add_argument('--eval_src', type=str, default='eval_ende_wmt_bpe32k_en.txt')
-argparser.add_argument('--eval_tgt', type=str, default='eval_ende_wmt_bpe32k_de.txt')
-argparser.add_argument('--data_dir', type=str, default='~/shr/t2t_data/')
-argparser.add_argument('--train_src', type=str, default='train_ende_wmt_bpe32k_en.txt.filtered')
-argparser.add_argument('--train_tgt', type=str, default='train_ende_wmt_bpe32k_de.txt.filtered')
 
-argparser.parse_args(namespace=args)
-args.data_dir = os.path.expanduser(args.data_dir)
 token_vocab = text_encoder.TokenTextEncoder(
-    os.path.join(args.data_dir, args.in_vocab),
+    os.path.join(args.data_dir, args.t2t_vocab),
     replace_oov='UNK'
 )
 
