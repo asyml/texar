@@ -33,7 +33,8 @@ class TextDataBase(DataBase): # pylint: disable=too-few-public-methods
         hparams = DataBase.default_hparams()
         hparams.update({
             "bucket_boundaries": [],
-            "bucket_batch_sizes": None})
+            "bucket_batch_sizes": None,
+            "bucket_length_fn": None})
         return hparams
 
     @staticmethod

@@ -47,7 +47,7 @@ def _default_paired_text_dataset_hparams():
         "target_dataset": target_hparams
     }
 
-# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes, too-many-public-methods
 class PairedTextData(TextDataBase):
     """Text data base that reads source and target text.
 
@@ -142,6 +142,11 @@ class PairedTextData(TextDataBase):
             compression_type=self._hparams.target_dataset.compression_type)
         return tf.data.Dataset.zip((src_dataset, tgt_dataset))
 
+
+    #TODO(zhiting)
+    #def _make_processor(dataset_hparams, data_spec, name_prefix=None):
+
+
     def _process_dataset(self):
         # pylint: disable=attribute-defined-outside-init
         # Create source data decoder
@@ -179,6 +184,16 @@ class PairedTextData(TextDataBase):
             lambda *args: tran_fn(data_utils.maybe_tuple(args)),
             num_parallel_calls=num_parallel_calls)
 
+    def _make_length_fn(self):
+        length_fn = self._hparams.bucket_length_fn
+        if not length_fn:
+            length_fn = lambda x: tf.maximum(
+                x[self.source_length_name], x[self.target_length_name])
+        elif not utils.is_callable(length_fn):
+            # pylint: disable=redefined-variable-type
+            length_fn = utils.get_function(length_fn, ["texar.custom"])
+        return length_fn
+
     def _make_data(self):
         self._src_vocab, self._tgt_vocab = self.make_vocab(
             self._hparams.source_dataset, self._hparams.target_dataset)
@@ -209,11 +224,9 @@ class PairedTextData(TextDataBase):
         self._process_dataset()
 
         # Batching
-        length_func = lambda x: tf.maximum(
-            x[self._src_decoder.length_tensor_name],
-            x[self._tgt_decoder.length_tensor_name])
+        length_fn = self._make_length_fn()
         self._dataset = self._make_batch(
-            self._dataset, self._hparams, length_func)
+            self._dataset, self._hparams, length_fn)
 
         if self._hparams.prefetch_buffer_size > 0:
             self._dataset = self._dataset.prefetch(
