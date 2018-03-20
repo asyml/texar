@@ -22,7 +22,7 @@ python extract_data.py
 ```
 2. Remove the `<PAD> <EOS> <UNK>` tokens in the vocab.bpe.32000
 ```
-#enter the `~t2t_data/' direcroty
+#enter the `~/t2t_data/' direcroty
 cp vocab.bpe.32000 vocab.bpe.filtered
 remove the 1st, 2nd, -1st line of `vocab.bpe.filtered' file
 ```
@@ -35,4 +35,9 @@ python transformer.py
 
 # evaluation on test dataset newstest2014
 ```
+#enter the `~/t2t_data/' directory
+cp vocab.bpe.32000 vocab.bpe.eval
+add <BOS> token in the second line of vocab.bpe.eval
+
+
 enter `log_dir' directory and run the `evaluate_bleu.sh'

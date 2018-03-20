@@ -10,16 +10,23 @@ class Hyperparams:
     #target_test = 'data/translation/de-en/IWSLT16.TED.tst2014.de-en.en.xml'
     maxlen = 256 # Maximum number of words in a sentence. alias = T.
                 # Feel free to increase this if you are ambitious.
-    min_cnt = 0 # words whose occurred less than min_cnt are encoded as <UNK>.
+    #min_cnt = 0 # words whose occurred less than min_cnt are encoded as <UNK>.
 
 args = Hyperparams()
 argparser = argparse.ArgumentParser()
-argparser.add_argument('--source_train', type=str, default='data/translation/de-en/train.tags.de-en.en')
-argparser.add_argument('--target_train', type=str, default='data/translation/de-en/train.tags.de-en.de')
+argparser.add_argument('--train_src', type=str, default='train_ende_wmt_bpe32k_en.txt.filtered')
+argparser.add_argument('--train_tgt', type=str, default='train_ende_wmt_bpe32k_de.txt.filtered')
+#argparser.add_argument('--source_train', type=str, default='data/translation/de-en/train.tags.de-en.en')
+#argparser.add_argument('--target_train', type=str, default='data/translation/de-en/train.tags.de-en.de')
 argparser.add_argument('--source_test', type=str, default='/tmp/t2t_datagen/newstest2014.tok.bpe.32000.en')
 argparser.add_argument('--target_test', type=str, default='/tmp/t2t_datagen/newstest2014.tok.bpe.32000.de')
-argparser.add_argument('--vocab_dir', type=str, default='~/t2t_data/')
+argparser.add_argument('--data_dir', type=str, default='/home/hzt/shr/t2t_data/')
+argparser.add_argument('--t2t_vocab', type=str, default='vocab.bpe.32000')
+#batch size is only used when testing the model
 argparser.add_argument('--batch_size', type=int, default=1)
+argparser.add_argument('--eval_src', type=str, default='eval_ende_wmt_bpe32k_en.txt')
+argparser.add_argument('--eval_tgt', type=str, default='eval_ende_wmt_bpe32k_de.txt')
+
 argparser.parse_args(namespace=args)
 args.vocab_dir = os.path.expanduser(args.vocab_dir)
 boundaries = _bucket_boundaries(max_length=256)
@@ -30,15 +37,15 @@ train_dataset_hparams = {
     "seed": 123,
     "shuffle": True,
     "source_dataset": {
-        "files": ['/home/hzt/shr/t2t_data/train_ende_wmt_bpe32k_en.txt.filtered'],
-        "vocab_file": '/home/hzt/shr/t2t_data/vocab.bpe.32000.filtered',
+        "files": [os.path.join(args.data_dir, args.train_src)],
+        "vocab_file": os.path.join(args.data_dir, 'vocab.bpe.32000.filtered'),
         "processing": {
             "bos_token": "<BOS>",
             "eos_token": "<EOS>",
          }
     },
     "target_dataset": {
-        "files": ['/home/hzt/shr/t2t_data/train_ende_wmt_bpe32k_de.txt.filtered'],
+        "files": [os.path.join(args.data_dir, args.train_tgt)],
         "vocab_share":True,
     },
     'bucket_boundaries': boundaries,
