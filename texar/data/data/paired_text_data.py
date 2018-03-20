@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 import tensorflow as tf
 
 from texar.core import utils
-from texar.data import data
+from texar.data.data.mono_text_data import _default_mono_text_dataset_hparams
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data.mono_text_data import MonoTextData
 from texar.data.data_decoders import TextDataDecoder
@@ -32,9 +32,9 @@ def _default_paired_text_dataset_hparams():
     """Returns hyperparameters of a mono text dataset with default values.
     """
     # TODO(zhiting): add more docs
-    source_hparams = data.mono_text_data._default_mono_text_dataset_hparams()
+    source_hparams = _default_mono_text_dataset_hparams()
     source_hparams["bos_token"] = None
-    target_hparams = data.mono_text_data._default_mono_text_dataset_hparams()
+    target_hparams = _default_mono_text_dataset_hparams()
     target_hparams.update(
         {
             "vocab_share": False,
@@ -142,7 +142,7 @@ class PairedTextData(TextDataBase):
             compression_type=self._hparams.target_dataset.compression_type)
         return tf.data.Dataset.zip((src_dataset, tgt_dataset))
 
-    def _process_dataset(self, dataset):
+    def _process_dataset(self):
         # pylint: disable=attribute-defined-outside-init
         # Create source data decoder
         src_hparams = self._hparams.source_dataset
@@ -154,7 +154,7 @@ class PairedTextData(TextDataBase):
             token_to_id_map=self._src_vocab.token_to_id_map)
 
         # Create target data decoder
-        if self._hparams.target_hparams["processing_share"]:
+        if self._hparams.target_dataset.processing_share:
             tgt_proc_hparams = self._hparams.source_dataset
         else:
             tgt_proc_hparams = self._hparams.target_dataset
@@ -175,34 +175,9 @@ class PairedTextData(TextDataBase):
 
         # Process data
         num_parallel_calls = self._hparams.num_parallel_calls
-        dataset = dataset.map(
-            tran_fn, num_parallel_calls=num_parallel_calls)
-
-
-    def _perform_other_transformations(self, dataset):
-        num_parallel_calls = self._hparams.num_parallel_calls
-
-        src_trans_hparams = self._hparams.source_dataset.other_transformations
-        src_trans = []
-        for tran in src_trans_hparams:
-            if not utils.is_callable(tran):
-                tran = utils.get_function(tran, ["texar.custom"])
-            src_trans.append(tran)
-
-        tgt_trans_hparams = self._hparams.target_dataset.other_transformations
-        tgt_trans = []
-        for tran in tgt_trans_hparams:
-            if not utils.is_callable(tran):
-                tran = utils.get_function(tran, ["texar.custom"])
-            tgt_trans.append(tran)
-
-        tran_fn = data_utils.make_combined_transformation(
-            [src_trans, tgt_trans], self)
-
-        dataset = dataset.map(
-            tran_fn, num_parallel_calls=num_parallel_calls)
-
-        return dataset
+        self._dataset = self._dataset.map(
+            lambda *args: tran_fn(data_utils.maybe_tuple(args)),
+            num_parallel_calls=num_parallel_calls)
 
     def _make_data(self):
         self._src_vocab, self._tgt_vocab = self.make_vocab(
@@ -231,7 +206,7 @@ class PairedTextData(TextDataBase):
         # Try to ensure all class attributes are created before this part,
         # so that the transformation func can have access to
         # them when called with `transformation_func(data, self)`
-        self._process_dataset(dataset)
+        self._process_dataset()
 
         # Batching
         length_func = lambda x: tf.maximum(
@@ -314,37 +289,55 @@ class PairedTextData(TextDataBase):
 
     @property
     def source_text_name(self):
-        """The name of text tensor.
+        """The name of the source text tensor.
         """
         return 'source_' + self._src_decoder.text_tensor_name
 
     @property
     def source_length_name(self):
-        """The name of length tensor.
+        """The name of the source length tensor.
         """
         return 'source_' + self._src_decoder.length_tensor_name
 
     @property
     def source_text_id_name(self):
-        """The name of text index tensor.
+        """The name of the source text index tensor.
         """
         return 'source_' + self._src_decoder.text_id_tensor_name
 
     @property
     def target_text_name(self):
-        """The name of text tensor.
+        """The name of the target text tensor.
         """
         return 'target_' + self._tgt_decoder.text_tensor_name
 
     @property
     def target_length_name(self):
-        """The name of length tensor.
+        """The name of the target length tensor.
         """
         return 'target_' + self._tgt_decoder.length_tensor_name
 
     @property
     def target_text_id_name(self):
-        """The name of text index tensor.
+        """The name of the target text index tensor.
         """
         return 'target_' + self._tgt_decoder.text_id_tensor_name
+
+    @property
+    def text_name(self):
+        """The name of text tensor.
+        """
+        return self._src_decoder.text_tensor_name
+
+    @property
+    def length_name(self):
+        """The name of length tensor.
+        """
+        return self._src_decoder.length_tensor_name
+
+    @property
+    def text_id_name(self):
+        """The name of text index tensor.
+        """
+        return self._src_decoder.text_id_tensor_name
 

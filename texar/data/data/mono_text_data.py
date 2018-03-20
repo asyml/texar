@@ -142,7 +142,8 @@ class MonoTextData(TextDataBase):
             [self._decoder] + other_trans)
         num_parallel_calls = self._hparams.num_parallel_calls
         self._dataset = self._dataset.map(
-            chained_tran, num_parallel_calls=num_parallel_calls)
+            lambda *args: chained_tran(data_utils.maybe_tuple(args)),
+            num_parallel_calls=num_parallel_calls)
 
     def _make_data(self):
         dataset_hparams = self._hparams.dataset
