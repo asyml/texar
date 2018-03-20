@@ -24,6 +24,15 @@ __all__ = [
 ]
 
 
+def maybe_tuple(data):
+    """Returns `tuple(data)` if :attr:`data` contains more than 1 elements.
+
+    Used to wrap `map_func` inputs.
+    """
+    data = tuple(data)
+    data = data if len(data) > 1 else data[0]
+    return data
+
 def make_partial(fn, *args, **kwargs):
     """Returns a new function with single argument by freezing other arguments
     of :attr:`fn`.
