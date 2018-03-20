@@ -28,7 +28,7 @@ argparser.add_argument('--eval_src', type=str, default='eval_ende_wmt_bpe32k_en.
 argparser.add_argument('--eval_tgt', type=str, default='eval_ende_wmt_bpe32k_de.txt')
 
 argparser.parse_args(namespace=args)
-args.vocab_dir = os.path.expanduser(args.vocab_dir)
+args.vocab_dir = os.path.expanduser(args.data_dir)
 boundaries = _bucket_boundaries(max_length=256)
 bucket_batch_size = [240, 180, 180, 180, 144, 144, 144, 120, 120, 120, 90, 90, 90, 90, 80, 72, 72, 60, 60, 48, 48, 48, 40, 40, 36, 30, 30, 24, 24, 20, 20, 18, 18, 16, 15, 12, 12, 10, 10, 9, 8, 8]
 
