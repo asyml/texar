@@ -39,5 +39,6 @@ python transformer.py
 cp vocab.bpe.32000 vocab.bpe.eval
 add <BOS> token in the second line of vocab.bpe.eval
 
+python eval_greedy.py
 
 enter `log_dir' directory and run the `evaluate_bleu.sh'
