@@ -47,7 +47,7 @@ def _default_q_dataset_hparams():
     return hparams
 
 class qMultiAlignedData(qDataBase):
-    """Text data base that reads source and target text.
+    """Data consists of multiple aligned parts.
 
     Args:
         hparams (dict): Hyperparameters. See :meth:`default_hparams` for the
