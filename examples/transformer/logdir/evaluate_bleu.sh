@@ -1,11 +1,5 @@
 YEAR=2014
-BEAM_SIZE=1
-ALPHA=0.6
 
-PROBLEM=translate_ende_wmt_bpe32k
-
-MODEL=transformer
-HPARAMS=transformer_base_single_gpu
 OUTPUT_FILE=my-model-152000.output.txt
 #OUTPUT_FILE=my-model-12
 
