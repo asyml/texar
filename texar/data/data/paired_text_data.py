@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 import tensorflow as tf
 
 from texar.core import utils
-from texar.data import data
+from texar.data.data.mono_text_data import _default_mono_text_dataset_hparams
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data.mono_text_data import MonoTextData
 from texar.data.data_decoders import TextDataDecoder
@@ -32,9 +32,9 @@ def _default_paired_text_dataset_hparams():
     """Returns hyperparameters of a mono text dataset with default values.
     """
     # TODO(zhiting): add more docs
-    source_hparams = data.mono_text_data._default_mono_text_dataset_hparams()
+    source_hparams = _default_mono_text_dataset_hparams()
     source_hparams["bos_token"] = None
-    target_hparams = data.mono_text_data._default_mono_text_dataset_hparams()
+    target_hparams = _default_mono_text_dataset_hparams()
     target_hparams.update(
         {
             "vocab_share": False,
@@ -47,7 +47,7 @@ def _default_paired_text_dataset_hparams():
         "target_dataset": target_hparams
     }
 
-
+# pylint: disable=too-many-instance-attributes
 class PairedTextData(TextDataBase):
     """Text data base that reads source and target text.
 
@@ -122,10 +122,6 @@ class PairedTextData(TextDataBase):
         """
         src_embedding = MonoTextData.make_embedding(src_emb_hparams,
                                                     src_token_to_id_map)
-        #if not vocab_share and emb_init_share:
-        #    raise ValueError("embedding init can be shared only when vocab "
-        #                     "is shared. Got `vocab_share=False, "
-        #                     "emb_init_share=True`.")
 
         if emb_init_share:
             tgt_embedding = src_embedding
@@ -146,67 +142,53 @@ class PairedTextData(TextDataBase):
             compression_type=self._hparams.target_dataset.compression_type)
         return tf.data.Dataset.zip((src_dataset, tgt_dataset))
 
-    def _process_dataset(self, dataset):
+    def _process_dataset(self):
+        # pylint: disable=attribute-defined-outside-init
         # Create source data decoder
         src_hparams = self._hparams.source_dataset
-        src_decoder = TextDataDecoder(
+        self._src_decoder = TextDataDecoder(
             delimiter=src_hparams["delimiter"],
             bos_token=src_hparams["bos_token"],
             eos_token=src_hparams["eos_token"],
             max_seq_length=src_hparams["max_seq_length"],
-            token_to_id_map=self._src_vocab.token_to_id_map,
-            text_tensor_name="source_text",
-            length_tensor_name="source_length",
-            text_id_tensor_name="source_text_ids")
+            token_to_id_map=self._src_vocab.token_to_id_map)
+
         # Create target data decoder
-        tgt_hparams = self._hparams.source_dataset
-        tgt_decoder = TextDataDecoder(
-            delimiter=tgt_hparams["delimiter"],
-            bos_token=tgt_hparams["bos_token"],
-            eos_token=tgt_hparams["eos_token"],
-            max_seq_length=tgt_hparams["max_seq_length"],
-            token_to_id_map=self._tgt_vocab.token_to_id_map,
-            text_tensor_name="target_text",
-            length_tensor_name="target_length",
-            text_id_tensor_name="target_text_ids")
-        # Process data
-        tran_fn = data_utils.make_combined_transformation([src_decoder,
-                                                           tgt_decoder])
-        num_parallel_calls = self._hparams.num_parallel_calls
-        dataset = dataset.map(
-            tran_fn, num_parallel_calls=num_parallel_calls)
+        if self._hparams.target_dataset.processing_share:
+            tgt_proc_hparams = self._hparams.source_dataset
+        else:
+            tgt_proc_hparams = self._hparams.target_dataset
+        self._tgt_decoder = TextDataDecoder(
+            delimiter=tgt_proc_hparams["delimiter"],
+            bos_token=tgt_proc_hparams["bos_token"],
+            eos_token=tgt_proc_hparams["eos_token"],
+            max_seq_length=tgt_proc_hparams["max_seq_length"],
+            token_to_id_map=self._tgt_vocab.token_to_id_map)
 
-        return dataset, src_decoder, tgt_decoder
-
-    def _perform_other_transformations(self, dataset):
-        num_parallel_calls = self._hparams.num_parallel_calls
-
-        src_trans_hparams = self._hparams.source_dataset.other_transformations
-        src_trans = []
-        for tran in src_trans_hparams:
-            if not utils.is_callable(tran):
-                tran = utils.get_function(tran, ["texar.custom"])
-            src_trans.append(tran)
-
-        tgt_trans_hparams = self._hparams.target_dataset.other_transformations
-        tgt_trans = []
-        for tran in tgt_trans_hparams:
-            if not utils.is_callable(tran):
-                tran = utils.get_function(tran, ["texar.custom"])
-            tgt_trans.append(tran)
-
+        src_trans = MonoTextData._make_other_transformations(
+            src_hparams["other_transformations"], self)
+        tgt_trans = MonoTextData._make_other_transformations(
+            tgt_proc_hparams["other_transformations"], self)
         tran_fn = data_utils.make_combined_transformation(
-            [src_trans, tgt_trans], self)
+            [[self._src_decoder] + src_trans, [self._tgt_decoder] + tgt_trans],
+            name_prefix=["source", "target"])
 
-        dataset = dataset.map(
-            tran_fn, num_parallel_calls=num_parallel_calls)
-
-        return dataset
+        # Process data
+        num_parallel_calls = self._hparams.num_parallel_calls
+        self._dataset = self._dataset.map(
+            lambda *args: tran_fn(data_utils.maybe_tuple(args)),
+            num_parallel_calls=num_parallel_calls)
 
     def _make_data(self):
         self._src_vocab, self._tgt_vocab = self.make_vocab(
             self._hparams.source_dataset, self._hparams.target_dataset)
-        self._embedding = self.make_embedding(
+
+        tgt_hparams = self._hparams.target_dataset
+        if not tgt_hparams.vocab_share and tgt_hparams.embedding_init_share:
+            raise ValueError("embedding_init can be shared only when vocab "
+                             "is shared. Got `vocab_share=False, "
+                             "emb_init_share=True`.")
+        self._src_embedding, self._tgt_embedding = self.make_embedding(
             self._hparams.source_dataset.embedding_init,
             self._src_vocab.token_to_id_map_py,
             self._hparams.target_dataset.embedding_init,
@@ -218,19 +200,18 @@ class PairedTextData(TextDataBase):
         dataset, dataset_size = self._shuffle_dataset(
             dataset, self._hparams, self._hparams.source_dataset.files)
         self._dataset_size = dataset_size
+        self._dataset = dataset
 
-        # Processing
-        self._dataset, self._src_decoder, self._tgt_decoder = \
-            self._process_dataset(dataset)
+        # Processing.
         # Try to ensure all class attributes are created before this part,
         # so that the transformation func can have access to
         # them when called with `transformation_func(data, self)`
-        self._dataset = self._perform_other_transformations(self._dataset)
-        # Transform data tuple into dict
-        self._dataset =
+        self._process_dataset()
 
         # Batching
-        length_func = lambda x: x[self._decoder.length_tensor_name]
+        length_func = lambda x: tf.maximum(
+            x[self._src_decoder.length_tensor_name],
+            x[self._tgt_decoder.length_tensor_name])
         self._dataset = self._make_batch(
             self._dataset, self._hparams, length_func)
 
@@ -238,14 +219,13 @@ class PairedTextData(TextDataBase):
             self._dataset = self._dataset.prefetch(
                 self._hparams.prefetch_buffer_size)
 
-
     def list_items(self):
         """Returns the list of item names that the data can produce.
 
         Returns:
             A list of strings.
         """
-        return list(self._decoder.list_items())
+        return list(self._dataset.output_types.keys())
 
     @property
     def dataset(self):
@@ -259,39 +239,105 @@ class PairedTextData(TextDataBase):
         if not self._dataset_size:
             # pylint: disable=attribute-defined-outside-init
             self._dataset_size = data_utils.count_file_lines(
-                self._hparams.dataset.files)
+                self._hparams.source_dataset.files)
         return self._dataset_size
 
     @property
     def vocab(self):
-        """The vocabulary defined in :class:`~texar.data.Vocab`.
+        """A pair instances of :class:`~texar.data.Vocab` that are source
+        and target vocabs, respectively.
         """
-        return self._vocab
+        return self._src_vocab, self._tgt_vocab
 
     @property
-    def embedding_init_value(self):
-        """The `Tensor` containing the embedding value loaded from file.
-        `None` if embedding is not specified.
+    def source_vocab(self):
+        """The source vocab, an instance of :class:`~texar.data.Vocab`.
         """
-        if self._embedding is None:
+        return self._src_vocab
+
+    @property
+    def target_vocab(self):
+        """The target vocab, an instance of :class:`~texar.data.Vocab`.
+        """
+        return self._tgt_vocab
+
+    @property
+    def source_embedding_init_value(self):
+        """The `Tensor` containing the embedding value of source data
+        loaded from file. `None` if embedding is not specified.
+        """
+        if self._src_embedding is None:
             return None
-        return self._embedding.word_vecs
+        return self._src_embedding.word_vecs
 
     @property
-    def text_tensor_name(self):
+    def target_embedding_init_value(self):
+        """The `Tensor` containing the embedding value of target data
+        loaded from file. `None` if embedding is not specified.
+        """
+        if self._tgt_embedding is None:
+            return None
+        return self._tgt_embedding.word_vecs
+
+    def embedding_init_value(self):
+        """A pair of `Tensor` containing the embedding values of source and
+        target data loaded from file.
+        """
+        src_emb = self.source_embedding_init_value
+        tgt_emb = self.target_embedding_init_value
+        return src_emb, tgt_emb
+
+    @property
+    def source_text_name(self):
+        """The name of the source text tensor.
+        """
+        return 'source_' + self._src_decoder.text_tensor_name
+
+    @property
+    def source_length_name(self):
+        """The name of the source length tensor.
+        """
+        return 'source_' + self._src_decoder.length_tensor_name
+
+    @property
+    def source_text_id_name(self):
+        """The name of the source text index tensor.
+        """
+        return 'source_' + self._src_decoder.text_id_tensor_name
+
+    @property
+    def target_text_name(self):
+        """The name of the target text tensor.
+        """
+        return 'target_' + self._tgt_decoder.text_tensor_name
+
+    @property
+    def target_length_name(self):
+        """The name of the target length tensor.
+        """
+        return 'target_' + self._tgt_decoder.length_tensor_name
+
+    @property
+    def target_text_id_name(self):
+        """The name of the target text index tensor.
+        """
+        return 'target_' + self._tgt_decoder.text_id_tensor_name
+
+    @property
+    def text_name(self):
         """The name of text tensor.
         """
-        return self._decoder.text_tensor_name
+        return self._src_decoder.text_tensor_name
 
     @property
-    def length_tensor_name(self):
+    def length_name(self):
         """The name of length tensor.
         """
-        return self._decoder.length_tensor_name
+        return self._src_decoder.length_tensor_name
 
     @property
-    def text_id_tensor_name(self):
+    def text_id_name(self):
         """The name of text index tensor.
         """
-        return self._decoder.text_id_tensor_name
+        return self._src_decoder.text_id_tensor_name
 
