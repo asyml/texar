@@ -39,7 +39,7 @@ class ScalarDataDecoder(data_decoder.DataDecoder):
 
     def __init__(self, dtype=tf.int32, data_name="data"):
         self._dtype = dtype
-        self._data_name = data_name
+        self._data_name = data_name or "data"
 
     def __call__(self, data):
         return self.decode(data, self.list_items())
@@ -74,6 +74,11 @@ class ScalarDataDecoder(data_decoder.DataDecoder):
         """
         return [self._data_name]
 
+    @property
+    def data_tensor_name(self):
+        """The name of the data tensor.
+        """
+        return self._data_name
 
 class TextDataDecoder(data_decoder.DataDecoder):
     """A text data decoder that decodes raw text data.
