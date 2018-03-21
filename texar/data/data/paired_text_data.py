@@ -322,6 +322,15 @@ class PairedTextData(TextDataBase):
         return 'source_' + self._src_decoder.text_id_tensor_name
 
     @property
+    def source_utterance_cnt_name(self):
+        """The name of the source text utterance count tensor.
+        """
+        if not self._hparams.source_dataset.variable_utterance:
+            raise ValueError(
+                "`utterance_cnt_name` of source data is undefined.")
+        return 'source_' + self._src_decoder.utterance_cnt_tensor_name
+
+    @property
     def target_text_name(self):
         """The name of the target text tensor.
         """
@@ -338,6 +347,15 @@ class PairedTextData(TextDataBase):
         """The name of the target text index tensor.
         """
         return 'target_' + self._tgt_decoder.text_id_tensor_name
+
+    @property
+    def target_utterance_cnt_name(self):
+        """The name of the target text utterance count tensor.
+        """
+        if not self._hparams.target_dataset.variable_utterance:
+            raise ValueError(
+                "`utterance_cnt_name` of target data is undefined.")
+        return 'target_' + self._tgt_decoder.utterance_cnt_tensor_name
 
     @property
     def text_name(self):
@@ -357,3 +375,12 @@ class PairedTextData(TextDataBase):
         """
         return self._src_decoder.text_id_tensor_name
 
+    @property
+    def utterance_cnt_name(self):
+        """The name of the target text utterance count tensor.
+        """
+        if self._hparams.source_dataset.variable_utterance:
+            return self._src_decoder.utterance_cnt_tensor_name
+        if self._hparams.target_dataset.variable_utterance:
+            return self._tgt_decoder.utterance_cnt_tensor_name
+        raise ValueError("`utterance_cnt_name` is not defined.")
