@@ -142,8 +142,6 @@ class PairedTextData(TextDataBase):
             compression_type=self._hparams.target_dataset.compression_type)
         return tf.data.Dataset.zip((src_dataset, tgt_dataset))
 
-
-    #TODO(zhiting)
     @staticmethod
     def _make_processor(src_hparams, tgt_hparams, data_spec, name_prefix=None):
         # Create source data decoder
@@ -188,9 +186,8 @@ class PairedTextData(TextDataBase):
 
         return tran_fn, data_spec
 
-    @staticmethod
-    def _process_dataset(dataset, hparams, data_spec):
-        tran_fn, data_spec = PairedTextData._make_processor(
+    def _process_dataset(self, dataset, hparams, data_spec):
+        tran_fn, data_spec = self._make_processor(
             hparams["source_dataset"], hparams["target_dataset"], data_spec)
         num_parallel_calls = hparams["num_parallel_calls"]
         dataset = dataset.map(

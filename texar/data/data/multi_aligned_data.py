@@ -218,9 +218,8 @@ class MultiAlignedTextData(TextDataBase):
 
         return tran_fn, data_spec
 
-    @staticmethod
-    def _process_dataset(dataset, hparams, data_spec):
-        tran_fn, data_spec = MultiAlignedTextData._make_processor(
+    def _process_dataset(self, dataset, hparams, data_spec):
+        tran_fn, data_spec = self.MultiAlignedTextData._make_processor(
             hparams["datasets"], data_spec, hparams["data_name_prefix"])
         num_parallel_calls = hparams["num_parallel_calls"]
         dataset = dataset.map(
