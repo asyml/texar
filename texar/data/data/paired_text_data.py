@@ -144,45 +144,59 @@ class PairedTextData(TextDataBase):
 
 
     #TODO(zhiting)
-    #def _make_processor(dataset_hparams, data_spec, name_prefix=None):
-
-
-    def _process_dataset(self):
-        # pylint: disable=attribute-defined-outside-init
+    @staticmethod
+    def _make_processor(src_hparams, tgt_hparams, data_spec, name_prefix=None):
         # Create source data decoder
-        src_hparams = self._hparams.source_dataset
-        self._src_decoder = TextDataDecoder(
+        src_decoder = TextDataDecoder(
             delimiter=src_hparams["delimiter"],
             bos_token=src_hparams["bos_token"],
             eos_token=src_hparams["eos_token"],
             max_seq_length=src_hparams["max_seq_length"],
-            token_to_id_map=self._src_vocab.token_to_id_map)
+            token_to_id_map=data_spec.vocab[0].token_to_id_map)
+        # Create source data other trans
+        data_spec_i = data_spec.get_ith_data_spec(0)
+        data_spec_i.add_spec(decoder=src_decoder)
+        src_trans = MonoTextData._make_other_transformations(
+            src_hparams["other_transformations"], data_spec_i)
+        data_spec.set_ith_data_spec(0, data_spec_i, 2)
 
         # Create target data decoder
-        if self._hparams.target_dataset.processing_share:
-            tgt_proc_hparams = self._hparams.source_dataset
+        if tgt_hparams["processing_share"]:
+            tgt_proc_hparams = src_hparams
         else:
-            tgt_proc_hparams = self._hparams.target_dataset
-        self._tgt_decoder = TextDataDecoder(
+            tgt_proc_hparams = tgt_hparams
+        tgt_decoder = TextDataDecoder(
             delimiter=tgt_proc_hparams["delimiter"],
             bos_token=tgt_proc_hparams["bos_token"],
             eos_token=tgt_proc_hparams["eos_token"],
             max_seq_length=tgt_proc_hparams["max_seq_length"],
-            token_to_id_map=self._tgt_vocab.token_to_id_map)
-
-        src_trans = MonoTextData._make_other_transformations(
-            src_hparams["other_transformations"], self)
+            token_to_id_map=data_spec.vocab[1].token_to_id_map)
+        # Create target data other trans
+        data_spec_i = data_spec.get_ith_data_spec(1)
+        data_spec_i.add_spec(decoder=tgt_decoder)
         tgt_trans = MonoTextData._make_other_transformations(
-            tgt_proc_hparams["other_transformations"], self)
-        tran_fn = data_utils.make_combined_transformation(
-            [[self._src_decoder] + src_trans, [self._tgt_decoder] + tgt_trans],
-            name_prefix=["source", "target"])
+            tgt_hparams["other_transformations"], data_spec_i)
+        data_spec.set_ith_data_spec(1, data_spec_i, 2)
 
-        # Process data
-        num_parallel_calls = self._hparams.num_parallel_calls
-        self._dataset = self._dataset.map(
+        if not name_prefix:
+            name_prefix = ["source", "target"]
+        tran_fn = data_utils.make_combined_transformation(
+            [[src_decoder] + src_trans, [tgt_decoder] + tgt_trans],
+            name_prefix=name_prefix)
+
+        data_spec.add_spec(name_prefix=name_prefix)
+
+        return tran_fn, data_spec
+
+    @staticmethod
+    def _process_dataset(dataset, hparams, data_spec):
+        tran_fn, data_spec = PairedTextData._make_processor(
+            hparams["source_dataset"], hparams["target_dataset"], data_spec)
+        num_parallel_calls = hparams["num_parallel_calls"]
+        dataset = dataset.map(
             lambda *args: tran_fn(data_utils.maybe_tuple(args)),
             num_parallel_calls=num_parallel_calls)
+        return dataset, data_spec
 
     def _make_length_fn(self):
         length_fn = self._hparams.bucket_length_fn
@@ -215,22 +229,27 @@ class PairedTextData(TextDataBase):
         dataset, dataset_size = self._shuffle_dataset(
             dataset, self._hparams, self._hparams.source_dataset.files)
         self._dataset_size = dataset_size
-        self._dataset = dataset
 
         # Processing.
-        # Try to ensure all class attributes are created before this part,
-        # so that the transformation func can have access to
-        # them when called with `transformation_func(data, self)`
-        self._process_dataset()
+        data_spec = data_utils._DataSpec(
+            dataset=dataset, dataset_size=self._dataset_size,
+            vocab=[self._src_vocab, self._tgt_vocab],
+            embedding=[self._src_embedding, self._tgt_embedding])
+        dataset, data_spec = self._process_dataset(
+            dataset, self._hparams, data_spec)
+        self._data_spec = data_spec
+        self._src_decoder = data_spec.decoder[0]
+        self._tgt_decoder = data_spec.decoder[1]
 
         # Batching
         length_fn = self._make_length_fn()
-        self._dataset = self._make_batch(
-            self._dataset, self._hparams, length_fn)
+        dataset = self._make_batch(dataset, self._hparams, length_fn)
 
+        # Prefetching
         if self._hparams.prefetch_buffer_size > 0:
-            self._dataset = self._dataset.prefetch(
-                self._hparams.prefetch_buffer_size)
+            dataset = dataset.prefetch(self._hparams.prefetch_buffer_size)
+
+        self._dataset = dataset
 
     def list_items(self):
         """Returns the list of item names that the data can produce.
