@@ -17,7 +17,7 @@ from texar.data.q_data import q_mono_text_data
 from texar.data.q_data.q_data_base import qDataBase
 from texar.data.q_data.q_paired_text_data import qPairedTextData
 from texar.data.data_decoders import TextDataDecoder
-from texar.data.data_decoders import MultiSentenceTextDataDecoder
+from texar.data.data_decoders import VarUttTextDataDecoder
 from texar.data.vocabulary import Vocab
 from texar.data.embedding import Embedding
 
@@ -34,7 +34,7 @@ def _default_q_multi_source_text_dataset_hparams():
     """
     source_hparams = q_mono_text_data._default_q_mono_text_dataset_hparams()
     source_hparams["processing"]["bos_token"] = None
-    source_hparams["processing"]["max_context_length"] = 5
+    source_hparams["processing"]["max_utterance_cnt"] = 5
     target_hparams = q_mono_text_data._default_q_mono_text_dataset_hparams()
     target_hparams.update(
         {
@@ -93,13 +93,13 @@ class qMultiSourceTextData(qPairedTextData):
                                        ["tensorflow"])
 
         # Create a multi sentence data decoder with default sentence delimiter.
-        src_decoder = MultiSentenceTextDataDecoder(
+        src_decoder = VarUttTextDataDecoder(
             split_level=proc_hparams["split_level"],
             delimiter=proc_hparams["delimiter"],
             bos_token=proc_hparams["bos_token"],
             eos_token=proc_hparams["eos_token"],
             max_seq_length=proc_hparams["max_seq_length"],
-            max_context_length=proc_hparams["max_context_length"],
+            max_utterance_cnt=proc_hparams["max_utterance_cnt"],
             token_to_id_map=vocab.token_to_id_map)
 
         # Load embedding (optional)

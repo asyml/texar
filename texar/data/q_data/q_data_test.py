@@ -255,9 +255,9 @@ class TextDataTest(tf.test.TestCase):
 
         source_text = [
             'This is a dialog 1 sentence . ||| This is a dialog 1 sentence . '
-            '||| This is yet another dialog 1 sentence .',
+            '||| This is yet another dialog 1 sentence .', #//
             'This is a dialog 2 sentence . ||| '
-            'This is also a dialog 2 sentence . '
+            'This is also a dialog 2 sentence . ', #//
         ]
         src_text_file = tempfile.NamedTemporaryFile()
         src_text_file.write('\n'.join(source_text).encode("utf-8"))
@@ -279,7 +279,7 @@ class TextDataTest(tf.test.TestCase):
                 "vocab_file": vocab_file.name,
                 "processing": {
                     "max_seq_length": 10,
-                    "max_context_length": 3
+                    "max_utterance_cnt": 3
                 }
             },
             "target_dataset": {

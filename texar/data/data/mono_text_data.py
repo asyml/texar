@@ -102,14 +102,14 @@ class MonoTextData(TextDataBase):
         return dataset
 
     @staticmethod
-    def _make_other_transformations(other_trans_hparams, text_data):
+    def _make_other_transformations(other_trans_hparams, data_spec):
         """Creates a list of tranformation functions based on the
         hyperparameters.
 
         Args:
             other_trans_hparams (list): A list of transformation functions,
                 names, or full paths.
-            text_data: An instance of :class:`texar.data.TextDataBase` to
+            data_spec: An instance of :class:`texar.data._DataSpec` to
                 be passed to transformation functions.
 
         Returns:
@@ -119,7 +119,7 @@ class MonoTextData(TextDataBase):
         for tran in other_trans_hparams:
             if not utils.is_callable(tran):
                 tran = utils.get_function(tran, ["texar.custom"])
-            other_trans.append(data_utils.make_partial(tran, text_data))
+            other_trans.append(data_utils.make_partial(tran, data_spec))
         return other_trans
 
     @staticmethod
@@ -143,9 +143,8 @@ class MonoTextData(TextDataBase):
 
         return chained_tran, data_spec
 
-    @staticmethod
-    def _process_dataset(dataset, hparams, data_spec):
-        chained_tran, data_spec = MonoTextData._make_processor(
+    def _process_dataset(self, dataset, hparams, data_spec):
+        chained_tran, data_spec = self._make_processor(
             hparams["dataset"], data_spec)
         num_parallel_calls = hparams["num_parallel_calls"]
         dataset = dataset.map(
@@ -183,6 +182,7 @@ class MonoTextData(TextDataBase):
         dataset, data_spec = self._process_dataset(dataset, self._hparams,
                                                    data_spec)
         self._data_spec = data_spec
+        self._decoder = data_spec.decoder
 
         # Batching
         length_fn = self._make_length_fn()

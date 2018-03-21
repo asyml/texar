@@ -53,7 +53,7 @@ class MonoTextDataTest(tf.test.TestCase):
         # Construct database
         text_data = tx.data.MonoTextData(hparams)
         self.assertEqual(text_data.vocab.vocab_size,
-                         2 + len(text_data.vocab.special_tokens))
+                         self._vocab_size + len(text_data.vocab.special_tokens))
 
         iterator = text_data.dataset.make_initializable_iterator()
         text_data_batch = iterator.get_next()
@@ -139,6 +139,84 @@ class MonoTextDataTest(tf.test.TestCase):
         text_data = tx.data.MonoTextData(self._hparams)
         self.assertSetEqual(set(text_data.list_items()),
                             {"text", "text_ids", "length"})
+
+class VarUttMonoTextDataTest(tf.test.TestCase):
+    """Tests variable utterance text data class.
+    """
+
+    def setUp(self):
+        tf.test.TestCase.setUp(self)
+
+        # Create test data
+        vocab_list = ['word', 'sentence', '词', 'response', 'dialog', '1', '2']
+        vocab_file = tempfile.NamedTemporaryFile()
+        vocab_file.write('\n'.join(vocab_list).encode("utf-8"))
+        vocab_file.flush()
+        self._vocab_file = vocab_file
+        self._vocab_size = len(vocab_list)
+
+        text = [
+            'This is a dialog 1 sentence . ||| This is a dialog 1 sentence . '
+            '||| This is yet another dialog 1 sentence .', #//
+            'This is a dialog 2 sentence . ||| '
+            'This is also a dialog 2 sentence . ', #//
+            '词 词 词 ||| word', #//
+            'This This', #//
+            '1 1 1 ||| 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 ||| 1 1 1 ||| 2'
+        ]
+        text_file = tempfile.NamedTemporaryFile()
+        text_file.write('\n'.join(text).encode("utf-8"))
+        text_file.flush()
+        self._text_file = text_file
+
+        self._hparams = {
+            "num_epochs": 50,
+            "batch_size": 3,
+            "shuffle": False,
+            "dataset": {
+                "files": self._text_file.name,
+                "vocab_file": self._vocab_file.name,
+                "max_utterance_cnt": 3,
+                "max_seq_length": 10
+            }
+        }
+
+    def _run_and_test(self, hparams):
+        # Construct database
+        text_data = tx.data.VarUttMonoTextData(hparams)
+        self.assertEqual(text_data.vocab.vocab_size,
+                         self._vocab_size + len(text_data.vocab.special_tokens))
+
+        iterator = text_data.dataset.make_initializable_iterator()
+        text_data_batch = iterator.get_next()
+
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            sess.run(tf.local_variables_initializer())
+            sess.run(tf.tables_initializer())
+            sess.run(iterator.initializer)
+
+            while True:
+                try:
+                    # Run the logics
+                    data_batch_ = sess.run(text_data_batch)
+                    self.assertEqual(set(data_batch_.keys()),
+                                     set(text_data.list_items()))
+                    # Test utterance count
+                    utt_ind = np.sum(data_batch_["text_ids"], 2) != 0
+                    utt_cnt = np.sum(utt_ind, 1)
+                    self.assertListEqual(
+                        data_batch_[text_data.utterance_cnt_name].tolist(),
+                        utt_cnt.tolist())
+
+                except tf.errors.OutOfRangeError:
+                    print('Done -- epoch limit reached')
+                    break
+
+    def test_default_setting(self):
+        """Tests the logics of the text data.
+        """
+        self._run_and_test(self._hparams)
 
 
 class PairedTextDataTest(tf.test.TestCase):
@@ -244,7 +322,6 @@ class PairedTextDataTest(tf.test.TestCase):
         hparams["target_dataset"].update(
             {"other_transformations": [_transform]})
         self._run_and_test(hparams, length_inc=(2, 1))
-
 
 
 if __name__ == "__main__":
