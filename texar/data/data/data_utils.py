@@ -52,7 +52,6 @@ class _DataSpec(object): # pylint: disable=too-few-public-methods
         kwargs['embedding'] = embedding
         self.__dict__.update(kwargs)
 
-
     def add_spec(self, **kwargs):
         """Adds new field.
         """
@@ -67,7 +66,7 @@ class _DataSpec(object): # pylint: disable=too-few-public-methods
             kwargs[k] = v[i] if isinstance(v, (tuple, list)) else v
         return _DataSpec(**kwargs)
 
-    def set_ith_data_spec(self, i, data_spec, num):
+    def set_ith_data_spec(self, i, data_spec, total_count):
         """Sets the i-th specification to respective values in
         :attr:`data_spec`.
         """
@@ -77,9 +76,11 @@ class _DataSpec(object): # pylint: disable=too-few-public-methods
                 if isinstance(v_, (tuple, list)):
                     v_[i] = v
                 else:
-                    self.__dict__[k] = v
+                    new_v_ = [v_] * total_count
+                    new_v_[i] = v
+                    self.__dict__[k] = new_v_
             else:
-                v_ = [None] * num
+                v_ = [None] * total_count
                 v_[i] = v
                 self.__dict__[k] = v_
 
