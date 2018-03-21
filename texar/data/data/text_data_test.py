@@ -176,6 +176,7 @@ class VarUttMonoTextDataTest(tf.test.TestCase):
             "dataset": {
                 "files": self._text_file.name,
                 "vocab_file": self._vocab_file.name,
+                "variable_utterance": True,
                 "max_utterance_cnt": 3,
                 "max_seq_length": 10
             }
@@ -183,7 +184,7 @@ class VarUttMonoTextDataTest(tf.test.TestCase):
 
     def _run_and_test(self, hparams):
         # Construct database
-        text_data = tx.data.VarUttMonoTextData(hparams)
+        text_data = tx.data.MonoTextData(hparams)
         self.assertEqual(text_data.vocab.vocab_size,
                          self._vocab_size + len(text_data.vocab.special_tokens))
 

@@ -14,7 +14,7 @@ import tensorflow as tf
 from texar.core import utils
 from texar.data.data import data_utils
 from texar.data.data.text_data_base import TextDataBase
-from texar.data.data_decoders import TextDataDecoder
+from texar.data.data_decoders import TextDataDecoder, VarUttTextDataDecoder
 from texar.data.vocabulary import Vocab
 from texar.data.embedding import Embedding
 from texar.data.constants import BOS_TOKEN, EOS_TOKEN
@@ -40,6 +40,8 @@ def _default_mono_text_dataset_hparams():
         "bos_token": BOS_TOKEN,
         "eos_token": EOS_TOKEN,
         "other_transformations": [],
+        "variable_utterance": False,
+        "max_utterance_cnt": 5,
         "@no_typecheck": ["files"]
     }
 
@@ -123,25 +125,35 @@ class MonoTextData(TextDataBase):
         return other_trans
 
     @staticmethod
-    def _make_processor(dataset_hparams, data_spec):
+    def _make_processor(dataset_hparams, data_spec, chained=True):
         # Create data decoder
-        decoder = TextDataDecoder(
-            delimiter=dataset_hparams["delimiter"],
-            bos_token=dataset_hparams["bos_token"],
-            eos_token=dataset_hparams["eos_token"],
-            max_seq_length=dataset_hparams["max_seq_length"],
-            token_to_id_map=data_spec.vocab.token_to_id_map)
+        if not dataset_hparams["variable_utterance"]:
+            decoder = TextDataDecoder(
+                delimiter=dataset_hparams["delimiter"],
+                bos_token=dataset_hparams["bos_token"],
+                eos_token=dataset_hparams["eos_token"],
+                max_seq_length=dataset_hparams["max_seq_length"],
+                token_to_id_map=data_spec.vocab.token_to_id_map)
+        else:
+            decoder = VarUttTextDataDecoder( #pylint: disable=redefined-variable-type
+                delimiter=dataset_hparams["delimiter"],
+                bos_token=dataset_hparams["bos_token"],
+                eos_token=dataset_hparams["eos_token"],
+                max_seq_length=dataset_hparams["max_seq_length"],
+                max_utterance_cnt=dataset_hparams["max_utterance_cnt"],
+                token_to_id_map=data_spec.vocab.token_to_id_map)
 
         # Create other transformations
         data_spec.add_spec(decoder=decoder)
         other_trans = MonoTextData._make_other_transformations(
             dataset_hparams["other_transformations"], data_spec)
 
-        # Process data
-        chained_tran = data_utils.make_chained_transformation(
-            [decoder] + other_trans)
-
-        return chained_tran, data_spec
+        if chained:
+            chained_tran = data_utils.make_chained_transformation(
+                [decoder] + other_trans)
+            return chained_tran, data_spec
+        else:
+            return decoder, other_trans, data_spec
 
     def _process_dataset(self, dataset, hparams, data_spec):
         chained_tran, data_spec = self._make_processor(
@@ -249,4 +261,12 @@ class MonoTextData(TextDataBase):
         """The name of text index tensor.
         """
         return self._decoder.text_id_tensor_name
+
+    @property
+    def utterance_cnt_name(self):
+        """The name of utterance count tensor.
+        """
+        if not self._hparams.dataset.variable_utterance:
+            raise ValueError("`utterance_cnt_name` is not defined.")
+        return self._decoder.utterance_cnt_tensor_name
 

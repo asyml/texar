@@ -8,13 +8,14 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import copy
+
 import tensorflow as tf
 
 from texar.core import utils
 from texar.data.data.mono_text_data import _default_mono_text_dataset_hparams
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data.mono_text_data import MonoTextData
-from texar.data.data_decoders import TextDataDecoder
 from texar.data.data import data_utils
 from texar.data.vocabulary import Vocab
 from texar.data.embedding import Embedding
@@ -145,35 +146,21 @@ class PairedTextData(TextDataBase):
     @staticmethod
     def _make_processor(src_hparams, tgt_hparams, data_spec, name_prefix=None):
         # Create source data decoder
-        src_decoder = TextDataDecoder(
-            delimiter=src_hparams["delimiter"],
-            bos_token=src_hparams["bos_token"],
-            eos_token=src_hparams["eos_token"],
-            max_seq_length=src_hparams["max_seq_length"],
-            token_to_id_map=data_spec.vocab[0].token_to_id_map)
-        # Create source data other trans
         data_spec_i = data_spec.get_ith_data_spec(0)
-        data_spec_i.add_spec(decoder=src_decoder)
-        src_trans = MonoTextData._make_other_transformations(
-            src_hparams["other_transformations"], data_spec_i)
+        src_decoder, src_trans, data_spec_i = MonoTextData._make_processor(
+            src_hparams, data_spec_i, chained=False)
         data_spec.set_ith_data_spec(0, data_spec_i, 2)
 
         # Create target data decoder
         if tgt_hparams["processing_share"]:
-            tgt_proc_hparams = src_hparams
+            tgt_proc_hparams = copy.copy(src_hparams)
+            tgt_proc_hparams["variable_utterance"] = \
+                    tgt_hparams["variable_utterance"]
         else:
             tgt_proc_hparams = tgt_hparams
-        tgt_decoder = TextDataDecoder(
-            delimiter=tgt_proc_hparams["delimiter"],
-            bos_token=tgt_proc_hparams["bos_token"],
-            eos_token=tgt_proc_hparams["eos_token"],
-            max_seq_length=tgt_proc_hparams["max_seq_length"],
-            token_to_id_map=data_spec.vocab[1].token_to_id_map)
-        # Create target data other trans
         data_spec_i = data_spec.get_ith_data_spec(1)
-        data_spec_i.add_spec(decoder=tgt_decoder)
-        tgt_trans = MonoTextData._make_other_transformations(
-            tgt_hparams["other_transformations"], data_spec_i)
+        tgt_decoder, tgt_trans, data_spec_i = MonoTextData._make_processor(
+            tgt_proc_hparams, data_spec_i, chained=False)
         data_spec.set_ith_data_spec(1, data_spec_i, 2)
 
         if not name_prefix:
