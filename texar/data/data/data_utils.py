@@ -29,6 +29,13 @@ __all__ = [
 ]
 
 
+def _connect_name(lhs_name, rhs_name):
+    if not lhs_name:
+        return rhs_name
+    if not rhs_name:
+        return lhs_name
+    return "{}_{}".format(lhs_name, rhs_name)
+
 #TODO(zhiting): unit test
 class _DataSpec(object): # pylint: disable=too-few-public-methods
     """Dataset specification. Used to pass necessary info to
@@ -102,6 +109,18 @@ def make_partial(fn, *args, **kwargs):
         return fn(data, *args, **kwargs)
     return _new_fn
 
+def name_prefix_fn(name_prefix):
+    """Returns a function that append a prefix to field names.
+    """
+    def _prefix_fn(data):
+        transformed_data = {}
+        for name, value in six.iteritems(data):
+            new_name = _connect_name(name_prefix, name)
+            transformed_data[new_name] = value
+        return transformed_data
+
+    return _prefix_fn
+
 def make_chained_transformation(tran_fns, *args, **kwargs):
     """Returns a dataset transformation function that applies a list of
     transformations sequentially.
@@ -162,7 +181,7 @@ def make_combined_transformation(tran_fns, name_prefix=None, *args, **kwargs):
             for name, value in six.iteritems(data_i):
                 new_name = name
                 if name_prefix:
-                    new_name = "{}_{}".format(name_prefix[i], name)
+                    new_name = _connect_name(name_prefix[i], name)
                 if new_name in transformed_data:
                     raise ValueError(
                         "Field name already exists: {}".format(new_name))

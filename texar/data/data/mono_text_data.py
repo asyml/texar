@@ -42,6 +42,7 @@ def _default_mono_text_dataset_hparams():
         "other_transformations": [],
         "variable_utterance": False,
         "max_utterance_cnt": 5,
+        "data_name": None,
         "@no_typecheck": ["files"]
     }
 
@@ -125,7 +126,8 @@ class MonoTextData(TextDataBase):
         return other_trans
 
     @staticmethod
-    def _make_processor(dataset_hparams, data_spec, chained=True):
+    def _make_processor(dataset_hparams, data_spec, chained=True,
+                        name_prefix=None):
         # Create data decoder
         if not dataset_hparams["variable_utterance"]:
             decoder = TextDataDecoder(
@@ -135,7 +137,7 @@ class MonoTextData(TextDataBase):
                 max_seq_length=dataset_hparams["max_seq_length"],
                 token_to_id_map=data_spec.vocab.token_to_id_map)
         else:
-            decoder = VarUttTextDataDecoder( #pylint: disable=redefined-variable-type
+            decoder = VarUttTextDataDecoder( # pylint: disable=redefined-variable-type
                 delimiter=dataset_hparams["delimiter"],
                 bos_token=dataset_hparams["bos_token"],
                 eos_token=dataset_hparams["eos_token"],
@@ -147,6 +149,8 @@ class MonoTextData(TextDataBase):
         data_spec.add_spec(decoder=decoder)
         other_trans = MonoTextData._make_other_transformations(
             dataset_hparams["other_transformations"], data_spec)
+        if name_prefix:
+            other_trans.append(data_utils.name_prefix_fn(name_prefix))
 
         if chained:
             chained_tran = data_utils.make_chained_transformation(
@@ -157,7 +161,8 @@ class MonoTextData(TextDataBase):
 
     def _process_dataset(self, dataset, hparams, data_spec):
         chained_tran, data_spec = self._make_processor(
-            hparams["dataset"], data_spec)
+            hparams["dataset"], data_spec,
+            name_prefix=hparams["dataset"]["data_name"])
         num_parallel_calls = hparams["num_parallel_calls"]
         dataset = dataset.map(
             lambda *args: chained_tran(data_utils.maybe_tuple(args)),
