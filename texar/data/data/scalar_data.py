@@ -72,11 +72,12 @@ class ScalarData(DataBase):
         return dtype
 
     @staticmethod
-    def _make_processor(dataset_hparams, data_spec, chained=True):
+    def _make_processor(dataset_hparams, data_spec, chained=True,
+                        name_prefix=None):
         # Create data decoder
         decoder = ScalarDataDecoder(
             ScalarData._get_dtype(dataset_hparams["data_type"]),
-            data_name=dataset_hparams["data_name"])
+            data_name=name_prefix)
         # Create other transformations
         data_spec.add_spec(decoder=decoder)
         # pylint: disable=protected-access
@@ -92,7 +93,8 @@ class ScalarData(DataBase):
 
     def _process_dataset(self, dataset, hparams, data_spec):
         chained_tran, data_spec = self._make_processor(
-            hparams["dataset"], data_spec)
+            hparams["dataset"], data_spec,
+            name_prefix=hparams["dataset"]["data_name"])
         num_parallel_calls = hparams["num_parallel_calls"]
         dataset = dataset.map(
             lambda *args: chained_tran(data_utils.maybe_tuple(args)),
@@ -151,7 +153,7 @@ class ScalarData(DataBase):
 
     @property
     def data_name(self):
-        """The name of text tensor.
+        """The name of the data tensor.
         """
         return self._decoder.data_tensor_name
 

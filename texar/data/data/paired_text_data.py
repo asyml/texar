@@ -35,12 +35,14 @@ def _default_paired_text_dataset_hparams():
     # TODO(zhiting): add more docs
     source_hparams = _default_mono_text_dataset_hparams()
     source_hparams["bos_token"] = None
+    source_hparams["data_name"] = "source"
     target_hparams = _default_mono_text_dataset_hparams()
     target_hparams.update(
         {
             "vocab_share": False,
             "embedding_init_share": False,
-            "processing_share": False
+            "processing_share": False,
+            "data_name": "target"
         }
     )
     return {
@@ -144,6 +146,15 @@ class PairedTextData(TextDataBase):
         return tf.data.Dataset.zip((src_dataset, tgt_dataset))
 
     @staticmethod
+    def _get_name_prefix(src_hparams, tgt_hparams):
+        name_prefix = [
+            src_hparams["data_name"], tgt_hparams["data_name"]]
+        if name_prefix[0] == name_prefix[1]:
+            raise ValueError("'data_name' of source and target "
+                             "datasets cannot be the same.")
+        return name_prefix
+
+    @staticmethod
     def _make_processor(src_hparams, tgt_hparams, data_spec, name_prefix=None):
         # Create source data decoder
         data_spec_i = data_spec.get_ith_data_spec(0)
@@ -152,12 +163,15 @@ class PairedTextData(TextDataBase):
         data_spec.set_ith_data_spec(0, data_spec_i, 2)
 
         # Create target data decoder
+        tgt_proc_hparams = tgt_hparams
         if tgt_hparams["processing_share"]:
             tgt_proc_hparams = copy.copy(src_hparams)
-            tgt_proc_hparams["variable_utterance"] = \
-                    tgt_hparams["variable_utterance"]
-        else:
-            tgt_proc_hparams = tgt_hparams
+            try:
+                tgt_proc_hparams["variable_utterance"] = \
+                        tgt_hparams["variable_utterance"]
+            except TypeError:
+                tgt_proc_hparams.variable_utterance = \
+                        tgt_hparams["variable_utterance"]
         data_spec_i = data_spec.get_ith_data_spec(1)
         tgt_decoder, tgt_trans, data_spec_i = MonoTextData._make_processor(
             tgt_proc_hparams, data_spec_i, chained=False)
@@ -174,8 +188,11 @@ class PairedTextData(TextDataBase):
         return tran_fn, data_spec
 
     def _process_dataset(self, dataset, hparams, data_spec):
+        name_prefix = PairedTextData._get_name_prefix(
+            hparams["source_dataset"], hparams["target_dataset"])
         tran_fn, data_spec = self._make_processor(
-            hparams["source_dataset"], hparams["target_dataset"], data_spec)
+            hparams["source_dataset"], hparams["target_dataset"],
+            data_spec, name_prefix=name_prefix)
         num_parallel_calls = hparams["num_parallel_calls"]
         dataset = dataset.map(
             lambda *args: tran_fn(data_utils.maybe_tuple(args)),

@@ -39,10 +39,13 @@ class ScalarDataDecoder(data_decoder.DataDecoder):
 
     def __init__(self, dtype=tf.int32, data_name="data"):
         self._dtype = dtype
-        self._data_name = data_name or "data"
+        self._data_name = data_name
+        if self._data_name is None:
+            self._data_name = "data"
 
     def __call__(self, data):
-        return self.decode(data, self.list_items())
+        outputs = self.decode(data, self.list_items())
+        return dict(zip(self.list_items(), outputs))
 
     def decode(self, data, items):
         """Decodes the data to return the tensors specified by the list of
