@@ -13,7 +13,7 @@ from texar import context
 from texar.utils import TexarError
 from texar.module_base import ModuleBase
 from texar.core.layers import get_layer
-from texar.core.utils import uniquify_str
+from texar.utils.utils import uniquify_str
 
 # pylint: disable=too-many-instance-attributes, arguments-differ
 

@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 import tensorflow as tf
 import tensorflow.contrib.slim as tf_slim
 
-from texar.core import utils
+from texar.utils import utils
 from texar.data.q_data.q_data_base import qDataBase
 from texar.data.data_decoders import TextDataDecoder
 from texar.data.vocabulary import Vocab

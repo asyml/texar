@@ -12,7 +12,7 @@ import copy
 
 import tensorflow as tf
 
-from texar.core import utils
+from texar.utils import utils
 from texar.data.data.mono_text_data import _default_mono_text_dataset_hparams
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data.mono_text_data import MonoTextData

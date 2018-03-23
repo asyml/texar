@@ -238,7 +238,7 @@ def sequence_sparse_softmax_cross_entropy(labels,
 
         return losses
 
-#TODO(zhiting)
+#TODO(zhiting): add docs
 def label_smoothing(labels, total_class, smooth_rate, name=None):
     """TODO
     """
