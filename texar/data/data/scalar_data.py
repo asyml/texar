@@ -84,6 +84,8 @@ class ScalarData(DataBase):
         other_trans = MonoTextData._make_other_transformations(
             dataset_hparams["other_transformations"], data_spec)
 
+        data_spec.add_spec(name_prefix=name_prefix)
+
         if chained:
             chained_tran = data_utils.make_chained_transformation(
                 [decoder] + other_trans)

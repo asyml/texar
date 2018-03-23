@@ -10,12 +10,14 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import tempfile
+import copy
 import numpy as np
 
 import tensorflow as tf
 
 import texar as tx
 
+# pylint: disable=too-many-locals, too-many-branches, protected-access
 
 class MultiAlignedDataTest(tf.test.TestCase):
     """Tests multi aligned text data class.
@@ -82,7 +84,7 @@ class MultiAlignedDataTest(tf.test.TestCase):
                     "variable_utterance": True,
                     "data_name": "2"
                 },
-                { # dataset 2
+                { # dataset 3
                     "files": self._int_3_file.name,
                     "data_type": "int",
                     "data_name": "label"
@@ -90,7 +92,7 @@ class MultiAlignedDataTest(tf.test.TestCase):
             ]
         }
 
-    def _run_and_test(self, hparams):
+    def _run_and_test(self, hparams, discard_did=None):
         # Construct database
         text_data = tx.data.MultiAlignedData(hparams)
         self.assertEqual(
@@ -122,13 +124,33 @@ class MultiAlignedDataTest(tf.test.TestCase):
                     # pylint: disable=invalid-name
                     for t0, t1, t2, i3 in zip(text_0, text_1, text_2, int_3):
                         np.testing.assert_array_equal(
-                            t0[:3], t1[1:4])
+                            t0[:2], t1[1:3])
                         np.testing.assert_array_equal(
                             t0[:3], t2[0][:3])
                         if t0[0].startswith(b'This'):
                             self.assertEqual(i3, 0)
                         else:
                             self.assertEqual(i3, 1)
+
+                    if discard_did is not None:
+                        hpms = text_data._hparams.datasets[discard_did]
+                        max_l = hpms.max_seq_length
+                        max_l += text_data._decoder[discard_did].added_length
+                        for i in range(2):
+                            for length in data_batch_[text_data.length_name(i)]:
+                                self.assertLessEqual(length, max_l)
+                        for lengths in data_batch_[text_data.length_name(2)]:
+                            for length in lengths:
+                                self.assertLessEqual(length, max_l)
+                    for i, hpms in enumerate(text_data._hparams.datasets):
+                        if hpms.data_type != "text":
+                            continue
+                        max_l = hpms.max_seq_length
+                        mode = hpms.length_filter_mode
+                        if max_l is not None and mode == "truncate":
+                            max_l += text_data._decoder[i].added_length
+                            for length in data_batch_[text_data.length_name(i)]:
+                                self.assertLessEqual(length, max_l)
 
                 except tf.errors.OutOfRangeError:
                     print('Done -- epoch limit reached')
@@ -138,6 +160,19 @@ class MultiAlignedDataTest(tf.test.TestCase):
         """Tests the logics of the text data.
         """
         self._run_and_test(self._hparams)
+
+    def test_length_filter(self):
+        """Tests filtering by length.
+        """
+        hparams = copy.copy(self._hparams)
+        hparams["datasets"][0].update(
+            {"max_seq_length": 4,
+             "length_filter_mode": "discard"})
+        hparams["datasets"][1].update(
+            {"max_seq_length": 2,
+             "length_filter_mode": "truncate"})
+        self._run_and_test(hparams, discard_did=0)
+
 
 
 if __name__ == "__main__":

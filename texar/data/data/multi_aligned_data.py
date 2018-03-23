@@ -14,10 +14,10 @@ import tensorflow as tf
 
 from texar.hyperparams import HParams
 from texar.core import utils
-from texar.data.data.mono_text_data import _default_mono_text_dataset_hparams
 from texar.data.data.scalar_data import _default_scalar_dataset_hparams
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data.scalar_data import ScalarData
+from texar.data.data.mono_text_data import _default_mono_text_dataset_hparams
 from texar.data.data.mono_text_data import MonoTextData
 from texar.data.data import data_utils
 from texar.data.vocabulary import Vocab
@@ -272,6 +272,19 @@ class MultiAlignedData(TextDataBase):
 
         return tran_fn, data_spec
 
+    @staticmethod
+    def _make_length_filter(dataset_hparams, length_name, decoder):
+        filter_fns = []
+        for i, hpms in enumerate(dataset_hparams):
+            if not _is_text_data(hpms["data_type"]):
+                filter_fn = None
+            else:
+                filter_fn = MonoTextData._make_length_filter(
+                    hpms, length_name[i], decoder[i])
+            filter_fns.append(filter_fn)
+        combined_filter_fn = data_utils._make_combined_filter_fn(filter_fns)
+        return combined_filter_fn
+
     def _process_dataset(self, dataset, hparams, data_spec):
         name_prefix = self._get_name_prefix(hparams["datasets"])
         # pylint: disable=attribute-defined-outside-init
@@ -285,9 +298,23 @@ class MultiAlignedData(TextDataBase):
             lambda *args: tran_fn(data_utils.maybe_tuple(args)),
             num_parallel_calls=num_parallel_calls)
 
+        # Filter by length
+        def _get_length_name(i):
+            if not _is_text_data(hparams["datasets"][i]["data_type"]):
+                return None
+            name = data_utils._connect_name(
+                data_spec.name_prefix[i],
+                data_spec.decoder[i].length_tensor_name)
+            return name
+        filter_fn = self._make_length_filter(
+            hparams["datasets"],
+            [_get_length_name(i) for i in range(len(hparams["datasets"]))],
+            data_spec.decoder)
+        dataset = dataset.apply(lambda dataset: dataset.filter(filter_fn))
+
         return dataset, data_spec
 
-    def _make_length_fn(self):
+    def _make_bucket_length_fn(self):
         length_fn = self._hparams.bucket_length_fn
         if not length_fn:
             # Uses the length of the first text data
@@ -322,9 +349,10 @@ class MultiAlignedData(TextDataBase):
         dataset, data_spec = self._process_dataset(
             dataset, self._hparams, data_spec)
         self._data_spec = data_spec
+        self._decoder = data_spec.decoder
 
         # Batching
-        length_fn = self._make_length_fn()
+        length_fn = self._make_bucket_length_fn()
         dataset = self._make_batch(dataset, self._hparams, length_fn)
 
         # Prefetching
@@ -383,12 +411,11 @@ class MultiAlignedData(TextDataBase):
 
     def text_name(self, name_or_id):
         """The name of text tensor of text dataset by its name or id. If the
-        dataaet is not of text type, the result is un-defined.
+        dataaet is not of text type, returns `None`.
         """
         i = self._maybe_name_to_id(name_or_id)
         if not _is_text_data(self._hparams.datasets[i]["data_type"]):
-            raise ValueError("text name of dataset {} undefined."
-                             .format(name_or_id))
+            return None
         name = data_utils._connect_name(
             self._data_spec.name_prefix[i],
             self._data_spec.decoder[i].text_tensor_name)
@@ -396,12 +423,11 @@ class MultiAlignedData(TextDataBase):
 
     def length_name(self, name_or_id):
         """The name of length tensor of text dataset by its name or id. If the
-        dataset is not of text type, the result is un-defined.
+        dataset is not of text type, returns `None`.
         """
         i = self._maybe_name_to_id(name_or_id)
         if not _is_text_data(self._hparams.datasets[i]["data_type"]):
-            raise ValueError("length name of dataset {} undefined."
-                             .format(name_or_id))
+            return None
         name = data_utils._connect_name(
             self._data_spec.name_prefix[i],
             self._data_spec.decoder[i].length_tensor_name)
@@ -409,12 +435,11 @@ class MultiAlignedData(TextDataBase):
 
     def text_id_name(self, name_or_id):
         """The name of length tensor of text dataset by its name or id. If the
-        dataset is not of text type, the result is un-defined.
+        dataset is not of text type, returns `None`.
         """
         i = self._maybe_name_to_id(name_or_id)
         if not _is_text_data(self._hparams.datasets[i]["data_type"]):
-            raise ValueError("text id name of dataset {} undefined."
-                             .format(name_or_id))
+            return None
         name = data_utils._connect_name(
             self._data_spec.name_prefix[i],
             self._data_spec.decoder[i].text_id_tensor_name)
@@ -422,14 +447,12 @@ class MultiAlignedData(TextDataBase):
 
     def utterance_cnt_name(self, name_or_id):
         """The name of utterance count tensor of text dataset by its name or id.
-        If the dataset is not variable utterance text data, the result is
-        un-defined.
+        If the dataset is not variable utterance text data, returns `None`.
         """
         i = self._maybe_name_to_id(name_or_id)
         if not _is_text_data(self._hparams.datasets[i]["data_type"]) or \
                 not self._hparams.datasets[i]["variable_utterance"]:
-            raise ValueError("utterance cnt name of dataset {} is undefined."
-                             .format(name_or_id))
+            return None
         name = data_utils._connect_name(
             self._data_spec.name_prefix[i],
             self._data_spec.decoder[i].utterance_cnt_tensor_name)
@@ -438,12 +461,11 @@ class MultiAlignedData(TextDataBase):
     @property
     def data_name(self, name_or_id):
         """The name of the data tensor of scalar dataset by its name or id..
-        If the dataset is not a scalar data, the result is un-defined.
+        If the dataset is not a scalar data, returns `None`.
         """
         i = self._maybe_name_to_id(name_or_id)
         if not _is_scalar_data(self._hparams.datasets[i]["data_type"]):
-            raise ValueError("data name of dataset {} is undefined."
-                             .format(name_or_id))
+            return None
         name = data_utils._connect_name(
             self._data_spec.name_prefix[i],
             self._data_spec.decoder[i].data_tensor_name)
