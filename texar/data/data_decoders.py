@@ -101,7 +101,7 @@ class TextDataDecoder(data_decoder.DataDecoder):
             sequences. If it is `None` (default) or an empty string, no EOS
             token is added.
         max_seq_length (int, optional): Maximum length of output sequences.
-            Tokens exceed the maximum length will be truncated. The length
+            Tokens exceeding the maximum length will be truncated. The length
             does not include any added bos_token and eos_token. If not
             given, no truncation is performed.
         token_to_id_map (optional): A

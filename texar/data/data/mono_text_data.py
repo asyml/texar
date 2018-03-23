@@ -34,6 +34,28 @@ class _LengthFilterMode: # pylint: disable=old-style-class, no-init, too-few-pub
 
 def _default_mono_text_dataset_hparams():
     """Returns hyperparameters of a mono text dataset with default values.
+
+    Returns:
+        .. code-block:: python
+
+            {
+            }
+
+        Here:
+
+        "max_seq_length" : int, optional
+            Maximum length of output sequences. Data samples exceeding the
+            length will be truncated or discarded according to
+            `"length_filter_mode"`. The length does not include any added
+            `"bos_token"` or `"eos_token"`. If `None` (default), no filtering
+            is performed.
+
+        "length_filter_mode" : str
+            Either `"truncate"` or `"discard"`. If `"truncate"` (default),
+            tokens exceeding the `"max_seq_length"` will be truncated.
+            If `"discard"`, data samples longer than the `"max_seq_length"`
+            will be discarded.
+
     """
     # TODO(zhiting): add more docs
     return {
