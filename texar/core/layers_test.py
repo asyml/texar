@@ -30,19 +30,15 @@ class GetRNNCellTest(tf.test.TestCase):
         num_units = 64
 
         hparams = {
-            "cell": {
-                "type": rnn.BasicLSTMCell(num_units)
-            }
+            "type": rnn.BasicLSTMCell(num_units)
         }
         cell = layers.get_rnn_cell(hparams)
         self.assertTrue(isinstance(cell, rnn.BasicLSTMCell))
 
         hparams = {
-            "cell": {
-                "type": "tensorflow.contrib.rnn.GRUCell",
-                "kwargs": {
-                    "num_units": num_units
-                }
+            "type": "tensorflow.contrib.rnn.GRUCell",
+            "kwargs": {
+                "num_units": num_units
             },
             "num_layers": 2,
             "dropout": {
@@ -69,11 +65,11 @@ class GetRNNCellTest(tf.test.TestCase):
             if isinstance(state_, (list, tuple)):
                 self.assertEqual(state_[0].shape[0], batch_size)
                 self.assertEqual(state_[0].shape[1],
-                                 hparams_.cell.kwargs.num_units)
+                                 hparams_.kwargs.num_units)
             else:
                 self.assertEqual(state_.shape[0], batch_size)
                 self.assertEqual(state_.shape[1],
-                                 hparams_.cell.kwargs.num_units)
+                                 hparams_.kwargs.num_units)
 
 
 class GetLayerTest(tf.test.TestCase):

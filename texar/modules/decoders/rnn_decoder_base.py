@@ -83,15 +83,15 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             "name": "rnn_decoder"
         }
 
-
-    def _build(self, helper, initial_state):    # pylint: disable=W0221
+    def _build(self, helper, initial_state=None):    # pylint: disable=W0221
         """Performs decoding.
 
         Args:
             helper: An instance of `tf.contrib.seq2seq.Helper` that helps with
                 the decoding process. For example, use an instance of
                 `TrainingHelper` in training phase.
-            initial_state: Initial state of decoding.
+            initial_state (optional): Initial state of decoding.
+                If `None` (default), zero state is used.
 
         Returns:
             `(outputs, final_state, sequence_lengths)`: `outputs` is an object
@@ -100,7 +100,11 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             Tensor of shape `[batch_size]`.
         """
         self._helper = helper
-        self._initial_state = initial_state
+        if initial_state is not None:
+            self._initial_state = initial_state
+        else:
+            self._initial_state = self.zero_state(
+                batch_size=self.batch_size, dtype=tf.float32)
 
         max_decoding_length_train = self._hparams.max_decoding_length_train
         if max_decoding_length_train is None:
@@ -182,6 +186,14 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         """The RNN cell.
         """
         return self._cell
+
+    def zero_state(self, batch_size, dtype):
+        """Zero state of the rnn cell.
+
+        Same as :attr:`decoder.cell.zero_state`.
+        """
+        return self._cell.zero_state(
+            batch_size=batch_size, dtype=dtype)
 
     @property
     def state_size(self):

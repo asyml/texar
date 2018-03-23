@@ -54,7 +54,7 @@ class MonoTextDataTest(tf.test.TestCase):
                       length_inc=None):
         # Construct database
         text_data = tx.data.MonoTextData(hparams)
-        self.assertEqual(text_data.vocab.vocab_size,
+        self.assertEqual(text_data.vocab.size,
                          self._vocab_size + len(text_data.vocab.special_tokens))
 
         iterator = text_data.dataset.make_initializable_iterator()
@@ -230,7 +230,7 @@ class VarUttMonoTextDataTest(tf.test.TestCase):
     def _run_and_test(self, hparams):
         # Construct database
         text_data = tx.data.MonoTextData(hparams)
-        self.assertEqual(text_data.vocab.vocab_size,
+        self.assertEqual(text_data.vocab.size,
                          self._vocab_size + len(text_data.vocab.special_tokens))
 
         iterator = text_data.dataset.make_initializable_iterator()

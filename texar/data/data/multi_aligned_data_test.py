@@ -96,7 +96,7 @@ class MultiAlignedDataTest(tf.test.TestCase):
         # Construct database
         text_data = tx.data.MultiAlignedData(hparams)
         self.assertEqual(
-            text_data.vocab(0).vocab_size,
+            text_data.vocab(0).size,
             self._vocab_size + len(text_data.vocab(0).special_tokens))
 
         iterator = text_data.dataset.make_initializable_iterator()

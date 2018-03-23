@@ -525,6 +525,14 @@ class AttentionRNNDecoder(RNNDecoderBase):
             attention_context=nest.map_structure(
                 lambda _: dtype, self._cell.state_size.attention))
 
+    def zero_state(self, batch_size, dtype):
+        """Zero state of the basic cell.
+
+        Same as :attr:`decoder.cell._cell.zero_state`.
+        """
+        return self._cell._cell.zero_state(
+            batch_size=batch_size, dtype=dtype)
+
     @property
     def state_size(self):
         """The state size of the basic cell.

@@ -9,4 +9,4 @@ from __future__ import print_function
 
 # pylint: disable=wildcard-import
 
-from texar.modules.embedders import *
+from texar.modules.embedders.embedders import *
