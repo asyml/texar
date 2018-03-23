@@ -17,7 +17,7 @@ import tensorflow as tf
 
 import texar as tx
 
-# pylint: disable=too-many-locals
+# pylint: disable=too-many-locals, protected-access
 
 class MonoTextDataTest(tf.test.TestCase):
     """Tests text data class.
@@ -49,7 +49,9 @@ class MonoTextDataTest(tf.test.TestCase):
             }
         }
 
-    def _run_and_test(self, hparams, test_batch_size=False, length_inc=None):
+    def _run_and_test(self, hparams,
+                      test_batch_size=False,
+                      length_inc=None):
         # Construct database
         text_data = tx.data.MonoTextData(hparams)
         self.assertEqual(text_data.vocab.vocab_size,
@@ -79,6 +81,24 @@ class MonoTextDataTest(tf.test.TestCase):
                             self.assertEqual(
                                 text_.index(b'<EOS>') + 1,
                                 data_batch_['length'][i] - length_inc)
+
+                    max_seq_length = text_data._hparams.dataset.max_seq_length
+                    mode = text_data._hparams.dataset.length_filter_mode
+                    if max_seq_length is not None:
+                        max_l = max_seq_length
+                        max_l += text_data._decoder.added_length
+                        for length in data_batch_['length']:
+                            self.assertLessEqual(length, max_l)
+                        if mode == "discard":
+                            for length in data_batch_['length']:
+                                self.assertEqual(length, 5)
+                        elif mode == "truncate":
+                            num_length_6 = 0
+                            for length in data_batch_['length']:
+                                num_length_6 += int(length == 6)
+                            self.assertGreater(num_length_6, 0)
+                        else:
+                            raise ValueError("Unknown mode: %s" % mode)
 
                 except tf.errors.OutOfRangeError:
                     print('Done -- epoch limit reached')
@@ -145,6 +165,24 @@ class MonoTextDataTest(tf.test.TestCase):
         text_data = tx.data.MonoTextData(hparams)
         self.assertSetEqual(set(text_data.list_items()),
                             {"data_text", "data_text_ids", "data_length"})
+
+    def test_length_discard(self):
+        """Tests discard lenghy seq.
+        """
+        hparams = copy.copy(self._hparams)
+        hparams["dataset"].update({"max_seq_length": 4,
+                                   "length_filter_mode": "discard"})
+        self._run_and_test(hparams)
+
+    def test_length_truncate(self):
+        """Tests truncation.
+        """
+        hparams = copy.copy(self._hparams)
+        hparams["dataset"].update({"max_seq_length": 4,
+                                   "length_filter_mode": "truncate"})
+        hparams["shuffle"] = False
+        hparams["allow_smaller_final_batch"] = False
+        self._run_and_test(hparams)
 
 
 class VarUttMonoTextDataTest(tf.test.TestCase):

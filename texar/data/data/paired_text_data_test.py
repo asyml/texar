@@ -17,6 +17,8 @@ import tensorflow as tf
 
 import texar as tx
 
+# pylint: disable=too-many-locals, too-many-branches, protected-access
+# pylint: disable=invalid-name
 
 class PairedTextDataTest(tf.test.TestCase):
     """Tests paired text data class.
@@ -59,8 +61,8 @@ class PairedTextDataTest(tf.test.TestCase):
             }
         }
 
-    # pylint: disable=too-many-locals
-    def _run_and_test(self, hparams, proc_shr=False, length_inc=None):
+    def _run_and_test(self, hparams, proc_shr=False, length_inc=None,
+                      discard_src=False):
         # Construct database
         text_data = tx.data.PairedTextData(hparams)
         self.assertEqual(
@@ -111,6 +113,13 @@ class PairedTextDataTest(tf.test.TestCase):
                                 text_.index(tgt_eos) + 1,
                                 data_batch_['target_length'][i] - length_inc[1])
 
+                    if discard_src:
+                        src_hparams = text_data.hparams.source_dataset
+                        max_l = src_hparams.max_seq_length
+                        max_l += text_data._decoder[0].added_length
+                        for l in data_batch_[text_data.source_length_name]:
+                            self.assertLessEqual(l, max_l)
+
                 except tf.errors.OutOfRangeError:
                     print('Done -- epoch limit reached')
                     break
@@ -140,6 +149,15 @@ class PairedTextDataTest(tf.test.TestCase):
         hparams["target_dataset"].update(
             {"other_transformations": [_transform]})
         self._run_and_test(hparams, length_inc=(2, 1))
+
+    def test_length_filter(self):
+        """Tests filtering by length.
+        """
+        hparams = copy.copy(self._hparams)
+        hparams["source_dataset"].update(
+            {"max_seq_length": 4,
+             "length_filter_mode": "discard"})
+        self._run_and_test(hparams, discard_src=True)
 
 
 if __name__ == "__main__":

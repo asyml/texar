@@ -135,6 +135,7 @@ class TextDataDecoder(data_decoder.DataDecoder):
         self._text_tensor_name = text_tensor_name
         self._text_id_tensor_name = text_id_tensor_name
         self._length_tensor_name = length_tensor_name
+        self._added_length = 0
 
     def __call__(self, data):
         outputs = self.decode(data, self.list_items())
@@ -169,8 +170,10 @@ class TextDataDecoder(data_decoder.DataDecoder):
         # Add BOS/EOS tokens
         if _append_token(self._bos_token):
             tokens = tf.concat([[self._bos_token], tokens], axis=0)
+            self._added_length += 1
         if _append_token(self._eos_token):
             tokens = tf.concat([tokens, [self._eos_token]], axis=0)
+            self._added_length += 1
 
         # Map to index
         token_ids = None
@@ -224,6 +227,11 @@ class TextDataDecoder(data_decoder.DataDecoder):
     def text_id_tensor_name(self, name):
         self._text_id_tensor_name = name
 
+    @property
+    def added_length(self):
+        """The added text length due to appended bos and eos tokens.
+        """
+        return self._added_length
 
 class VarUttTextDataDecoder(data_decoder.DataDecoder):
     """A text data decoder that decodes raw text data. Each data is considered
@@ -291,6 +299,7 @@ class VarUttTextDataDecoder(data_decoder.DataDecoder):
         self._utterance_cnt_tensor_name = utterance_cnt_tensor_name
         self._sentence_delimiter = sentence_delimiter
         self._max_utterance_cnt = max_utterance_cnt
+        self._added_length = 0
 
     def __call__(self, data):
         outputs = self.decode(data, self.list_items())
@@ -336,9 +345,11 @@ class VarUttTextDataDecoder(data_decoder.DataDecoder):
         if _append_token(self._eos_token):
             raw_sent_length += 1
             sent_length += 1
+            self._added_length += 1
         if _append_token(self._bos_token):
             raw_sent_length += 1
             sent_length += 1
+            self._added_length += 1
 
         def _trunc_and_pad(s, pad_token, max_length):
             if self._max_seq_length:
@@ -428,3 +439,9 @@ class VarUttTextDataDecoder(data_decoder.DataDecoder):
     @text_id_tensor_name.setter
     def text_id_tensor_name(self, name):
         self._text_id_tensor_name = name
+
+    @property
+    def added_length(self):
+        """The added text length due to appended bos and eos tokens.
+        """
+        return self._added_length
