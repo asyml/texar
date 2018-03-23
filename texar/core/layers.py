@@ -60,21 +60,19 @@ def default_rnn_cell_hparams():
         .. code-block:: python
 
             {
-                "cell": {
-                    # Name or full path of the cell class. E.g., the classname
-                    # of built-in cells in `tensorflow.contrib.rnn`, or the
-                    # classname of user-defined cells in `texar.custom`, or a
-                    # full path like "my_module.MyCell".
-                    "type": "BasicLSTMCell",
+                # Name or full path of the cell class. E.g., the classname
+                # of built-in cells in `tensorflow.contrib.rnn`, or the
+                # classname of user-defined cells in `texar.custom`, or a
+                # full path like "my_module.MyCell".
+                "type": "BasicLSTMCell",
 
-                    # A dictionary of arguments for constructor of the cell
-                    # class. An RNN cell is created by calling the cell class
-                    # named in `type` passing the arguments specified in
-                    # `kwargs` as `cell_class(**kwargs)`
-                    "kwargs": {
-                        "num_units": 64
-                    }
-                },
+                # A dictionary of arguments for constructor of the cell
+                # class. An RNN cell is created by calling the cell class
+                # named in `type` passing the arguments specified in
+                # `kwargs` as `cell_class(**kwargs)`
+                "kwargs": {
+                    "num_units": 64
+                }
 
                 # Number of cell layers
                 "num_layers": 1
@@ -109,11 +107,9 @@ def default_rnn_cell_hparams():
             }
     """
     return {
-        "cell": {
-            "type": "BasicLSTMCell",
-            "kwargs": {
-                "num_units": 64
-            }
+        "type": "BasicLSTMCell",
+        "kwargs": {
+            "num_units": 64
         },
         "num_layers": 1,
         "dropout": {
@@ -137,7 +133,7 @@ def get_rnn_cell(hparams=None):
     Args:
         hparams (dict or HParams, optional): Cell hyperparameters. Missing
             hyperparameters are set to default values. If
-            :attr:`hparams["cell"]["type"]` is a cell instance (rather
+            :attr:`hparams["type"]` is a cell instance (rather
             than the name or path to the cell class), then
             :attr:`hparams["num_layers"]` must be 1.
 
@@ -146,7 +142,7 @@ def get_rnn_cell(hparams=None):
 
     Raises:
         ValueError: If :attr:`hparams["num_layers"]` > 1 and
-            :attr:`hparams["cell"]["type"]` is not of type string.
+            :attr:`hparams["type"]` is not of type string.
         ValueError: The cell is not an
             :tf_main:`RNNCell <contrib/rnn/RNNCell>` instance.
     """
@@ -162,11 +158,11 @@ def get_rnn_cell(hparams=None):
             (hparams["num_layers"], len(d_hp["input_size"])))
 
     cells = []
-    cell_kwargs = hparams["cell"]["kwargs"].todict()
+    cell_kwargs = hparams["kwargs"].todict()
     num_layers = hparams["num_layers"]
     for layer_i in range(num_layers):
         # Create the basic cell
-        cell_type = hparams["cell"]["type"]
+        cell_type = hparams["type"]
         if utils.is_str_or_unicode(cell_type):
             cell_modules = ['tensorflow.contrib.rnn', 'texar.custom']
             cell = utils.get_instance(cell_type, cell_kwargs, cell_modules)

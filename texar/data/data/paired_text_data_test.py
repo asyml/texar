@@ -66,7 +66,7 @@ class PairedTextDataTest(tf.test.TestCase):
         # Construct database
         text_data = tx.data.PairedTextData(hparams)
         self.assertEqual(
-            text_data.source_vocab.vocab_size,
+            text_data.source_vocab.size,
             self._vocab_size + len(text_data.source_vocab.special_tokens))
 
         iterator = text_data.dataset.make_initializable_iterator()

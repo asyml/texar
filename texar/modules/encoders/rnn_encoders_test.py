@@ -53,7 +53,7 @@ class UnidirectionalRNNEncoderTest(tf.test.TestCase):
                                    maxval=1., dtype=tf.float32)
         outputs, state = encoder(inputs)
 
-        cell_dim = encoder.hparams.rnn_cell.cell.kwargs.num_units
+        cell_dim = encoder.hparams.rnn_cell.kwargs.num_units
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
             outputs_, state_ = sess.run([outputs, state])
@@ -69,7 +69,7 @@ class UnidirectionalRNNEncoderTest(tf.test.TestCase):
         encoder = UnidirectionalRNNEncoder()
         outputs, state = encoder(embedder(inputs))
 
-        cell_dim = encoder.hparams.rnn_cell.cell.kwargs.num_units
+        cell_dim = encoder.hparams.rnn_cell.kwargs.num_units
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
             outputs_, state_ = sess.run([outputs, state])
@@ -113,7 +113,7 @@ class BidirectionalRNNEncoderTest(tf.test.TestCase):
                                    maxval=1., dtype=tf.float32)
         outputs, state = encoder(inputs)
 
-        cell_dim = encoder.hparams.rnn_cell_fw.cell.kwargs.num_units
+        cell_dim = encoder.hparams.rnn_cell_fw.kwargs.num_units
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
             outputs_, state_ = sess.run([outputs, state])
@@ -150,7 +150,7 @@ class BidirectionalRNNEncoderTest(tf.test.TestCase):
 #                                   dtype=tf.int32)
 #        outputs, state = encoder(inputs)
 #
-#        cell_dim = encoder.hparams.rnn_cell.cell.kwargs.num_units
+#        cell_dim = encoder.hparams.rnn_cell.kwargs.num_units
 #        with self.test_session() as sess:
 #            sess.run(tf.global_variables_initializer())
 #            outputs_, state_ = sess.run([outputs, state])
