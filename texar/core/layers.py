@@ -12,7 +12,7 @@ import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
 from texar import context
 from texar.hyperparams import HParams
-from texar.core import utils
+from texar.utils import utils
 
 # pylint: disable=not-context-manager, redefined-variable-type, invalid-name
 # pylint: disable=too-many-branches, too-many-arguments, too-many-lines

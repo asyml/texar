@@ -13,7 +13,7 @@ import tensorflow as tf
 import tensorflow.contrib.slim as tf_slim
 
 from texar.hyperparams import HParams
-from texar.core import utils
+from texar.utils import utils
 from texar.data.q_data.q_data_base import qDataBase
 from texar.data.q_data import q_mono_text_data
 from texar.data.q_data.q_data_providers import ParallelDataProvider

@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 
 import tensorflow as tf
 
-from texar.core import utils
+from texar.utils import utils
 from texar.data.data import data_utils
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data_decoders import TextDataDecoder, VarUttTextDataDecoder

@@ -12,7 +12,7 @@ import inspect
 import tensorflow as tf
 
 from texar.hyperparams import HParams
-from texar.core import utils
+from texar.utils import utils
 
 __all__ = [
     "default_optimization_hparams",

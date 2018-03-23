@@ -14,7 +14,7 @@ import tensorflow as tf
 
 import numpy as np
 
-from texar.core import utils
+from texar.utils import utils
 
 # pylint: disable=invalid-name
 

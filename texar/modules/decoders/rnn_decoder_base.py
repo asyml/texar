@@ -16,7 +16,8 @@ from tensorflow.contrib.seq2seq import dynamic_decode
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.util import nest
 
-from texar.core import layers, utils
+from texar.core import layers
+from texar.utils import utils
 from texar import context
 from texar.module_base import ModuleBase
 from texar.modules.decoders import rnn_decoder_helpers

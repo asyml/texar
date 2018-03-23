@@ -13,7 +13,7 @@ import copy
 import tensorflow as tf
 
 from texar.hyperparams import HParams
-from texar.core import utils
+from texar.utils import utils
 from texar.data.data.scalar_data import _default_scalar_dataset_hparams
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data.scalar_data import ScalarData
