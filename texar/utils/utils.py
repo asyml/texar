@@ -23,7 +23,6 @@ from tensorflow.python.ops import rnn
 
 from texar import context
 
-
 MAX_SEQ_LENGTH = np.iinfo(np.int32).max  #TODO (zhiting): move to constants
 
 ## Some modules cannot be imported directly,
@@ -249,23 +248,26 @@ def is_callable(x):
     return _is_callable
 
 
-def switch_dropout(dropout_keep_prob, is_train=None):
+def switch_dropout(dropout_keep_prob, mode=None):
     """Turns off dropout when not in training mode.
 
     Args:
         dropout_keep_prob: Dropout keep probability in training mode
-        is_train: Boolean Tensor indicator of the training mode. Dropout is
-            activated if `is_train=True`. If `is_train` is not given, the mode
-            is inferred from the global mode.
+        mode (optional): A Tensor taking values of
+            :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`.
+            Dropout is activated if :attr:`mode` is `TRAIN`.
+            If `None`, the mode is inferred from
+            :func:`texar.context.global_mode`.
 
     Returns:
-        A unit Tensor that equals the dropout keep probability in training mode,
-        and 1 in eval mode.
+        A unit Tensor that equals the dropout keep probability in `TRAIN` mode,
+        and `1.` in other modes.
     """
-    if is_train is None:
-        return 1. - (1. - dropout_keep_prob) * tf.to_float(context.is_train())
+    if mode is None:
+        is_train = context.global_mode_train()
     else:
-        return 1. - (1. - dropout_keep_prob) * tf.to_float(is_train)
+        is_train = tf.equal(mode, tf.estimator.ModeKeys.TRAIN)
+    return 1. - (1. - dropout_keep_prob) * tf.to_float(is_train)
 
 
 def transpose_batch_time(inputs):

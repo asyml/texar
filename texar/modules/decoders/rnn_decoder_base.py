@@ -114,7 +114,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         if max_decoding_length_infer is None:
             max_decoding_length_infer = utils.MAX_SEQ_LENGTH
         max_decoding_length = tf.cond(
-            context.is_train(),
+            context.global_mode_train(),
             lambda: max_decoding_length_train,
             lambda: max_decoding_length_infer)
         outputs, final_state, sequence_lengths = dynamic_decode(

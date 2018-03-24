@@ -123,11 +123,13 @@ def train():
 
                 _, step, loss = sess.run(
                     [train_op, global_step, mle_loss],
-                    feed_dict={context.is_train(): True})
+                    feed_dict={context.global_mode():
+                               tf.estimator.ModeKeys.TRAIN})
 
                 sequence_length_, seq_len = sess.run(
                     [sequence_lengths, data_batch['length']],
-                    feed_dict={context.is_train(): True})
+                    feed_dict={context.global_mode():
+                               tf.estimator.ModeKeys.TRAIN})
 
                 # question: can we run the sess.run twice?
                 # I'm wondering whether the loaded data will be different in these two times
@@ -172,7 +174,9 @@ def sample(ckpt, n_samples=5):
         saver = tf.train.Saver(tf.global_variables())
         saver.restore(sess, ckpt)
 
-        sess_outputs = sess.run(outputs, feed_dict={context.is_train(): False})
+        sess_outputs = sess.run(
+            outputs,
+            feed_dict={context.global_mode(): tf.estimator.ModeKeys.EVAL})
         for i in range(n_samples):
             words = [vocab._id_to_token_map_py[id] for id in sess_outputs.sample_id[i]]
 
