@@ -12,9 +12,8 @@ import tensorflow as tf
 
 from texar.modules.encoders.rnn_encoders import UnidirectionalRNNEncoder
 from texar.modules.encoders.rnn_encoders import BidirectionalRNNEncoder
-#from texar.modules.encoders.rnn_encoders import HierarchicalForwardRNNEncoder
+from texar.modules.encoders import HierarchicalRNNEncoder
 from texar.modules.embedders.embedders import WordEmbedder
-
 
 class UnidirectionalRNNEncoderTest(tf.test.TestCase):
     """Tests :class:`~texar.modules.UnidirectionalRNNEncoder` class.
@@ -53,7 +52,7 @@ class UnidirectionalRNNEncoderTest(tf.test.TestCase):
                                    maxval=1., dtype=tf.float32)
         outputs, state = encoder(inputs)
 
-        cell_dim = encoder.hparams.rnn_cell.kwargs.num_units
+        cell_dim = encoder.hparams.rnn_cell.cell.kwargs.num_units
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
             outputs_, state_ = sess.run([outputs, state])
@@ -69,7 +68,7 @@ class UnidirectionalRNNEncoderTest(tf.test.TestCase):
         encoder = UnidirectionalRNNEncoder()
         outputs, state = encoder(embedder(inputs))
 
-        cell_dim = encoder.hparams.rnn_cell.kwargs.num_units
+        cell_dim = encoder.hparams.rnn_cell.cell.kwargs.num_units
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
             outputs_, state_ = sess.run([outputs, state])
@@ -113,7 +112,7 @@ class BidirectionalRNNEncoderTest(tf.test.TestCase):
                                    maxval=1., dtype=tf.float32)
         outputs, state = encoder(inputs)
 
-        cell_dim = encoder.hparams.rnn_cell_fw.kwargs.num_units
+        cell_dim = encoder.hparams.rnn_cell_fw.cell.kwargs.num_units
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
             outputs_, state_ = sess.run([outputs, state])
@@ -122,40 +121,67 @@ class BidirectionalRNNEncoderTest(tf.test.TestCase):
             self.assertEqual(state_[0][0].shape, (batch_size, cell_dim))
 
 
-# TODO(zhiting): not completed yet
-#class HierarchicalForwardRNNEncoderTest(tf.test.TestCase):
-#    """Tests HierarchicalForwardRNNEncoder class.
-#    """
-#
-#    def test_trainable_variables(self):
-#        """Tests the functionality of automatically collecting trainable
-#        variables.
-#        """
-#        encoder = HierarchicalForwardRNNEncoder(vocab_size=2)
-#        inputs = [[[1, 0], [0, 1], [0, 1]]]
-#        _, _ = encoder(inputs)
-#        self.assertEqual(len(encoder.trainable_variables), 5)
-#
-#    def test_encode(self):
-#        """Tests encoding.
-#        """
-#        vocab_size = 4
-#        encoder = HierarchicalForwardRNNEncoder(vocab_size=vocab_size)
-#
-#        max_major_time = 8
-#        max_minor_time = 6
-#        batch_size = 16
-#        inputs = tf.random_uniform([batch_size, max_major_time, max_minor_time],
-#                                   maxval=vocab_size,
-#                                   dtype=tf.int32)
-#        outputs, state = encoder(inputs)
-#
-#        cell_dim = encoder.hparams.rnn_cell.kwargs.num_units
-#        with self.test_session() as sess:
-#            sess.run(tf.global_variables_initializer())
-#            outputs_, state_ = sess.run([outputs, state])
-#            self.assertEqual(outputs_.shape, (batch_size, max_major_time, cell_dim))
-#            self.assertEqual(state_[0].shape, (batch_size, cell_dim))
+class HierarchicalForwardRNNEncoderTest(tf.test.TestCase):
+    """Tests HierarchicalForwardRNNEncoder class.
+    """
+
+    def test_trainable_variables(self):
+        """Tests the functionality of automatically collecting trainable
+        variables.
+        """
+        encoder = HierarchicalRNNEncoder()
+        inputs = tf.constant([[[[1, 0], [0, 1], [0., 1]]]])
+        _, _ = encoder(inputs)
+        self.assertEqual(len(encoder.trainable_variables), 4)
+
+    def test_encode(self):
+        """Tests encoding.
+        """
+        vocab_size = 4
+        encoder = HierarchicalRNNEncoder()
+
+        max_major_time = 8
+        max_minor_time = 6
+        batch_size = 16
+        dims = 32
+        inputs = tf.random_uniform([batch_size, max_major_time, max_minor_time, dims],
+                                   maxval=0.1,
+                                   minval=-0.1,
+                                   dtype=tf.float32)
+        outputs, state = encoder(inputs)
+
+        cell_dim = encoder.encoder_minor.hparams.rnn_cell.cell.kwargs.num_units
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            outputs_, state_ = sess.run([outputs, state])
+            self.assertEqual(outputs_.shape, (batch_size, max_major_time, cell_dim))
+            self.assertEqual(state_[0].shape, (batch_size, cell_dim))
+
+    
+    def test_bidir_encode(self):
+        """Tests encoding.
+        """
+        vocab_size = 4
+
+        minor_encoder = BidirectionalRNNEncoder()
+        encoder = HierarchicalRNNEncoder(encoder_minor=minor_encoder)
+
+        max_major_time = 8
+        max_minor_time = 6
+        batch_size = 16
+        dims = 32
+        inputs = tf.random_uniform([batch_size, max_major_time, max_minor_time, dims],
+                                   maxval=0.1,
+                                   minval=-0.1,
+                                   dtype=tf.float32)
+        outputs, state = encoder(inputs)
+
+        cell_dim = encoder.encoder_major.hparams.rnn_cell.cell.kwargs.num_units
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            outputs_, state_ = sess.run([outputs, state])
+            self.assertEqual(outputs_.shape, (batch_size, max_major_time, cell_dim))
+            self.assertEqual(state_[0].shape, (batch_size, cell_dim))
 
 if __name__ == "__main__":
     tf.test.main()
