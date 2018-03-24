@@ -174,3 +174,49 @@ def label_smoothing(labels, total_class, smooth_rate, name=None):
     with tf.name_scope(name, 'label_smoothing'):
         one_hot_labels = tf.one_hot(labels, depth=total_class)
         return  (1-smooth_rate)*one_hot_labels + (smooth_rate)/total_class
+
+def smoothing_cross_entropy(logits,
+                            labels,
+                            vocab_size,
+                            confidence,
+                            gaussian=False):
+  """Cross entropy with label smoothing to limit over-confidence.
+  Args:
+    logits: Tensor of size [batch_size, ?, ?, ?, vocab_size]
+    labels: Tensor of size [batch_size, ?, ?, ?]
+    vocab_size: Tensor representing the size of the vocabulary.
+    confidence: Used to determine on and off values for label smoothing.
+      If `gaussian` is true, `confidence` is the variance to the gaussian
+      distribution.
+    gaussian: Uses a gaussian distribution for label smoothing
+  Returns:
+  """
+  with tf.name_scope("smoothing_cross_entropy", values=[logits, labels]):
+    # Low confidence is given to all non-true labels, uniformly.
+    low_confidence = (1.0 - confidence) / tf.to_float(vocab_size - 1)
+    # Normalizing constant is the best cross-entropy value with soft targets.
+    # We subtract it just for readability, makes no difference on learning.
+    normalizing = -(
+        confidence * tf.log(confidence) + tf.to_float(vocab_size - 1) *
+        low_confidence * tf.log(low_confidence + 1e-20))
+
+    if gaussian and confidence > 0.0:
+      labels = tf.cast(labels, tf.float32)
+
+      normal_dist = tf.distributions.Normal(loc=labels, scale=confidence)
+      # Locations to evaluate the probability distributions.
+      soft_targets = normal_dist.prob(
+          tf.cast(tf.range(vocab_size), tf.float32)[:, None, None, None, None])
+      # Reordering soft_targets from [vocab_size, batch_size, ?, ?, ?] to match
+      # logits: [batch_size, ?, ?, ?, vocab_size]
+      soft_targets = tf.transpose(soft_targets, perm=[1, 2, 3, 4, 0])
+    else:
+      soft_targets = tf.one_hot(
+          tf.cast(labels, tf.int32),
+          depth=vocab_size,
+          on_value=confidence,
+          off_value=low_confidence)
+    xentropy = tf.nn.softmax_cross_entropy_with_logits(
+        logits=logits, labels=soft_targets)
+    return xentropy - normalizing
+

@@ -13,7 +13,7 @@ from texar import context
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.networks import FeedForwardNetwork
 from texar.modules.embedders import embedder_utils
-
+from texar import utils
 class TransformerEncoder(EncoderBase):
     """Base class for all encoder classes.
     Args:
@@ -128,13 +128,15 @@ class TransformerEncoder(EncoderBase):
             self.enc = tf.nn.embedding_lookup(self._embedding, inputs)
         else:
             self.enc = inputs
-
+        encoder_padding = utils.embedding_to_padding(
+            self.enc)
         if self._hparams.multiply_embedding_mode =='sqrt_depth':
             self.enc = self.enc * (self._embedding.shape.as_list()[-1]**0.5)
 
         emb_target_space = tf.reshape(self.target_symbol_embedding, [1,1,-1])
         self.enc = self.enc + emb_target_space
 
+        pad_remover = utils.PadRemover(inputs_length)
         if self._hparams.sinusoid:
             self.enc += layers.sinusoid_positional_encoding(
                 self.enc,
@@ -149,15 +151,14 @@ class TransformerEncoder(EncoderBase):
 
         self.enc = tf.layers.dropout(self.enc, \
             rate=self._hparams.dropout, training=context.is_train())
-
+        pad_remover = utils.padding_related.PadRemover(encoder_padding)
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("layer_{}".format(i)):
                 with tf.variable_scope('self_attention'):
                     selfatt_output = layers.multihead_attention(
                         queries=layers.layer_normalize(self.enc),
                         keys=None,
-                        queries_valid_length=inputs_length,
-                        keys_valid_length=inputs_length,
+                        keys_padding=encoder_padding,
                         num_heads=self._hparams.num_heads,
                         dropout_rate=self._hparams.dropout,
                         num_units=self._hparams.embedding.dim,
@@ -171,10 +172,19 @@ class TransformerEncoder(EncoderBase):
                     )
                 poswise_network = FeedForwardNetwork(hparams=self._hparams['poswise_feedforward'])
                 with tf.variable_scope(poswise_network.variable_scope):
+                    x = layers.layer_normalize(self.enc)
+                    original_shape = layers.shape_list(x)
+                    x = tf.reshape(x, tf.concat([[-1], original_shape[2:]], axis=0))
+                    x = tf.expand_dims(pad_remover.remove(x), axis=0)
+                    #[1, batch_size*seq_length, hidden_dim]
                     sub_output = tf.layers.dropout(
-                        poswise_network(layers.layer_normalize(self.enc)),
+                        poswise_network(x),
                         rate=self._hparams.dropout,
-                        training=context.is_train())
+                        training=context.is_train()
+                    )
+                    sub_output = tf.reshape(pad_remover.restore(tf.squeeze(\
+                        sub_output, axis=0)), original_shape
+                    )
                     self.enc = self.enc + sub_output
 
         self.enc = layers.layer_normalize(self.enc)
@@ -182,4 +192,4 @@ class TransformerEncoder(EncoderBase):
             self._add_internal_trainable_variables()
             self._built = True
 
-        return self.enc
+        return encoder_padding, self.enc

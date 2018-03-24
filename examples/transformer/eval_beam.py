@@ -5,7 +5,6 @@ import codecs
 import beam_utils
 import tensorflow as tf
 import numpy as np
-import copy
 from data_load import load_test_data, load_shared_vocab, hp
 from nltk.translate.bleu_score import corpus_bleu
 from texar.modules import TransformerEncoder, TransformerDecoder
