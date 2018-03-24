@@ -136,7 +136,7 @@ def get_rnn_cell(hparams=None, mode=None):
             :attr:`hparams["type"]` is a cell instance (rather
             than the name or path to the cell class), then
             :attr:`hparams["num_layers"]` must be 1.
-        mode (optional): A member of
+        mode (optional): A Tensor taking value in
             :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
             `TRAIN`, `EVAL`, and `PREDICT`. If `None`, dropout will be
             controlled by :func:`texar.context.global_mode`.

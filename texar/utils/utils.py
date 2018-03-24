@@ -247,6 +247,44 @@ def is_callable(x):
         _is_callable = hasattr(x, '__call__')
     return _is_callable
 
+def maybe_gloabl_mode(mode):
+    """Returns :func:`texar.contex.global_mode` if :attr:`mode` is `None`,
+    otherwise returns :attr:`mode` as-is.
+    """
+    if mode is None:
+        return context.global_mode()
+    else:
+        return mode
+
+def is_train_mode(mode):
+    """Returns a bool Tensor indicating whether the global mode is TRAIN.
+    If :attr:`mode` is `None`, the mode is determined by
+    :func:`texar.contex.global_mode`.
+    """
+    if mode is None:
+        return context.global_mode_train()
+    else:
+        return tf.equal(mode, tf.estimator.ModeKeys.TRAIN)
+
+def is_eval_mode(mode):
+    """Returns a bool Tensor indicating whether the global mode is EVAL.
+    If :attr:`mode` is `None`, the mode is determined by
+    :func:`texar.contex.global_mode`.
+    """
+    if mode is None:
+        return context.global_mode_eval()
+    else:
+        return tf.equal(mode, tf.estimator.ModeKeys.EVAL)
+
+def is_predict_mode(mode):
+    """Returns a bool Tensor indicating whether the global mode is PREDICT.
+    If :attr:`mode` is `None`, the mode is determined by
+    :func:`texar.contex.global_mode`.
+    """
+    if mode is None:
+        return context.global_mode_predict()
+    else:
+        return tf.equal(mode, tf.estimator.ModeKeys.PREDICT)
 
 def switch_dropout(dropout_keep_prob, mode=None):
     """Turns off dropout when not in training mode.
@@ -263,11 +301,7 @@ def switch_dropout(dropout_keep_prob, mode=None):
         A unit Tensor that equals the dropout keep probability in `TRAIN` mode,
         and `1.` in other modes.
     """
-    if mode is None:
-        is_train = context.global_mode_train()
-    else:
-        is_train = tf.equal(mode, tf.estimator.ModeKeys.TRAIN)
-    return 1. - (1. - dropout_keep_prob) * tf.to_float(is_train)
+    return 1. - (1. - dropout_keep_prob) * tf.to_float(is_train_mode(mode))
 
 
 def transpose_batch_time(inputs):
