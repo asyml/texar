@@ -1,6 +1,6 @@
 YEAR=2014
 
-OUTPUT_FILE=my-model-152000.output.txt
+OUTPUT_FILE=my-model-250000.output.txt
 #OUTPUT_FILE=my-model-12
 
 perl ~/mosesdecoder/scripts/tokenizer/tokenizer.perl -l de < /tmp/t2t_datagen/newstest${YEAR}.de > /tmp/t2t_datagen/newstest${YEAR}.de.tok
