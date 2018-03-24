@@ -8,7 +8,7 @@ from __future__ import division
 from __future__ import print_function
 
 # pylint: disable=not-context-manager, too-many-arguments, no-name-in-module
-# pylint: disable=too-many-branches, protected-access
+# pylint: disable=too-many-branches, protected-access, W0221
 
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import Decoder as TFDecoder
@@ -49,6 +49,11 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             else:
                 self._cell = layers.get_rnn_cell(self._hparams.rnn_cell)
 
+        #self._external_cell_given = False
+        #if cell is not None:
+        #    self._cell = cell
+        #    self._external_cell_given = True
+
         # Make the output layer
         self._vocab_size = vocab_size
         self._output_layer = output_layer
@@ -84,7 +89,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             "name": "rnn_decoder"
         }
 
-    def _build(self, helper, initial_state=None):    # pylint: disable=W0221
+    def _build(self, helper, initial_state=None):
         """Performs decoding.
 
         Args:
@@ -93,6 +98,12 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 `TrainingHelper` in training phase.
             initial_state (optional): Initial state of decoding.
                 If `None` (default), zero state is used.
+            mode (optional): A member of
+                :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`.
+                If `None`, :func:`~texar.context.global_mode` is used.
+                Note that if :attr:`cell` is given when constructing the
+                deocoder, the :attr:`mode` here does not have an effect to
+                :attr:`cell`.
 
         Returns:
             `(outputs, final_state, sequence_lengths)`: `outputs` is an object
@@ -114,6 +125,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         if max_decoding_length_infer is None:
             max_decoding_length_infer = utils.MAX_SEQ_LENGTH
         max_decoding_length = tf.cond(
+            #utils.is_train_mode(mode),
             context.global_mode_train(),
             lambda: max_decoding_length_train,
             lambda: max_decoding_length_infer)
