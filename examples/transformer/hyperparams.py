@@ -30,6 +30,9 @@ argparser.add_argument('--eval_tgt', type=str, default='eval_ende_wmt_bpe32k_de.
 argparser.parse_args(namespace=args)
 args.vocab_dir = os.path.expanduser(args.data_dir)
 boundaries = _bucket_boundaries(max_length=256)
+boundaries = [b + 1 for b in boundaries]
+#since there is no <BOS> token in t2t, but there is BOS in our model
+
 bucket_batch_size = [240, 180, 180, 180, 144, 144, 144, 120, 120, 120, 90, 90, 90, 90, 80, 72, 72, 60, 60, 48, 48, 48, 40, 40, 36, 30, 30, 24, 24, 20, 20, 18, 18, 16, 15, 12, 12, 10, 10, 9, 8, 8]
 
 train_dataset_hparams = {
@@ -61,35 +64,36 @@ encoder_hparams = {
             'type': 'uniform_unit_scaling',
             }
         },
-    'max_seq_length':256,
+    #'max_seq_length':256,
     'sinusoid': True,
+    # no need to set max_seq_length in encoder when sinusoid is used
     'num_blocks': 6,
     'num_heads': 8,
     'poswise_feedforward': {
-    'name':'ffn',
-    'layers':[
-        {
-            'type':'Conv1D',
-            'kwargs': {
-                'filters':hidden_dim*4,
-                'kernel_size':1,
-                'activation':'relu',
-                'use_bias':True,
-            }
-        },
-        {
-            'type':'Dropout',
-            'kwargs': {
-                'rate': 0.1,
-            }
-        },
-        {
-            'type':'Conv1D',
-            'kwargs': {
-                'filters':hidden_dim,
-                'kernel_size':1,
-                'use_bias':True,
+        'name':'ffn',
+        'layers':[
+            {
+                'type':'Dense',
+                'kwargs': {
+                    'name':'conv1',
+                    'units':hidden_dim*4,
+                    'activation':'relu',
+                    'use_bias':True,
                 }
+            },
+            {
+                'type':'Dropout',
+                'kwargs': {
+                    'rate': 0.1,
+                }
+            },
+            {
+                'type':'Dense',
+                'kwargs': {
+                    'name':'conv2',
+                    'units':hidden_dim,
+                    'use_bias':True,
+                    }
             }
         ],
     },
@@ -98,7 +102,7 @@ decoder_hparams = copy.deepcopy(encoder_hparams)
 decoder_hparams['share_embed_and_transform'] = True
 
 loss_hparams = {
-    'label_smoothing': 0.1,
+    'label_confidence': 0.9,
 }
 
 opt_hparams = {
