@@ -142,7 +142,7 @@ def train(sess, epoch_cnt):
         try:
             _, step, loss = sess.run(
                 [train_op, global_step, mle_loss],
-                feed_dict={context.is_train(): True})
+                feed_dict={context.global_mode(): True})
             if step % 10 == 0:
                 print("step %d, at epoch %d: %.6f" % (step, epoch_cnt, 
                                                       loss))
@@ -159,7 +159,7 @@ def valid(sess, epoch_cnt):
         try:
             f_output, loss = sess.run(
                 [outputs, mle_loss],
-                feed_dict={context.is_train(): False})
+                feed_dict={context.global_mode(): False})
 
             item_cnt += len(f_output.logits)
             loss_cnt += len(f_output.logits) * loss  
@@ -180,7 +180,7 @@ def test(sess):
         try:
             f_output, loss = sess.run(
                 [outputs, mle_loss],
-                feed_dict={context.is_train(): False})
+                feed_dict={context.global_mode(): False})
 
             item_cnt += len(f_output.logits)
             loss_cnt += len(f_output.logits) * loss  
