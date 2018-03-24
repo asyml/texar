@@ -36,6 +36,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                  cell=None,
                  vocab_size=None,
                  output_layer=None,
+                 cell_dropout_mode=None,
                  hparams=None):
         ModuleBase.__init__(self, hparams)
 
@@ -47,12 +48,8 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             if cell is not None:
                 self._cell = cell
             else:
-                self._cell = layers.get_rnn_cell(self._hparams.rnn_cell)
-
-        #self._external_cell_given = False
-        #if cell is not None:
-        #    self._cell = cell
-        #    self._external_cell_given = True
+                self._cell = layers.get_rnn_cell(
+                    self._hparams.rnn_cell, cell_dropout_mode)
 
         # Make the output layer
         self._vocab_size = vocab_size
