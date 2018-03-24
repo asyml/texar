@@ -157,7 +157,7 @@ if __name__ == "__main__":
                     for batch_idx in range(num_batch):
                         source, target, predict, _, gstep, loss, mgd = sess.run(
                             [src_input, tgt_input, preds, train_op, global_step, mle_loss, merged],
-                            feed_dict={context.is_train(): True})
+                            feed_dict={context.global_mode(): tf.estimator.ModeKeys.TRAIN})
                         #print('source:{}'.format(source))
                         #print('target:{}'.format(target))
                         #exit()

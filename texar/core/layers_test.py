@@ -59,8 +59,9 @@ class GetRNNCellTest(tf.test.TestCase):
                              cell.zero_state(batch_size, dtype=tf.float32))
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
-            output_, state_ = sess.run([output, state],
-                                       feed_dict={context.is_train(): True})
+            output_, state_ = sess.run(
+                [output, state],
+                feed_dict={context.global_mode(): tf.estimator.ModeKeys.TRAIN})
             self.assertEqual(output_.shape[0], batch_size)
             if isinstance(state_, (list, tuple)):
                 self.assertEqual(state_[0].shape[0], batch_size)

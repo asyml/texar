@@ -99,7 +99,7 @@ class TransformerDecoder(ModuleBase):
         self.dec = tf.layers.dropout(
             self.dec,
             rate=self._hparams.dropout,
-            training=context.is_train()
+            training=context.global_mode_train()
         )
 
         for i in range(self._hparams.num_blocks):
@@ -118,7 +118,7 @@ class TransformerDecoder(ModuleBase):
                     self.dec = self.dec + tf.layers.dropout(
                         selfatt_output,
                         rate=self._hparams.dropout,
-                        training=context.is_train()
+                        training=context.global_mode_train()
                     )
 
                 with tf.variable_scope('encdec_attention'):
@@ -134,14 +134,14 @@ class TransformerDecoder(ModuleBase):
                         scope="multihead_attention")
                     self.dec = self.dec + tf.layers.dropout(encdec_output, \
                         rate=self._hparams.dropout,
-                        training=context.is_train()
+                        training=context.global_mode_train()
                     )
                 poswise_network = FeedForwardNetwork(hparams=self._hparams['poswise_feedforward'])
                 with tf.variable_scope(poswise_network.variable_scope):
                     sub_output = tf.layers.dropout(
                         poswise_network(layers.layer_normalize(self.dec)),
                         rate=self._hparams.dropout,
-                        training=context.is_train()
+                        training=context.global_mode_train()
                     )
                     self.dec = self.dec + sub_output
 

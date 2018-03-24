@@ -76,7 +76,7 @@ class FeedForwardNetwork(ModuleBase):
 
         Returns:
         """
-        training = context.is_train()
+        training = context.global_mode_train()
         if mode is not None and mode == tf.estimator.ModeKeys.TRAIN:
             training = True
 

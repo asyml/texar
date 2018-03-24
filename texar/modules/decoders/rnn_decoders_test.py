@@ -61,7 +61,7 @@ class BasicRNNDecoderTest(tf.test.TestCase):
 
             outputs_, final_state_, sequence_lengths_ = sess.run(
                 [outputs, final_state, sequence_lengths],
-                feed_dict={context.is_train(): True})
+                feed_dict={context.global_mode(): tf.estimator.ModeKeys.TRAIN})
             self.assertIsInstance(outputs_, BasicRNNDecoderOutput)
             self.assertEqual(
                 outputs_.logits.shape,
@@ -117,7 +117,7 @@ class BasicRNNDecoderTest(tf.test.TestCase):
 
             outputs_, final_state_, sequence_lengths_ = sess.run(
                 [outputs, final_state, sequence_lengths],
-                feed_dict={context.is_train(): True,
+                feed_dict={context.global_mode(): tf.estimator.ModeKeys.TRAIN,
                            _inputs_placeholder: inputs_,
                            _embedding_placeholder: embedding_})
             self.assertEqual(final_state_[0].shape,
@@ -125,7 +125,7 @@ class BasicRNNDecoderTest(tf.test.TestCase):
 
             tf_outputs_, tf_final_state_, tf_sequence_lengths_ = sess.run(
                 [tf_outputs, tf_final_state, tf_sequence_lengths],
-                feed_dict={context.is_train(): True,
+                feed_dict={context.global_mode(): tf.estimator.ModeKeys.TRAIN,
                            _inputs_placeholder: inputs_,
                            _embedding_placeholder: embedding_})
 
@@ -163,7 +163,8 @@ class BasicRNNDecoderTest(tf.test.TestCase):
             sess.run(tf.global_variables_initializer())
             outputs_, final_state_, sequence_lengths_ = sess.run(
                 [outputs, final_state, sequence_lengths],
-                feed_dict={context.is_train(): False})
+                feed_dict={context.global_mode():
+                           tf.estimator.ModeKeys.PREDICT})
             self.assertIsInstance(outputs_, BasicRNNDecoderOutput)
             max_length = max(sequence_lengths_)
             self.assertEqual(
@@ -227,7 +228,7 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
             sess.run(tf.global_variables_initializer())
             outputs_, final_state_, sequence_lengths_ = sess.run(
                 [outputs, final_state, sequence_lengths],
-                feed_dict={context.is_train(): True})
+                feed_dict={context.global_mode(): tf.estimator.ModeKeys.TRAIN})
             self.assertIsInstance(outputs_, AttentionRNNDecoderOutput)
             self.assertEqual(
                 outputs_.logits.shape,
@@ -278,7 +279,8 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
             sess.run(tf.global_variables_initializer())
             outputs_, final_state_, sequence_lengths_ = sess.run(
                 [outputs, final_state, sequence_lengths],
-                feed_dict={context.is_train(): False})
+                feed_dict={context.global_mode():
+                           tf.estimator.ModeKeys.PREDICT})
             self.assertIsInstance(outputs_, AttentionRNNDecoderOutput)
             max_length = max(sequence_lengths_)
             self.assertEqual(

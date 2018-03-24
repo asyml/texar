@@ -124,7 +124,7 @@ def default_rnn_cell_hparams():
     }
 
 
-def get_rnn_cell(hparams=None):
+def get_rnn_cell(hparams=None, mode=None):
     """Creates an RNN cell.
 
     See :meth:`~texar.core.layers.default_rnn_cell_hparams` for all
@@ -136,6 +136,10 @@ def get_rnn_cell(hparams=None):
             :attr:`hparams["type"]` is a cell instance (rather
             than the name or path to the cell class), then
             :attr:`hparams["num_layers"]` must be 1.
+        mode (optional): A member of
+            :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
+            `TRAIN`, `EVAL`, and `PREDICT`. If `None`, dropout will be
+            controlled by :func:`texar.context.global_mode`.
 
     Returns:
         An instance of :tf_main:`RNNCell <contrib/rnn/RNNCell>`.
@@ -170,7 +174,7 @@ def get_rnn_cell(hparams=None):
             if num_layers > 1:
                 raise ValueError(
                     "If `hparams['num_layers']`>1, then "
-                    "`hparams['cell']['type']` must be a string name or path "
+                    "`hparams['type']` must be a string name or path "
                     "to the class.")
             cell = cell_type
         if not isinstance(cell, rnn.RNNCell):
@@ -185,11 +189,17 @@ def get_rnn_cell(hparams=None):
                 vr_kwargs = {"variational_recurrent": True,
                              "input_size": d_hp["input_size"][layer_i],
                              "dtype": tf.float32}
+            input_keep_prob = utils.switch_dropout(d_hp["input_keep_prob"],
+                                                   mode)
+            output_keep_prob = utils.switch_dropout(d_hp["output_keep_prob"],
+                                                    mode)
+            state_keep_prob = utils.switch_dropout(d_hp["state_keep_prob"],
+                                                   mode)
             cell = rnn.DropoutWrapper(
                 cell=cell,
-                input_keep_prob=utils.switch_dropout(d_hp["input_keep_prob"]),
-                output_keep_prob=utils.switch_dropout(d_hp["output_keep_prob"]),
-                state_keep_prob=utils.switch_dropout(d_hp["state_keep_prob"]),
+                input_keep_prob=input_keep_prob,
+                output_keep_prob=output_keep_prob,
+                state_keep_prob=state_keep_prob,
                 **vr_kwargs)
 
         # Optionally add residual and highway connections
@@ -1135,7 +1145,8 @@ def multihead_attention(queries,
         outputs *= query_masks
 
         #attention dropout
-        outputs = tf.layers.dropout(outputs, rate=dropout_rate, training=context.is_train())
+        outputs = tf.layers.dropout(
+            outputs, rate=dropout_rate, training=context.global_mode_train())
 
         outputs = tf.matmul(outputs, V_)
         outputs = tf.concat(tf.split(outputs, num_heads, axis=0), axis=2)
