@@ -12,7 +12,7 @@ import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
 from texar import context
 from texar.hyperparams import HParams
-from texar.core import utils
+from texar.utils import utils
 
 # pylint: disable=not-context-manager, redefined-variable-type, invalid-name
 # pylint: disable=too-many-branches, too-many-arguments, too-many-lines
@@ -60,21 +60,19 @@ def default_rnn_cell_hparams():
         .. code-block:: python
 
             {
-                "cell": {
-                    # Name or full path of the cell class. E.g., the classname
-                    # of built-in cells in `tensorflow.contrib.rnn`, or the
-                    # classname of user-defined cells in `texar.custom`, or a
-                    # full path like "my_module.MyCell".
-                    "type": "BasicLSTMCell",
+                # Name or full path of the cell class. E.g., the classname
+                # of built-in cells in `tensorflow.contrib.rnn`, or the
+                # classname of user-defined cells in `texar.custom`, or a
+                # full path like "my_module.MyCell".
+                "type": "BasicLSTMCell",
 
-                    # A dictionary of arguments for constructor of the cell
-                    # class. An RNN cell is created by calling the cell class
-                    # named in `type` passing the arguments specified in
-                    # `kwargs` as `cell_class(**kwargs)`
-                    "kwargs": {
-                        "num_units": 64
-                    }
-                },
+                # A dictionary of arguments for constructor of the cell
+                # class. An RNN cell is created by calling the cell class
+                # named in `type` passing the arguments specified in
+                # `kwargs` as `cell_class(**kwargs)`
+                "kwargs": {
+                    "num_units": 64
+                }
 
                 # Number of cell layers
                 "num_layers": 1
@@ -109,11 +107,9 @@ def default_rnn_cell_hparams():
             }
     """
     return {
-        "cell": {
-            "type": "BasicLSTMCell",
-            "kwargs": {
-                "num_units": 64
-            }
+        "type": "BasicLSTMCell",
+        "kwargs": {
+            "num_units": 64
         },
         "num_layers": 1,
         "dropout": {
@@ -128,7 +124,7 @@ def default_rnn_cell_hparams():
     }
 
 
-def get_rnn_cell(hparams=None):
+def get_rnn_cell(hparams=None, mode=None):
     """Creates an RNN cell.
 
     See :meth:`~texar.core.layers.default_rnn_cell_hparams` for all
@@ -137,16 +133,20 @@ def get_rnn_cell(hparams=None):
     Args:
         hparams (dict or HParams, optional): Cell hyperparameters. Missing
             hyperparameters are set to default values. If
-            :attr:`hparams["cell"]["type"]` is a cell instance (rather
+            :attr:`hparams["type"]` is a cell instance (rather
             than the name or path to the cell class), then
             :attr:`hparams["num_layers"]` must be 1.
+        mode (optional): A Tensor taking value in
+            :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
+            `TRAIN`, `EVAL`, and `PREDICT`. If `None`, dropout will be
+            controlled by :func:`texar.context.global_mode`.
 
     Returns:
         An instance of :tf_main:`RNNCell <contrib/rnn/RNNCell>`.
 
     Raises:
         ValueError: If :attr:`hparams["num_layers"]` > 1 and
-            :attr:`hparams["cell"]["type"]` is not of type string.
+            :attr:`hparams["type"]` is not of type string.
         ValueError: The cell is not an
             :tf_main:`RNNCell <contrib/rnn/RNNCell>` instance.
     """
@@ -162,11 +162,11 @@ def get_rnn_cell(hparams=None):
             (hparams["num_layers"], len(d_hp["input_size"])))
 
     cells = []
-    cell_kwargs = hparams["cell"]["kwargs"].todict()
+    cell_kwargs = hparams["kwargs"].todict()
     num_layers = hparams["num_layers"]
     for layer_i in range(num_layers):
         # Create the basic cell
-        cell_type = hparams["cell"]["type"]
+        cell_type = hparams["type"]
         if utils.is_str_or_unicode(cell_type):
             cell_modules = ['tensorflow.contrib.rnn', 'texar.custom']
             cell = utils.get_instance(cell_type, cell_kwargs, cell_modules)
@@ -174,7 +174,7 @@ def get_rnn_cell(hparams=None):
             if num_layers > 1:
                 raise ValueError(
                     "If `hparams['num_layers']`>1, then "
-                    "`hparams['cell']['type']` must be a string name or path "
+                    "`hparams['type']` must be a string name or path "
                     "to the class.")
             cell = cell_type
         if not isinstance(cell, rnn.RNNCell):
@@ -189,11 +189,17 @@ def get_rnn_cell(hparams=None):
                 vr_kwargs = {"variational_recurrent": True,
                              "input_size": d_hp["input_size"][layer_i],
                              "dtype": tf.float32}
+            input_keep_prob = utils.switch_dropout(d_hp["input_keep_prob"],
+                                                   mode)
+            output_keep_prob = utils.switch_dropout(d_hp["output_keep_prob"],
+                                                    mode)
+            state_keep_prob = utils.switch_dropout(d_hp["state_keep_prob"],
+                                                   mode)
             cell = rnn.DropoutWrapper(
                 cell=cell,
-                input_keep_prob=utils.switch_dropout(d_hp["input_keep_prob"]),
-                output_keep_prob=utils.switch_dropout(d_hp["output_keep_prob"]),
-                state_keep_prob=utils.switch_dropout(d_hp["state_keep_prob"]),
+                input_keep_prob=input_keep_prob,
+                output_keep_prob=output_keep_prob,
+                state_keep_prob=state_keep_prob,
                 **vr_kwargs)
 
         # Optionally add residual and highway connections
@@ -1139,7 +1145,9 @@ def multihead_attention(queries,
         #outputs *= query_masks
 
         #attention dropout
-        outputs = tf.layers.dropout(outputs, rate=dropout_rate, training=context.is_train())
+        outputs = tf.layers.dropout(
+            outputs, rate=dropout_rate, training=context.global_mode_train())
+
         outputs = tf.matmul(outputs, V_)
         outputs = combine_heads(outputs)
         outputs = tf.layers.dense(outputs, num_units, use_bias=False, name='output_transform')

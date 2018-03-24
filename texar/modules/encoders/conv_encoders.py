@@ -12,7 +12,7 @@ import tensorflow as tf
 from texar.utils.exceptions import TexarError
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.networks import FeedForwardNetwork
-from texar.core.utils import uniquify_str
+from texar.utils.utils import uniquify_str
 
 # pylint: disable=not-context-manager, too-many-arguments, too-many-locals
 

@@ -13,7 +13,7 @@ from tensorflow.contrib.seq2seq import Helper as TFHelper
 from tensorflow.contrib.distributions import RelaxedOneHotCategorical \
     as GumbelSoftmax
 
-from texar.core import utils
+from texar.utils import utils
 
 # pylint: disable=not-context-manager, too-many-arguments
 # pylint: disable=too-many-instance-attributes
@@ -177,15 +177,14 @@ class SoftmaxEmbeddingHelper(TFHelper):
         """Initializer.
 
         Args:
-          embedding: A callable that takes a vector tensors of 'ids' or the
-            params argument for embedding_lookup.
+          embedding: An embedding argument for embedding_lookup.
           start_tokens: 'int32' vector shaped [batch_size], the start tokens.
           tau: softmax anneal temperature.
           stop_gradient: stop the gradient when feeding to the next step.
         """
 
         if callable(embedding):
-            self._embedding_fn = embedding
+            raise ValueError("embedding must be an embedding matrix.")
         else:
             self._embedding = embedding
             self._embedding_fn = (

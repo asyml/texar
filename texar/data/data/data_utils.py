@@ -14,12 +14,13 @@ import tensorflow as tf
 
 import numpy as np
 
-from texar.core import utils
+from texar.utils import utils
 
 # pylint: disable=invalid-name
 
 __all__ = [
     "_DataSpec",
+    "_connect_name",
     "maybe_tuple",
     "make_partial",
     "make_chained_transformation",
@@ -27,7 +28,6 @@ __all__ = [
     "random_shard_dataset",
     "count_file_lines"
 ]
-
 
 #TODO(zhiting): unit test
 class _DataSpec(object): # pylint: disable=too-few-public-methods
@@ -52,7 +52,6 @@ class _DataSpec(object): # pylint: disable=too-few-public-methods
         kwargs['embedding'] = embedding
         self.__dict__.update(kwargs)
 
-
     def add_spec(self, **kwargs):
         """Adds new field.
         """
@@ -67,7 +66,7 @@ class _DataSpec(object): # pylint: disable=too-few-public-methods
             kwargs[k] = v[i] if isinstance(v, (tuple, list)) else v
         return _DataSpec(**kwargs)
 
-    def set_ith_data_spec(self, i, data_spec, num):
+    def set_ith_data_spec(self, i, data_spec, total_count):
         """Sets the i-th specification to respective values in
         :attr:`data_spec`.
         """
@@ -77,12 +76,50 @@ class _DataSpec(object): # pylint: disable=too-few-public-methods
                 if isinstance(v_, (tuple, list)):
                     v_[i] = v
                 else:
-                    self.__dict__[k] = v
+                    new_v_ = [v_] * total_count
+                    new_v_[i] = v
+                    self.__dict__[k] = new_v_
             else:
-                v_ = [None] * num
+                v_ = [None] * total_count
                 v_[i] = v
                 self.__dict__[k] = v_
 
+def _make_length_filter_fn(length_name, max_length):
+    """Returns a predicate function which takes in data sample
+    and returns a bool indicating whether to filter by length.
+    """
+    def _filter_fn(data):
+        return data[length_name] <= max_length
+    return _filter_fn
+
+def _make_combined_filter_fn(filter_fns, mode="and"):
+    """Returns a new predicate function that combines multiple
+    predicate functions with certain mode.
+
+    Args:
+        filter_fns (list): Filter functions to combine. `None` functions are
+            ignored.
+        mode (str): A mode from `{"and", "or"}`.
+    """
+    def _combined_fn(data):
+        outputs = []
+        for fn in filter_fns:
+            if fn:
+                outputs.append(fn(data))
+        if mode == "and":
+            return tf.reduce_all(outputs)
+        elif mode == "or":
+            return tf.reduce_any(outputs)
+        else:
+            raise ValueError("Unknown mode: {}".format(mode))
+    return _combined_fn
+
+def _connect_name(lhs_name, rhs_name):
+    if not lhs_name:
+        return rhs_name
+    if not rhs_name:
+        return lhs_name
+    return "{}_{}".format(lhs_name, rhs_name)
 
 def maybe_tuple(data):
     """Returns `tuple(data)` if :attr:`data` contains more than 1 elements.
@@ -100,6 +137,18 @@ def make_partial(fn, *args, **kwargs):
     def _new_fn(data):
         return fn(data, *args, **kwargs)
     return _new_fn
+
+def name_prefix_fn(name_prefix):
+    """Returns a function that append a prefix to field names.
+    """
+    def _prefix_fn(data):
+        transformed_data = {}
+        for name, value in six.iteritems(data):
+            new_name = _connect_name(name_prefix, name)
+            transformed_data[new_name] = value
+        return transformed_data
+
+    return _prefix_fn
 
 def make_chained_transformation(tran_fns, *args, **kwargs):
     """Returns a dataset transformation function that applies a list of
@@ -161,7 +210,7 @@ def make_combined_transformation(tran_fns, name_prefix=None, *args, **kwargs):
             for name, value in six.iteritems(data_i):
                 new_name = name
                 if name_prefix:
-                    new_name = "{}_{}".format(name_prefix[i], name)
+                    new_name = _connect_name(name_prefix[i], name)
                 if new_name in transformed_data:
                     raise ValueError(
                         "Field name already exists: {}".format(new_name))

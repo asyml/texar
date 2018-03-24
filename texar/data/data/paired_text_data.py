@@ -8,20 +8,21 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import copy
+
 import tensorflow as tf
 
-from texar.core import utils
+from texar.utils import utils
 from texar.data.data.mono_text_data import _default_mono_text_dataset_hparams
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data.mono_text_data import MonoTextData
-from texar.data.data_decoders import TextDataDecoder
 from texar.data.data import data_utils
 from texar.data.vocabulary import Vocab
 from texar.data.embedding import Embedding
 from texar.data.constants import BOS_TOKEN, EOS_TOKEN
 
 # pylint: disable=invalid-name, arguments-differ, not-context-manager
-# pylint: disable=protected-access
+# pylint: disable=protected-access, too-many-arguments
 
 __all__ = [
     "_default_paired_text_dataset_hparams",
@@ -34,12 +35,14 @@ def _default_paired_text_dataset_hparams():
     # TODO(zhiting): add more docs
     source_hparams = _default_mono_text_dataset_hparams()
     source_hparams["bos_token"] = None
+    source_hparams["data_name"] = "source"
     target_hparams = _default_mono_text_dataset_hparams()
     target_hparams.update(
         {
             "vocab_share": False,
             "embedding_init_share": False,
-            "processing_share": False
+            "processing_share": False,
+            "data_name": "target"
         }
     )
     return {
@@ -142,49 +145,86 @@ class PairedTextData(TextDataBase):
             compression_type=self._hparams.target_dataset.compression_type)
         return tf.data.Dataset.zip((src_dataset, tgt_dataset))
 
+    @staticmethod
+    def _get_name_prefix(src_hparams, tgt_hparams):
+        name_prefix = [
+            src_hparams["data_name"], tgt_hparams["data_name"]]
+        if name_prefix[0] == name_prefix[1]:
+            raise ValueError("'data_name' of source and target "
+                             "datasets cannot be the same.")
+        return name_prefix
 
-    #TODO(zhiting)
-    #def _make_processor(dataset_hparams, data_spec, name_prefix=None):
-
-
-    def _process_dataset(self):
-        # pylint: disable=attribute-defined-outside-init
+    @staticmethod
+    def _make_processor(src_hparams, tgt_hparams, data_spec, name_prefix):
         # Create source data decoder
-        src_hparams = self._hparams.source_dataset
-        self._src_decoder = TextDataDecoder(
-            delimiter=src_hparams["delimiter"],
-            bos_token=src_hparams["bos_token"],
-            eos_token=src_hparams["eos_token"],
-            max_seq_length=src_hparams["max_seq_length"],
-            token_to_id_map=self._src_vocab.token_to_id_map)
+        data_spec_i = data_spec.get_ith_data_spec(0)
+        src_decoder, src_trans, data_spec_i = MonoTextData._make_processor(
+            src_hparams, data_spec_i, chained=False)
+        data_spec.set_ith_data_spec(0, data_spec_i, 2)
 
         # Create target data decoder
-        if self._hparams.target_dataset.processing_share:
-            tgt_proc_hparams = self._hparams.source_dataset
-        else:
-            tgt_proc_hparams = self._hparams.target_dataset
-        self._tgt_decoder = TextDataDecoder(
-            delimiter=tgt_proc_hparams["delimiter"],
-            bos_token=tgt_proc_hparams["bos_token"],
-            eos_token=tgt_proc_hparams["eos_token"],
-            max_seq_length=tgt_proc_hparams["max_seq_length"],
-            token_to_id_map=self._tgt_vocab.token_to_id_map)
+        tgt_proc_hparams = tgt_hparams
+        if tgt_hparams["processing_share"]:
+            tgt_proc_hparams = copy.copy(src_hparams)
+            try:
+                tgt_proc_hparams["variable_utterance"] = \
+                        tgt_hparams["variable_utterance"]
+            except TypeError:
+                tgt_proc_hparams.variable_utterance = \
+                        tgt_hparams["variable_utterance"]
+        data_spec_i = data_spec.get_ith_data_spec(1)
+        tgt_decoder, tgt_trans, data_spec_i = MonoTextData._make_processor(
+            tgt_proc_hparams, data_spec_i, chained=False)
+        data_spec.set_ith_data_spec(1, data_spec_i, 2)
 
-        src_trans = MonoTextData._make_other_transformations(
-            src_hparams["other_transformations"], self)
-        tgt_trans = MonoTextData._make_other_transformations(
-            tgt_proc_hparams["other_transformations"], self)
         tran_fn = data_utils.make_combined_transformation(
-            [[self._src_decoder] + src_trans, [self._tgt_decoder] + tgt_trans],
-            name_prefix=["source", "target"])
+            [[src_decoder] + src_trans, [tgt_decoder] + tgt_trans],
+            name_prefix=name_prefix)
 
-        # Process data
-        num_parallel_calls = self._hparams.num_parallel_calls
-        self._dataset = self._dataset.map(
+        data_spec.add_spec(name_prefix=name_prefix)
+
+        return tran_fn, data_spec
+
+    @staticmethod
+    def _make_length_filter(src_hparams, tgt_hparams,
+                            src_length_name, tgt_length_name,
+                            src_decoder, tgt_decoder):
+        src_filter_fn = MonoTextData._make_length_filter(
+            src_hparams, src_length_name, src_decoder)
+        tgt_filter_fn = MonoTextData._make_length_filter(
+            tgt_hparams, tgt_length_name, tgt_decoder)
+        combined_filter_fn = data_utils._make_combined_filter_fn(
+            [src_filter_fn, tgt_filter_fn])
+        return combined_filter_fn
+
+    def _process_dataset(self, dataset, hparams, data_spec):
+        name_prefix = PairedTextData._get_name_prefix(
+            hparams["source_dataset"], hparams["target_dataset"])
+        tran_fn, data_spec = self._make_processor(
+            hparams["source_dataset"], hparams["target_dataset"],
+            data_spec, name_prefix=name_prefix)
+
+        num_parallel_calls = hparams["num_parallel_calls"]
+        dataset = dataset.map(
             lambda *args: tran_fn(data_utils.maybe_tuple(args)),
             num_parallel_calls=num_parallel_calls)
 
-    def _make_length_fn(self):
+        # Filter by length
+        src_length_name = data_utils._connect_name(
+            data_spec.name_prefix[0],
+            data_spec.decoder[0].length_tensor_name)
+        tgt_length_name = data_utils._connect_name(
+            data_spec.name_prefix[1],
+            data_spec.decoder[1].length_tensor_name)
+        filter_fn = self._make_length_filter(
+            hparams["source_dataset"], hparams["target_dataset"],
+            src_length_name, tgt_length_name,
+            data_spec.decoder[0], data_spec.decoder[1])
+        dataset = dataset.apply(lambda dataset: dataset.filter(filter_fn))
+
+        return dataset, data_spec
+
+    def _make_bucket_length_fn(self):
         length_fn = self._hparams.bucket_length_fn
         if not length_fn:
             length_fn = lambda x: tf.maximum(
@@ -215,22 +255,28 @@ class PairedTextData(TextDataBase):
         dataset, dataset_size = self._shuffle_dataset(
             dataset, self._hparams, self._hparams.source_dataset.files)
         self._dataset_size = dataset_size
-        self._dataset = dataset
 
         # Processing.
-        # Try to ensure all class attributes are created before this part,
-        # so that the transformation func can have access to
-        # them when called with `transformation_func(data, self)`
-        self._process_dataset()
+        data_spec = data_utils._DataSpec(
+            dataset=dataset, dataset_size=self._dataset_size,
+            vocab=[self._src_vocab, self._tgt_vocab],
+            embedding=[self._src_embedding, self._tgt_embedding])
+        dataset, data_spec = self._process_dataset(
+            dataset, self._hparams, data_spec)
+        self._data_spec = data_spec
+        self._decoder = data_spec.decoder
+        self._src_decoder = data_spec.decoder[0]
+        self._tgt_decoder = data_spec.decoder[1]
 
         # Batching
-        length_fn = self._make_length_fn()
-        self._dataset = self._make_batch(
-            self._dataset, self._hparams, length_fn)
+        length_fn = self._make_bucket_length_fn()
+        dataset = self._make_batch(dataset, self._hparams, length_fn)
 
+        # Prefetching
         if self._hparams.prefetch_buffer_size > 0:
-            self._dataset = self._dataset.prefetch(
-                self._hparams.prefetch_buffer_size)
+            dataset = dataset.prefetch(self._hparams.prefetch_buffer_size)
+
+        self._dataset = dataset
 
     def list_items(self):
         """Returns the list of item names that the data can produce.
@@ -304,37 +350,79 @@ class PairedTextData(TextDataBase):
     def source_text_name(self):
         """The name of the source text tensor.
         """
-        return 'source_' + self._src_decoder.text_tensor_name
+        name = data_utils._connect_name(
+            self._data_spec.name_prefix[0],
+            self._src_decoder.text_tensor_name)
+        return name
 
     @property
     def source_length_name(self):
         """The name of the source length tensor.
         """
-        return 'source_' + self._src_decoder.length_tensor_name
+        name = data_utils._connect_name(
+            self._data_spec.name_prefix[0],
+            self._src_decoder.length_tensor_name)
+        return name
 
     @property
     def source_text_id_name(self):
         """The name of the source text index tensor.
         """
-        return 'source_' + self._src_decoder.text_id_tensor_name
+        name = data_utils._connect_name(
+            self._data_spec.name_prefix[0],
+            self._src_decoder.text_id_tensor_name)
+        return name
+
+    @property
+    def source_utterance_cnt_name(self):
+        """The name of the source text utterance count tensor.
+        """
+        if not self._hparams.source_dataset.variable_utterance:
+            raise ValueError(
+                "`utterance_cnt_name` of source data is undefined.")
+        name = data_utils._connect_name(
+            self._data_spec.name_prefix[0],
+            self._src_decoder.utterance_cnt_tensor_name)
+        return name
 
     @property
     def target_text_name(self):
         """The name of the target text tensor.
         """
-        return 'target_' + self._tgt_decoder.text_tensor_name
+        name = data_utils._connect_name(
+            self._data_spec.name_prefix[1],
+            self._tgt_decoder.text_tensor_name)
+        return name
 
     @property
     def target_length_name(self):
         """The name of the target length tensor.
         """
-        return 'target_' + self._tgt_decoder.length_tensor_name
+        name = data_utils._connect_name(
+            self._data_spec.name_prefix[1],
+            self._tgt_decoder.length_tensor_name)
+        return name
 
     @property
     def target_text_id_name(self):
         """The name of the target text index tensor.
         """
-        return 'target_' + self._tgt_decoder.text_id_tensor_name
+        name = data_utils._connect_name(
+            self._data_spec.name_prefix[1],
+            self._tgt_decoder.text_id_tensor_name)
+        return name
+
+    @property
+    def target_utterance_cnt_name(self):
+        """The name of the target text utterance count tensor.
+        """
+        if not self._hparams.target_dataset.variable_utterance:
+            raise ValueError(
+                "`utterance_cnt_name` of target data is undefined.")
+        name = data_utils._connect_name(
+            self._data_spec.name_prefix[1],
+            self._tgt_decoder.utterance_cnt_tensor_name)
+        return name
 
     @property
     def text_name(self):
@@ -354,3 +442,12 @@ class PairedTextData(TextDataBase):
         """
         return self._src_decoder.text_id_tensor_name
 
+    @property
+    def utterance_cnt_name(self):
+        """The name of the target text utterance count tensor.
+        """
+        if self._hparams.source_dataset.variable_utterance:
+            return self._src_decoder.utterance_cnt_tensor_name
+        if self._hparams.target_dataset.variable_utterance:
+            return self._tgt_decoder.utterance_cnt_tensor_name
+        raise ValueError("`utterance_cnt_name` is not defined.")

@@ -20,8 +20,11 @@ from texar.data.constants import PADDING_TOKEN
 __all__ = [
     "ScalarDataDecoder",
     "TextDataDecoder",
-    "MultiSentenceTextDataDecoder"
+    "VarUttTextDataDecoder"
 ]
+
+def _append_token(token):
+    return token is not None and token != ""
 
 class ScalarDataDecoder(data_decoder.DataDecoder):
     """A data decoder that decodes a scalar, e.g., int label or float number.
@@ -37,9 +40,12 @@ class ScalarDataDecoder(data_decoder.DataDecoder):
     def __init__(self, dtype=tf.int32, data_name="data"):
         self._dtype = dtype
         self._data_name = data_name
+        if self._data_name is None:
+            self._data_name = "data"
 
     def __call__(self, data):
-        return self.decode(data, self.list_items())
+        outputs = self.decode(data, self.list_items())
+        return dict(zip(self.list_items(), outputs))
 
     def decode(self, data, items):
         """Decodes the data to return the tensors specified by the list of
@@ -71,6 +77,11 @@ class ScalarDataDecoder(data_decoder.DataDecoder):
         """
         return [self._data_name]
 
+    @property
+    def data_tensor_name(self):
+        """The name of the data tensor.
+        """
+        return self._data_name
 
 class TextDataDecoder(data_decoder.DataDecoder):
     """A text data decoder that decodes raw text data.
@@ -90,7 +101,7 @@ class TextDataDecoder(data_decoder.DataDecoder):
             sequences. If it is `None` (default) or an empty string, no EOS
             token is added.
         max_seq_length (int, optional): Maximum length of output sequences.
-            Tokens exceed the maximum length will be truncated. The length
+            Tokens exceeding the maximum length will be truncated. The length
             does not include any added bos_token and eos_token. If not
             given, no truncation is performed.
         token_to_id_map (optional): A
@@ -124,6 +135,7 @@ class TextDataDecoder(data_decoder.DataDecoder):
         self._text_tensor_name = text_tensor_name
         self._text_id_tensor_name = text_id_tensor_name
         self._length_tensor_name = length_tensor_name
+        self._added_length = 0
 
     def __call__(self, data):
         outputs = self.decode(data, self.list_items())
@@ -156,10 +168,12 @@ class TextDataDecoder(data_decoder.DataDecoder):
             tokens = tokens[:self._max_seq_length]
 
         # Add BOS/EOS tokens
-        if self._bos_token is not None and self._bos_token != "":
+        if _append_token(self._bos_token):
             tokens = tf.concat([[self._bos_token], tokens], axis=0)
-        if self._eos_token is not None and self._eos_token != "":
+            self._added_length += 1
+        if _append_token(self._eos_token):
             tokens = tf.concat([tokens, [self._eos_token]], axis=0)
+            self._added_length += 1
 
         # Map to index
         token_ids = None
@@ -213,8 +227,13 @@ class TextDataDecoder(data_decoder.DataDecoder):
     def text_id_tensor_name(self, name):
         self._text_id_tensor_name = name
 
+    @property
+    def added_length(self):
+        """The added text length due to appended bos and eos tokens.
+        """
+        return self._added_length
 
-class MultiSentenceTextDataDecoder(data_decoder.DataDecoder):
+class VarUttTextDataDecoder(data_decoder.DataDecoder):
     """A text data decoder that decodes raw text data. Each data is considered
     to be multiple sentences concatenated by a delimiter.
 
@@ -237,11 +256,12 @@ class MultiSentenceTextDataDecoder(data_decoder.DataDecoder):
             padding will be done to ensure output sequence all reach this
             number. The length does not include any added bos_token and eos_
             token.
-        max_context_length (int): Maximum number of sequences.
-            Additional empty sentences will be add to the output sequence to
-            ensure the tensor have max_context_length dimension. The context
-            length tensor to be get from the return value will contain the
-            actual number of sentences before padding.
+        max_utterance_cnt (int): Maximum number of sequences.
+            Additional empty sentences will be added to
+            ensure the respective dimension of the output tensor has size
+            :attr:`max_utterance_cnt`. The output item named by
+            :meth:`utterance_cnt_tensor_name` contains the actual number of
+            utterance in the data.
         token_to_id_map (optional): A
             :class:`~tensorflow.contrib.lookup.HashTable` instance that maps
             token strings to integer indexes. If not given, the decoder will
@@ -261,12 +281,12 @@ class MultiSentenceTextDataDecoder(data_decoder.DataDecoder):
                  bos_token=None,
                  eos_token=None,
                  max_seq_length=None,
-                 max_context_length=None,
+                 max_utterance_cnt=None,
                  token_to_id_map=None,
                  text_tensor_name="text",
                  length_tensor_name="length",
                  text_id_tensor_name="text_ids",
-                 context_length_tensor_name="context_lengths"):
+                 utterance_cnt_tensor_name="utterance_cnt"):
         self._split_level = split_level
         self._delimiter = delimiter
         self._bos_token = bos_token
@@ -276,14 +296,16 @@ class MultiSentenceTextDataDecoder(data_decoder.DataDecoder):
         self._text_tensor_name = text_tensor_name
         self._text_id_tensor_name = text_id_tensor_name
         self._length_tensor_name = length_tensor_name
-        self._context_length_tensor_name = context_length_tensor_name
+        self._utterance_cnt_tensor_name = utterance_cnt_tensor_name
         self._sentence_delimiter = sentence_delimiter
-        self._max_context_length = max_context_length
+        self._max_utterance_cnt = max_utterance_cnt
+        self._added_length = 0
 
     def __call__(self, data):
-        return self.decode(data, self.list_items())
+        outputs = self.decode(data, self.list_items())
+        return dict(zip(self.list_items(), outputs))
 
-    def decode(self, data, items):
+    def decode(self, data, items): # pylint: disable=too-many-locals
         """Decodes the data to return the tensors specified by the list of
         items.
 
@@ -301,33 +323,51 @@ class MultiSentenceTextDataDecoder(data_decoder.DataDecoder):
         sentences = tf.string_split([data],
                                     delimiter=self._sentence_delimiter).values
 
+        # Truncate utterances
+        if self._max_utterance_cnt:
+            sentences = sentences[:self._max_utterance_cnt]
+        utterance_cnt = tf.shape(sentences)[0]
+
+        # Get (max) sentence length
+        def _get_sent_length(s):
+            raw_length = tf.size(
+                tf.string_split([s], delimiter=self._delimiter).values)
+            if self._max_seq_length:
+                return tf.minimum(raw_length, self._max_seq_length)
+            else:
+                return raw_length
+
+        raw_sent_length = tf.map_fn(
+            _get_sent_length, sentences, dtype=tf.int32)
         sent_length = self._max_seq_length
-        if self._eos_token:
+        if not sent_length:
+            sent_length = tf.reduce_max(raw_sent_length)
+        if _append_token(self._eos_token):
+            raw_sent_length += 1
             sent_length += 1
-
-        if self._bos_token:
+            self._added_length += 1
+        if _append_token(self._bos_token):
+            raw_sent_length += 1
             sent_length += 1
+            self._added_length += 1
 
-        # Padding function.
-        def _pad_token(s, padding, pad_length):
-            while s.size < pad_length:
-                s = np.append(s, padding)
+        def _trunc_and_pad(s, pad_token, max_length):
+            if self._max_seq_length:
+                s = s[:self._max_seq_length]
+            if _append_token(self._bos_token):
+                s = np.append([self._bos_token], s)
+            if _append_token(self._eos_token):
+                s = np.append(s, [self._eos_token])
+            s = np.append(s, [pad_token]*(max_length-s.size))
             return s
 
         # Split each sentence to tokens, and pad them to a same length.
         # This is necessary to treat all sentences as a single tensor.
-        # Note that we have to pad the EOS symbol before the padding, if
-        # _eos_token is defined
         split_sentences = tf.map_fn(
             lambda s: tf.py_func(
-                _pad_token,
+                _trunc_and_pad,
                 [
-                    tf.concat(
-                        [tf.string_split([s], delimiter=self._delimiter).values,
-                         [self._eos_token]], axis=0
-                    )
-                    if self._eos_token  # Add EOS above if defined.
-                    else tf.string_split([s], delimiter=self._delimiter).values,
+                    tf.string_split([s], delimiter=self._delimiter).values,
                     PADDING_TOKEN,
                     sent_length
                 ],
@@ -335,48 +375,8 @@ class MultiSentenceTextDataDecoder(data_decoder.DataDecoder):
             sentences, dtype=tf.string
         )
 
-        # Get number of actual sentences.
-        length = tf.shape(sentences)[0]
-
-        # Truncate, since we may have already added the EOS token, we add one
-        # to compensate this.
-        max_length = self._max_seq_length + 1 if self._eos_token \
-            else self._max_seq_length
-        split_sentences = tf.map_fn(
-            lambda x: x[:max_length],
-            split_sentences, dtype=tf.string
-        )
-
-        # Add BOS tokens.
-        split_sentences = tf.map_fn(
-            lambda x: tf.concat([[self._bos_token], x],
-                                axis=0) if self._bos_token else x,
-            split_sentences,
-            dtype=tf.string
-        )
-
-        # Shape will be lost after py_func, remember it first.
-        origin_shape = split_sentences.shape
-
-        split_sentences = tf.map_fn(
-            lambda s: tf.py_func(_pad_token, [s, PADDING_TOKEN, sent_length],
-                                 tf.string),
-            split_sentences,
-            dtype=tf.string,
-        )
-        split_sentences.set_shape(origin_shape)
-
-        # Pad additional sentence.
-        def _pad_sentence(s, padding, pad_length):
-            while s.shape[0] < pad_length:
-                s = np.vstack([s, padding])
-            return s
-
-        sent_padding = tf.tile([PADDING_TOKEN], [sent_length])
-        split_sentences = tf.py_func(_pad_sentence,
-                                     [split_sentences, sent_padding,
-                                      self._max_context_length], [tf.string])[0]
-        split_sentences.set_shape((self._max_context_length, sent_length))
+        split_sentences = tf.reshape(split_sentences,
+                                     [utterance_cnt, sent_length])
 
         # Map to index
         token_ids = None
@@ -385,8 +385,8 @@ class MultiSentenceTextDataDecoder(data_decoder.DataDecoder):
 
         outputs = {
             self._text_tensor_name: split_sentences,
-            self._length_tensor_name: tf.size(split_sentences),
-            self._context_length_tensor_name: length,
+            self._length_tensor_name: raw_sent_length,
+            self._utterance_cnt_tensor_name: tf.shape(sentences)[0],
             self._text_id_tensor_name: token_ids
         }
         return [outputs[item] for item in items]
@@ -401,7 +401,7 @@ class MultiSentenceTextDataDecoder(data_decoder.DataDecoder):
             self._text_tensor_name,
             self._length_tensor_name,
             self._text_id_tensor_name,
-            self._context_length_tensor_name
+            self._utterance_cnt_tensor_name
         ]
 
     @property
@@ -415,10 +415,10 @@ class MultiSentenceTextDataDecoder(data_decoder.DataDecoder):
         self._text_tensor_name = name
 
     @property
-    def context_length_tensor_name(self):
-        """The name of context length tensor.
+    def utterance_cnt_tensor_name(self):
+        """The name of the utterance count tensor.
         """
-        return self._context_length_tensor_name
+        return self._utterance_cnt_tensor_name
 
     @property
     def length_tensor_name(self):
@@ -439,3 +439,9 @@ class MultiSentenceTextDataDecoder(data_decoder.DataDecoder):
     @text_id_tensor_name.setter
     def text_id_tensor_name(self, name):
         self._text_id_tensor_name = name
+
+    @property
+    def added_length(self):
+        """The added text length due to appended bos and eos tokens.
+        """
+        return self._added_length
