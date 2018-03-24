@@ -150,7 +150,7 @@ class TransformerEncoder(EncoderBase):
                 tf.tile(tf.expand_dims(tf.range(tf.shape(inputs)[1]), 0), [tf.shape(inputs)[0], 1]))
 
         self.enc = tf.layers.dropout(self.enc, \
-            rate=self._hparams.dropout, training=context.is_train())
+            rate=self._hparams.dropout, training=context.global_mode_train())
         pad_remover = utils.padding_related.PadRemover(encoder_padding)
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("layer_{}".format(i)):
@@ -168,7 +168,7 @@ class TransformerEncoder(EncoderBase):
                     self.enc = self.enc + tf.layers.dropout(
                         selfatt_output,
                         rate=self._hparams.dropout,
-                        training=context.is_train()
+                        training=context.global_mode_train()
                     )
                 poswise_network = FeedForwardNetwork(hparams=self._hparams['poswise_feedforward'])
                 with tf.variable_scope(poswise_network.variable_scope):
@@ -180,7 +180,7 @@ class TransformerEncoder(EncoderBase):
                     sub_output = tf.layers.dropout(
                         poswise_network(x),
                         rate=self._hparams.dropout,
-                        training=context.is_train()
+                        training=context.global_mode_train()
                     )
                     sub_output = tf.reshape(pad_remover.restore(tf.squeeze(\
                         sub_output, axis=0)), original_shape

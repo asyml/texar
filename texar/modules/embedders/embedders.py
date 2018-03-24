@@ -122,6 +122,12 @@ class WordEmbedder(ModuleBase):
         return outputs
 
     @property
+    def embedding(self):
+        """The embedding tensor.
+        """
+        return self._embedding
+
+    @property
     def dim(self):
         """The embedding dimension.
         """

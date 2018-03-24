@@ -11,7 +11,6 @@ from __future__ import unicode_literals
 import tensorflow as tf
 
 from texar.data.data.data_base import DataBase
-from texar.data.data import data_utils
 
 
 __all__ = [
@@ -58,32 +57,4 @@ class TextDataBase(DataBase): # pylint: disable=too-few-public-methods
                 element_length_func, bucket_boundaries, bucket_batch_size)
 
         return dataset
-
-    @staticmethod
-    def _shuffle_dataset(dataset, hparams, dataset_files):
-        dataset_size = None
-        shuffle_buffer_size = hparams["shuffle_buffer_size"]
-        if hparams["shard_and_shuffle"]:
-            if shuffle_buffer_size is None:
-                raise ValueError(
-                    "Dataset hyperparameter 'shuffle_buffer_size' "
-                    "must not be `None` if 'shard_and_shuffle'=`True`.")
-            dataset_size = data_utils.count_file_lines(dataset_files)
-            if shuffle_buffer_size >= dataset_size:
-                raise ValueError(
-                    "Dataset size (%d) <= shuffle_buffer_size (%d). Set "
-                    "shuffle_and_shard to `False`." %
-                    (dataset_size, shuffle_buffer_size))
-            #TODO(zhiting): Use a different seed?
-            dataset = dataset.apply(data_utils.random_shard_dataset(
-                dataset_size, shuffle_buffer_size, hparams["seed"]))
-            dataset = dataset.shuffle(shuffle_buffer_size + 16, # add a margin
-                                      seed=hparams["seed"])
-        elif hparams["shuffle"]:
-            if shuffle_buffer_size is None:
-                dataset_size = data_utils.count_file_lines(dataset_files)
-                shuffle_buffer_size = dataset_size
-            dataset = dataset.shuffle(shuffle_buffer_size, seed=hparams["seed"])
-
-        return dataset, dataset_size
 

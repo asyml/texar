@@ -17,7 +17,7 @@ from tensorflow.contrib.seq2seq import AttentionWrapper
 from tensorflow.python.util import nest
 
 from texar.modules.decoders.rnn_decoder_base import RNNDecoderBase
-from texar.core.utils import get_instance, get_function
+from texar.utils.utils import get_instance, get_function
 
 __all__ = [
     "BasicRNNDecoderOutput",
@@ -524,6 +524,14 @@ class AttentionRNNDecoder(RNNDecoderBase):
                 lambda _: dtype, self._alignments_size()),
             attention_context=nest.map_structure(
                 lambda _: dtype, self._cell.state_size.attention))
+
+    def zero_state(self, batch_size, dtype):
+        """Zero state of the basic cell.
+
+        Same as :attr:`decoder.cell._cell.zero_state`.
+        """
+        return self._cell._cell.zero_state(
+            batch_size=batch_size, dtype=dtype)
 
     @property
     def state_size(self):

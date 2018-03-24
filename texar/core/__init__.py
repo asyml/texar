@@ -9,7 +9,6 @@ from __future__ import print_function
 
 # pylint: disable=wildcard-import
 
-from texar.core.utils import *
 from texar.core.layers import *
 from texar.core.replay_memories import *
 from texar.core.explorations import *

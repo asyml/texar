@@ -63,7 +63,7 @@ class TextDataTest(tf.test.TestCase):
                     self.assertEqual(set(data.keys()),
                                      set(text_database.list_items()))
                     self.assertEqual(len(data['text']), hparams['batch_size'])
-                    self.assertEqual(text_database.vocab.vocab_size,
+                    self.assertEqual(text_database.vocab.size,
                                      len(vocab_list) + 4)
 
             except tf.errors.OutOfRangeError:
@@ -130,9 +130,9 @@ class TextDataTest(tf.test.TestCase):
                                      hparams['batch_size'])
                     self.assertEqual(len(data['target_text']),
                                      hparams['batch_size'])
-                    self.assertEqual(text_database.source_vocab.vocab_size,
+                    self.assertEqual(text_database.source_vocab.size,
                                      len(vocab_list) + 4)
-                    self.assertEqual(text_database.target_vocab.vocab_size,
+                    self.assertEqual(text_database.target_vocab.size,
                                      len(vocab_list) + 4)
 
                     src_text = data['source_text']
@@ -221,9 +221,9 @@ class TextDataTest(tf.test.TestCase):
                                      hparams['batch_size'])
                     self.assertEqual(len(data['2_label']),
                                      hparams['batch_size'])
-                    self.assertEqual(database.datasets[0].vocab.vocab_size,
+                    self.assertEqual(database.datasets[0].vocab.size,
                                      len(vocab_list) + 4)
-                    self.assertEqual(database.datasets[1].vocab.vocab_size,
+                    self.assertEqual(database.datasets[1].vocab.size,
                                      len(vocab_list) + 4)
 
                     text_0 = data['0_text']
@@ -255,9 +255,9 @@ class TextDataTest(tf.test.TestCase):
 
         source_text = [
             'This is a dialog 1 sentence . ||| This is a dialog 1 sentence . '
-            '||| This is yet another dialog 1 sentence .',
+            '||| This is yet another dialog 1 sentence .', #//
             'This is a dialog 2 sentence . ||| '
-            'This is also a dialog 2 sentence . '
+            'This is also a dialog 2 sentence . ', #//
         ]
         src_text_file = tempfile.NamedTemporaryFile()
         src_text_file.write('\n'.join(source_text).encode("utf-8"))
@@ -279,7 +279,7 @@ class TextDataTest(tf.test.TestCase):
                 "vocab_file": vocab_file.name,
                 "processing": {
                     "max_seq_length": 10,
-                    "max_context_length": 3
+                    "max_utterance_cnt": 3
                 }
             },
             "target_dataset": {
@@ -312,9 +312,9 @@ class TextDataTest(tf.test.TestCase):
                                      hparams['batch_size'])
                     self.assertEqual(len(data['target_text']),
                                      hparams['batch_size'])
-                    self.assertEqual(text_database.source_vocab.vocab_size,
+                    self.assertEqual(text_database.source_vocab.size,
                                      len(vocab_list) + 4)
-                    self.assertEqual(text_database.target_vocab.vocab_size,
+                    self.assertEqual(text_database.target_vocab.size,
                                      len(vocab_list) + 4)
 
             except tf.errors.OutOfRangeError:

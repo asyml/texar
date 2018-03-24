@@ -9,5 +9,6 @@ from __future__ import print_function
 
 # pylint: disable=wildcard-import
 
+from texar.utils.utils import *
 from texar.utils.exceptions import *
 from texar.utils.padding_related import *
