@@ -477,7 +477,6 @@ def get_layer(hparams):
                 kwargs[k] = get_constraint_fn(v)
             else:
                 kwargs[k] = v
-
         layer = utils.get_instance(layer_type, kwargs, layer_modules)
 
     if not isinstance(layer, tf.layers.Layer):
@@ -1074,10 +1073,9 @@ def sinusoid_positional_encoding(inputs,
 
 def multihead_attention(queries,
                         keys,
-                        queries_valid_length,
-                        keys_valid_length,
-                        causality,
-                        num_heads,
+                        keys_padding=None,
+                        causality=False,
+                        num_heads=8,
                         num_units=None,
                         dropout_rate=0,
                         scope='multihead_attention'):
@@ -1101,60 +1099,60 @@ def multihead_attention(queries,
             num_units = queries.get_shape().as_list()[-1]
         if keys is None:
             keys = queries
-
+        if num_units % num_heads != 0:
+            raise ValueError("Value depth (%d) must be divisible by the number"
+                             "of attention heads (%d)." % (\
+                            num_units, num_heads))
         Q = tf.layers.dense(queries, num_units, use_bias=False, name='q')
         K = tf.layers.dense(keys, num_units, use_bias=False, name='k')
         V = tf.layers.dense(keys, num_units, use_bias=False, name='v')
 
-        Q_ = tf.concat(tf.split(Q, num_heads, axis=2), axis=0)
-        K_ = tf.concat(tf.split(K, num_heads, axis=2), axis=0)
-        V_ = tf.concat(tf.split(V, num_heads, axis=2), axis=0)
+        Q_ = split_heads(Q, num_heads)
+        #[batch_size, num_heads, seq_length, memory_depth]
+        K_ = split_heads(K, num_heads)
+        V_ = split_heads(V, num_heads)
 
-        outputs = tf.matmul(Q_, tf.transpose(K_, [0, 2, 1]))
-
-        # attention scale
-        outputs = outputs / (K_.get_shape().as_list()[-1] ** 0.5)
-
-        max_key_len = tf.to_int32(tf.shape(keys))[1]
-        key_masks = tf.sequence_mask(
-            tf.to_int32(keys_valid_length), max_key_len, tf.float32)
-        key_masks = tf.tile(key_masks, [num_heads,1])
-        key_masks = tf.tile(tf.expand_dims(key_masks, 1), [1, tf.shape(queries)[1], 1])
-        paddings = tf.ones_like(outputs)*(-1e9)
-        outputs = tf.where(tf.equal(key_masks, 0), paddings, outputs)
+        key_depth_per_head = num_units // num_heads
+        Q_ *= key_depth_per_head**-0.5
+        outputs = tf.matmul(Q_, K_, transpose_b=True)
+        # attention scale => query scale
+        # outputs = outputs / (K_.get_shape().as_list()[-1] ** 0.5)
+        if keys_padding is not None:
+            key_attention_bias = keys_padding * -1e9
+            key_attention_bias = tf.expand_dims(
+                tf.expand_dims(key_attention_bias, 1),2)
+            outputs += key_attention_bias
 
         if causality:
-            diag_vals = tf.ones_like(outputs[0, :, :])
+            diag_vals = tf.ones_like(outputs[0, 0, :, :])
             if tf.__version__.startswith('1.4'):
                 tril = tf.contrib.linalg.LinearOperatorTriL(diag_vals).to_dense()
             elif tf.__version__.startswith('1.6'):
                 tril = tf.contrib.linalg.LinearOperatorLowerTriangular(diag_vals).to_dense()
-            masks = tf.tile(tf.expand_dims(tril, 0), [tf.shape(outputs)[0], 1, 1])
-            paddings = tf.ones_like(masks)*(-2**32+1)
-            outputs = tf.where(tf.equal(masks, 0), paddings, outputs)
+            masks = tf.expand_dims(tf.expand_dims(tril, 0), 1)
+            forward_attention_bias = (1 - masks)*(-1e9)
+            outputs += forward_attention_bias
 
         outputs = tf.nn.softmax(outputs)
         # outputs => probability simplex
 
-        max_query_len =tf.to_int32(tf.shape(queries))[1]
-        query_masks = tf.sequence_mask(
-            tf.to_int32(queries_valid_length), max_query_len, tf.float32)
-        query_masks = tf.tile(query_masks, [num_heads,1])
-        query_masks = tf.tile(tf.expand_dims(query_masks, -1), [1, 1, tf.shape(keys)[1]])
+        #max_query_len =tf.to_int32(tf.shape(queries))[1]
+        #query_masks = tf.sequence_mask(
+        #    tf.to_int32(queries_valid_length), max_query_len, tf.float32)
+        #query_masks = tf.tile(query_masks, [num_heads,1])
+        #query_masks = tf.tile(tf.expand_dims(query_masks, -1), [1, 1, tf.shape(keys)[1]])
         # batch, query_len, key_len
-        outputs *= query_masks
+        #outputs *= query_masks
 
         #attention dropout
         outputs = tf.layers.dropout(
             outputs, rate=dropout_rate, training=context.global_mode_train())
 
         outputs = tf.matmul(outputs, V_)
-        outputs = tf.concat(tf.split(outputs, num_heads, axis=0), axis=2)
-
+        outputs = combine_heads(outputs)
         outputs = tf.layers.dense(outputs, num_units, use_bias=False, name='output_transform')
         #(batch_size, length_query, attention_depth)
     return outputs
-
 
 def layer_normalize(inputs,
               #epsilon=1e-6, it seems in t2t, it's 1e-6
@@ -1181,3 +1179,40 @@ def layer_normalize(inputs,
         norm_x = (inputs - mean) * tf.rsqrt(variance + epsilon)
         outputs = norm_x * scale + bias
     return outputs
+
+
+def split_heads(x, num_heads):
+    """Split channels (dimension 2) into multiple heads, becomes dimension 1).
+        must ensure x.shape[-1] can be deviced by num_heads.any
+    """
+    depth = x.get_shape()[-1]
+    splitted_x = tf.reshape(x, [tf.shape(x)[0], tf.shape(x)[1], \
+        num_heads, depth // num_heads])
+    return tf.transpose(splitted_x, [0, 2, 1, 3])
+def combine_heads(x):
+    """
+    input: [batch, num_heads, seq_len, dim]
+    output:[batch, seq_len, num_heads*dim]
+    """
+    t = tf.transpose(x, [0, 2, 1, 3]) #[batch, seq_len, num_heads, dim]
+    num_heads, dim = t.get_shape()[-2:]
+    return tf.reshape(t, [tf.shape(t)[0], tf.shape(t)[1], num_heads*dim])
+
+def shape_list(x):
+  """Return list of dims, statically where possible."""
+  x = tf.convert_to_tensor(x)
+
+  # If unknown rank, return dynamic shape
+  if x.get_shape().dims is None:
+    return tf.shape(x)
+
+  static = x.get_shape().as_list()
+  shape = tf.shape(x)
+
+  ret = []
+  for i in range(len(static)):
+    dim = static[i]
+    if dim is None:
+      dim = shape[i]
+    ret.append(dim)
+  return ret

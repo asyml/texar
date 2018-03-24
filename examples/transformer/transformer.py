@@ -28,9 +28,9 @@ if __name__ == "__main__":
     logdir = './logdir/'
     config_logging(logdir)
 
-    tf.set_random_seed(123)
-    np.random.seed(123)
-    random.seed(123)
+    tf.set_random_seed(1234)
+    np.random.seed(1234)
+    random.seed(1234)
     hidden_dim = 512
     # Construct the database
     text_database = qPairedTextData(train_dataset_hparams)
@@ -44,15 +44,13 @@ if __name__ == "__main__":
 
     enc_input_length = tf.reduce_sum(tf.to_float(tf.not_equal(encoder_input, 0)), axis=-1)
     dec_input_length = tf.reduce_sum(tf.to_float(tf.not_equal(decoder_input, 0)), axis=-1)
-    labels_length = tf.reduce_sum(tf.to_float(tf.not_equal(labels, 0)), axis=-1)
-
     #enc_input_length = tf.Print(enc_input_length,
     #    data=[tf.shape(ori_src_text), tf.shape(ori_tgt_text), enc_input_length, dec_input_length, labels_length])
 
     encoder = TransformerEncoder(
         vocab_size=text_database.source_vocab.vocab_size,\
         hparams=encoder_hparams)
-    encoder_output = encoder(encoder_input, inputs_length=enc_input_length)
+    encoder_padding, encoder_output = encoder(encoder_input, inputs_length=enc_input_length)
     decoder = TransformerDecoder(
         embedding = encoder._embedding,
         hparams=decoder_hparams)
@@ -60,19 +58,14 @@ if __name__ == "__main__":
     logits, preds = decoder(
         decoder_input,
         encoder_output,
-        src_length=enc_input_length,
-        tgt_length=dec_input_length
+        encoder_padding,
     )
-    smooth_labels = mle_losses.label_smoothing(labels, text_database.target_vocab.vocab_size, \
-        loss_hparams['label_smoothing'])
-    mle_loss = mle_losses.average_sequence_softmax_cross_entropy(
-        labels=smooth_labels,
-        logits=logits,
-        sequence_length=labels_length
-    )
-
+    mle_loss = mle_losses.smoothing_cross_entropy(logits, labels, text_database.target_vocab.vocab_size,
+        loss_hparams['label_confidence'])
     istarget = tf.to_float(tf.not_equal(labels, 0))
-    acc = tf.reduce_sum(tf.to_float(tf.equal(tf.to_int64(preds), labels))*istarget) / tf.to_float((tf.reduce_sum(labels_length)))
+    mle_loss = tf.reduce_sum(mle_loss * istarget) / tf.reduce_sum(istarget)
+
+    acc = tf.reduce_sum(tf.to_float(tf.equal(tf.to_int64(preds), labels))*istarget) / tf.to_float((tf.reduce_sum(istarget)))
     tf.summary.scalar('acc', acc)
     global_step = tf.Variable(0, trainable=False)
 
