@@ -54,7 +54,9 @@ class Conv1DClassifier(ClassifierBase):
         """
         hparams = Conv1DEncoder.default_hparams()
         hparams.update(
-            {"num_classes": 2, "logit_layer_kwargs": None})
+            {"name": "conv1d_classifier",
+             "num_classes": 2,
+             "logit_layer_kwargs": None})
         return hparams
 
     def _build(self, inputs, mode=None): # pylint: disable=arguments-differ
