@@ -158,15 +158,15 @@ class BasicRNNDecoder(RNNDecoderBase):
                 :meth:`~texar.modules.default_helper_infer_hparams`
 
             "max_decoding_length_train": int or None
-                Maximum allowed number of decoding steps in training phase.
+                Maximum allowed number of decoding steps in training mode..
 
-                The default value is `None`, which means decoding is
+                The default is `None`, which means decoding is
                 performed until fully done, e.g., encountering the <EOS> token.
 
             "max_decoding_length_infer" : int or None
-                Maximum allowed number of decoding steps in inference phase.
+                Maximum allowed number of decoding steps in inference mode.
 
-                The default value is `None`, which means decoding is
+                The default is `None`, which means decoding is
                 performed until fully done, e.g., encountering the <EOS> token.
 
             "name" : str
