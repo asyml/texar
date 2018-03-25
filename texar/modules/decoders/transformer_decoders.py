@@ -75,7 +75,7 @@ class TransformerDecoder(ModuleBase):
             'poswise_feedforward':None,
         }
 
-    def _build(self, inputs, encoder_output, src_length, tgt_length):
+    def _build(self, inputs, encoder_output, encoder_padding):
         if self._embedding is not None:
             self.dec = tf.nn.embedding_lookup(self._embedding, inputs)
         else:
@@ -83,7 +83,6 @@ class TransformerDecoder(ModuleBase):
 
         if self._hparams.multiply_embedding_mode == 'sqrt_depth':
             self.dec = self.dec * (self._embedding.shape.as_list()[-1]**0.5)
-
         if self._hparams.sinusoid:
             self.dec += layers.sinusoid_positional_encoding(
                 self.dec,
@@ -99,7 +98,7 @@ class TransformerDecoder(ModuleBase):
         self.dec = tf.layers.dropout(
             self.dec,
             rate=self._hparams.dropout,
-            training=context.is_train()
+            training=context.global_mode_train()
         )
 
         for i in range(self._hparams.num_blocks):
@@ -108,40 +107,42 @@ class TransformerDecoder(ModuleBase):
                     selfatt_output = layers.multihead_attention(
                         queries=layers.layer_normalize(self.dec),
                         keys=None,
-                        queries_valid_length=tgt_length,
-                        keys_valid_length=tgt_length,
+                        keys_padding=None,
                         num_units=self._hparams.embedding.dim,
                         num_heads=self._hparams.num_heads,
                         dropout_rate=self._hparams.dropout,
                         causality=True,
-                        scope="self_attention")
+                        scope="self_attention"
+                    )
+                    # no padding is ever followed by nonpadding,
+                    # so causality can cover keys padding
                     self.dec = self.dec + tf.layers.dropout(
                         selfatt_output,
                         rate=self._hparams.dropout,
-                        training=context.is_train()
+                        training=context.global_mode_train()
                     )
 
                 with tf.variable_scope('encdec_attention'):
                     encdec_output = layers.multihead_attention(
                         queries=layers.layer_normalize(self.dec),
                         keys=encoder_output,
-                        queries_valid_length=tgt_length,
-                        keys_valid_length=src_length,
+                        keys_padding=encoder_padding,
                         num_units=self._hparams.embedding.dim,
                         num_heads=self._hparams.num_heads,
                         dropout_rate=self._hparams.dropout,
                         causality=False,
-                        scope="multihead_attention")
+                        scope="multihead_attention"
+                    )
                     self.dec = self.dec + tf.layers.dropout(encdec_output, \
                         rate=self._hparams.dropout,
-                        training=context.is_train()
+                        training=context.global_mode_train()
                     )
                 poswise_network = FeedForwardNetwork(hparams=self._hparams['poswise_feedforward'])
                 with tf.variable_scope(poswise_network.variable_scope):
                     sub_output = tf.layers.dropout(
                         poswise_network(layers.layer_normalize(self.dec)),
                         rate=self._hparams.dropout,
-                        training=context.is_train()
+                        training=context.global_mode_train()
                     )
                     self.dec = self.dec + sub_output
 

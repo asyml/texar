@@ -10,7 +10,7 @@ from __future__ import print_function
 from tensorflow import gfile
 import numpy as np
 
-from texar.core import utils
+from texar.utils import utils
 from texar.hyperparams import HParams
 
 __all__ = [

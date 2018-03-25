@@ -8,7 +8,7 @@ from __future__ import division
 from __future__ import print_function
 
 # pylint: disable=not-context-manager, too-many-arguments, no-name-in-module
-# pylint: disable=too-many-branches, protected-access
+# pylint: disable=too-many-branches, protected-access, W0221
 
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import Decoder as TFDecoder
@@ -16,7 +16,8 @@ from tensorflow.contrib.seq2seq import dynamic_decode
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.util import nest
 
-from texar.core import layers, utils
+from texar.core import layers
+from texar.utils import utils
 from texar import context
 from texar.module_base import ModuleBase
 from texar.modules.decoders import rnn_decoder_helpers
@@ -35,6 +36,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                  cell=None,
                  vocab_size=None,
                  output_layer=None,
+                 cell_dropout_mode=None,
                  hparams=None):
         ModuleBase.__init__(self, hparams)
 
@@ -46,7 +48,8 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             if cell is not None:
                 self._cell = cell
             else:
-                self._cell = layers.get_rnn_cell(self._hparams.rnn_cell)
+                self._cell = layers.get_rnn_cell(
+                    self._hparams.rnn_cell, cell_dropout_mode)
 
         # Make the output layer
         self._vocab_size = vocab_size
@@ -83,15 +86,21 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             "name": "rnn_decoder"
         }
 
-
-    def _build(self, helper, initial_state):    # pylint: disable=W0221
+    def _build(self, helper, initial_state=None):
         """Performs decoding.
 
         Args:
             helper: An instance of `tf.contrib.seq2seq.Helper` that helps with
                 the decoding process. For example, use an instance of
                 `TrainingHelper` in training phase.
-            initial_state: Initial state of decoding.
+            initial_state (optional): Initial state of decoding.
+                If `None` (default), zero state is used.
+            mode (optional): A member of
+                :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`.
+                If `None`, :func:`~texar.context.global_mode` is used.
+                Note that if :attr:`cell` is given when constructing the
+                deocoder, the :attr:`mode` here does not have an effect to
+                :attr:`cell`.
 
         Returns:
             `(outputs, final_state, sequence_lengths)`: `outputs` is an object
@@ -100,7 +109,11 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             Tensor of shape `[batch_size]`.
         """
         self._helper = helper
-        self._initial_state = initial_state
+        if initial_state is not None:
+            self._initial_state = initial_state
+        else:
+            self._initial_state = self.zero_state(
+                batch_size=self.batch_size, dtype=tf.float32)
 
         max_decoding_length_train = self._hparams.max_decoding_length_train
         if max_decoding_length_train is None:
@@ -109,7 +122,8 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         if max_decoding_length_infer is None:
             max_decoding_length_infer = utils.MAX_SEQ_LENGTH
         max_decoding_length = tf.cond(
-            context.is_train(),
+            #utils.is_train_mode(mode),
+            context.global_mode_train(),
             lambda: max_decoding_length_train,
             lambda: max_decoding_length_infer)
         outputs, final_state, sequence_lengths = dynamic_decode(
@@ -182,6 +196,14 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         """The RNN cell.
         """
         return self._cell
+
+    def zero_state(self, batch_size, dtype):
+        """Zero state of the rnn cell.
+
+        Same as :attr:`decoder.cell.zero_state`.
+        """
+        return self._cell.zero_state(
+            batch_size=batch_size, dtype=dtype)
 
     @property
     def state_size(self):

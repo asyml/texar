@@ -19,17 +19,47 @@ import tensorflow as tf
 
 # pylint: disable=too-many-locals, no-member, redefined-variable-type
 
-def bleu(hypotheses, references, lowercase=False):
-    """Calculates BLEU score using the MOSES multi-bleu.perl script.
+__all__ = [
+    "sentence_bleu",
+    "corpus_bleu"
+]
+
+def _maybe_list_to_string(list_or_str):
+    if isinstance(list_or_str, (tuple, list, np.ndarray)):
+        return ' '.join(list_or_str)
+    return list_or_str
+
+def sentence_bleu(references, hypothesis, lowercase=False):
+    """Calculates BLEU score of a hypothesis sentence using the MOSES
+    multi-bleu.perl script.
 
     Args:
-        hypotheses (list): A list of strings.
-            Each string is a single hypothesis example. List can also be numpy
-            array.
-        references (list of list): A list of reference list for each of
-            the hypotheses. Each reference list is a list of string where
-            each string is a single reference example. List can also be
-            numpy array.
+        references: A list of reference sentences.
+            A sentence can be either a string, or a list of string tokens.
+            List can also be numpy array.
+        hypotheses: A hypothesis sentence.
+            A sentence can be either a string, or a list of string tokens.
+            List can also be numpy array.
+        lowercase (bool): If true, pass the "-lc" flag to the multi-bleu script
+
+    Returns:
+        float32: the BLEU score.
+    """
+    return corpus_bleu([references], [hypothesis], lowercase=lowercase)
+
+def corpus_bleu(list_of_references, hypotheses, lowercase=False):
+    """Calculates corpus-level BLEU score using the MOSES
+    multi-bleu.perl script.
+
+    Args:
+        references: A list of references, each of which is a list of
+            sentences where each sentence is a single reference example.
+            A sentence can be either a string, or a list of string tokens.
+            List can also be numpy array.
+        hypotheses: A list of sentences.
+            Each sentence is a single hypothesis example.
+            A sentence can be either a string, or a list of string tokens.
+            List can also be numpy array.
         lowercase (bool): If true, pass the "-lc" flag to the multi-bleu script
 
     Returns:
@@ -48,26 +78,28 @@ def bleu(hypotheses, references, lowercase=False):
     result_path = tempfile.mkdtemp()
     # Create hyperthesis file
     hfile_path = os.path.join(result_path, 'hyp')
+    hyps = [_maybe_list_to_string(h) for h in hypotheses]
     with open(hfile_path, "w") as hfile:
-        hfile.write("\n".join(hypotheses).encode("utf-8"))
+        hfile.write("\n".join(hyps).encode("utf-8"))
         hfile.write("\n")
     # Create reference files
-    max_nrefs = max([len(ref) for ref in references])
+    max_nrefs = max([len(refs) for refs in list_of_references])
     rfile_path = os.path.join(result_path, 'ref')
     for rid in range(max_nrefs):
         with open(rfile_path + '%d'%rid, "w") as rfile:
-            for ref in references:
-                if rid < len(ref):
-                    rfile.write(ref[rid].encode("utf-8") + "\n")
+            for refs in list_of_references:
+                if rid < len(refs):
+                    ref = _maybe_list_to_string(refs[rid])
+                    rfile.write(ref.encode("utf-8") + "\n")
                 else:
                     rfile.write("\n")
 
     # Calculate BLEU
+    multi_bleu_cmd = [multi_bleu_path]
+    if lowercase:
+        multi_bleu_cmd += ["-lc"]
+    multi_bleu_cmd += [rfile_path]
     with open(hfile_path, "r") as hyp_input:
-        multi_bleu_cmd = [multi_bleu_path]
-        if lowercase:
-            multi_bleu_cmd += ["-lc"]
-        multi_bleu_cmd += [rfile_path]
         try:
             multi_bleu_ret = subprocess.check_output(
                 multi_bleu_cmd, stdin=hyp_input, stderr=subprocess.STDOUT)
@@ -77,7 +109,7 @@ def bleu(hypotheses, references, lowercase=False):
         except subprocess.CalledProcessError as error:
             if error.output is not None:
                 tf.logging.warning(
-                    "multi-bleu.perl eturned non-zero exit code")
+                    "multi-bleu.perl returned non-zero exit code")
                 tf.logging.warning(error.output)
             bleu_score = np.float32(0.0)
 

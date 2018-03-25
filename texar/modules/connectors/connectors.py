@@ -15,7 +15,7 @@ from tensorflow.python.util import nest    # pylint: disable=E0611
 
 from texar.modules.connectors.connector_base import ConnectorBase
 from texar.core import layers
-from texar.core.utils import get_function, get_instance
+from texar.utils.utils import get_function, get_instance
 
 # pylint: disable=too-many-locals, arguments-differ, too-many-arguments
 

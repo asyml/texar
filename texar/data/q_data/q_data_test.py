@@ -63,7 +63,7 @@ class TextDataTest(tf.test.TestCase):
                     self.assertEqual(set(data.keys()),
                                      set(text_database.list_items()))
                     self.assertEqual(len(data['text']), hparams['batch_size'])
-                    self.assertEqual(text_database.vocab.vocab_size,
+                    self.assertEqual(text_database.vocab.size,
                                      len(vocab_list) + 4)
 
             except tf.errors.OutOfRangeError:
@@ -130,9 +130,9 @@ class TextDataTest(tf.test.TestCase):
                                      hparams['batch_size'])
                     self.assertEqual(len(data['target_text']),
                                      hparams['batch_size'])
-                    self.assertEqual(text_database.source_vocab.vocab_size,
+                    self.assertEqual(text_database.source_vocab.size,
                                      len(vocab_list) + 4)
-                    self.assertEqual(text_database.target_vocab.vocab_size,
+                    self.assertEqual(text_database.target_vocab.size,
                                      len(vocab_list) + 4)
 
                     src_text = data['source_text']
@@ -221,9 +221,9 @@ class TextDataTest(tf.test.TestCase):
                                      hparams['batch_size'])
                     self.assertEqual(len(data['2_label']),
                                      hparams['batch_size'])
-                    self.assertEqual(database.datasets[0].vocab.vocab_size,
+                    self.assertEqual(database.datasets[0].vocab.size,
                                      len(vocab_list) + 4)
-                    self.assertEqual(database.datasets[1].vocab.vocab_size,
+                    self.assertEqual(database.datasets[1].vocab.size,
                                      len(vocab_list) + 4)
 
                     text_0 = data['0_text']
@@ -312,9 +312,9 @@ class TextDataTest(tf.test.TestCase):
                                      hparams['batch_size'])
                     self.assertEqual(len(data['target_text']),
                                      hparams['batch_size'])
-                    self.assertEqual(text_database.source_vocab.vocab_size,
+                    self.assertEqual(text_database.source_vocab.size,
                                      len(vocab_list) + 4)
-                    self.assertEqual(text_database.target_vocab.vocab_size,
+                    self.assertEqual(text_database.target_vocab.size,
                                      len(vocab_list) + 4)
 
             except tf.errors.OutOfRangeError:

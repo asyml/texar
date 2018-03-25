@@ -177,7 +177,7 @@ class Vocab(object):  # pylint: disable=too-many-instance-attributes
         return self._token_to_id_map_py
 
     @property
-    def vocab_size(self):
+    def size(self):
         """The vocabulary size.
         """
         return len(self.token_to_id_map_py)

@@ -152,7 +152,9 @@ def evaluate():
                     np.int32)
                 for j in range(hp.maxlen):
                     loss, _preds = sess.run([mle_loss, preds], \
-                        feed_dict={src_input: src, tgt_input: outputs, context.is_train():False})
+                        feed_dict={
+                            src_input: src, tgt_input: outputs,
+                            context.global_mode(): tf.estimator.ModeKeys.EVAL})
                     #fout.write('loss:{}\n'.format(loss))
                     outputs[:, j] = _preds[:, j]
                 for source, target, pred in zip(sources, targets, outputs): # sentence-wise

@@ -12,7 +12,7 @@ from tensorflow.contrib.rnn import LSTMStateTuple
 
 from texar.modules.encoders import UnidirectionalRNNEncoder
 from texar.modules.encoders.encoder_base import EncoderBase
-from texar.core import utils
+from texar.utils import utils
 
 #TODO(zhiting): this is incomplete
 __all__ = [
@@ -86,7 +86,7 @@ class HierarchicalEncoder(EncoderBase):
                         hparams=self._hparams.encoder_minor.hparams)
 
     #TODO(zhiting): docs for hparams `minor_type` and `minor_cell`.
-    #TODO(xingjiang): 
+    #TODO(xingjiang):
     #   Unfortunately due to the check rule of hyperparameters we cannot
     #   specify the class_name of encoder, should be improved.
     #   See the docs for more details.
@@ -101,7 +101,7 @@ class HierarchicalEncoder(EncoderBase):
         Returns:
             dict: Adictionary with following structure and values:
             .. code-block:: python
-                
+
                 {
                     "name": "hierarchical_encoder_wrapper"
                 }
@@ -167,11 +167,11 @@ class HierarchicalEncoder(EncoderBase):
 
         if time_major == True:
             batch_size = inputs.shape[2].value
-            inputs = tf.reshape(inputs, 
+            inputs = tf.reshape(inputs,
                                 (inputs.shape[0], -1, inputs.shape[-1]))
         else:
             batch_size = inputs.shape[0].value
-            inputs = tf.reshape(inputs, 
+            inputs = tf.reshape(inputs,
                                 (-1, inputs.shape[-2], inputs.shape[-1]))
 
         outputs_minor, states_minor = self._encoder_minor(inputs,
