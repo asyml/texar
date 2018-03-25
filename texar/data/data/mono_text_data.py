@@ -1,6 +1,6 @@
 #
 """
-Various data classes that define data reading, parsing, batching, and other
+Mono text data class that define data reading, parsing, batching, and other
 preprocessing operations.
 """
 
@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 
 import tensorflow as tf
 
-from texar.core import utils
+from texar.utils import utils
 from texar.data.data import data_utils
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data_decoders import TextDataDecoder, VarUttTextDataDecoder
@@ -19,15 +19,43 @@ from texar.data.vocabulary import Vocab
 from texar.data.embedding import Embedding
 from texar.data.constants import BOS_TOKEN, EOS_TOKEN
 
-# pylint: disable=invalid-name, arguments-differ, not-context-manager
+# pylint: disable=invalid-name, arguments-differ, protected-access
 
 __all__ = [
     "_default_mono_text_dataset_hparams",
     "MonoTextData"
 ]
 
+class _LengthFilterMode: # pylint: disable=old-style-class, no-init, too-few-public-methods
+    """Options of length filter mode.
+    """
+    TRUNC = "truncate",
+    DISCARD = "discard"
+
 def _default_mono_text_dataset_hparams():
     """Returns hyperparameters of a mono text dataset with default values.
+
+    Returns:
+        .. code-block:: python
+
+            {
+            }
+
+        Here:
+
+        "max_seq_length" : int, optional
+            Maximum length of output sequences. Data samples exceeding the
+            length will be truncated or discarded according to
+            `"length_filter_mode"`. The length does not include any added
+            `"bos_token"` or `"eos_token"`. If `None` (default), no filtering
+            is performed.
+
+        "length_filter_mode" : str
+            Either `"truncate"` or `"discard"`. If `"truncate"` (default),
+            tokens exceeding the `"max_seq_length"` will be truncated.
+            If `"discard"`, data samples longer than the `"max_seq_length"`
+            will be discarded.
+
     """
     # TODO(zhiting): add more docs
     return {
@@ -37,11 +65,13 @@ def _default_mono_text_dataset_hparams():
         "embedding_init": Embedding.default_hparams(),
         "delimiter": " ",
         "max_seq_length": None,
+        "length_filter_mode": "truncate",
         "bos_token": BOS_TOKEN,
         "eos_token": EOS_TOKEN,
         "other_transformations": [],
         "variable_utterance": False,
         "max_utterance_cnt": 5,
+        "data_name": None,
         "@no_typecheck": ["files"]
     }
 
@@ -125,21 +155,26 @@ class MonoTextData(TextDataBase):
         return other_trans
 
     @staticmethod
-    def _make_processor(dataset_hparams, data_spec, chained=True):
+    def _make_processor(dataset_hparams, data_spec, chained=True,
+                        name_prefix=None):
         # Create data decoder
+        max_seq_length = None
+        if dataset_hparams["length_filter_mode"] == "truncate":
+            max_seq_length = dataset_hparams["max_seq_length"]
+
         if not dataset_hparams["variable_utterance"]:
             decoder = TextDataDecoder(
                 delimiter=dataset_hparams["delimiter"],
                 bos_token=dataset_hparams["bos_token"],
                 eos_token=dataset_hparams["eos_token"],
-                max_seq_length=dataset_hparams["max_seq_length"],
+                max_seq_length=max_seq_length,
                 token_to_id_map=data_spec.vocab.token_to_id_map)
         else:
-            decoder = VarUttTextDataDecoder( #pylint: disable=redefined-variable-type
+            decoder = VarUttTextDataDecoder( # pylint: disable=redefined-variable-type
                 delimiter=dataset_hparams["delimiter"],
                 bos_token=dataset_hparams["bos_token"],
                 eos_token=dataset_hparams["eos_token"],
-                max_seq_length=dataset_hparams["max_seq_length"],
+                max_seq_length=max_seq_length,
                 max_utterance_cnt=dataset_hparams["max_utterance_cnt"],
                 token_to_id_map=data_spec.vocab.token_to_id_map)
 
@@ -147,6 +182,10 @@ class MonoTextData(TextDataBase):
         data_spec.add_spec(decoder=decoder)
         other_trans = MonoTextData._make_other_transformations(
             dataset_hparams["other_transformations"], data_spec)
+        if name_prefix:
+            other_trans.append(data_utils.name_prefix_fn(name_prefix))
+
+        data_spec.add_spec(name_prefix=name_prefix)
 
         if chained:
             chained_tran = data_utils.make_chained_transformation(
@@ -155,19 +194,41 @@ class MonoTextData(TextDataBase):
         else:
             return decoder, other_trans, data_spec
 
+    @staticmethod
+    def _make_length_filter(dataset_hparams, length_name, decoder):
+        filter_mode = dataset_hparams["length_filter_mode"]
+        max_length = dataset_hparams["max_seq_length"]
+        filter_fn = None
+        if filter_mode == _LengthFilterMode.DISCARD and max_length is not None:
+            max_length += decoder.added_length
+            filter_fn = data_utils._make_length_filter_fn(length_name,
+                                                          max_length)
+        return filter_fn
+
     def _process_dataset(self, dataset, hparams, data_spec):
         chained_tran, data_spec = self._make_processor(
-            hparams["dataset"], data_spec)
+            hparams["dataset"], data_spec,
+            name_prefix=hparams["dataset"]["data_name"])
         num_parallel_calls = hparams["num_parallel_calls"]
         dataset = dataset.map(
             lambda *args: chained_tran(data_utils.maybe_tuple(args)),
             num_parallel_calls=num_parallel_calls)
+
+        # Filter by length
+        length_name = data_utils._connect_name(
+            data_spec.name_prefix,
+            data_spec.decoder.length_tensor_name)
+        filter_fn = self._make_length_filter(
+            hparams["dataset"], length_name, data_spec.decoder)
+        if filter_fn:
+            dataset = dataset.apply(lambda dataset: dataset.filter(filter_fn))
+
         return dataset, data_spec
 
-    def _make_length_fn(self):
+    def _make_bucket_length_fn(self):
         length_fn = self._hparams.bucket_length_fn
         if not length_fn:
-            length_fn = lambda x: x[self._decoder.length_tensor_name]
+            length_fn = lambda x: x[self.length_name]
         elif not utils.is_callable(length_fn):
             # pylint: disable=redefined-variable-type
             length_fn = utils.get_function(length_fn, ["texar.custom"])
@@ -186,7 +247,6 @@ class MonoTextData(TextDataBase):
         self._dataset_size = dataset_size
 
         # Processing
-        # pylint: disable=protected-access
         data_spec = data_utils._DataSpec(dataset=dataset,
                                          dataset_size=self._dataset_size,
                                          vocab=self._vocab,
@@ -197,7 +257,7 @@ class MonoTextData(TextDataBase):
         self._decoder = data_spec.decoder
 
         # Batching
-        length_fn = self._make_length_fn()
+        length_fn = self._make_bucket_length_fn()
         dataset = self._make_batch(dataset, self._hparams, length_fn)
 
         # Prefetching
@@ -248,19 +308,28 @@ class MonoTextData(TextDataBase):
     def text_name(self):
         """The name of text tensor.
         """
-        return self._decoder.text_tensor_name
+        name = data_utils._connect_name(
+            self._data_spec.name_prefix,
+            self._data_spec.decoder.text_tensor_name)
+        return name
 
     @property
     def length_name(self):
         """The name of length tensor.
         """
-        return self._decoder.length_tensor_name
+        name = data_utils._connect_name(
+            self._data_spec.name_prefix,
+            self._data_spec.decoder.length_tensor_name)
+        return name
 
     @property
     def text_id_name(self):
         """The name of text index tensor.
         """
-        return self._decoder.text_id_tensor_name
+        name = data_utils._connect_name(
+            self._data_spec.name_prefix,
+            self._data_spec.decoder.text_id_tensor_name)
+        return name
 
     @property
     def utterance_cnt_name(self):
@@ -268,5 +337,8 @@ class MonoTextData(TextDataBase):
         """
         if not self._hparams.dataset.variable_utterance:
             raise ValueError("`utterance_cnt_name` is not defined.")
-        return self._decoder.utterance_cnt_tensor_name
+        name = data_utils._connect_name(
+            self._data_spec.name_prefix,
+            self._data_spec.decoder.utterance_cnt_tensor_name)
+        return name
 

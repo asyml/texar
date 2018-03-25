@@ -8,7 +8,6 @@ import numpy as np
 from data_load import load_test_data, load_shared_vocab, hp
 from nltk.translate.bleu_score import corpus_bleu
 from texar.modules import TransformerEncoder, TransformerDecoder
-from texar.losses import mle_losses
 from texar import context
 from hyperparams import encoder_hparams, decoder_hparams
 
@@ -24,30 +23,21 @@ def evaluate():
 
     word2idx, idx2word = load_shared_vocab()
     decoder_input = tf.concat((tf.ones_like(tgt_input[:, :1]), tgt_input[:, :-1]), -1) # 1:<S>
-    tgt_length = tf.reduce_sum(tf.to_float(tf.not_equal(decoder_input, 0)), axis=-1)
 
     encoder = TransformerEncoder(vocab_size=len(word2idx), hparams=encoder_hparams)
-    encoder_output = encoder(src_input,
+    encoder_padding, encoder_output = encoder(src_input,
         inputs_length=src_length)
 
     decoder = TransformerDecoder(
         embedding = encoder._embedding,
-        hparams=decoder_hparams)
+        hparams=decoder_hparams
+    )
+
     logits, preds = decoder(
         decoder_input,
         encoder_output,
-        src_length=src_length,
-        tgt_length=tgt_length)
-    loss_params = {
-        'label_smoothing':0.1,
-    }
-    is_target=tf.to_float(tf.not_equal(tgt_input, 0))
-    smoothed_labels = mle_losses.label_smoothing(tgt_input, len(idx2word), loss_params['label_smoothing'])
-    mle_loss = mle_losses.average_sequence_softmax_cross_entropy(
-        labels=smoothed_labels,
-        logits=logits,
-        sequence_length=tf.reduce_sum(is_target, -1))
-
+        encoder_padding
+    )
     # Start session
     #print('var cnt:{}'.format(len(tf.trainable_variables())))
     #for var in tf.trainable_variables():
@@ -85,12 +75,13 @@ def evaluate():
                 outputs = np.zeros((hp.batch_size, hp.maxlen),np.int32)
                 finished = [False] * hp.batch_size
                 for j in range(hp.maxlen):
-                    _, _preds = sess.run([mle_loss, preds], \
+                    _preds = sess.run(preds, \
                         feed_dict={
                             src_input: src,
                             tgt_input: outputs,
                             context.is_train():False
-                        })
+                        }
+                    )
                     for k in range(hp.batch_size):
                         if _preds[k][j] == word2idx['<EOS>']:
                             finished[k] = True

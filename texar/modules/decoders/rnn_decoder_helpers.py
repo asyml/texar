@@ -13,7 +13,7 @@ from tensorflow.contrib.seq2seq import Helper as TFHelper
 from tensorflow.contrib.distributions import RelaxedOneHotCategorical \
     as GumbelSoftmax
 
-from texar.core import utils
+from texar.utils import utils
 
 # pylint: disable=not-context-manager, too-many-arguments
 # pylint: disable=too-many-instance-attributes

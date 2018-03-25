@@ -17,7 +17,7 @@ from tensorflow.contrib.seq2seq import AttentionWrapper
 from tensorflow.python.util import nest
 
 from texar.modules.decoders.rnn_decoder_base import RNNDecoderBase
-from texar.core.utils import get_instance, get_function
+from texar.utils.utils import get_instance, get_function
 
 __all__ = [
     "BasicRNNDecoderOutput",
@@ -98,6 +98,11 @@ class BasicRNNDecoder(RNNDecoderBase):
             is used with output dimension set to :attr:`vocab_size`.
             Set `output_layer=tf.identity` if you do not want to have an
             output layer after the RNN cell outputs.
+        cell_dropout_mode (optional): A Tensor taking value of
+            :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, which
+            toggles dropout in the RNN cell (e.g., activates dropout in the
+            TRAIN mode). If `None`, :func:`~texar.context.global_mode` is used.
+            Ignored if :attr:`cell` is given.
         hparams (dict, optional): Hyperparameters. If not specified, the default
             hyperparameter setting is used. See
             :meth:`~texar.modules.BasicRNNDecoder.default_hparams` for the
@@ -108,9 +113,10 @@ class BasicRNNDecoder(RNNDecoderBase):
                  cell=None,
                  vocab_size=None,
                  output_layer=None,
+                 cell_dropout_mode=None,
                  hparams=None):
         RNNDecoderBase.__init__(
-            self, cell, vocab_size, output_layer, hparams)
+            self, cell, vocab_size, output_layer, cell_dropout_mode, hparams)
 
     @staticmethod
     def default_hparams():
@@ -259,9 +265,10 @@ class AttentionRNNDecoder(RNNDecoderBase):
                  cell=None,
                  vocab_size=None,
                  output_layer=None,
+                 cell_dropout_mode=None,
                  hparams=None):
         RNNDecoderBase.__init__(
-            self, cell, vocab_size, output_layer, hparams)
+            self, cell, vocab_size, output_layer, cell_dropout_mode, hparams)
 
         attn_hparams = self._hparams['attention']
         attn_kwargs = attn_hparams['kwargs'].todict()
@@ -524,6 +531,14 @@ class AttentionRNNDecoder(RNNDecoderBase):
                 lambda _: dtype, self._alignments_size()),
             attention_context=nest.map_structure(
                 lambda _: dtype, self._cell.state_size.attention))
+
+    def zero_state(self, batch_size, dtype):
+        """Zero state of the basic cell.
+
+        Same as :attr:`decoder.cell._cell.zero_state`.
+        """
+        return self._cell._cell.zero_state(
+            batch_size=batch_size, dtype=dtype)
 
     @property
     def state_size(self):
