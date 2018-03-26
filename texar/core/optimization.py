@@ -149,21 +149,28 @@ def get_learning_rate_decay_fn(hparams=None):
 
 
 def get_gradient_clip_fn(hparams=None):
-    """Creates gradient clipping function based on the hyperparameters.
+    """Creates a gradient clipping function based on the hyperparameters.
 
     See the :attr:`gradient_clip` field in
     :meth:`~texar.core.optimization.default_optimization_hparams` for all
     hyperparameters and default values.
+
+    The gradient clipping function takes a list of `(gradients, variables)`
+    tuples and returns a list of `(clipped_gradients, variables)` tuples.
+    Typical examples include
+    :tf_main:`tf.clip_by_global_norm <clip_by_global_norm>`,
+    :tf_main:`tf.clip_by_value <clip_by_value>`,
+    :tf_main:`tf.clip_by_norm <clip_by_norm>`,
+    :tf_main:`tf.clip_by_average_norm <clip_by_average_norm>`, etc.
 
     Args:
         hparams (dict or HParams, optional): hyperparameters. Missing
             hyperparameters are set to default values automatically.
 
     Returns:
-        function or `None`: If :attr:`hparams["type"]` is specified, returns a
-        function that takes a list of `(gradients, variables)` tuples and
-        returns a list of `(clipped_gradients, variables)` tuples. If
-        :attr:`hparams["type"]` is empty, returns `None`.
+        function or `None`: If :attr:`hparams["type"]` is specified, returns
+        the respective function. If :attr:`hparams["type"]` is empty,
+        returns `None`.
     """
     if hparams is None or isinstance(hparams, dict):
         hparams = HParams(
@@ -172,7 +179,7 @@ def get_gradient_clip_fn(hparams=None):
     if fn_type is None or fn_type == "":
         return None
 
-    fn_modules = ["texar.custom", "tensorflow"]
+    fn_modules = ["tensorflow", "texar.custom"]
     clip_fn = utils.get_function(fn_type, fn_modules)
     clip_fn_args = inspect.getargspec(clip_fn).args
     fn_kwargs = hparams["kwargs"]
