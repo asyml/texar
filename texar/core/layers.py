@@ -71,7 +71,7 @@ def default_rnn_cell_hparams():
                 # named in `type` passing the arguments specified in
                 # `kwargs` as `cell_class(**kwargs)`
                 "kwargs": {
-                    "num_units": 64
+                    "num_units": 256
                 }
 
                 # Number of cell layers
@@ -109,7 +109,7 @@ def default_rnn_cell_hparams():
     return {
         "type": "BasicLSTMCell",
         "kwargs": {
-            "num_units": 64
+            "num_units": 256,
         },
         "num_layers": 1,
         "dropout": {

@@ -28,6 +28,10 @@ test_data_hparams = {
     }
 }
 opt_hparams = {
+    "optimizer": {
+        "type": "AdamOptimizer",
+        "kwargs": {"learning_rate": 0.0001}
+    },
     "gradient_clip": {
         "type": "clip_by_global_norm",
         "kwargs": {"clip_norm": 5.}
@@ -36,27 +40,31 @@ opt_hparams = {
 
 
 def _main(_): #pylint: disable=too-many-locals
+    # Data
     train_data = tx.data.MonoTextData(train_data_hparams)
     test_data = tx.data.MonoTextData(test_data_hparams)
     iterator = tx.data.TrainTestDataIterator(train=train_data,
                                              test=test_data)
     data_batch = iterator.get_next()
 
+    # Model architecture
     embedder = tx.modules.WordEmbedder(
         vocab_size=train_data.vocab.size, hparams={"dim": 100})
     decoder = tx.modules.BasicRNNDecoder(vocab_size=train_data.vocab.size)
-
     outputs, _, seq_lengths = decoder(
         decoding_strategy="train_greedy",
         inputs=data_batch["text_ids"],
         sequence_length=data_batch["length"]-1,
         embedding=embedder)
+
+    # Losses & train ops
     mle_loss = tx.losses.sequence_sparse_softmax_cross_entropy(
         labels=data_batch['text_ids'][:, 1:],
         logits=outputs.logits,
         sequence_length=seq_lengths)
     train_op, global_step = tx.core.get_train_op(mle_loss, hparams=opt_hparams)
 
+    # Prediction
     outputs_sample, _, _ = decoder(
         decoding_strategy="infer_sample",
         start_tokens=[test_data.vocab.bos_token_id]*5,
