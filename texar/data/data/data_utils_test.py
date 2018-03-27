@@ -14,7 +14,7 @@ import numpy as np
 
 import tensorflow as tf
 
-from texar.data.data import data_utils
+from texar.data.data import dataset_utils as dsutils
 
 
 class TransformationTest(tf.test.TestCase):
@@ -32,7 +32,7 @@ class TransformationTest(tf.test.TestCase):
         def _tran_c(data):
             return data + 10000
 
-        chained_tran = data_utils.make_chained_transformation(
+        chained_tran = dsutils.make_chained_transformation(
             [_tran_a, _tran_b, _tran_c])
         dataset = dataset.map(chained_tran)
 
@@ -50,20 +50,20 @@ class TransformationTest(tf.test.TestCase):
             self.assertEqual(data_, original_data.tolist())
 
 class CountFileLinesTest(tf.test.TestCase):
-    """Tests :func:`texar.data.data.data_utils.count_file_lines`.
+    """Tests :func:`texar.data.data.dsutils.count_file_lines`.
     """
 
     def test_load_glove(self):
         """Tests the load_glove function.
         """
         file_1 = tempfile.NamedTemporaryFile(mode="w+")
-        num_lines = data_utils.count_file_lines(file_1.name)
+        num_lines = dsutils.count_file_lines(file_1.name)
         self.assertEqual(num_lines, 0)
 
         file_2 = tempfile.NamedTemporaryFile(mode="w+")
         file_2.write('\n'.join(['x']*5))
         file_2.flush()
-        num_lines = data_utils.count_file_lines(
+        num_lines = dsutils.count_file_lines(
             [file_1.name, file_2.name, file_2.name])
         self.assertEqual(num_lines, 0+5+5)
 
