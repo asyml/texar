@@ -15,9 +15,8 @@ from texar.utils import utils
 from texar.data.data import data_utils
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data_decoders import TextDataDecoder, VarUttTextDataDecoder
-from texar.data.vocabulary import Vocab
+from texar.data.vocabulary import Vocab, _SpecialTokens
 from texar.data.embedding import Embedding
-from texar.data.constants import BOS_TOKEN, EOS_TOKEN
 
 # pylint: disable=invalid-name, arguments-differ, protected-access
 
@@ -29,7 +28,7 @@ __all__ = [
 class _LengthFilterMode: # pylint: disable=old-style-class, no-init, too-few-public-methods
     """Options of length filter mode.
     """
-    TRUNC = "truncate",
+    TRUNC = "truncate"
     DISCARD = "discard"
 
 def _default_mono_text_dataset_hparams():
@@ -66,8 +65,8 @@ def _default_mono_text_dataset_hparams():
         "delimiter": " ",
         "max_seq_length": None,
         "length_filter_mode": "truncate",
-        "bos_token": BOS_TOKEN,
-        "eos_token": EOS_TOKEN,
+        "bos_token": _SpecialTokens.BOS_TOKEN,
+        "eos_token": _SpecialTokens.EOS_TOKEN,
         "other_transformations": [],
         "variable_utterance": False,
         "max_utterance_cnt": 5,
@@ -110,8 +109,10 @@ class MonoTextData(TextDataBase):
         """Reads vocab file and returns an instance of
         :class:`texar.data.Vocab`.
         """
-        bos_token = utils.default_string(hparams["bos_token"], BOS_TOKEN)
-        eos_token = utils.default_string(hparams["eos_token"], EOS_TOKEN)
+        bos_token = utils.default_string(
+            hparams["bos_token"], _SpecialTokens.BOS_TOKEN)
+        eos_token = utils.default_string(
+            hparams["eos_token"], _SpecialTokens.EOS_TOKEN)
         vocab = Vocab(hparams["vocab_file"],
                       bos_token=bos_token, eos_token=eos_token)
         return vocab

@@ -112,7 +112,7 @@ def _main(_): #pylint: disable=too-many-locals
         sess.run(tf.tables_initializer())
 
         for epoch in range(100):
-            _train_epochs(sess, epoch, display=10)
+            _train_epochs(sess, epoch, display=1000)
             _test_epochs(sess, epoch)
 
 if __name__ == '__main__':
