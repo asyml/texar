@@ -13,11 +13,20 @@ from collections import defaultdict
 import tensorflow as tf
 from tensorflow import gfile
 import numpy as np
-from texar.data.constants import BOS_TOKEN, EOS_TOKEN, PADDING_TOKEN, UNK_TOKEN
 
 __all__ = [
+    "_SpecialTokens",
     "Vocab"
 ]
+
+class _SpecialTokens(object): #pylint: disable=too-few-public-methods
+    """Special tokens.
+    """
+    PAD_TOKEN = "<PAD>"
+    BOS_TOKEN = "<BOS>"
+    EOS_TOKEN = "<EOS>"
+    UNK_TOKEN = "<UNK>"
+
 
 def _make_defaultdict(keys, values, default_value):
     """Creates a python defaultdict.
@@ -51,18 +60,20 @@ class Vocab(object):  # pylint: disable=too-many-instance-attributes
         eos_token (str): A special token that will be added to the end of
             sequences.
         unk_token (str): A special token that will replace all unknown tokens.
-        padding_token (str): A special token that is used to do padding,
+        pad_token (str): A special token that is used to do padding,
                                 default to be a empty string.
     """
 
     def __init__(self, filename, # pylint: disable=too-many-arguments
-                 bos_token=BOS_TOKEN, eos_token=EOS_TOKEN,
-                 unk_token=UNK_TOKEN, padding_token=PADDING_TOKEN):
+                 pad_token=_SpecialTokens.PAD_TOKEN,
+                 bos_token=_SpecialTokens.BOS_TOKEN,
+                 eos_token=_SpecialTokens.EOS_TOKEN,
+                 unk_token=_SpecialTokens.UNK_TOKEN):
         self._filename = filename
+        self._pad_token = pad_token
         self._bos_token = bos_token
         self._eos_token = eos_token
         self._unk_token = unk_token
-        self._padding_token = padding_token
 
         self._id_to_token_map, self._token_to_id_map, \
         self._id_to_token_map_py, self._token_to_id_map_py = \
@@ -94,12 +105,12 @@ class Vocab(object):  # pylint: disable=too-many-instance-attributes
         if self._unk_token in vocab:
             raise ValueError("Special UNK token already exists in the "
                              "vocabulary: '%s'" % self._unk_token)
-        if self._padding_token in vocab:
+        if self._pad_token in vocab:
             raise ValueError("Special padding token already exists in the "
-                             "vocabulary: '%s'" % self._padding_token)
+                             "vocabulary: '%s'" % self._pad_token)
 
-        # Places _padding_token at the beginning to make sure it take index 0.
-        vocab = [self._padding_token, self._bos_token, self._eos_token,
+        # Places _pad_token at the beginning to make sure it take index 0.
+        vocab = [self._pad_token, self._bos_token, self._eos_token,
                  self._unk_token] + vocab
         # Must make sure this is consistent with the above line
         unk_token_idx = 3
@@ -221,22 +232,22 @@ class Vocab(object):  # pylint: disable=too-many-instance-attributes
         return self.token_to_id_map_py[self._unk_token]
 
     @property
-    def padding_token(self):
+    def pad_token(self):
         """A string of the special token indicating padding token. The
         default padding token is an empty string.
         """
-        return self._padding_token
+        return self._pad_token
 
     @property
-    def padding_token_id(self):
+    def pad_token_id(self):
         """The int index of the special token indicating padding token.
         """
-        return self.token_to_id_map_py[self._padding_token]
+        return self.token_to_id_map_py[self._pad_token]
 
     @property
     def special_tokens(self):
         """The list of special tokens
-        :attr:`[padding_token, bos_token, eos_token, unk_token]`.
+        :attr:`[pad_token, bos_token, eos_token, unk_token]`.
         """
-        return [self._padding_token, self._bos_token, self._eos_token,
+        return [self._pad_token, self._bos_token, self._eos_token,
                 self._unk_token]
