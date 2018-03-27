@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 
 import tensorflow as tf
 
-from texar.data.data import data_utils
+from texar.data.data import dataset_utils as dsutils
 from texar.data.data.data_base import DataBase
 from texar.data.data.mono_text_data import MonoTextData
 from texar.data.data_decoders import ScalarDataDecoder
@@ -87,7 +87,7 @@ class ScalarData(DataBase):
         data_spec.add_spec(name_prefix=name_prefix)
 
         if chained:
-            chained_tran = data_utils.make_chained_transformation(
+            chained_tran = dsutils.make_chained_transformation(
                 [decoder] + other_trans)
             return chained_tran, data_spec
         else:
@@ -99,7 +99,7 @@ class ScalarData(DataBase):
             name_prefix=hparams["dataset"]["data_name"])
         num_parallel_calls = hparams["num_parallel_calls"]
         dataset = dataset.map(
-            lambda *args: chained_tran(data_utils.maybe_tuple(args)),
+            lambda *args: chained_tran(dsutils.maybe_tuple(args)),
             num_parallel_calls=num_parallel_calls)
         return dataset, data_spec
 
@@ -114,8 +114,8 @@ class ScalarData(DataBase):
 
         # Processing
         # pylint: disable=protected-access
-        data_spec = data_utils._DataSpec(dataset=dataset,
-                                         dataset_size=self._dataset_size)
+        data_spec = dsutils._DataSpec(dataset=dataset,
+                                      dataset_size=self._dataset_size)
         dataset, data_spec = self._process_dataset(dataset, self._hparams,
                                                    data_spec)
         self._data_spec = data_spec
@@ -149,7 +149,7 @@ class ScalarData(DataBase):
         """
         if not self._dataset_size:
             # pylint: disable=attribute-defined-outside-init
-            self._dataset_size = data_utils.count_file_lines(
+            self._dataset_size = dsutils.count_file_lines(
                 self._hparams.dataset.files)
         return self._dataset_size
 

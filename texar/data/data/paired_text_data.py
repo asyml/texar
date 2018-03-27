@@ -16,7 +16,7 @@ from texar.utils import utils
 from texar.data.data.mono_text_data import _default_mono_text_dataset_hparams
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data.mono_text_data import MonoTextData
-from texar.data.data import data_utils
+from texar.data.data import dataset_utils as dsutils
 from texar.data.vocabulary import Vocab, _SpecialTokens
 from texar.data.embedding import Embedding
 
@@ -176,7 +176,7 @@ class PairedTextData(TextDataBase):
             tgt_proc_hparams, data_spec_i, chained=False)
         data_spec.set_ith_data_spec(1, data_spec_i, 2)
 
-        tran_fn = data_utils.make_combined_transformation(
+        tran_fn = dsutils.make_combined_transformation(
             [[src_decoder] + src_trans, [tgt_decoder] + tgt_trans],
             name_prefix=name_prefix)
 
@@ -192,7 +192,7 @@ class PairedTextData(TextDataBase):
             src_hparams, src_length_name, src_decoder)
         tgt_filter_fn = MonoTextData._make_length_filter(
             tgt_hparams, tgt_length_name, tgt_decoder)
-        combined_filter_fn = data_utils._make_combined_filter_fn(
+        combined_filter_fn = dsutils._make_combined_filter_fn(
             [src_filter_fn, tgt_filter_fn])
         return combined_filter_fn
 
@@ -205,14 +205,14 @@ class PairedTextData(TextDataBase):
 
         num_parallel_calls = hparams["num_parallel_calls"]
         dataset = dataset.map(
-            lambda *args: tran_fn(data_utils.maybe_tuple(args)),
+            lambda *args: tran_fn(dsutils.maybe_tuple(args)),
             num_parallel_calls=num_parallel_calls)
 
         # Filter by length
-        src_length_name = data_utils._connect_name(
+        src_length_name = dsutils._connect_name(
             data_spec.name_prefix[0],
             data_spec.decoder[0].length_tensor_name)
-        tgt_length_name = data_utils._connect_name(
+        tgt_length_name = dsutils._connect_name(
             data_spec.name_prefix[1],
             data_spec.decoder[1].length_tensor_name)
         filter_fn = self._make_length_filter(
@@ -256,7 +256,7 @@ class PairedTextData(TextDataBase):
         self._dataset_size = dataset_size
 
         # Processing.
-        data_spec = data_utils._DataSpec(
+        data_spec = dsutils._DataSpec(
             dataset=dataset, dataset_size=self._dataset_size,
             vocab=[self._src_vocab, self._tgt_vocab],
             embedding=[self._src_embedding, self._tgt_embedding])
@@ -296,7 +296,7 @@ class PairedTextData(TextDataBase):
         """
         if not self._dataset_size:
             # pylint: disable=attribute-defined-outside-init
-            self._dataset_size = data_utils.count_file_lines(
+            self._dataset_size = dsutils.count_file_lines(
                 self._hparams.source_dataset.files)
         return self._dataset_size
 
@@ -349,7 +349,7 @@ class PairedTextData(TextDataBase):
     def source_text_name(self):
         """The name of the source text tensor.
         """
-        name = data_utils._connect_name(
+        name = dsutils._connect_name(
             self._data_spec.name_prefix[0],
             self._src_decoder.text_tensor_name)
         return name
@@ -358,7 +358,7 @@ class PairedTextData(TextDataBase):
     def source_length_name(self):
         """The name of the source length tensor.
         """
-        name = data_utils._connect_name(
+        name = dsutils._connect_name(
             self._data_spec.name_prefix[0],
             self._src_decoder.length_tensor_name)
         return name
@@ -367,7 +367,7 @@ class PairedTextData(TextDataBase):
     def source_text_id_name(self):
         """The name of the source text index tensor.
         """
-        name = data_utils._connect_name(
+        name = dsutils._connect_name(
             self._data_spec.name_prefix[0],
             self._src_decoder.text_id_tensor_name)
         return name
@@ -379,7 +379,7 @@ class PairedTextData(TextDataBase):
         if not self._hparams.source_dataset.variable_utterance:
             raise ValueError(
                 "`utterance_cnt_name` of source data is undefined.")
-        name = data_utils._connect_name(
+        name = dsutils._connect_name(
             self._data_spec.name_prefix[0],
             self._src_decoder.utterance_cnt_tensor_name)
         return name
@@ -388,7 +388,7 @@ class PairedTextData(TextDataBase):
     def target_text_name(self):
         """The name of the target text tensor.
         """
-        name = data_utils._connect_name(
+        name = dsutils._connect_name(
             self._data_spec.name_prefix[1],
             self._tgt_decoder.text_tensor_name)
         return name
@@ -397,7 +397,7 @@ class PairedTextData(TextDataBase):
     def target_length_name(self):
         """The name of the target length tensor.
         """
-        name = data_utils._connect_name(
+        name = dsutils._connect_name(
             self._data_spec.name_prefix[1],
             self._tgt_decoder.length_tensor_name)
         return name
@@ -406,7 +406,7 @@ class PairedTextData(TextDataBase):
     def target_text_id_name(self):
         """The name of the target text index tensor.
         """
-        name = data_utils._connect_name(
+        name = dsutils._connect_name(
             self._data_spec.name_prefix[1],
             self._tgt_decoder.text_id_tensor_name)
         return name
@@ -418,7 +418,7 @@ class PairedTextData(TextDataBase):
         if not self._hparams.target_dataset.variable_utterance:
             raise ValueError(
                 "`utterance_cnt_name` of target data is undefined.")
-        name = data_utils._connect_name(
+        name = dsutils._connect_name(
             self._data_spec.name_prefix[1],
             self._tgt_decoder.utterance_cnt_tensor_name)
         return name

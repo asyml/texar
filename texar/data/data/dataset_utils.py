@@ -1,6 +1,6 @@
 #
 """
-Various utilities specific to data processing.
+Various utilities specific to dataset processing.
 """
 
 from __future__ import absolute_import
