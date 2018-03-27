@@ -53,8 +53,8 @@ class TextDataBase(DataBase): # pylint: disable=too-few-public-methods
             bucket_batch_size = hparams["bucket_batch_sizes"]
             if bucket_batch_size is None:
                 bucket_batch_size = [batch_size] * (len(bucket_boundaries) + 1)
-            dataset = tf.contrib.data.bucket_by_sequence_length(
-                element_length_func, bucket_boundaries, bucket_batch_size)
+            dataset = dataset.apply(tf.contrib.data.bucket_by_sequence_length(
+                element_length_func, bucket_boundaries, bucket_batch_size))
 
         return dataset
 

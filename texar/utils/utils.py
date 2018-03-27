@@ -23,7 +23,7 @@ from tensorflow.python.ops import rnn
 
 from texar import context
 
-MAX_SEQ_LENGTH = np.iinfo(np.int32).max  #TODO (zhiting): move to constants
+MAX_SEQ_LENGTH = np.iinfo(np.int32).max
 
 ## Some modules cannot be imported directly,
 ## e.g., `import tensorflow.train` fails.
