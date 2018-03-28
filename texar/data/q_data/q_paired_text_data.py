@@ -92,9 +92,9 @@ class qPairedTextData(qDataBase):
 
         # Make vocabulary
         bos_token = utils.default_string(tgt_proc_hparams["bos_token"],
-                                         _SpecialTokens.BOS_TOKEN)
+                                         _SpecialTokens.BOS)
         eos_token = utils.default_string(tgt_proc_hparams["eos_token"],
-                                         _SpecialTokens.EOS_TOKEN)
+                                         _SpecialTokens.EOS)
         if tgt_hparams["vocab_share"]:
             if bos_token == src_dataset.vocab.bos_token and \
                     eos_token == src_dataset.vocab.eos_token:

@@ -370,7 +370,7 @@ class VarUttTextDataDecoder(data_decoder.DataDecoder):
                 _trunc_and_pad,
                 [
                     tf.string_split([s], delimiter=self._delimiter).values,
-                    _SpecialTokens.PAD_TOKEN,
+                    _SpecialTokens.PAD,
                     sent_length
                 ],
                 tf.string),

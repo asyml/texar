@@ -22,10 +22,10 @@ __all__ = [
 class _SpecialTokens(object): #pylint: disable=too-few-public-methods
     """Special tokens.
     """
-    PAD_TOKEN = "<PAD>"
-    BOS_TOKEN = "<BOS>"
-    EOS_TOKEN = "<EOS>"
-    UNK_TOKEN = "<UNK>"
+    PAD = "<PAD>"
+    BOS = "<BOS>"
+    EOS = "<EOS>"
+    UNK = "<UNK>"
 
 
 def _make_defaultdict(keys, values, default_value):
@@ -65,10 +65,10 @@ class Vocab(object):  # pylint: disable=too-many-instance-attributes
     """
 
     def __init__(self, filename, # pylint: disable=too-many-arguments
-                 pad_token=_SpecialTokens.PAD_TOKEN,
-                 bos_token=_SpecialTokens.BOS_TOKEN,
-                 eos_token=_SpecialTokens.EOS_TOKEN,
-                 unk_token=_SpecialTokens.UNK_TOKEN):
+                 pad_token=_SpecialTokens.PAD,
+                 bos_token=_SpecialTokens.BOS,
+                 eos_token=_SpecialTokens.EOS,
+                 unk_token=_SpecialTokens.UNK):
         self._filename = filename
         self._pad_token = pad_token
         self._bos_token = bos_token
