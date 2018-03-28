@@ -9,6 +9,7 @@ from __future__ import print_function
 
 # pylint: disable=wildcard-import
 
+from texar.data.data_utils import *
 from texar.data.data import *
 from texar.data.q_data import *
 from texar.data.data_decoders import *

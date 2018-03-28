@@ -15,7 +15,7 @@ from texar.utils import utils
 from texar.data.data import dataset_utils as dsutils
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data_decoders import TextDataDecoder, VarUttTextDataDecoder
-from texar.data.vocabulary import Vocab, _SpecialTokens
+from texar.data.vocabulary import Vocab, SpecialTokens
 from texar.data.embedding import Embedding
 
 # pylint: disable=invalid-name, arguments-differ, protected-access
@@ -65,8 +65,8 @@ def _default_mono_text_dataset_hparams():
         "delimiter": " ",
         "max_seq_length": None,
         "length_filter_mode": "truncate",
-        "bos_token": _SpecialTokens.BOS,
-        "eos_token": _SpecialTokens.EOS,
+        "bos_token": SpecialTokens.BOS,
+        "eos_token": SpecialTokens.EOS,
         "other_transformations": [],
         "variable_utterance": False,
         "max_utterance_cnt": 5,
@@ -110,9 +110,9 @@ class MonoTextData(TextDataBase):
         :class:`texar.data.Vocab`.
         """
         bos_token = utils.default_string(
-            hparams["bos_token"], _SpecialTokens.BOS)
+            hparams["bos_token"], SpecialTokens.BOS)
         eos_token = utils.default_string(
-            hparams["eos_token"], _SpecialTokens.EOS)
+            hparams["eos_token"], SpecialTokens.EOS)
         vocab = Vocab(hparams["vocab_file"],
                       bos_token=bos_token, eos_token=eos_token)
         return vocab

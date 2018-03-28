@@ -14,7 +14,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.slim.python.slim.data import data_decoder
 
-from texar.data.vocabulary import _SpecialTokens
+from texar.data.vocabulary import SpecialTokens
 
 # pylint: disable=too-many-instance-attributes, too-many-arguments,
 # pylint: disable=no-member, invalid-name
@@ -370,7 +370,7 @@ class VarUttTextDataDecoder(data_decoder.DataDecoder):
                 _trunc_and_pad,
                 [
                     tf.string_split([s], delimiter=self._delimiter).values,
-                    _SpecialTokens.PAD,
+                    SpecialTokens.PAD,
                     sent_length
                 ],
                 tf.string),
