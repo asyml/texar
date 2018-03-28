@@ -126,9 +126,9 @@ class MultiAlignedData(TextDataBase):
                 bos_token = hparams_i["bos_token"]
                 eos_token = hparams_i["eos_token"]
             bos_token = utils.default_string(
-                bos_token, _SpecialTokens.BOS_TOKEN)
+                bos_token, _SpecialTokens.BOS)
             eos_token = utils.default_string(
-                eos_token, _SpecialTokens.EOS_TOKEN)
+                eos_token, _SpecialTokens.EOS)
 
             vocab_shr = hparams_i["vocab_share_with"]
             if vocab_shr is not None:

@@ -65,8 +65,8 @@ def _default_mono_text_dataset_hparams():
         "delimiter": " ",
         "max_seq_length": None,
         "length_filter_mode": "truncate",
-        "bos_token": _SpecialTokens.BOS_TOKEN,
-        "eos_token": _SpecialTokens.EOS_TOKEN,
+        "bos_token": _SpecialTokens.BOS,
+        "eos_token": _SpecialTokens.EOS,
         "other_transformations": [],
         "variable_utterance": False,
         "max_utterance_cnt": 5,
@@ -110,9 +110,9 @@ class MonoTextData(TextDataBase):
         :class:`texar.data.Vocab`.
         """
         bos_token = utils.default_string(
-            hparams["bos_token"], _SpecialTokens.BOS_TOKEN)
+            hparams["bos_token"], _SpecialTokens.BOS)
         eos_token = utils.default_string(
-            hparams["eos_token"], _SpecialTokens.EOS_TOKEN)
+            hparams["eos_token"], _SpecialTokens.EOS)
         vocab = Vocab(hparams["vocab_file"],
                       bos_token=bos_token, eos_token=eos_token)
         return vocab

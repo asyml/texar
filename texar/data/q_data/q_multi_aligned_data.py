@@ -93,9 +93,9 @@ class qMultiAlignedData(qDataBase):
 
         # Make vocabulary
         bos_token = utils.default_string(proc_hparams["bos_token"],
-                                         _SpecialTokens.BOS_TOKEN)
+                                         _SpecialTokens.BOS)
         eos_token = utils.default_string(proc_hparams["eos_token"],
-                                         _SpecialTokens.EOS_TOKEN)
+                                         _SpecialTokens.EOS)
         vocab_share_id = hparams["vocab_share_with"]
         if vocab_share_id is not None:
             if vocab_share_id >= dataset_id:
