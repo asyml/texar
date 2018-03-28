@@ -20,7 +20,7 @@ from texar.data.data.scalar_data import ScalarData
 from texar.data.data.mono_text_data import _default_mono_text_dataset_hparams
 from texar.data.data.mono_text_data import MonoTextData
 from texar.data.data import dataset_utils as dsutils
-from texar.data.vocabulary import Vocab, _SpecialTokens
+from texar.data.vocabulary import Vocab, SpecialTokens
 from texar.data.embedding import Embedding
 
 # pylint: disable=invalid-name, arguments-differ, not-context-manager
@@ -126,9 +126,9 @@ class MultiAlignedData(TextDataBase):
                 bos_token = hparams_i["bos_token"]
                 eos_token = hparams_i["eos_token"]
             bos_token = utils.default_string(
-                bos_token, _SpecialTokens.BOS)
+                bos_token, SpecialTokens.BOS)
             eos_token = utils.default_string(
-                eos_token, _SpecialTokens.EOS)
+                eos_token, SpecialTokens.EOS)
 
             vocab_shr = hparams_i["vocab_share_with"]
             if vocab_shr is not None:

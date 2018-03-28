@@ -17,7 +17,7 @@ from texar.data.data.mono_text_data import _default_mono_text_dataset_hparams
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data.mono_text_data import MonoTextData
 from texar.data.data import dataset_utils as dsutils
-from texar.data.vocabulary import Vocab, _SpecialTokens
+from texar.data.vocabulary import Vocab, SpecialTokens
 from texar.data.embedding import Embedding
 
 # pylint: disable=invalid-name, arguments-differ, not-context-manager
@@ -95,9 +95,9 @@ class PairedTextData(TextDataBase):
             tgt_bos_token = tgt_hparams["bos_token"]
             tgt_eos_token = tgt_hparams["eos_token"]
         tgt_bos_token = utils.default_string(tgt_bos_token,
-                                             _SpecialTokens.BOS)
+                                             SpecialTokens.BOS)
         tgt_eos_token = utils.default_string(tgt_eos_token,
-                                             _SpecialTokens.EOS)
+                                             SpecialTokens.EOS)
         if tgt_hparams["vocab_share"]:
             if tgt_bos_token == src_vocab.bos_token and \
                     tgt_eos_token == src_vocab.eos_token:

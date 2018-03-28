@@ -15,11 +15,11 @@ from tensorflow import gfile
 import numpy as np
 
 __all__ = [
-    "_SpecialTokens",
+    "SpecialTokens",
     "Vocab"
 ]
 
-class _SpecialTokens(object): #pylint: disable=too-few-public-methods
+class SpecialTokens(object): #pylint: disable=too-few-public-methods
     """Special tokens.
     """
     PAD = "<PAD>"
@@ -65,10 +65,10 @@ class Vocab(object):  # pylint: disable=too-many-instance-attributes
     """
 
     def __init__(self, filename, # pylint: disable=too-many-arguments
-                 pad_token=_SpecialTokens.PAD,
-                 bos_token=_SpecialTokens.BOS,
-                 eos_token=_SpecialTokens.EOS,
-                 unk_token=_SpecialTokens.UNK):
+                 pad_token=SpecialTokens.PAD,
+                 bos_token=SpecialTokens.BOS,
+                 eos_token=SpecialTokens.EOS,
+                 unk_token=SpecialTokens.UNK):
         self._filename = filename
         self._pad_token = pad_token
         self._bos_token = bos_token

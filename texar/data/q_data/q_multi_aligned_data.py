@@ -18,7 +18,7 @@ from texar.data.q_data.q_data_base import qDataBase
 from texar.data.q_data import q_mono_text_data
 from texar.data.q_data.q_data_providers import ParallelDataProvider
 from texar.data import data_decoders
-from texar.data.vocabulary import Vocab, _SpecialTokens
+from texar.data.vocabulary import Vocab, SpecialTokens
 from texar.data.embedding import Embedding
 
 # pylint: disable=invalid-name, arguments-differ, not-context-manager
@@ -93,9 +93,9 @@ class qMultiAlignedData(qDataBase):
 
         # Make vocabulary
         bos_token = utils.default_string(proc_hparams["bos_token"],
-                                         _SpecialTokens.BOS)
+                                         SpecialTokens.BOS)
         eos_token = utils.default_string(proc_hparams["eos_token"],
-                                         _SpecialTokens.EOS)
+                                         SpecialTokens.EOS)
         vocab_share_id = hparams["vocab_share_with"]
         if vocab_share_id is not None:
             if vocab_share_id >= dataset_id:
