@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 import tensorflow as tf
 
 from texar.utils import utils
+from texar.data.data_utils import count_file_lines
 from texar.data.data import dataset_utils as dsutils
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data_decoders import TextDataDecoder, VarUttTextDataDecoder
@@ -286,7 +287,7 @@ class MonoTextData(TextDataBase):
         """
         if not self._dataset_size:
             # pylint: disable=attribute-defined-outside-init
-            self._dataset_size = dsutils.count_file_lines(
+            self._dataset_size = count_file_lines(
                 self._hparams.dataset.files)
         return self._dataset_size
 

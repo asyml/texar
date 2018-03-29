@@ -16,6 +16,7 @@ from texar.utils import utils
 from texar.data.data.mono_text_data import _default_mono_text_dataset_hparams
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data.mono_text_data import MonoTextData
+from texar.data.data_utils import count_file_lines
 from texar.data.data import dataset_utils as dsutils
 from texar.data.vocabulary import Vocab, SpecialTokens
 from texar.data.embedding import Embedding
@@ -296,7 +297,7 @@ class PairedTextData(TextDataBase):
         """
         if not self._dataset_size:
             # pylint: disable=attribute-defined-outside-init
-            self._dataset_size = dsutils.count_file_lines(
+            self._dataset_size = count_file_lines(
                 self._hparams.source_dataset.files)
         return self._dataset_size
 

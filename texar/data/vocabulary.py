@@ -20,7 +20,8 @@ __all__ = [
 ]
 
 class SpecialTokens(object): #pylint: disable=too-few-public-methods
-    """Special tokens.
+    """Special tokens, including :attr:`PAD`, :attr:`BOS`, :attr:`BOS`,
+    :attr:`UNK`.
     """
     PAD = "<PAD>"
     BOS = "<BOS>"
