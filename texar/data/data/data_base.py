@@ -14,6 +14,7 @@ import tensorflow as tf
 
 from texar.hyperparams import HParams
 from texar.data.data import dataset_utils as dsutils
+from texar.data.data_utils import count_file_lines
 
 __all__ = [
     "DataBase"
@@ -69,7 +70,7 @@ class DataBase(object):
                 raise ValueError(
                     "Dataset hyperparameter 'shuffle_buffer_size' "
                     "must not be `None` if 'shard_and_shuffle'=`True`.")
-            dataset_size = dsutils.count_file_lines(dataset_files)
+            dataset_size = count_file_lines(dataset_files)
             if shuffle_buffer_size >= dataset_size:
                 raise ValueError(
                     "Dataset size (%d) <= shuffle_buffer_size (%d). Set "
@@ -82,13 +83,11 @@ class DataBase(object):
                                       seed=hparams["seed"])
         elif hparams["shuffle"]:
             if shuffle_buffer_size is None:
-                dataset_size = dsutils.count_file_lines(dataset_files)
+                dataset_size = count_file_lines(dataset_files)
                 shuffle_buffer_size = dataset_size
             dataset = dataset.shuffle(shuffle_buffer_size, seed=hparams["seed"])
 
         return dataset, dataset_size
-
-
 
     @property
     def num_epochs(self):

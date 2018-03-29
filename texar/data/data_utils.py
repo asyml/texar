@@ -14,6 +14,7 @@ import tarfile
 import zipfile
 import logging
 import collections
+import numpy as np
 from six.moves import urllib
 
 import tensorflow as tf
@@ -22,7 +23,11 @@ import tensorflow as tf
 
 __all__ = [
     "create_dir_if_needed",
-    "maybe_download"
+    "maybe_download",
+    "get_files",
+    "read_words",
+    "make_vocab",
+    "count_file_lines"
 ]
 
 Py3 = sys.version_info[0] == 3
@@ -115,28 +120,58 @@ def get_files(file_paths):
         raise ValueError('No data files found in %s' % (file_paths,))
     return files
 
-def read_words(filename, delimiter, newline_token="\n"):
+def read_words(filename, newline_token=None):
     """Reads word from a file.
 
     Args:
         filename (str): Path to the file.
-        delimiter (str): Delimiter to split the string into tokens.
         newline_token (str): The token to replace the original newline
             token `\n`. For example, `newline_token=tx.data.SpecialTokens.EOS`.
+            If `None`, no replacement is performed.
+
+    Returns:
+        A list of words.
     """
     with tf.gfile.GFile(filename, "r") as f:
         if Py3:
-            return f.read().replace("\n", newline_token).split(delimiter)
+            if newline_token is None:
+                return f.read().split()
+            else:
+                return f.read().replace("\n", newline_token).split()
         else:
-            return (f.read().decode("utf-8")
-                    .replace("\n", newline_token).split(delimiter))
+            if newline_token is None:
+                return f.read().decode("utf-8").split()
+            else:
+                return (f.read().decode("utf-8")
+                        .replace("\n", newline_token).split())
 
-def make_vocab(filenames, delimiter=" ", max_vocab_size=-1):
-    """Builds vocab (a list of words).
+
+def make_vocab(filenames, max_vocab_size=-1,
+               newline_token=None, return_type="list"):
+    """Builds vocab of the files.
+
+    Args:
+        filenames (str): A (list of) files.
+        max_vocab_size (int): Maximum size of the vocabulary. Low frequency
+            words that exceeding the limit will be discarded.
+            Set to `-1` (default) if no truncation is wanted.
+        newline_token (str): The token to replace the original newline
+            token `\n`. For example, `newline_token=tx.data.SpecialTokens.EOS`.
+            If `None`, no replacement is performed.
+        return_type (str): Either "list" or "dict". If "list" (default), this
+            function returns a list of words sorted by frequency. If "dict",
+            this function returns a dict mapping words to their index sorted
+            by frequency.
+
+    Returns:
+        A list or dict.
     """
+    if not isinstance(filenames, (list, tuple)):
+        filenames = [filenames]
+
     words = []
     for fn in filenames:
-        words += read_words(fn, delimiter)
+        words += read_words(fn, newline_token=newline_token)
 
     counter = collections.Counter(words)
     count_pairs = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
@@ -145,4 +180,30 @@ def make_vocab(filenames, delimiter=" ", max_vocab_size=-1):
     if max_vocab_size >= 0:
         words = words[:max_vocab_size]
 
-    return words
+    if return_type == "list":
+        return words
+    elif return_type == "dict":
+        word_to_id = dict(zip(words, range(len(words))))
+        return word_to_id
+    else:
+        raise ValueError("Unknown return_type: {}".format(return_type))
+
+
+def count_file_lines(filenames):
+    """Counts the number of lines in the file(s).
+    """
+    def _count_lines(fn):
+        with open(fn) as f:
+            i = -1
+            for i, _ in enumerate(f):
+                pass
+            return i + 1
+
+    if not isinstance(filenames, (list, tuple)):
+        filenames = [filenames]
+    num_lines = np.sum([_count_lines(fn) for fn in filenames])
+    return num_lines
+
+
+
+
