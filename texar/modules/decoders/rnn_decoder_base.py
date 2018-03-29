@@ -88,7 +88,8 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             "name": "rnn_decoder"
         }
 
-    def _build(self, initial_state=None, max_decoding_length=None,
+    def _build(self, initial_state=None,
+               max_decoding_length=None, impute_finished=False,
                output_time_major=False, decoding_strategy="train_greedy",
                inputs=None, sequence_length=None, input_time_major=False,
                embedding=None, start_tokens=None, end_token=None,
@@ -154,6 +155,12 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 :attr:`hparams["max_decoding_length_train"]` or
                 :attr:`hparams["max_decoding_length_infer"]` is used
                 according to :attr:`mode`.
+            impute_finished (bool): If `True`, then states for batch
+                entries which are marked as finished get copied through and
+                the corresponding outputs get zeroed out.  This causes some
+                slowdown at each time step, but ensures that the final state
+                and outputs have the correct values and that backprop ignores
+                time steps that were marked as finished.
             output_time_major (bool): If `True`, outputs are returned as
                 time major tensors. If `False` (default), outputs are returned
                 as batch major tensors.
@@ -292,8 +299,8 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
 
         # Decode
         outputs, final_state, sequence_lengths = dynamic_decode(
-            decoder=self, maximum_iterations=max_l,
-            output_time_major=output_time_major)
+            decoder=self, impute_finished=impute_finished,
+            maximum_iterations=max_l, output_time_major=output_time_major)
 
         if not self._built:
             self._add_internal_trainable_variables()

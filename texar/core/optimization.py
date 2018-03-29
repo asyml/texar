@@ -14,6 +14,8 @@ import tensorflow as tf
 from texar.hyperparams import HParams
 from texar.utils import utils
 
+# pylint: disable=too-many-arguments
+
 __all__ = [
     "default_optimization_hparams",
     "get_optimizer",
@@ -208,17 +210,21 @@ def get_gradient_clip_fn(hparams=None):
     return grad_clip_fn
 
 
-def get_train_op(loss, variables=None, global_step=None,
-                 increment_global_step=True, hparams=None):
+def get_train_op(loss, variables=None, learning_rate=None,
+                 global_step=None, increment_global_step=True, hparams=None):
     """Creates a training op.
 
     Args:
-        loss (scalar Tensor): loss to optimize over.
-        variables (list of Variables, optional): Variables to optimize. If
+        loss: A scalar Tensor representing the loss to optimize.
+        variables (optional): A list of Variables to optimize. If
             `None`, all trainable variables are used.
-        global_step (scalar int Tensor, optional): step counter to update on
+        learning_rate (float or Tensor, optional): If `None`, learning rate
+            specified in :attr:`hparams`, or the default learning rate
+            of the optimizer will be used.
+        global_step (optional): A scalar int Tensor. Step counter to update on
             each step unless :attr:`increment_global_step` is `False`. If
             `None`, a new global step variable will be created.
+            Learning rate decay requires requires :attr:`global_step`.
         incremental_global_step (bool): Whether to increment
             :attr:`global_step`. This is useful if the :attr:`global_step` is
             used in multiple training ops per training step (e.g. to optimize
@@ -246,7 +252,9 @@ def get_train_op(loss, variables=None, global_step=None,
 
     optimizer = get_optimizer(hparams["optimizer"])
 
-    learning_rate = hparams["optimizer"]["kwargs"].get("learning_rate", None)
+    if learning_rate is None:
+        learning_rate = hparams["optimizer"]["kwargs"].get("learning_rate",
+                                                           None)
     if learning_rate is None:
         # Try to get learning_rate from the default value of the
         # optimizer's argument
