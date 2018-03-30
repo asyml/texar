@@ -12,13 +12,12 @@ import tensorflow as tf
 from tensorflow.contrib.seq2seq import GreedyEmbeddingHelper
 
 from texar import context
-from texar.core.utils import switch_dropout
+from texar.utils import switch_dropout
 from texar.modules.embedders import WordEmbedder
-from texar.modules.encoders.classifiers import Conv1DClassifier
-from texar.modules.encoders.rnn_encoders import UnidirectionalRNNEncoder
-from texar.modules.decoders.rnn_decoders import BasicRNNDecoder
-from texar.modules.decoders.rnn_decoder_helpers import \
-    EmbeddingTrainingHelper, GumbelSoftmaxEmbeddingHelper
+from texar.modules.classifiers import Conv1DClassifier
+from texar.modules.encoders import UnidirectionalRNNEncoder
+from texar.modules.decoders import BasicRNNDecoder
+from texar.modules.decoders import _get_training_helper, GumbelSoftmaxEmbeddingHelper
 from texar.modules.connectors import MLPTransformConnector
 from texar.core.layers import SequentialLayer
 from texar.core import get_train_op
@@ -138,8 +137,8 @@ class TSF(ModelBase):
                                       hparams=hparams.rnn_decoder)
 
         seq_len = [tf.shape(input_tensors["dec_inputs"])[1]] * hparams.batch_size
-        train_helper = EmbeddingTrainingHelper( input_tensors["dec_inputs"],
-                                                seq_len, embedder)
+        train_helper = _get_training_helper(input_tensors["dec_inputs"], seq_len,
+                                            embedding=embedder)
         g_outputs, _, _ = rnn_decoder(train_helper, h_ori)
 
         teach_h = tf.concat([tf.expand_dims(h_ori, 1), g_outputs.cell_output], 1)
