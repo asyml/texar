@@ -219,3 +219,4 @@ doc/_build
 /data/
 checkpoints/
 /language_models/
+/examples/lm_ptb/simple-examples/

@@ -388,7 +388,7 @@ class MultiAlignedData(TextDataBase):
         return self._dataset_size
 
     def _maybe_name_to_id(self, name_or_id):
-        if utils.is_str_or_unicode(name_or_id):
+        if utils.is_str(name_or_id):
             if name_or_id not in self._name_to_id:
                 raise ValueError("Unknown data name: {}".format(name_or_id))
             return self._name_to_id[name_or_id]
