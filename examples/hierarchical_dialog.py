@@ -13,124 +13,220 @@ import tensorflow as tf
 # We shall wrap all these modules
 from texar.data import qMultiSourceTextData
 from texar.modules import ForwardConnector
-from texar.modules import BasicRNNDecoder, get_helper
-from texar.modules import HierarchicalEncoder
+from texar.modules import BasicRNNDecoder, SoftmaxEmbeddingHelper, get_helper
+from texar.modules import HierarchicalRNNEncoder, UnidirectionalRNNEncoder, \
+                          BidirectionalRNNEncoder
 from texar.losses import mle_losses
 from texar.core import optimization as opt
+from texar.modules import WordEmbedder
 from texar import context
-from texar.data.embedding import Embedding
-from texar.modules.embedders.embedders import WordEmbedder
+
+import texar as tx
+
+import os
+from argparse import ArgumentParser
+from copy import deepcopy
 
 from IPython import embed
 
-if __name__ == "__main__":
-    ### Build data pipeline
+parser = ArgumentParser()
+parser.add_argument('mode', choices=['train', 'test'])
+parser.add_argument('-s', '--save_root', required=True, type=str)
+parser.add_argument('-l', '--load_path', type=str, default=None)
+parser.add_argument('-n', '--num_epoch', type=int, default=None)
 
-    # Config data hyperparams. Hyperparams not configured will be automatically
-    # filled with default values. For text database, default values are defined
-    # in `texar.data.database.default_text_dataset_hparams()`.
-    # Construct database
-    
-    data_hparams = {
-        "num_epochs": 10,
-        "batch_size": 10,
-        "source_dataset": {
-            "files": ['../data/dialog/source.txt'],
-            "vocab_file": '../data/dialog/vocab.txt',
-            "processing": {
-                "max_seq_length": 30,
-                "max_context_length": 2 
-            },
-            "embedding_init": {
-                "file": '/space/hzt/word_embed/glove/glove.6B.200d.txt',
-                "dim": 200,
-                "read_fn": "load_glove"
-            }
+args = parser.parse_args()
+
+data_root = "/home/hzt/yxj/hred-sw1r2c"
+
+train_data_hparams = {
+    "seed": 173,
+    "batch_size": 10,
+    "num_epochs": 1,
+    "source_dataset": {
+        "variable_utterance": True,
+        "max_utterance_cnt": 10,
+        "max_seq_length": None,
+        "embedding_init": {
+            "file": "/space/hzt/word_embed/glove/glove.6B.200d.txt",
+            "dim": 200,
+            "read_fn": "load_glove",
         },
-        "target_dataset": {
-            "files": ['../data/dialog/target.txt'],
-            "vocab_share": True,
-            "reader_share": True,
-        }
+        "files": [os.path.join(data_root, 'train-source.txt')],
+        "vocab_file": os.path.join(data_root, 'vocab.txt'),
+    },
+    "target_dataset": {
+        "files": [os.path.join(data_root, 'train-target.txt')],
+        "vocab_share": True,
+        "embedding_init_share": True,
     }
+}
+opt_hparams = {
+    "optimizer": {
+        "type": "AdamOptimizer",
+    }
+}
 
-    # Construct the database
-    dialog_db = qMultiSourceTextData(data_hparams)
-    data_batch = dialog_db()
+valid_data_hparams = deepcopy(train_data_hparams)
+test_data_hparams  = deepcopy(train_data_hparams)
 
-    # build embedder
+valid_data_hparams['source_dataset']['files'] = [os.path.join(
+                                                    data_root, 
+                                                    'valid-source.txt'
+                                                 )]
+valid_data_hparams['target_dataset']['files'] = [os.path.join(
+                                                    data_root,
+                                                    'valid-target.txt'
+                                                 )]
+test_data_hparams['source_dataset']['files'] = [os.path.join(
+                                                    data_root, 
+                                                    'test-source.txt'
+                                                )]
+test_data_hparams['target_dataset']['files'] = [os.path.join(
+                                                    data_root,
+                                                    'test-target.txt'
+                                                )]
+# declaration of modules
 
-    embedder = WordEmbedder(init_value=dialog_db.embedding.word_vecs)
+train_data = tx.data.PairedTextData(train_data_hparams)
+valid_data = tx.data.PairedTextData(valid_data_hparams)
+test_data  = tx.data.PairedTextData(test_data_hparams)
 
-    # builder encoder
-    encoder = HierarchicalEncoder()
+iterator = tx.data.TrainTestDataIterator(train=train_data,
+                                         val=valid_data,
+                                         test=test_data)
 
-    # Build decoder. Simply use the default hyperparameters.\
-    decoder = BasicRNNDecoder(vocab_size=dialog_db.target_vocab.vocab_size)
+embedder = WordEmbedder(init_value=train_data.source_embedding_init_value) 
 
-    # Build connector, which simply feeds zero state to decoder as initial state
-    connector = ForwardConnector(decoder.state_size)
+encoder_major = UnidirectionalRNNEncoder()
+encoder_minor = BidirectionalRNNEncoder()
     
-    inputs_embedded = embedder(inputs=data_batch['source_text_ids'])
-    enc_outputs, enc_last = encoder(inputs=inputs_embedded)
+encoder = HierarchicalRNNEncoder(encoder_major=encoder_major,
+                                 encoder_minor=encoder_minor)
 
-    # We shall probably improve the interface here.
-    helper_train = get_helper(
-        "EmbeddingTrainingHelper",
-        inputs=data_batch['target_text_ids'][:, :-1],
-        sequence_length=data_batch['target_length'] - 1,
-        embedding=embedder)
+decoder = BasicRNNDecoder(vocab_size=train_data.source_vocab.size)
+    
+connector = ForwardConnector(decoder.state_size)
+    
+# build the graph
 
-    embed()
+data_batch = iterator.get_next()
 
-    # Decode
-    outputs, final_state, sequence_lengths = decoder(
-        helper=helper_train, initial_state=connector(enc_last))
+inputs_embedded = embedder(inputs=data_batch['source_text_ids'])
 
-    embed()
+encoder_outputs, encoder_final = encoder(inputs=inputs_embedded,
+                                         sequence_length_minor=
+                                            data_batch['source_length'])
 
-    # Build loss
-    mle_loss = mle_losses.average_sequence_sparse_softmax_cross_entropy(
-        labels=data_batch['target_text_ids'][:, 1:],
-        logits=outputs.logits,
-        sequence_length=sequence_lengths - 1)
+helper_train = get_helper(
+    "EmbeddingTrainingHelper",
+    inputs=data_batch['target_text_ids'][:, :-1],
+    sequence_length=data_batch['target_length'] - 1,
+    embedding=embedder)
 
-    # Build train op. Only config the optimizer while using default settings
-    # for other hyperparameters.
-    opt_hparams = {
-        "optimizer": {
-            "type": "MomentumOptimizer",
-            "kwargs": {
-                "learning_rate": 0.01,
-                "momentum": 0.9
-            }
-        }
-    }
-    train_op, global_step = opt.get_train_op(mle_loss, hparams=opt_hparams)
+outputs, final_states, sequence_length = decoder(
+    helper=helper_train,
+    initial_state=connector(encoder_final))
+    
+mle_loss = mle_losses.average_sequence_sparse_softmax_cross_entropy(
+    labels=data_batch['target_text_ids'][:, 1:],
+    logits=outputs.logits,
+    sequence_length=sequence_length - 1)
 
-    ### Graph is done. Now start running
-    # We shall wrap these environment setup codes
+train_op, global_step = opt.get_train_op(mle_loss, hparams=opt_hparams) 
+
+def train(sess, epoch_cnt):
+    iterator.switch_to_train_data(sess)
+
+    while True:
+        try:
+            _, step, loss = sess.run(
+                [train_op, global_step, mle_loss],
+                feed_dict={context.global_mode(): True})
+            if step % 10 == 0:
+                print("step %d, at epoch %d: %.6f" % (step, epoch_cnt, 
+                                                      loss))
+
+        except tf.errors.OutOfRangeError:
+            break
+
+def valid(sess, epoch_cnt):
+    iterator.switch_to_val_data(sess)
+
+    item_cnt = 0
+    loss_cnt = 0
+    while True:
+        try:
+            f_output, loss = sess.run(
+                [outputs, mle_loss],
+                feed_dict={context.global_mode(): False})
+
+            item_cnt += len(f_output.logits)
+            loss_cnt += len(f_output.logits) * loss  
+             
+        except tf.errors.OutOfRangeError:
+            break
+
+    print("valid at epoch %d: %.6f" % (epoch_cnt, loss_cnt / item_cnt))
+
+    return loss_cnt / item_cnt
+
+def test(sess):
+    iterator.switch_to_test_data(sess)
+
+    item_cnt = 0
+    loss_cnt = 0
+    while True:
+        try:
+            f_output, loss = sess.run(
+                [outputs, mle_loss],
+                feed_dict={context.global_mode(): False})
+
+            item_cnt += len(f_output.logits)
+            loss_cnt += len(f_output.logits) * loss  
+
+            print(item_cnt, loss)
+             
+        except tf.errors.OutOfRangeError:
+            break
+
+    print("test: %.6f" % (loss_cnt / item_cnt))
+
+if __name__ == "__main__":
+
+    saver = tf.train.Saver()
+
+    best_valid_loss = 1e10
+    best_epoch_loc = None
+
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
 
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-        try:
-            while not coord.should_stop():
-                # Run the logics
-                _, step, loss = sess.run(
-                    [train_op, global_step, mle_loss],
-                    feed_dict={context.is_train(): True})
+        epoch_cnt = 0
 
-                if step % 10 == 0:
-                    print("%d: %.6f" % (step, loss))
+        if args.load_path is not None:
+            saver.restore(sess, args.load_path)
 
-        except tf.errors.OutOfRangeError:
-            print('Done -- epoch limit reached')
-        finally:
-            coord.request_stop()
-        coord.join(threads)
+        if args.mode == 'test':
+            test(sess)
+        else:
+            while epoch_cnt != args.num_epoch: 
+                epoch_cnt += 1
+
+                train(sess, epoch_cnt)
+                valid_loss = valid(sess, epoch_cnt)
+
+                if valid_loss < best_valid_loss:
+                    best_valid_loss = valid_loss
+                    best_epoch_loc = epoch_cnt
+                    saver.save(sess, args.save_root)              
+            
+                if epoch_cnt - best_epoch_loc > 10:
+                    print('seems overfit after {}. HALT.'.format(
+                            best_epoch_loc))
+                    break
+
 
