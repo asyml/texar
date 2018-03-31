@@ -13,7 +13,7 @@ from __future__ import division
 import inspect
 from pydoc import locate
 import copy
-import sys
+import six
 import numpy as np
 
 import tensorflow as tf
@@ -23,7 +23,7 @@ from tensorflow.python.ops import rnn
 
 from texar import context
 
-MAX_SEQ_LENGTH = np.iinfo(np.int32).max  #TODO (zhiting): move to constants
+MAX_SEQ_LENGTH = np.iinfo(np.int32).max
 
 ## Some modules cannot be imported directly,
 ## e.g., `import tensorflow.train` fails.
@@ -32,6 +32,34 @@ MAX_SEQ_LENGTH = np.iinfo(np.int32).max  #TODO (zhiting): move to constants
 #    'tensorflow.train', 'tensorflow.keras.regularizers'
 #}
 
+__all__ = [
+    "get_class",
+    "get_instance",
+    "get_instance_with_redundant_kwargs",
+    "get_function",
+    "call_function_with_redundant_kwargs",
+    "get_default_arg_values",
+    "add_variable",
+    "is_callable",
+    "maybe_gloabl_mode",
+    "is_train_mode",
+    "is_eval_mode",
+    "is_predict_mode",
+    "switch_dropout",
+    "transpose_batch_time",
+    "default_string",
+    "patch_dict",
+    "is_str",
+    "uniquify_str",
+    "_bucket_boundaries",
+    "soft_sequence_embedding",
+    "straight_through",
+    "ceildiv",
+    "get_batch_size",
+]
+
+
+# TODO(zhiting): complete this
 def _expand_name(name):
     """Replaces common shorthands with respective full names.
 
@@ -360,14 +388,15 @@ def patch_dict(tgt_dict, src_dict):
             patched_dict[key] = patch_dict(patched_dict[key], value)
     return patched_dict
 
-def is_str_or_unicode(x):
+def is_str(x):
     """Returns `True` if :attr:`x` is either a str or unicode. Returns `False`
     otherwise.
     """
-    if sys.version_info[0] < 3:
-        return isinstance(x, str) or isinstance(x, unicode)
-    else:
-        return isinstance(x, str)
+    return isinstance(x, six.string_types)
+    #if sys.version_info[0] < 3:
+    #    return isinstance(x, str) or isinstance(x, unicode)
+    #else:
+    #    return isinstance(x, str)
 
 def uniquify_str(str_, str_set):
     """Uniquifies :attr:`str_` if :attr:`str_` is included in :attr:`str_set`.
@@ -452,3 +481,8 @@ def ceildiv(a, b):
     """
     return -(-a // b)
 
+def get_batch_size(tensor):
+    """Returns a unit `Tensor` representing the batch size, i.e.,
+    the size of the 1st dimension of :attr:`tensor`.
+    """
+    return tf.shape(tensor)[0]

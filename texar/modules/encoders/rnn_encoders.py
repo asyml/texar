@@ -72,6 +72,11 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
     Args:
         cell: (RNNCell, optional) If it is not specified,
             a cell is created as specified in :attr:`hparams["rnn_cell"]`.
+        cell_dropout_mode (optional): A Tensor taking value of
+            :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, which
+            toggles dropout in the RNN cell (e.g., activates dropout in the
+            TRAIN mode). If `None`, :func:`~texar.context.global_mode` is used.
+            Ignored if :attr:`cell` is given.
         hparams (dict, optional): Encoder hyperparameters. If it is not
             specified, the default hyperparameter setting is used. See
             :attr:`default_hparams` for the sturcture and default values.
@@ -79,6 +84,7 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
 
     def __init__(self,
                  cell=None,
+                 cell_dropout_mode=None,
                  hparams=None):
         RNNEncoderBase.__init__(self, hparams)
 
@@ -87,7 +93,8 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
             if cell is not None:
                 self._cell = cell
             else:
-                self._cell = layers.get_rnn_cell(self._hparams.rnn_cell)
+                self._cell = layers.get_rnn_cell(
+                    self._hparams.rnn_cell, cell_dropout_mode)
 
     @staticmethod
     def default_hparams():
@@ -186,6 +193,11 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
     Args:
         cell: (RNNCell, optional) If it is not specified,
             a cell is created as specified in :attr:`hparams["rnn_cell"]`.
+        cell_dropout_mode (optional): A Tensor taking value of
+            :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, which
+            toggles dropout in the RNN cell (e.g., activates dropout in the
+            TRAIN mode). If `None`, :func:`~texar.context.global_mode` is used.
+            Ignored if :attr:`cell` is given.
         hparams (dict, optional): Encoder hyperparameters. If it is not
             specified, the default hyperparameter setting is used. See
             :attr:`default_hparams` for the sturcture and default values.
@@ -194,6 +206,7 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
     def __init__(self,
                  cell_fw=None,
                  cell_bw=None,
+                 cell_dropout_mode=None,
                  hparams=None):
         RNNEncoderBase.__init__(self, hparams)
 
@@ -202,14 +215,17 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
             if cell_fw is not None:
                 self._cell_fw = cell_fw
             else:
-                self._cell_fw = layers.get_rnn_cell(self._hparams.rnn_cell_fw)
+                self._cell_fw = layers.get_rnn_cell(
+                    self._hparams.rnn_cell_fw, cell_dropout_mode)
 
             if cell_bw is not None:
                 self._cell_bw = cell_bw
             elif self.hparams.rnn_cell_share_config:
-                self._cell_bw = layers.get_rnn_cell(self._hparams.rnn_cell_fw)
+                self._cell_bw = layers.get_rnn_cell(
+                    self._hparams.rnn_cell_fw, cell_dropout_mode)
             else:
-                self._cell_bw = layers.get_rnn_cell(self._hparams.rnn_cell_bw)
+                self._cell_bw = layers.get_rnn_cell(
+                    self._hparams.rnn_cell_bw, cell_dropout_mode)
 
     @staticmethod
     def default_hparams():

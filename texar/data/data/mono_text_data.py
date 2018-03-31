@@ -12,12 +12,12 @@ from __future__ import unicode_literals
 import tensorflow as tf
 
 from texar.utils import utils
-from texar.data.data import data_utils
+from texar.data.data_utils import count_file_lines
+from texar.data.data import dataset_utils as dsutils
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data_decoders import TextDataDecoder, VarUttTextDataDecoder
-from texar.data.vocabulary import Vocab
+from texar.data.vocabulary import Vocab, SpecialTokens
 from texar.data.embedding import Embedding
-from texar.data.constants import BOS_TOKEN, EOS_TOKEN
 
 # pylint: disable=invalid-name, arguments-differ, protected-access
 
@@ -29,7 +29,7 @@ __all__ = [
 class _LengthFilterMode: # pylint: disable=old-style-class, no-init, too-few-public-methods
     """Options of length filter mode.
     """
-    TRUNC = "truncate",
+    TRUNC = "truncate"
     DISCARD = "discard"
 
 def _default_mono_text_dataset_hparams():
@@ -66,8 +66,8 @@ def _default_mono_text_dataset_hparams():
         "delimiter": " ",
         "max_seq_length": None,
         "length_filter_mode": "truncate",
-        "bos_token": BOS_TOKEN,
-        "eos_token": EOS_TOKEN,
+        "bos_token": SpecialTokens.BOS,
+        "eos_token": SpecialTokens.EOS,
         "other_transformations": [],
         "variable_utterance": False,
         "max_utterance_cnt": 5,
@@ -110,8 +110,10 @@ class MonoTextData(TextDataBase):
         """Reads vocab file and returns an instance of
         :class:`texar.data.Vocab`.
         """
-        bos_token = utils.default_string(hparams["bos_token"], BOS_TOKEN)
-        eos_token = utils.default_string(hparams["eos_token"], EOS_TOKEN)
+        bos_token = utils.default_string(
+            hparams["bos_token"], SpecialTokens.BOS)
+        eos_token = utils.default_string(
+            hparams["eos_token"], SpecialTokens.EOS)
         vocab = Vocab(hparams["vocab_file"],
                       bos_token=bos_token, eos_token=eos_token)
         return vocab
@@ -151,7 +153,7 @@ class MonoTextData(TextDataBase):
         for tran in other_trans_hparams:
             if not utils.is_callable(tran):
                 tran = utils.get_function(tran, ["texar.custom"])
-            other_trans.append(data_utils.make_partial(tran, data_spec))
+            other_trans.append(dsutils.make_partial(tran, data_spec))
         return other_trans
 
     @staticmethod
@@ -183,12 +185,12 @@ class MonoTextData(TextDataBase):
         other_trans = MonoTextData._make_other_transformations(
             dataset_hparams["other_transformations"], data_spec)
         if name_prefix:
-            other_trans.append(data_utils.name_prefix_fn(name_prefix))
+            other_trans.append(dsutils.name_prefix_fn(name_prefix))
 
         data_spec.add_spec(name_prefix=name_prefix)
 
         if chained:
-            chained_tran = data_utils.make_chained_transformation(
+            chained_tran = dsutils.make_chained_transformation(
                 [decoder] + other_trans)
             return chained_tran, data_spec
         else:
@@ -201,8 +203,8 @@ class MonoTextData(TextDataBase):
         filter_fn = None
         if filter_mode == _LengthFilterMode.DISCARD and max_length is not None:
             max_length += decoder.added_length
-            filter_fn = data_utils._make_length_filter_fn(length_name,
-                                                          max_length)
+            filter_fn = dsutils._make_length_filter_fn(length_name,
+                                                       max_length)
         return filter_fn
 
     def _process_dataset(self, dataset, hparams, data_spec):
@@ -211,11 +213,11 @@ class MonoTextData(TextDataBase):
             name_prefix=hparams["dataset"]["data_name"])
         num_parallel_calls = hparams["num_parallel_calls"]
         dataset = dataset.map(
-            lambda *args: chained_tran(data_utils.maybe_tuple(args)),
+            lambda *args: chained_tran(dsutils.maybe_tuple(args)),
             num_parallel_calls=num_parallel_calls)
 
         # Filter by length
-        length_name = data_utils._connect_name(
+        length_name = dsutils._connect_name(
             data_spec.name_prefix,
             data_spec.decoder.length_tensor_name)
         filter_fn = self._make_length_filter(
@@ -247,10 +249,10 @@ class MonoTextData(TextDataBase):
         self._dataset_size = dataset_size
 
         # Processing
-        data_spec = data_utils._DataSpec(dataset=dataset,
-                                         dataset_size=self._dataset_size,
-                                         vocab=self._vocab,
-                                         embedding=self._embedding)
+        data_spec = dsutils._DataSpec(dataset=dataset,
+                                      dataset_size=self._dataset_size,
+                                      vocab=self._vocab,
+                                      embedding=self._embedding)
         dataset, data_spec = self._process_dataset(dataset, self._hparams,
                                                    data_spec)
         self._data_spec = data_spec
@@ -285,7 +287,7 @@ class MonoTextData(TextDataBase):
         """
         if not self._dataset_size:
             # pylint: disable=attribute-defined-outside-init
-            self._dataset_size = data_utils.count_file_lines(
+            self._dataset_size = count_file_lines(
                 self._hparams.dataset.files)
         return self._dataset_size
 
@@ -308,7 +310,7 @@ class MonoTextData(TextDataBase):
     def text_name(self):
         """The name of text tensor.
         """
-        name = data_utils._connect_name(
+        name = dsutils._connect_name(
             self._data_spec.name_prefix,
             self._data_spec.decoder.text_tensor_name)
         return name
@@ -317,7 +319,7 @@ class MonoTextData(TextDataBase):
     def length_name(self):
         """The name of length tensor.
         """
-        name = data_utils._connect_name(
+        name = dsutils._connect_name(
             self._data_spec.name_prefix,
             self._data_spec.decoder.length_tensor_name)
         return name
@@ -326,7 +328,7 @@ class MonoTextData(TextDataBase):
     def text_id_name(self):
         """The name of text index tensor.
         """
-        name = data_utils._connect_name(
+        name = dsutils._connect_name(
             self._data_spec.name_prefix,
             self._data_spec.decoder.text_id_tensor_name)
         return name
@@ -337,7 +339,7 @@ class MonoTextData(TextDataBase):
         """
         if not self._hparams.dataset.variable_utterance:
             raise ValueError("`utterance_cnt_name` is not defined.")
-        name = data_utils._connect_name(
+        name = dsutils._connect_name(
             self._data_spec.name_prefix,
             self._data_spec.decoder.utterance_cnt_tensor_name)
         return name

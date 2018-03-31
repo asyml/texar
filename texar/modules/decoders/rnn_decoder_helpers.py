@@ -22,7 +22,7 @@ __all__ = [
     "default_helper_train_hparams",
     "default_helper_infer_hparams",
     "get_helper",
-    "EmbeddingTrainingHelper",
+    "_get_training_helper",
     "GumbelSoftmaxEmbeddingHelper",
     "SoftmaxEmbeddingHelper",
 ]
@@ -127,42 +127,48 @@ def get_helper(helper_type,
         helper_type, class_kwargs, module_paths)
 
 
-class EmbeddingTrainingHelper(TFTrainingHelper):
-    """A training helper that uses embeddings.
-
-    Returned sample_ids are the argmax of the RNN output logits.
+def _get_training_helper( #pylint: disable=invalid-name
+        inputs, sequence_length, embedding=None, time_major=False, name=None):
+    """Returns an instance of :tf_main:`TrainingHelper
+    <contrib/seq2seq/TrainingHelper>` given embeddings.
 
     Args:
-        inputs ((structure of) integer Tensors): Sequences of input token
-            indexes.
-        sequence_length (1D integer list or Tensor): Lengths of input token
-            sequences.
-        embedding: The `params` argument of :tf_main:`tf.nn.embedding_lookup
+        inputs: If :attr:`embedding` is given, this is sequences of input
+            token indexes. If :attr:`embedding` is `None`, this is passed to
+            TrainingHelper directly.
+        sequence_length (1D Tensor): Lengths of input token sequences.
+        embedding (optional): The `params` argument of
+        :tf_main:`tf.nn.embedding_lookup
         <nn/embedding_lookup>` (e.g., the embedding Tensor); or a callable that
         takes a vector of integer indexes and returns respective embedding.
         time_major (bool): Whether the tensors in `inputs` are time major.
             If `False` (default), they are assumed to be batch major.
-        name (string): Name scope for any created operations.
+        name (str, optional): Name scope for any created operations.
+
+    Returns:
+        An instance of TrainingHelper.
 
     Raises:
         ValueError: if `sequence_length` is not a 1D tensor.
     """
+    if embedding is None:
+        return TFTrainingHelper(inputs=inputs,
+                                sequence_length=sequence_length,
+                                time_major=time_major,
+                                name=name)
 
-    def __init__(self, inputs, sequence_length, embedding,
-                 time_major=False, name=None):
-        with tf.name_scope(name, "EmbeddingTrainingHelper", [embedding]):
-            if callable(embedding):
-                self._embedding_fn = embedding
-            else:
-                self._embedding_fn = (
-                    lambda ids: tf.nn.embedding_lookup(embedding, ids))
-            emb_inputs = self._embedding_fn(inputs)
-            TFTrainingHelper.__init__(
-                self,
-                inputs=emb_inputs,
-                sequence_length=sequence_length,
-                time_major=time_major,
-                name=name)
+    with tf.name_scope(name, "TrainingHelper", [embedding, inputs]):
+        if callable(embedding):
+            embedding_fn = embedding
+        else:
+            embedding_fn = (
+                lambda ids: tf.nn.embedding_lookup(embedding, ids))
+        emb_inputs = embedding_fn(inputs)
+    helper = TFTrainingHelper(inputs=emb_inputs,
+                              sequence_length=sequence_length,
+                              time_major=time_major,
+                              name=name)
+    return helper
 
 
 class SoftmaxEmbeddingHelper(TFHelper):

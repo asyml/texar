@@ -73,6 +73,40 @@ class GetRNNCellTest(tf.test.TestCase):
                                  hparams_.kwargs.num_units)
 
 
+    def test_switch_dropout(self):
+        """Tests dropout mode.
+        """
+        emb_dim = 4
+        num_units = 64
+        hparams = {
+            "kwargs": {
+                "num_units": num_units
+            },
+            "num_layers": 2,
+            "dropout": {
+                "input_keep_prob": 0.8,
+            },
+        }
+        mode = tf.placeholder(tf.string)
+        hparams_ = HParams(hparams, layers.default_rnn_cell_hparams())
+        cell = layers.get_rnn_cell(hparams_, mode)
+
+        batch_size = 16
+        inputs = tf.zeros([batch_size, emb_dim], dtype=tf.float32)
+        output, state = cell(inputs,
+                             cell.zero_state(batch_size, dtype=tf.float32))
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            output_train, _ = sess.run(
+                [output, state],
+                feed_dict={mode: tf.estimator.ModeKeys.TRAIN})
+            self.assertEqual(output_train.shape[0], batch_size)
+            output_test, _ = sess.run(
+                [output, state],
+                feed_dict={mode: tf.estimator.ModeKeys.EVAL})
+            self.assertEqual(output_test.shape[0], batch_size)
+
+
 class GetLayerTest(tf.test.TestCase):
     """Tests layer creator.
     """

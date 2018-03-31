@@ -1,6 +1,6 @@
 #
 """
-Various utilities specific to data processing.
+Various utilities specific to dataset processing.
 """
 
 from __future__ import absolute_import
@@ -26,10 +26,8 @@ __all__ = [
     "make_chained_transformation",
     "make_combined_transformation",
     "random_shard_dataset",
-    "count_file_lines"
 ]
 
-#TODO(zhiting): unit test
 class _DataSpec(object): # pylint: disable=too-few-public-methods
     """Dataset specification. Used to pass necessary info to
     user-defined tranformation functions.
@@ -235,21 +233,4 @@ def random_shard_dataset(dataset_size, shard_size, seed=None):
         return sharded_dataset
 
     return _shard_fn
-
-def count_file_lines(filenames):
-    """Counts the number of lines in the file(s).
-    """
-    def _count_lines(fn):
-        with open(fn) as f:
-            i = -1
-            for i, _ in enumerate(f):
-                pass
-            return i + 1
-
-    if not isinstance(filenames, (list, tuple)):
-        filenames = [filenames]
-    num_lines = np.sum([_count_lines(fn) for fn in filenames])
-    return num_lines
-
-
 

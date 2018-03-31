@@ -14,15 +14,15 @@ import tensorflow as tf
 
 from texar.hyperparams import HParams
 from texar.utils import utils
-from texar.data.data.scalar_data import _default_scalar_dataset_hparams
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data.scalar_data import ScalarData
 from texar.data.data.mono_text_data import _default_mono_text_dataset_hparams
+from texar.data.data.scalar_data import _default_scalar_dataset_hparams
 from texar.data.data.mono_text_data import MonoTextData
-from texar.data.data import data_utils
-from texar.data.vocabulary import Vocab
+from texar.data.data_utils import count_file_lines
+from texar.data.data import dataset_utils as dsutils
+from texar.data.vocabulary import Vocab, SpecialTokens
 from texar.data.embedding import Embedding
-from texar.data.constants import BOS_TOKEN, EOS_TOKEN
 
 # pylint: disable=invalid-name, arguments-differ, not-context-manager
 # pylint: disable=protected-access
@@ -126,8 +126,10 @@ class MultiAlignedData(TextDataBase):
             else:
                 bos_token = hparams_i["bos_token"]
                 eos_token = hparams_i["eos_token"]
-            bos_token = utils.default_string(bos_token, BOS_TOKEN)
-            eos_token = utils.default_string(eos_token, EOS_TOKEN)
+            bos_token = utils.default_string(
+                bos_token, SpecialTokens.BOS)
+            eos_token = utils.default_string(
+                eos_token, SpecialTokens.EOS)
 
             vocab_shr = hparams_i["vocab_share_with"]
             if vocab_shr is not None:
@@ -265,7 +267,7 @@ class MultiAlignedData(TextDataBase):
             processors.append(processor)
             data_spec.set_ith_data_spec(i, data_spec_i, len(dataset_hparams))
 
-        tran_fn = data_utils.make_combined_transformation(
+        tran_fn = dsutils.make_combined_transformation(
             processors, name_prefix=name_prefix)
 
         data_spec.add_spec(name_prefix=name_prefix)
@@ -282,7 +284,7 @@ class MultiAlignedData(TextDataBase):
                 filter_fn = MonoTextData._make_length_filter(
                     hpms, length_name[i], decoder[i])
             filter_fns.append(filter_fn)
-        combined_filter_fn = data_utils._make_combined_filter_fn(filter_fns)
+        combined_filter_fn = dsutils._make_combined_filter_fn(filter_fns)
         return combined_filter_fn
 
     def _process_dataset(self, dataset, hparams, data_spec):
@@ -295,14 +297,14 @@ class MultiAlignedData(TextDataBase):
 
         num_parallel_calls = hparams["num_parallel_calls"]
         dataset = dataset.map(
-            lambda *args: tran_fn(data_utils.maybe_tuple(args)),
+            lambda *args: tran_fn(dsutils.maybe_tuple(args)),
             num_parallel_calls=num_parallel_calls)
 
         # Filter by length
         def _get_length_name(i):
             if not _is_text_data(hparams["datasets"][i]["data_type"]):
                 return None
-            name = data_utils._connect_name(
+            name = dsutils._connect_name(
                 data_spec.name_prefix[i],
                 data_spec.decoder[i].length_tensor_name)
             return name
@@ -342,10 +344,10 @@ class MultiAlignedData(TextDataBase):
         self._dataset_size = dataset_size
 
         # Processing
-        data_spec = data_utils._DataSpec(dataset=dataset,
-                                         dataset_size=self._dataset_size,
-                                         vocab=self._vocab,
-                                         embedding=self._embedding)
+        data_spec = dsutils._DataSpec(dataset=dataset,
+                                      dataset_size=self._dataset_size,
+                                      vocab=self._vocab,
+                                      embedding=self._embedding)
         dataset, data_spec = self._process_dataset(
             dataset, self._hparams, data_spec)
         self._data_spec = data_spec
@@ -381,12 +383,12 @@ class MultiAlignedData(TextDataBase):
         """
         if not self._dataset_size:
             # pylint: disable=attribute-defined-outside-init
-            self._dataset_size = data_utils.count_file_lines(
+            self._dataset_size = count_file_lines(
                 self._hparams.datasets[0].files)
         return self._dataset_size
 
     def _maybe_name_to_id(self, name_or_id):
-        if utils.is_str_or_unicode(name_or_id):
+        if utils.is_str(name_or_id):
             if name_or_id not in self._name_to_id:
                 raise ValueError("Unknown data name: {}".format(name_or_id))
             return self._name_to_id[name_or_id]
@@ -416,7 +418,7 @@ class MultiAlignedData(TextDataBase):
         i = self._maybe_name_to_id(name_or_id)
         if not _is_text_data(self._hparams.datasets[i]["data_type"]):
             return None
-        name = data_utils._connect_name(
+        name = dsutils._connect_name(
             self._data_spec.name_prefix[i],
             self._data_spec.decoder[i].text_tensor_name)
         return name
@@ -428,7 +430,7 @@ class MultiAlignedData(TextDataBase):
         i = self._maybe_name_to_id(name_or_id)
         if not _is_text_data(self._hparams.datasets[i]["data_type"]):
             return None
-        name = data_utils._connect_name(
+        name = dsutils._connect_name(
             self._data_spec.name_prefix[i],
             self._data_spec.decoder[i].length_tensor_name)
         return name
@@ -440,7 +442,7 @@ class MultiAlignedData(TextDataBase):
         i = self._maybe_name_to_id(name_or_id)
         if not _is_text_data(self._hparams.datasets[i]["data_type"]):
             return None
-        name = data_utils._connect_name(
+        name = dsutils._connect_name(
             self._data_spec.name_prefix[i],
             self._data_spec.decoder[i].text_id_tensor_name)
         return name
@@ -453,7 +455,7 @@ class MultiAlignedData(TextDataBase):
         if not _is_text_data(self._hparams.datasets[i]["data_type"]) or \
                 not self._hparams.datasets[i]["variable_utterance"]:
             return None
-        name = data_utils._connect_name(
+        name = dsutils._connect_name(
             self._data_spec.name_prefix[i],
             self._data_spec.decoder[i].utterance_cnt_tensor_name)
         return name
@@ -466,7 +468,7 @@ class MultiAlignedData(TextDataBase):
         i = self._maybe_name_to_id(name_or_id)
         if not _is_scalar_data(self._hparams.datasets[i]["data_type"]):
             return None
-        name = data_utils._connect_name(
+        name = dsutils._connect_name(
             self._data_spec.name_prefix[i],
             self._data_spec.decoder[i].data_tensor_name)
         return name
