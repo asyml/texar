@@ -9,19 +9,22 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import tempfile
 import numpy as np
 
 import tensorflow as tf
 
-from texar.data.data import data_utils
+from texar.data.data import dataset_utils as dsutils
 
+
+# pylint: disable=invalid-name
 
 class TransformationTest(tf.test.TestCase):
     """Tests various transformation utilities.
     """
 
     def test_make_chained_transformation(self):
+        """Tests :func:`texar.data.make_chained_transformation`
+        """
         original_data = np.arange(0, 10)
         dataset = tf.data.Dataset.from_tensor_slices(original_data)
 
@@ -32,7 +35,7 @@ class TransformationTest(tf.test.TestCase):
         def _tran_c(data):
             return data + 10000
 
-        chained_tran = data_utils.make_chained_transformation(
+        chained_tran = dsutils.make_chained_transformation(
             [_tran_a, _tran_b, _tran_c])
         dataset = dataset.map(chained_tran)
 
@@ -48,25 +51,6 @@ class TransformationTest(tf.test.TestCase):
             self.assertEqual(len(data_), len(original_data))
             data_ = [elem_ - 11100 for elem_ in data_]
             self.assertEqual(data_, original_data.tolist())
-
-class CountFileLinesTest(tf.test.TestCase):
-    """Tests :func:`texar.data.data.data_utils.count_file_lines`.
-    """
-
-    def test_load_glove(self):
-        """Tests the load_glove function.
-        """
-        file_1 = tempfile.NamedTemporaryFile(mode="w+")
-        num_lines = data_utils.count_file_lines(file_1.name)
-        self.assertEqual(num_lines, 0)
-
-        file_2 = tempfile.NamedTemporaryFile(mode="w+")
-        file_2.write('\n'.join(['x']*5))
-        file_2.flush()
-        num_lines = data_utils.count_file_lines(
-            [file_1.name, file_2.name, file_2.name])
-        self.assertEqual(num_lines, 0+5+5)
-
 
 if __name__ == "__main__":
     tf.test.main()

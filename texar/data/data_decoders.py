@@ -9,10 +9,12 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import numpy as np
+
 import tensorflow as tf
 from tensorflow.contrib.slim.python.slim.data import data_decoder
-import numpy as np
-from texar.data.constants import PADDING_TOKEN
+
+from texar.data.vocabulary import SpecialTokens
 
 # pylint: disable=too-many-instance-attributes, too-many-arguments,
 # pylint: disable=no-member, invalid-name
@@ -368,7 +370,7 @@ class VarUttTextDataDecoder(data_decoder.DataDecoder):
                 _trunc_and_pad,
                 [
                     tf.string_split([s], delimiter=self._delimiter).values,
-                    PADDING_TOKEN,
+                    SpecialTokens.PAD,
                     sent_length
                 ],
                 tf.string),
