@@ -28,14 +28,7 @@ def default_embedding_hparams():
             {
                 "name": "embedding",
                 "dim": 100,
-                "initializer": {
-                    "type": "random_uniform_initializer",
-                    "kwargs": {
-                        "minval": -0.1,
-                        "maxval": 0.1,
-                        "seed": None
-                    }
-                },
+                "initializer": None,
                 "regularizer": {
                     "type": "L1L2",
                     "kwargs": {
@@ -54,9 +47,23 @@ def default_embedding_hparams():
         "dim" : int
             Embedding dimension.
 
-        "initializer" : dict
-            Hyperparameters of the initializer for the embedding values,
-            including:
+        "initializer" : dict or None
+            Hyperparameters of the initializer for the embedding values. An
+            example is as
+
+            .. code-block:: python
+
+                {
+                    "type": "random_uniform_initializer",
+                    "kwargs": {
+                        "minval": -0.1,
+                        "maxval": 0.1,
+                        "seed": None
+                    }
+                }
+
+            which corresponds to :tf_main:`tf.random_uniform_initializer
+            <random_uniform_initializer>`, and includes:
 
             "type" : str or initializer instance
                 Name, full path, or instance of the initializer class; Or name
@@ -81,10 +88,6 @@ def default_embedding_hparams():
                 where :attr:`initializer_class_or_fn` is specified in
                 :attr:`"type"`.
                 Ignored if :attr:`"type"` is an initializer instance.
-
-            The default value corresponds to the initializer
-            :tf_main:`tf.random_uniform_initializer
-            <random_uniform_initializer>`.
 
         "regularizer" : dict
             Hyperparameters of the regularizer for the embedding values. The
@@ -122,14 +125,7 @@ def default_embedding_hparams():
     return {
         "name": "embedding",
         "dim": 100,
-        "initializer": {
-            "type": "random_uniform_initializer",
-            "kwargs": {
-                "minval": -0.1,
-                "maxval": 0.1,
-                "seed": None
-            }
-        },
+        "initializer": None,
         "regularizer": layers.default_regularizer_hparams(),
         "trainable": True
     }

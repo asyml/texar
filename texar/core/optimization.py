@@ -14,11 +14,11 @@ import tensorflow as tf
 from texar.hyperparams import HParams
 from texar.utils import utils
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments, no-member
 
 __all__ = [
     "default_optimization_hparams",
-    "get_optimizer",
+    "get_optimizer_fn",
     "get_learning_rate_decay_fn",
     "get_gradient_clip_fn",
     "get_train_op"
@@ -59,33 +59,54 @@ def default_optimization_hparams():
         "name": None
     }
 
-# TODO(zhiting): add YellowFin optimizer
-def get_optimizer(hparams=None):
-    """Creates an optimizer based on hyperparameters.
+def get_optimizer_fn(hparams=None):
+    """Returns a function with the signiture:
+    (learning_rate=None) -> instance of optimizer class
 
-    See the :attr:"optimizer" field in
+    The optimizer class must be a subclass of :tf_main:`~tf.train.Optimizer`.
+
+    See the :attr:`"optimizer"` field in
     :meth:`~texar.core.optimization.default_optimization_hparams` for all
     hyperparameters and default values.
+
+    If :attr:`hparams["type"]` is an optimier instance, returns the instance
+    directly.
 
     Args:
         hparams (dict or HParams, optional): hyperparameters. Missing
             hyperparameters are set to default values automatically.
 
     Returns:
-        An instance of :class:`~tensorflow.train.Optimizer`.
+        A function that creates optimizer instance, or an optimizer instance.
     """
     if hparams is None or isinstance(hparams, dict):
         hparams = HParams(
             hparams, default_optimization_hparams()["optimizer"])
 
-    opt_type = hparams["type"]
-    opt_kwargs = hparams["kwargs"].todict()
-    opt_modules = ['texar.custom',
-                   'tensorflow.train',
-                   'tensorflow.contrib.opt']
-    opt = utils.get_instance(opt_type, opt_kwargs, opt_modules)
+    opt = hparams["type"]
+    if utils.is_str(opt):
+        opt_modules = ['tensorflow.train',
+                       'tensorflow.contrib.opt',
+                       'texar.custom']
+        opt_class = utils.get_class(opt, opt_modules)
+    elif isinstance(opt, type) and issubclass(opt, tf.train.Optimizer):
+        opt_class = opt
+    elif isinstance(opt, tf.train.Optimizer):
+        return opt
+    else:
+        raise ValueError(
+            "Unrecognized optimizer. Must be string name of the optimizer "
+            "class, or the class which is a subclass of tf.train.Optimizer, "
+            "or an instance of the subclass of Optimizer.")
 
-    return opt
+    def _get_opt(learning_rate=None):
+        opt_kwargs = hparams["kwargs"].todict()
+        fn_args = set(inspect.getargspec(opt_class.__init__).args)
+        if 'learning_rate' in fn_args and learning_rate is not None:
+            opt_kwargs["learning_rate"] = learning_rate
+        return opt_class(**opt_kwargs)
+
+    return _get_opt, opt
 
 def get_learning_rate_decay_fn(hparams=None):
     """Creates learning rate decay function based on the hyperparameters.
@@ -112,7 +133,7 @@ def get_learning_rate_decay_fn(hparams=None):
     if fn_type is None or fn_type == "":
         return None
 
-    fn_modules = ["texar.custom", "tensorflow.train"]
+    fn_modules = ["tensorflow.train", "texar.custom"]
     decay_fn = utils.get_function(fn_type, fn_modules)
     fn_kwargs = hparams["kwargs"]
     if fn_kwargs is HParams:
@@ -131,8 +152,8 @@ def get_learning_rate_decay_fn(hparams=None):
         Returns:
             scalar float Tensor: decayed learning rate.
         """
-        offset_global_step = tf.minimum(
-            tf.to_int32(global_step), end_step) - start_step
+        offset_global_step = tf.maximum(
+            tf.minimum(tf.to_int32(global_step), end_step) - start_step, 0)
         if decay_fn == tf.train.piecewise_constant:
             decayed_lr = decay_fn(x=offset_global_step, **fn_kwargs)
         else:
@@ -185,7 +206,7 @@ def get_gradient_clip_fn(hparams=None):
     clip_fn = utils.get_function(fn_type, fn_modules)
     clip_fn_args = inspect.getargspec(clip_fn).args
     fn_kwargs = hparams["kwargs"]
-    if fn_kwargs is HParams:
+    if isinstance(fn_kwargs, HParams):
         fn_kwargs = fn_kwargs.todict()
 
     def grad_clip_fn(grads_and_vars):
@@ -220,10 +241,9 @@ def get_train_op(loss, variables=None, learning_rate=None,
             `None`, all trainable variables are used.
         learning_rate (float or Tensor, optional): If `None`, learning rate
             specified in :attr:`hparams`, or the default learning rate
-            of the optimizer will be used.
+            of the optimizer will be used (if exists).
         global_step (optional): A scalar int Tensor. Step counter to update on
-            each step unless :attr:`increment_global_step` is `False`. If
-            `None`, a new global step variable will be created.
+            each step unless :attr:`increment_global_step` is `False`.
             Learning rate decay requires requires :attr:`global_step`.
         incremental_global_step (bool): Whether to increment
             :attr:`global_step`. This is useful if the :attr:`global_step` is
@@ -242,29 +262,16 @@ def get_train_op(loss, variables=None, learning_rate=None,
     """
     hparams = HParams(hparams, default_optimization_hparams())
 
-    if variables is None:
-        variables = tf.trainable_variables()
-    if global_step is None:
-        global_step_name = None
-        if hparams["name"] is not None:
-            global_step_name = '_'.join([hparams["name"], 'step'])
-        global_step = tf.Variable(0, name=global_step_name, trainable=False)
-
-    optimizer = get_optimizer(hparams["optimizer"])
+    opt_hparams = hparams["optimizer"]
+    optimizer_fn, optimizer_class = get_optimizer_fn(opt_hparams)
 
     if learning_rate is None:
-        learning_rate = hparams["optimizer"]["kwargs"].get("learning_rate",
-                                                           None)
+        learning_rate = opt_hparams["kwargs"].get("learning_rate", None)
     if learning_rate is None:
         # Try to get learning_rate from the default value of the
         # optimizer's argument
-        opt_argspec = utils.get_default_arg_values(optimizer.__init__)
-        if 'learning_rate' not in opt_argspec:
-            raise ValueError(
-                "`learning_rate` must be specified in "
-                "hparams['optimizer']['kwargs'], if the optimizer does not "
-                "have default value for it.")
-        learning_rate = opt_argspec["learning_rate"]
+        opt_argspec = utils.get_default_arg_values(optimizer_class.__init__)
+        learning_rate = opt_argspec.get("learning_rate", None)
 
     grad_clip_fn = get_gradient_clip_fn(hparams["gradient_clip"])
 
@@ -274,7 +281,7 @@ def get_train_op(loss, variables=None, learning_rate=None,
         loss=loss,
         global_step=global_step,
         learning_rate=learning_rate,
-        optimizer=optimizer,
+        optimizer=optimizer_fn,
         gradient_noise_scale=hparams["gradient_noise_scale"],
         clip_gradients=grad_clip_fn,
         learning_rate_decay_fn=lr_decay_fn,
@@ -282,4 +289,4 @@ def get_train_op(loss, variables=None, learning_rate=None,
         name=hparams["name"],
         increment_global_step=increment_global_step)
 
-    return train_op, global_step
+    return train_op
