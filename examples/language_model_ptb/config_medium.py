@@ -11,17 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PTB LM small size config.
+"""PTB LM medium size config.
 """
 
 # pylint: disable=invalid-name, too-few-public-methods, missing-docstring
 
-init_scale = 0.1
-num_epochs = 13
-hidden_size = 200
-keep_prob = 1.0
+init_scale = 0.05
+num_epochs = 39
+hidden_size = 650
+keep_prob = 0.5
 batch_size = 20
-num_steps = 20
+num_steps = 35
 
 cell = {
     "type": "LSTMBlockCell",
@@ -48,9 +48,9 @@ opt = {
         "type": "exponential_decay",
         "kwargs": {
             "decay_steps": 1,
-            "decay_rate": 0.5,
+            "decay_rate": 0.8,
             "staircase": True
         },
-        "start_decay_step": 3
+        "start_decay_step": 5
     }
 }
