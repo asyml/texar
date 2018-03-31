@@ -219,4 +219,5 @@ doc/_build
 /data/
 checkpoints/
 /language_models/
-/examples/lm_ptb/simple-examples/
+/examples/language_model_ptb/simple-examples/
+simple-examples.tgz
