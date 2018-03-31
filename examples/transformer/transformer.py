@@ -16,7 +16,7 @@ from texar.losses import mle_losses
 #from texar.core import optimization as opt
 from texar import context
 from hyperparams import train_dataset_hparams, encoder_hparams, decoder_hparams, \
-    opt_hparams, loss_hparams
+    opt_hparams, loss_hparams, args
 def config_logging(filepath):
     logging.basicConfig(filename = filepath+'logging.txt', \
         format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',\
@@ -25,9 +25,7 @@ def config_logging(filepath):
 
 if __name__ == "__main__":
     ### Build data pipeline
-    logdir = './logdir/'
-    config_logging(logdir)
-
+    config_logging(args.log_dir)
     tf.set_random_seed(1234)
     np.random.seed(1234)
     random.seed(1234)
@@ -48,7 +46,7 @@ if __name__ == "__main__":
     #    data=[tf.shape(ori_src_text), tf.shape(ori_tgt_text), enc_input_length, dec_input_length, labels_length])
 
     encoder = TransformerEncoder(
-        vocab_size=text_database.source_vocab.vocab_size,\
+        vocab_size=text_database.source_vocab.size,\
         hparams=encoder_hparams)
     encoder_padding, encoder_output = encoder(encoder_input, inputs_length=enc_input_length)
     decoder = TransformerDecoder(
@@ -60,7 +58,7 @@ if __name__ == "__main__":
         encoder_output,
         encoder_padding,
     )
-    mle_loss = mle_losses.smoothing_cross_entropy(logits, labels, text_database.target_vocab.vocab_size,
+    mle_loss = mle_losses.smoothing_cross_entropy(logits, labels, text_database.target_vocab.size,
         loss_hparams['label_confidence'])
     istarget = tf.to_float(tf.not_equal(labels, 0))
     mle_loss = tf.reduce_sum(mle_loss * istarget) / tf.reduce_sum(istarget)
@@ -73,11 +71,16 @@ if __name__ == "__main__":
     if opt_hparams['learning_rate_schedule'] == 'static':
         learning_rate = 1e-3
     else:
-        learning_rate = 2 * tf.minimum(1.0, (fstep / opt_hparams['warmup_steps'])) \
+        learning_rate = opt_hparams['lr_constant'] \
+            * tf.minimum(1.0, (fstep / opt_hparams['warmup_steps'])) \
             * tf.rsqrt(tf.maximum(fstep, opt_hparams['warmup_steps'])) \
             * encoder_hparams['embedding']['dim']**-0.5
-    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate,
-            beta1=0.9, beta2=0.997, epsilon=1e-9)
+    optimizer = tf.train.AdamOptimizer(
+        learning_rate=learning_rate,
+        beta1=opt_hparams['Adam_beta1'],
+        beta2=opt_hparams['Adam_beta2'],
+        epsilon=opt_hparams['Adam_epsilon'],
+    )
     train_op = optimizer.minimize(mle_loss, global_step)
     tf.summary.scalar('lr', learning_rate)
     tf.summary.scalar('mle_loss', mle_loss)
@@ -97,18 +100,19 @@ if __name__ == "__main__":
         graph.finalize()
 
         var_list = tf.trainable_variables()
-        with open(logdir+'var.list', 'w+') as outfile:
+        with open(args.log_dir+'var.list', 'w+') as outfile:
             for var in var_list:
                 outfile.write('var:{} shape:{} dtype:{}\n'.format(var.name, var.shape, var.dtype))
                 logging.info('var:{} shape:{}'.format(var.name, var.shape, var.dtype))
-        writer = tf.summary.FileWriter(logdir, graph=sess.graph)
+        writer = tf.summary.FileWriter(args.log_dir, graph=sess.graph)
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
         try:
             while not coord.should_stop():
                 source, dec_in, target, predict, _, step, loss, mgd = sess.run(
                     [encoder_input, decoder_input, labels, preds, train_op, global_step, mle_loss, merged],
-                    feed_dict={context.is_train(): True})
+                    feed_dict={context.global_mode(): tf.estimator.ModeKeys.TRAIN}
+                )
                 if step % 100 == 0:
                     logging.info('step:{} source:{} targets:{} loss:{}'.format(\
                         step, source.shape, target.shape, loss))
@@ -119,7 +123,7 @@ if __name__ == "__main__":
                 writer.add_summary(mgd, global_step=step)
                 if step % 1000 == 0:
                     print('step:{} loss:{}'.format(step, loss))
-                    saver.save(sess, logdir+'my-model', global_step=step)
+                    saver.save(sess, args.log_dir+'my-model', global_step=step)
                 if step == opt_hparams['max_training_steps']:
                     coord.request_stop()
         except tf.errors.OutOfRangeError:
@@ -127,4 +131,4 @@ if __name__ == "__main__":
         finally:
             coord.request_stop()
         coord.join(threads)
-        saver.save(sess, logdir+'my-model', global_step=step)
+        saver.save(sess, args.log_dir+'my-model', global_step=step)
