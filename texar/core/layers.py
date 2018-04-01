@@ -28,6 +28,9 @@ __all__ = [
     "get_activation_fn",
     "get_constraint_fn",
     "get_layer",
+    "_ReducePooling1D",
+    "MaxReducePooling1D",
+    "AverageReducePooling1D",
     "MergeLayer",
     "SequentialLayer",
     "default_conv1d_kwargs",
@@ -510,6 +513,57 @@ def _compute_concat_output_shape(input_shape, axis):
     output_shape[axis] = concat_axis_size
     return output_shape
 
+class _ReducePooling1D(tf.layers.Layer):
+    """Pooling layer for abirary pooling functions for 1D inputs.
+
+    The same as `tf.python.layers.pooling._Pooling1D` except that the pooling
+    dimension is entirely reduced (i.e., `pool_size=length`).
+
+    This class is for code reuse, rather than an exposed API.
+    """
+    def __init__(self, reduce_function, data_format='channels_last',
+                 name=None, **kwargs):
+        super(_ReducePooling1D, self).__init__(name=name, **kwargs)
+        self._reduce_function = reduce_function
+        if data_format not in {'channels_last', 'channels_first'}:
+            raise ValueError("`data_format must be either 'channels_last' or` "
+                             "'channels_first'. Got: {}".format(data_format))
+        self._data_format = data_format
+
+    def compute_output_shape(self, input_shape):
+        input_shape = tf.TensorShape(input_shape).as_list()
+        if self._data_format == 'channels_last':
+            return tf.TensorShape([input_shape[0], input_shape[2]])
+        else:
+            return tf.TensorShape([input_shape[0], input_shape[1]])
+
+    def call(self, inputs):
+        if self._data_format == 'channels_last':
+            return self._reduce_function(inputs, axis=1)
+        else:
+            return self._reduce_function(inputs, axis=2)
+
+class MaxReducePooling1D(_ReducePooling1D):
+    """Max Pooling layer for 1D inputs. The same as
+    :tf_main:`MaxPooling1D <layers/MaxPooling1D>` except that the pooling
+    dimension is entirely reduced (i.e., `pool_size=length`).
+
+
+    """
+    def __init__(self, data_format='channels_last', name=None, **kwargs):
+        super(MaxReducePooling1D, self).__init__(
+            tf.reduce_max, data_format=data_format, name=name, **kwargs)
+
+class AverageReducePooling1D(_ReducePooling1D):
+    """Average Pooling layer for 1D inputs. The same as
+    :tf_main:`AveragePooling1D <layers/AveragePooling1D>` except that the
+    pooling dimension is entirely reduced (i.e., `pool_size=length`).
+
+
+    """
+    def __init__(self, data_format='channels_last', name=None, **kwargs):
+        super(AverageReducePooling1D, self).__init__(
+            tf.reduce_mean, data_format=data_format, name=name, **kwargs)
 
 class MergeLayer(tf.layers.Layer):
     """A layer that consists of multiple layers in parallel. Input is fed to

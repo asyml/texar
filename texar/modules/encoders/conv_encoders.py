@@ -155,6 +155,7 @@ class Conv1DEncoder(EncoderBase):
                 mrg_kwargs_layers = []
                 for hparams_ij in hparams_i:
                     seq_kwargs_j = {"layers": [hparams_ij, pool_hparams[i]]}
+                    seq_kwargs_j = {"layers": [hparams_ij]}
                     mrg_kwargs_layers.append(
                         {"type": "SequentialLayer", "kwargs": seq_kwargs_j})
                 mrg_hparams = {"type": "MergeLayer",

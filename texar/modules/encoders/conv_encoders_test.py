@@ -29,7 +29,8 @@ class Conv1DEncoderTest(tf.test.TestCase):
         for layer in encoder_1.layers[0].layers:
             self.assertTrue(isinstance(layer, tx.core.SequentialLayer))
 
-        inputs_1 = tf.ones([64, 16, 300], tf.float32)
+        #inputs_1 = tf.ones([64, 16, 300], tf.float32)
+        inputs_1 = tf.placeholder(tf.float32, [64, None, 300])
         outputs_1 = encoder_1(inputs_1)
         self.assertEqual(outputs_1.shape, [64, 128])
 
