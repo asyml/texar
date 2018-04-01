@@ -11,6 +11,7 @@ import copy
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import GreedyEmbeddingHelper
 
+import texar as tx
 from texar import context
 from texar.utils import switch_dropout
 from texar.modules.embedders import WordEmbedder
@@ -86,7 +87,7 @@ class TSF(ModelBase):
             },
         }
 
-    def _build_inputs(self):
+    def build_inputs(self):
         batch_size = self._hparams.batch_size
         enc_inputs = tf.placeholder(tf.int32, [batch_size, None],
                                     name="enc_inputs")
@@ -100,7 +101,7 @@ class TSF(ModelBase):
         gamma = tf.placeholder(tf.float32, [], name="gamma")
         rho = tf.placeholder(tf.float32, [], name="rho")
 
-        input_tensors = {
+        self.input_tensors = {
             "enc_inputs": enc_inputs,
             "dec_inputs": dec_inputs,
             "targets": targets,
@@ -109,8 +110,6 @@ class TSF(ModelBase):
             "gamma": gamma,
             "rho": rho,
         }
-
-        return input_tensors
 
     def build_model(self, input_tensors):
         hparams = self._hparams
@@ -249,8 +248,9 @@ class TSF(ModelBase):
         return loss_d0
 
     def train_d1_step(self, sess, batch, rho, gamma):
-        loss_d1, _ = sess.run([self.loss["loss_d1"], self.opt["optimizer_d1"]],
-                              self.feed_dict(batch, rho, gamma))
+        loss_d1, _ = sess.run(
+            [self.loss["loss_d1"], self.opt["optimizer_d1"]],
+            self.feed_dict(batch, rho, gamma))
         return loss_d1
 
     def train_g_step(self, sess, batch, rho, gamma):
@@ -281,7 +281,8 @@ class TSF(ModelBase):
              self.loss["loss_d"],
              self.loss["loss_d0"],
              self.loss["loss_d1"]],
-            self.feed_dict(batch, rho, gamma, is_train=False))
+            self.feed_dict(batch, rho, gamma,
+                           mode=tf.estimators.ModeKeys.EVAL))
         return loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1
 
     def decode_step(self, sess, batch):
@@ -289,15 +290,15 @@ class TSF(ModelBase):
             [self.output_tensors["hard_logits_ori"],
              self.output_tensors["hard_logits_tsf"]],
             feed_dict={
-                context.is_train(): False,
+                tx.global_mode(): tf.estimators.ModeKeys.EVAL,
                 self.input_tensors["enc_inputs"]: batch["enc_inputs"],
                 self.input_tensors["dec_inputs"]: batch["dec_inputs"],
                 self.input_tensors["labels"]: batch["labels"]})
         return logits_ori, logits_tsf
 
-    def feed_dict(self, batch, rho, gamma, is_train=True):
+    def feed_dict(self, batch, rho, gamma, mode=tf.estimators.ModeKeys.TRAIN):
         return {
-            context.is_train(): is_train,
+            tx.global_mode(): mode,
             self.input_tensors["enc_inputs"]: batch["enc_inputs"],
             self.input_tensors["dec_inputs"]: batch["dec_inputs"],
             self.input_tensors["targets"]: batch["targets"],

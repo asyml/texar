@@ -2,7 +2,7 @@
 import argparse
 import copy
 import os
-from texar.core.utils import _bucket_boundaries
+from texar.utils.data_reader import _batching_scheme
 
 class Hyperparams:
     '''Hyperparameters'''
@@ -23,17 +23,35 @@ argparser.add_argument('--target_test', type=str, default='/tmp/t2t_datagen/news
 argparser.add_argument('--data_dir', type=str, default='/home/hzt/shr/t2t_data/')
 argparser.add_argument('--t2t_vocab', type=str, default='vocab.bpe.32000')
 #batch size is only used when testing the model
-argparser.add_argument('--batch_size', type=int, default=1)
+argparser.add_argument('--batch_size', type=int, default=2048)
+argparser.add_argument('--batch_mode', type=str, default='token')
 argparser.add_argument('--eval_src', type=str, default='eval_ende_wmt_bpe32k_en.txt')
 argparser.add_argument('--eval_tgt', type=str, default='eval_ende_wmt_bpe32k_de.txt')
-
+argparser.add_argument('--max_length_bucket', type=int, default=256)
+argparser.add_argument('--min_length_bucket', type=int, default=8)
+argparser.add_argument('--length_bucket_step', type=float, default=1.1)
+argparser.add_argument('--max_training_steps', type=int, default=250000)
+argparser.add_argument('--warmup_steps', type=int, default=16000)
+argparser.add_argument('--lr_constant', type=float, default=2)
 argparser.parse_args(namespace=args)
 args.vocab_dir = os.path.expanduser(args.data_dir)
-boundaries = _bucket_boundaries(max_length=256)
-boundaries = [b + 1 for b in boundaries]
+log_params_dir = 'log_dir/bsize{}.step{}.lr_c{}warm{}/'.format(args.batch_size, args.max_training_steps,\
+    args.lr_constant, args.warmup_steps)
+args.log_dir = os.path.join('/space/shr/transformer_log', log_params_dir)
+#args.log_dir = os.path.join(os.path.split(os.path.realpath(__file__))[0], log_params_dir)
+print('args.log_dir:{}'.format(args.log_dir))
+batching_scheme = _batching_scheme(
+    args.batch_size,
+    args.max_length_bucket,
+    args.min_length_bucket,
+    args.length_bucket_step,
+    drop_long_sequences=True,
+)
+batching_scheme['boundaries'] = [b + 1 for b in batching_scheme['boundaries']]
 #since there is no <BOS> token in t2t, but there is BOS in our model
-
-bucket_batch_size = [240, 180, 180, 180, 144, 144, 144, 120, 120, 120, 90, 90, 90, 90, 80, 72, 72, 60, 60, 48, 48, 48, 40, 40, 36, 30, 30, 24, 24, 20, 20, 18, 18, 16, 15, 12, 12, 10, 10, 9, 8, 8]
+print('boundaries:{}'.format(batching_scheme['boundaries']))
+print('batch_sizes:{}'.format(batching_scheme['batch_sizes']))
+#bucket_batch_size = [240, 180, 180, 180, 144, 144, 144, 120, 120, 120, 90, 90, 90, 90, 80, 72, 72, 60, 60, 48, 48, 48, 40, 40, 36, 30, 30, 24, 24, 20, 20, 18, 18, 16, 15, 12, 12, 10, 10, 9, 8, 8]
 
 train_dataset_hparams = {
     "num_epochs": 100,
@@ -51,8 +69,8 @@ train_dataset_hparams = {
         "files": [os.path.join(args.data_dir, args.train_tgt)],
         "vocab_share":True,
     },
-    'bucket_boundaries': boundaries,
-    'bucket_batch_size': bucket_batch_size
+    'bucket_boundaries': batching_scheme['boundaries'],
+    'bucket_batch_size': batching_scheme['batch_sizes'],
 }
 hidden_dim = 512
 encoder_hparams = {
@@ -106,7 +124,14 @@ loss_hparams = {
 }
 
 opt_hparams = {
-    'learning_rate_schedule': 'linear_warmup_rsqrt_decay',
-    'warmup_steps': 16000,
-    'max_training_steps': 250000,
+    'learning_rate_schedule': 'constant.linear_warmup.rsqrt_decay.rsqrt_depth',
+    'lr_constant': args.lr_constant,
+    'warmup_steps': args.warmup_steps,
+    'max_training_steps': args.max_training_steps,
+    'Adam_beta1':0.9,
+    'Adam_beta2':0.997,
+    'Adam_epsilon':1e-9,
 }
+print('logdir:{}'.format(args.log_dir))
+if not os.path.exists(args.log_dir):
+    os.makedirs(args.log_dir)

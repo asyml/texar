@@ -1,0 +1,15 @@
+#!/usr/bin/env python
+
+from argparse import ArgumentParser
+import sentencepiece as spm
+
+parser = ArgumentParser(description='SentencePiece Train')
+parser.add_argument('--input', type=str)
+parser.add_argument('--vocab_size', type=str)
+parser.add_argument('--model_prefix', type=str)
+args = parser.parse_args()
+
+spm.SentencePieceTrainer.Train('--input={} --model_prefix={} --vocab_size={}'.format(args.input,
+                                                                                     args.model_prefix,
+                                                                                     args.vocab_size))
+print(args)
