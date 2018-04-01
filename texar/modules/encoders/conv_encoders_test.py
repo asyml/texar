@@ -29,8 +29,7 @@ class Conv1DEncoderTest(tf.test.TestCase):
         for layer in encoder_1.layers[0].layers:
             self.assertTrue(isinstance(layer, tx.core.SequentialLayer))
 
-        #inputs_1 = tf.ones([64, 16, 300], tf.float32)
-        inputs_1 = tf.placeholder(tf.float32, [64, None, 300])
+        inputs_1 = tf.ones([64, 16, 300], tf.float32)
         outputs_1 = encoder_1(inputs_1)
         self.assertEqual(outputs_1.shape, [64, 128])
 
@@ -62,6 +61,50 @@ class Conv1DEncoderTest(tf.test.TestCase):
             self.assertTrue(isinstance(layer, tx.core.SequentialLayer))
 
         inputs_2 = tf.ones([64, 16, 300], tf.float32)
+        outputs_2 = encoder_2(inputs_2)
+        self.assertEqual(outputs_2.shape, [64, 10])
+
+    def test_unknown_seq_length(self):
+        """Tests use of pooling layer when the seq_length dimension of inputs
+        is `None`.
+        """
+        hparams = {
+            # Conv layers
+            "num_conv_layers": 2,
+            "filters": 128,
+            "kernel_size": [[3, 4, 5], 4],
+            # Pooling layers
+            "pooling": "AveragePooling",
+            "pool_size": [2, None],
+            # Dense layers
+            "num_dense_layers": 1,
+            "dense_size": 10,
+        }
+        encoder = Conv1DEncoder(hparams)
+        # nlayers = nconv-pool + nconv + npool + ndense + ndropout + flatten
+        self.assertEqual(len(encoder.layers), 1+1+1+1+1+1)
+        self.assertTrue(isinstance(encoder.layer_by_name('pool_2'),
+                                   tx.core.AverageReducePooling1D))
+
+        inputs = tf.placeholder(tf.float32, [64, None, 300])
+        outputs = encoder(inputs)
+        self.assertEqual(outputs.shape, [64, 10])
+
+        hparams_2 = {
+            # Conv layers
+            "num_conv_layers": 1,
+            "filters": 128,
+            "kernel_size": 4,
+            "other_conv_kwargs": {'data_format': 'channels_first'},
+            # Pooling layers
+            "pooling": "MaxPooling",
+            "other_pool_kwargs": {'data_format': 'channels_first'},
+            # Dense layers
+            "num_dense_layers": 1,
+            "dense_size": 10,
+        }
+        encoder_2 = Conv1DEncoder(hparams_2)
+        inputs_2 = tf.placeholder(tf.float32, [64, 300, None])
         outputs_2 = encoder_2(inputs_2)
         self.assertEqual(outputs_2.shape, [64, 10])
 

@@ -7,6 +7,7 @@ from __future__ import print_function
 from __future__ import division
 
 import math
+import copy
 
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
@@ -31,6 +32,7 @@ __all__ = [
     "_ReducePooling1D",
     "MaxReducePooling1D",
     "AverageReducePooling1D",
+    "get_pooling_layer_hparams",
     "MergeLayer",
     "SequentialLayer",
     "default_conv1d_kwargs",
@@ -564,6 +566,34 @@ class AverageReducePooling1D(_ReducePooling1D):
     def __init__(self, data_format='channels_last', name=None, **kwargs):
         super(AverageReducePooling1D, self).__init__(
             tf.reduce_mean, data_format=data_format, name=name, **kwargs)
+
+_POOLING_TO_REDUCE = {
+    "MaxPooling1D": "MaxReducePooling1D",
+    "AveragePooling1D": "AverageReducePooling1D",
+    tf.layers.MaxPooling1D: MaxReducePooling1D,
+    tf.layers.AveragePooling1D: AverageReducePooling1D
+}
+
+def get_pooling_layer_hparams(hparams):
+    """Creates pooling layer hparams dict usable for :func:`get_layer`.
+
+    If the :attr:`hparams` sets `'pool_size'` to `None`, the layer will be
+    changed to the respective reduce-pooling layer.
+    """
+    if isinstance(hparams, HParams):
+        hparams = hparams.todict()
+
+    new_hparams = copy.copy(hparams)
+    kwargs = new_hparams.get('kwargs', None)
+
+    if kwargs and kwargs.get('pool_size', None) is None:
+        pool_type = hparams['type']
+        new_hparams['type'] = _POOLING_TO_REDUCE.get(pool_type, pool_type)
+        kwargs.pop('pool_size', None)
+        kwargs.pop('strides', None)
+        kwargs.pop('padding', None)
+
+    return new_hparams
 
 class MergeLayer(tf.layers.Layer):
     """A layer that consists of multiple layers in parallel. Input is fed to
