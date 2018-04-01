@@ -16,7 +16,7 @@ import os
 
 from utils import *
 import texar as tx
-from texar.data.vocabulary import SpecialTokens
+from texar.data import SpecialTokens
 from texar.hyperparams import HParams
 from texar.models.tsf import TSF
 
@@ -46,12 +46,12 @@ class TSFTrainer:
             "val_data_hparams": {
                 "batch_size": 64,
                 "num_epochs": 1,
+                "shuffle": True,
                 "source_dataset": {
                     "files": "../../data/yelp/sentiment.dev.sort.0",
                     "vocab_file": "../../data/yelp/vocab",
                     "bos_token": SpecialTokens.BOS,
                     "eos_token": SpecialTokens.EOS,
-                    "shuffle": True,
                 },
                 "target_dataset": {
                     "files": "../../data/yelp/sentiment.dev.sort.1",
@@ -61,18 +61,19 @@ class TSFTrainer:
             "test_data_hparams": {
                 "batch_size": 64,
                 "num_epochs": 1,
+                "shuffle": True,
                 "source_dataset": {
                     "files": "../../data/yelp/sentiment.test.sort.0",
                     "vocab_file": "../../data/yelp/vocab",
                     "bos_token": SpecialTokens.BOS,
                     "eos_token": SpecialTokens.EOS,
-                    "shuffle": True,
                 },
                 "target_dataset": {
                     "files": "../../data/yelp/sentiment.test.sort.1",
                     "vocab_share": True,
                 },
             },
+            "vocab_size": 10000,
             "batch_size": 128,
             "expt_dir": "../../expt",
             "log_dir": "log",
@@ -92,7 +93,8 @@ class TSFTrainer:
 
         data0_ori, data1_ori, data0_tsf, data1_tsf = [], [], [], []
         while True:
-            batch = sess.run([input_tensors])
+            batch = sess.run([input_tensors],
+                             {tx.global_mode(): tf.estimator.EvalKeys.EVAL})
             logits_ori, logits_tsf = model.decode_step(sess, batch)
             loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1 = model.eval_step(
                 sess, batch, self._hparams.rho, self._hparams.gamma_min)
@@ -181,8 +183,6 @@ class TSFTrainer:
         with tf.Session() as sess:
             losses = Stats()
             model = TSF(self._hparams)
-            model.build_inputs()
-            model.build_model(self.input_tensors)
             if "model" in self._hparams.keys():
                 model.saver.restore(sess, self._hparams.model)
             else:
@@ -207,7 +207,7 @@ class TSFTrainer:
                 while True:
                     try:
                         batch = sess.run([input_tensors],
-                                         tx.global_mode(): tf.estimator.ModeKeys.EVAL)
+                                         {tx.global_mode(): tf.estimator.ModeKeys.EVAL})
                         loss_d0 = model.train_d0_step(sess, batch,
                                                       self._hparams.rho, gamma)
                         loss_d1 = model.train_d1_step(sess, batch,
@@ -251,8 +251,8 @@ class TSFTrainer:
                     log_print("saved model %s"%(file_name))
 
                 gamma = max(self._hparams.gamma_min, gamma * self._hparams.gamma_decay)
-        
-    return best_dev
+                
+            return best_dev
 
 def main(unused_args):
     trainer = TSFTrainer()

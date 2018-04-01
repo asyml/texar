@@ -11,6 +11,7 @@ import tensorflow as tf
 
 from texar.module_base import ModuleBase
 from texar import core
+from texar import HParams
 
 __all__ = [
     "ModelBase"
@@ -23,7 +24,6 @@ class ModelBase():
     def __init__(self, hparams=None):
         self._hparams = HParams(hparams, self.default_hparams(),
                                 allow_new_hparam=True)
-        self.saver = tf.train.Saver()
 
     @staticmethod
     def default_hparams():
