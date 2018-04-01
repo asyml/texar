@@ -68,12 +68,20 @@ def evaluate():
         with codecs.open(resultfile, "w", "utf-8") as fout, codecs.open(outputfile, 'w+','utf-8') as oout:
             list_of_refs, hypotheses = [], []
             for i in range(len(test_corpus) // hp.batch_size):
-                print('i:{} instance:{}'.format(i, i*hp.batch_size))
+                assert hp.batch_size ==1, 'batch beam search not supported.'
+                active_hyp = [beam_utils.Hypothesis(0, [], None]
+                completed_hyp = []
+                length = 0
                 src = test_corpus[i*hp.batch_size: (i+1)*hp.batch_size]
                 sources = source_list[i*hp.batch_size: (i+1)*hp.batch_size]
                 targets = target_list[i*hp.batch_size: (i+1)*hp.batch_size]
-                outputs = np.zeros((hp.batch_size, hp.maxlen),np.int32)
+                #outputs = np.zeros((hp.batch_size, hp.maxlen),np.int32)
+                #outputs is in the beam state
                 finished = [False] * hp.batch_size
+                while len(completed_hyp) < hp.beam_size and length < hp.maxlen:
+                    new_set =[]
+                    for hyp in active_hyp:
+                        if length>0
                 for j in range(hp.maxlen):
                     _preds = sess.run(preds, \
                         feed_dict={
