@@ -8,6 +8,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import numpy as np
 
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
@@ -17,7 +18,7 @@ from texar import context
 from texar.hyperparams import HParams
 from texar.core import layers
 
-# pylint: disable=no-member, protected-access
+# pylint: disable=no-member, protected-access, invalid-name
 
 class GetRNNCellTest(tf.test.TestCase):
     """Tests RNN cell creator.
@@ -131,6 +132,51 @@ class GetLayerTest(tf.test.TestCase):
         layer = layers.get_layer(hparams)
         self.assertTrue(isinstance(layer, tx.core.MergeLayer))
 
+class ReducePoolingLayerTest(tf.test.TestCase):
+    """Tests reduce pooling layer.
+    """
+    def setUp(self):
+        tf.test.TestCase.setUp(self)
+
+        self._batch_size = 64
+        self._seq_length = 16
+        self._emb_dim = 100
+
+    def test_max_reduce_pooling_layer(self):
+        """Tests :class:`texar.core.MaxReducePooling1D`.
+        """
+        pool_layer = layers.MaxReducePooling1D()
+
+        inputs = tf.random_uniform(
+            [self._batch_size, self._seq_length, self._emb_dim])
+        output_shape = pool_layer.compute_output_shape(inputs.get_shape())
+        output = pool_layer(inputs)
+        output_reduce = tf.reduce_max(inputs, axis=1)
+        self.assertEqual(output.get_shape(), output_shape)
+        self.assertEqual(output.get_shape(), [self._batch_size, self._emb_dim])
+
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            output_, output_reduce_ = sess.run([output, output_reduce])
+            np.testing.assert_array_equal(output_, output_reduce_)
+
+    def test_average_reduce_pooling_layer(self):
+        """Tests :class:`texar.core.AverageReducePooling1D`.
+        """
+        pool_layer = layers.AverageReducePooling1D()
+
+        inputs = tf.random_uniform(
+            [self._batch_size, self._seq_length, self._emb_dim])
+        output_shape = pool_layer.compute_output_shape(inputs.get_shape())
+        output = pool_layer(inputs)
+        output_reduce = tf.reduce_mean(inputs, axis=1)
+        self.assertEqual(output.get_shape(), output_shape)
+        self.assertEqual(output.get_shape(), [self._batch_size, self._emb_dim])
+
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            output_, output_reduce_ = sess.run([output, output_reduce])
+            np.testing.assert_array_equal(output_, output_reduce_)
 
 class MergeLayerTest(tf.test.TestCase):
     """Tests MergeLayer.

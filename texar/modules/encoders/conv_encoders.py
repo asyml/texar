@@ -11,6 +11,7 @@ import tensorflow as tf
 
 from texar.hyperparams import HParams
 from texar.utils.exceptions import TexarError
+from texar.core.layers import get_pooling_layer_hparams
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.networks import FeedForwardNetwork
 from texar.utils.utils import uniquify_str
@@ -63,7 +64,7 @@ class Conv1DEncoder(EncoderBase):
             "other_conv_kwargs": None,
             # Pooling layers
             "pooling": "MaxPooling1D",
-            "pool_size": 1,
+            "pool_size": None,
             "pool_strides": 1,
             "other_pool_kwargs": None,
             # Dense layers
@@ -105,7 +106,9 @@ class Conv1DEncoder(EncoderBase):
             kwargs_i = {"pool_size": pool_size[i], "strides": strides[i],
                         "name": "pool_%d" % (i+1)}
             kwargs_i.update(other_kwargs)
-            pool_hparams.append({"type": pool_type, "kwargs": kwargs_i})
+            pool_hparams_ = get_pooling_layer_hparams({"type": pool_type,
+                                                       "kwargs": kwargs_i})
+            pool_hparams.append(pool_hparams_)
 
         return pool_hparams
 
@@ -155,6 +158,7 @@ class Conv1DEncoder(EncoderBase):
                 mrg_kwargs_layers = []
                 for hparams_ij in hparams_i:
                     seq_kwargs_j = {"layers": [hparams_ij, pool_hparams[i]]}
+                    seq_kwargs_j = {"layers": [hparams_ij]}
                     mrg_kwargs_layers.append(
                         {"type": "SequentialLayer", "kwargs": seq_kwargs_j})
                 mrg_hparams = {"type": "MergeLayer",
