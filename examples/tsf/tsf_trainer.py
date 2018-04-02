@@ -31,7 +31,8 @@ class TSFTrainer:
         return {
             "train_data_hparams": {
                 "batch_size": 64,
-                "num_epochs": 20,
+                "num_epochs": 1,
+                "allow_smaller_final_batch": False,
                 "source_dataset": {
                     "files": "../../data/yelp/sentiment.train.sort.0",
                     "vocab_file": "../../data/yelp/vocab",
@@ -47,6 +48,7 @@ class TSFTrainer:
                 "batch_size": 64,
                 "num_epochs": 1,
                 "shuffle": False,
+                "allow_smaller_final_batch": False,
                 "source_dataset": {
                     "files": "../../data/yelp/sentiment.dev.sort.0",
                     "vocab_file": "../../data/yelp/vocab",
@@ -62,6 +64,7 @@ class TSFTrainer:
                 "batch_size": 64,
                 "num_epochs": 1,
                 "shuffle": False,
+                "allow_smaller_final_batch": False,
                 "source_dataset": {
                     "files": "../../data/yelp/sentiment.test.sort.0",
                     "vocab_file": "../../data/yelp/vocab",
@@ -90,7 +93,7 @@ class TSFTrainer:
     def eval_model(self, model, sess, dataset, iterator, input_tensors,
                    output_path):
         losses = Stats()
-        id2word = dataset.vocab._id_to_token_map_py
+        id2word = dataset.vocab[0].id_to_token_map_py
 
         data0_ori, data1_ori, data0_tsf, data1_tsf = [], [], [], []
         while True:
@@ -128,7 +131,7 @@ class TSFTrainer:
     def preprocess_input(self, data_batch):
         src = data_batch["source_text_ids"]
         src_len = data_batch["source_length"]
-        tgt = data_batch["source_text_ids"]
+        tgt = data_batch["target_text_ids"]
         tgt_len = data_batch["target_length"]
         l = tf.maximum(tf.shape(src)[1], tf.shape(tgt)[1])
         batch_size = tf.shape(src)[0]
