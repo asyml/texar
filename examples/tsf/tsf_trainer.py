@@ -13,18 +13,34 @@ import tensorflow as tf
 import json
 import os
 
-
 from utils import *
 import texar as tx
 from texar.data import SpecialTokens
 from texar.hyperparams import HParams
 from texar.models.tsf import TSF
 
+flags = tf.flags
+FLAGS = flags.FLAGS
+
+flags.DEFINE_string("expt_dir", "", "experiment dir")
+flags.DEFINE_string("log_dir", "", "log dir")
+flags.DEFINE_string("config", "", "config")
+flags.DEFINE_string("model", "", "model")
+
 class TSFTrainer:
     """TSF trainer."""
     def __init__(self, hparams=None):
-        self._hparams = HParams(hparams, self.default_hparams(),
-                                allow_new_hparam=True)
+        flags_hparams = self.default_hparams()
+        if FLAGS.expt_dir:
+            flags_hparams["expt_dir"] = FLAGS.expt_dir
+        if FLAGS.log_dir:
+            flags_hparams["log_dir"] = FLAGS.log_dir
+        if FLAGS.config:
+            flags_hparams["config"] = FLAGS.config
+        if FLAGS.model:
+            flags_hparams["model"] = FLAGS.model
+
+        self._hparams = HParams(hparams, flags_hparams, allow_new_hparam=True)
 
     @staticmethod
     def default_hparams():
@@ -97,24 +113,27 @@ class TSFTrainer:
 
         data0_ori, data1_ori, data0_tsf, data1_tsf = [], [], [], []
         while True:
-            batch = sess.run(input_tensors,
-                             {tx.global_mode(): tf.estimator.EvalKeys.EVAL})
-            logits_ori, logits_tsf = model.decode_step(sess, batch)
-            loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1 = model.eval_step(
-                sess, batch, self._hparams.rho, self._hparams.gamma_min)
-            batch_size = batch["enc_inputs"].shape()[0]
-            word_size = np.sum(batch["weights"])
-            losses.append(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1,
-                          w_loss=batch_size, w_g=batch_size,
-                          w_ppl=word_size, w_d=batch_size,
-                          w_d0=batch_size, w_d1=batch_size)
-            ori = logits2word(logits_ori, id2word)
-            tsf = logits2word(logits_tsf, id2word)
-            half = self._hparams.batch_size // 2
-            data0_ori += ori[:half]
-            data1_ori += ori[half:]
-            data0_tsf += tsf[:half]
-            data1_tsf += tsf[half:]
+            try:
+                batch = sess.run(input_tensors,
+                                 {tx.global_mode(): tf.estimator.ModeKeys.EVAL})
+                logits_ori, logits_tsf = model.decode_step(sess, batch)
+                loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1 = model.eval_step(
+                    sess, batch, self._hparams.rho, self._hparams.gamma_min)
+                batch_size = batch["enc_inputs"].shape[0]
+                word_size = np.sum(batch["weights"])
+                losses.append(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1,
+                              w_loss=batch_size, w_g=batch_size,
+                              w_ppl=word_size, w_d=batch_size,
+                              w_d0=batch_size, w_d1=batch_size)
+                ori = logits2word(logits_ori, id2word)
+                tsf = logits2word(logits_tsf, id2word)
+                half = self._hparams.batch_size // 2
+                data0_ori += ori[:half]
+                data1_ori += ori[half:]
+                data0_tsf += tsf[:half]
+                data1_tsf += tsf[half:]
+            except tf.errors.OutOfRangeError:
+                break
 
         n = dataset._dataset_size
         data0_ori = data0_ori[:n]
@@ -238,13 +257,14 @@ class TSFTrainer:
                 dev_loss = self.eval_model(
                     model, sess, val_data, iterator, input_tensors,
                     os.path.join(log_dir, "sentiment.dev.epoch%d"%(epoch)))
+                log_print("dev " + str(dev_loss))
+
                 iterator.switch_to_test_data(sess)
                 test_loss = self.eval_model(
                     model, sess, test_data, iterator, input_tensors,
                     os.path.join(log_dir, "sentiment.test.epoch%d"%(epoch)))
-
-                log_print("dev " + str(dev_loss))
                 log_print("test " + str(test_loss))
+
                 if dev_loss.loss < best_dev:
                     best_dev = dev_loss.loss
                     file_name = (
