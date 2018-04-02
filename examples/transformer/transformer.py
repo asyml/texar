@@ -48,7 +48,7 @@ if __name__ == "__main__":
     encoder = TransformerEncoder(
         vocab_size=text_database.source_vocab.size,\
         hparams=encoder_hparams)
-    encoder_padding, encoder_output = encoder(encoder_input, inputs_length=enc_input_length)
+    encoder_output, encoder_decoder_attention_bias = encoder(encoder_input, inputs_length=enc_input_length)
     decoder = TransformerDecoder(
         embedding = encoder._embedding,
         hparams=decoder_hparams)
@@ -56,7 +56,7 @@ if __name__ == "__main__":
     logits, preds = decoder(
         decoder_input,
         encoder_output,
-        encoder_padding,
+        encoder_decoder_attention_bias,
     )
     mle_loss = mle_losses.smoothing_cross_entropy(logits, labels, text_database.target_vocab.size,
         loss_hparams['label_confidence'])

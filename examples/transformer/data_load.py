@@ -13,24 +13,21 @@ import codecs
 import regex
 
 def load_shared_vocab():
-    vocab = [line.split()[0] for line in codecs.open(hp.vocab_dir + 'vocab.bpe.32000.eval').read().splitlines()]
+    vocab = ['<PAD>', '<BOS>', '<EOS>', '<UNK>'] + [line.split()[0] for line in codecs.open(hp.vocab_file).read().splitlines()]
+
     word2idx = {word: idx for idx, word in enumerate(vocab)}
     idx2word = {idx: word for idx, word in enumerate(vocab)}
     return word2idx, idx2word
 
 def create_data(source_sents, target_sents):
     word2idx, idx2word = load_shared_vocab()
-
     # Index
     x_list, y_list, Sources, Targets = [], [], [], []
     for source_sent, target_sent in zip(source_sents, target_sents):
-        x = [word2idx[word] for word in (source_sent + u" <EOS>").split()]
-        y = [word2idx[word] for word in (target_sent + u" <EOS>").split()]
-        x = x[:hp.maxlen]
-        y = y[:hp.maxlen]
-
-        # truncate or discard
-        #if max(len(x), len(y)) <=hp.maxlen:
+        x = [word2idx.get(word, 2) for word in (source_sent + " <EOS>").split()]
+        y = [word2idx.get(word, 2) for word in (target_sent + " <EOS>").split()]
+        #x = x[:hp.maxlen]
+        #y = y[:hp.maxlen]
         x_list.append(np.array(x))
         y_list.append(np.array(y))
         Sources.append(source_sent)
@@ -45,15 +42,15 @@ def create_data(source_sents, target_sents):
     return X, Y, Sources, Targets
 
 def load_train_data():
-    de_sents = [regex.sub("[^\s\p{Latin}']", "", line) for line in codecs.open(hp.source_train, 'r', 'utf-8').read().split("\n") if line and line[0] != "<"]
-    en_sents = [regex.sub("[^\s\p{Latin}']", "", line) for line in codecs.open(hp.target_train, 'r', 'utf-8').read().split("\n") if line and line[0] != "<"]
+    de_sents = [regex.sub("[^\s\p{Latin}']", "", line) for line in codecs.open(hp.train_src, 'r', 'utf-8').read().split("\n") if line and line[0] != "<"]
+    en_sents = [regex.sub("[^\s\p{Latin}']", "", line) for line in codecs.open(hp.train_tgt, 'r', 'utf-8').read().split("\n") if line and line[0] != "<"]
 
     X, Y, Sources, Targets = create_data(de_sents, en_sents)
     return X, Y
 
 def load_test_data():
-    src_sents = [line for line in codecs.open(hp.source_test, 'r', 'utf-8').read().split("\n") if line]
-    tgt_sents = [line for line in codecs.open(hp.target_test, 'r', 'utf-8').read().split("\n") if line]
+    src_sents = [line for line in codecs.open(hp.test_src, 'r', 'utf-8').read().split("\n") if line]
+    tgt_sents = [line for line in codecs.open(hp.test_tgt, 'r', 'utf-8').read().split("\n") if line]
     X, Y, Sources, Targets = create_data(src_sents, tgt_sents)
     return X, Sources, Targets # (1064, 150)
 
