@@ -16,7 +16,8 @@ import texar as tx
 from texar import context
 from texar.utils import switch_dropout
 from texar.modules.embedders import WordEmbedder
-from texar.modules.classifiers import Conv1DClassifier
+# from texar.modules.classifiers import Conv1DClassifier
+from texar.modules.classifiers import CNN as Conv1DClassifier
 from texar.modules.encoders import UnidirectionalRNNEncoder
 from texar.modules.decoders import BasicRNNDecoder
 from texar.modules.decoders import _get_training_helper, GumbelSoftmaxEmbeddingHelper
@@ -75,8 +76,13 @@ class TSF(ModelBase):
             },
             "cnn": {
                 "name": "cnn",
+                "kernel_sizes": [3, 4, 5],
+                "num_filter": 128,
+                "output_keep_prob": 0.5,
+                "input_keep_prob": 1.,
             },
             "opt": {
+                "name": "optimizer",
                 "optimizer": {
                     "type":  "AdamOptimizer",
                     "kwargs": {
@@ -185,7 +191,6 @@ class TSF(ModelBase):
         cnn0 = Conv1DClassifier(cnn0_hparams)
         cnn1 = Conv1DClassifier(cnn1_hparams)
 
-        pdb.set_trace()
         _, loss_d0 = adv_losses.binary_adversarial_losses(
             teach_h[:half], soft_h_tsf[half:], cnn0)
         _, loss_d1 = adv_losses.binary_adversarial_losses(
@@ -194,7 +199,9 @@ class TSF(ModelBase):
         loss_d = loss_d0 + loss_d1
         loss = loss_g - input_tensors["rho"] * loss_d
 
-        var_eg = rnn_encoder.trainable_variables + rnn_decoder.trainable_variables \
+        var_eg = embedder.trainable_variables + \
+                 rnn_encoder.trainable_variables + \
+                 rnn_decoder.trainable_variables \
                  + label_proj_g.trainable_variables
         var_d0 = cnn0.trainable_variables
         var_d1 = cnn1.trainable_variables
@@ -208,34 +215,34 @@ class TSF(ModelBase):
         opt_ae_hparams.name = "optimizer_ae"
         opt_d0_hparams.name = "optimizer_d0"
         opt_d1_hparams.name = "optimizer_d1"
-        optimizer_all, _ = get_train_op(loss, variables=var_eg,
-                                        hparams=opt_all_hparams)
-        optimizer_ae, _ = get_train_op(loss_g, variables=var_eg,
-                                       hparams=opt_ae_hparams)
-        optimizer_d0, _ = get_train_op(loss_d0, variables=var_d0,
-                                       hparams=opt_d0_hparams)
-        optimizer_d1, _ = get_train_op(loss_d1, variables=var_d1,
-                                       hparams=opt_d1_hparams)
+        optimizer_all = get_train_op(loss, variables=var_eg,
+                                     hparams=opt_all_hparams)
+        optimizer_ae = get_train_op(loss_g, variables=var_eg,
+                                    hparams=opt_ae_hparams)
+        optimizer_d0 = get_train_op(loss_d0, variables=var_d0,
+                                    hparams=opt_d0_hparams)
+        optimizer_d1 = get_train_op(loss_d1, variables=var_d1,
+                                    hparams=opt_d1_hparams)
         
         self.output_tensors = {
-            "h_ori", h_ori,
-            "h_tsf", h_tsf,
-            "hard_logits_ori", hard_outputs_ori.logits,
-            "hard_logits_tsf", hard_outputs_tsf.logits,
-            "soft_logits_ori", soft_outputs_ori.logits,
-            "soft_logits_tsf", soft_outputs_tsf.logits,
-            "g_logits", g_outputs.logits,
-            "teach_h", teach_h,
-            "soft_h_tsf", soft_h_tsf,
+            "h_ori": h_ori,
+            "h_tsf": h_tsf,
+            "hard_logits_ori": hard_outputs_ori.logits,
+            "hard_logits_tsf": hard_outputs_tsf.logits,
+            "soft_logits_ori": soft_outputs_ori.logits,
+            "soft_logits_tsf": soft_outputs_tsf.logits,
+            "g_logits": g_outputs.logits,
+            "teach_h": teach_h,
+            "soft_h_tsf": soft_h_tsf,
         }
 
         self.loss = {
-            "loss", loss,
-            "loss_g", loss_g,
-            "ppl_g", ppl_g,
-            "loss_d", loss_d,
-            "loss_d0", loss_d0,
-            "loss_d1", loss_d1,
+            "loss": loss,
+            "loss_g": loss_g,
+            "ppl_g": ppl_g,
+            "loss_d": loss_d,
+            "loss_d0": loss_d0,
+            "loss_d1": loss_d1,
         }
 
         self.opt = {

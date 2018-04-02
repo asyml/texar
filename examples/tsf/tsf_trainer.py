@@ -46,7 +46,7 @@ class TSFTrainer:
             "val_data_hparams": {
                 "batch_size": 64,
                 "num_epochs": 1,
-                "shuffle": True,
+                "shuffle": False,
                 "source_dataset": {
                     "files": "../../data/yelp/sentiment.dev.sort.0",
                     "vocab_file": "../../data/yelp/vocab",
@@ -61,7 +61,7 @@ class TSFTrainer:
             "test_data_hparams": {
                 "batch_size": 64,
                 "num_epochs": 1,
-                "shuffle": True,
+                "shuffle": False,
                 "source_dataset": {
                     "files": "../../data/yelp/sentiment.test.sort.0",
                     "vocab_file": "../../data/yelp/vocab",
@@ -87,13 +87,14 @@ class TSFTrainer:
         }
 
 
-    def eval_model(self, model, sess, dataset, iterator, input_tensors, output_path):
+    def eval_model(self, model, sess, dataset, iterator, input_tensors,
+                   output_path):
         losses = Stats()
         id2word = dataset.vocab._id_to_token_map_py
 
         data0_ori, data1_ori, data0_tsf, data1_tsf = [], [], [], []
         while True:
-            batch = sess.run([input_tensors],
+            batch = sess.run(input_tensors,
                              {tx.global_mode(): tf.estimator.EvalKeys.EVAL})
             logits_ori, logits_tsf = model.decode_step(sess, batch)
             loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1 = model.eval_step(
@@ -203,15 +204,15 @@ class TSFTrainer:
                 log_print("gamma %.3f"%(gamma))
 
                 # one epoch
-                iterator.switch_to_train_dataset(sess)
+                iterator.switch_to_train_data(sess)
                 while True:
                     try:
-                        batch = sess.run([input_tensors],
+                        batch = sess.run(input_tensors,
                                          {tx.global_mode(): tf.estimator.ModeKeys.EVAL})
-                        loss_d0 = model.train_d0_step(sess, batch,
-                                                      self._hparams.rho, gamma)
-                        loss_d1 = model.train_d1_step(sess, batch,
-                                                      self._hparams.rho, gamma)
+                        loss_d0 = model.train_d0_step(
+                            sess, batch, self._hparams.rho, gamma)
+                        loss_d1 = model.train_d1_step(
+                            sess, batch, self._hparams.rho, gamma)
 
                         if loss_d0 < 1.2 and loss_d1 < 1.2:
                             loss, loss_g, ppl_g, loss_d = model.train_g_step(
@@ -226,20 +227,21 @@ class TSFTrainer:
                         if step % self._hparams.disp_interval == 0:
                             log_print("step %d: "%(step) + str(losses))
                             losses.reset()
-                    except:
+                    except tf.errors.OutOfRangeError:
                         break
 
                 # eval on dev
-                iterator.switch_to_val_dataset(sess)
+                iterator.switch_to_val_data(sess)
                 dev_loss = self.eval_model(
-                    model, sess, vocab, val[0], val[1],
+                    model, sess, val_data, iterator, input_tensors,
                     os.path.join(log_dir, "sentiment.dev.epoch%d"%(epoch)))
-                iterator.switch_to_test_dataset(sess)
+                iterator.switch_to_test_data(sess)
                 test_loss = self.eval_model(
-                    model, sess, vocab, val[0], val[1],
+                    model, sess, test_data, iterator, input_tensors,
                     os.path.join(log_dir, "sentiment.test.epoch%d"%(epoch)))
 
                 log_print("dev " + str(dev_loss))
+                log_print("test " + str(test_loss))
                 if dev_loss.loss < best_dev:
                     best_dev = dev_loss.loss
                     file_name = (
