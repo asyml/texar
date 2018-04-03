@@ -31,8 +31,12 @@ if __name__ == "__main__":
     random.seed(1234)
     hidden_dim = 512
     # Construct the database
-    text_database = qPairedTextData(train_dataset_hparams)
-    text_data_batch = text_database()
+    train_database = qPairedTextData(train_dataset_hparams)
+    #eval_database = qPairedTextData(eval_dataset_hparams)
+    test_database  =qPairedTextData(test_dataset_hparams)
+
+    text_data_batch = iterator.get_next()
+
     ori_src_text = text_data_batch['source_text_ids']
     ori_tgt_text = text_data_batch['target_text_ids']
 
@@ -58,6 +62,11 @@ if __name__ == "__main__":
         encoder_output,
         encoder_decoder_attention_bias,
     )
+    predictions = decoder.dynamic_decode(
+        encoder_output,
+        encoder_decoder_attention_bias,
+    )
+
     mle_loss = mle_losses.smoothing_cross_entropy(logits, labels, text_database.target_vocab.size,
         loss_hparams['label_confidence'])
     istarget = tf.to_float(tf.not_equal(labels, 0))
@@ -92,30 +101,49 @@ if __name__ == "__main__":
     config.gpu_options.allow_growth=True
     vocab = text_database.source_vocab
 
-    with tf.Session(config=config) as sess:
+
+    graph = tf.get_default_graph()
+    graph.finalize()
+
+    var_list = tf.trainable_variables()
+    #with open(args.log_dir+'var.list', 'w+') as outfile:
+    #    for var in var_list:
+    #        outfile.write('var:{} shape:{} dtype:{}\n'.format(var.name, var.shape, var.dtype))
+    #            logging.info('var:{} shape:{}'.format(var.name, var.shape, var.dtype))
+    with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
-        graph = tf.get_default_graph()
-        graph.finalize()
-
-        var_list = tf.trainable_variables()
-        with open(args.log_dir+'var.list', 'w+') as outfile:
-            for var in var_list:
-                outfile.write('var:{} shape:{} dtype:{}\n'.format(var.name, var.shape, var.dtype))
-                logging.info('var:{} shape:{}'.format(var.name, var.shape, var.dtype))
         writer = tf.summary.FileWriter(args.log_dir, graph=sess.graph)
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-        try:
-            while not coord.should_stop():
-                source, dec_in, target, predict, _, step, loss, mgd = sess.run(
-                    [encoder_input, decoder_input, labels, preds, train_op, global_step, mle_loss, merged],
-                    feed_dict={context.global_mode(): tf.estimator.ModeKeys.TRAIN}
-                )
+        if args.running_mode == 'train':
+            for epoch in range(args.max_train_epoch):
+                _train_epochs(sess, epoch)
+                #if epoch % args.eval_interval == 0:
+                #    _eval_epochs(sess, epoch)
+        elif args.running_mode == 'test':
+            _test_epochs(sess, epoch)
+    def _test_epoch(sess, epoch):
+        iterator.switch_to_test_data(sess)
+
+    def _train_epochs(sess, epoch, writer):
+        iterator.switch_to_train_data(sess)
+        while True:
+            try:
+                fetches = {'source', encoder_input,
+                           'dec_in', decoder_input,
+                           'target', labels,
+                           'predict': preds,
+                           'train_op', train_op,
+                           'step': global_step,
+                           'loss': mle_loss,
+                           'mgd' :merged}
+                feed = {context.global_mode(): tf.estimator.ModeKeys.TRAIN}
+                _fetches = sess.run(fetches, feed_dict=feed)
                 if step % 100 == 0:
                     logging.info('step:{} source:{} targets:{} loss:{}'.format(\
                         step, source.shape, target.shape, loss))
+                source, dec_in, target = \
+                    _fetches['source'], _fetches['dec_in'], _fetches['target']
                 source, dec_in, target = source.tolist(), dec_in.tolist(), target.tolist()
                 swords = [ ' '.join([vocab._id_to_token_map_py[i] for i in sent]) for sent in source ]
                 dwords = [ ' '.join([vocab._id_to_token_map_py[i] for i in sent]) for sent in dec_in ]
@@ -124,11 +152,6 @@ if __name__ == "__main__":
                 if step % 1000 == 0:
                     print('step:{} loss:{}'.format(step, loss))
                     saver.save(sess, args.log_dir+'my-model', global_step=step)
-                if step == opt_hparams['max_training_steps']:
-                    coord.request_stop()
         except tf.errors.OutOfRangeError:
-            print('Done -- epoch limit reached')
-        finally:
-            coord.request_stop()
-        coord.join(threads)
+            break
         saver.save(sess, args.log_dir+'my-model', global_step=step)

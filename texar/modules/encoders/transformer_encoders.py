@@ -8,9 +8,10 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from texar.core import layers
+from texar.core import layers, attentions
 from texar import context
 from texar.modules.encoders.encoder_base import EncoderBase
+from texar.modules.encoders.position_encoders import SinusoidalPositionEncoder
 from texar.modules.networks import FeedForwardNetwork
 from texar.modules.embedders import embedder_utils
 from texar import utils
@@ -72,6 +73,8 @@ class TransformerEncoder(EncoderBase):
                     [32, embed_dim])
                 self.target_symbol_embedding = tf.gather(space_embedding, \
                     self._hparams.target_space_id)
+            self.position_encoder = SinusoidalPositionEncoder()
+
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
@@ -115,7 +118,7 @@ class TransformerEncoder(EncoderBase):
             #https://github.com/tensorflow/tensor2tensor/blob/master/tensor2tensor/layers/common_attention.py
             #Line678
             "max_seq_length":100000000,
-            'sinusoid':False,
+            'sinusoid':True,
             'dropout':0.1,
             'num_blocks':6,
             'num_heads':8,
@@ -123,32 +126,22 @@ class TransformerEncoder(EncoderBase):
             'target_space_id': 1,
         }
 
-    def _build(self, inputs, inputs_length, **kwargs):
+    def _build(self, inputs,  **kwargs):
         if self._embedding is not None:
             self.enc = tf.nn.embedding_lookup(self._embedding, inputs)
         else:
             self.enc = inputs
-        encoder_padding = utils.embedding_to_padding(
-            self.enc)
         if self._hparams.multiply_embedding_mode =='sqrt_depth':
             self.enc = self.enc * (self._embedding.shape.as_list()[-1]**0.5)
 
+        #### transformer_prepare_encoder
+        encoder_padding = utils.embedding_to_padding(self.enc)
+        ignore_padding = attentions.attention_bias_ignore_padding(encoder_padding)
+        encoder_self_attention_bias = ignore_padding
+        encoder_decoder_attention_bias = ignore_padding
         emb_target_space = tf.reshape(self.target_symbol_embedding, [1,1,-1])
         self.enc = self.enc + emb_target_space
-
-        pad_remover = utils.PadRemover(inputs_length)
-        if self._hparams.sinusoid:
-            self.enc += layers.sinusoid_positional_encoding(
-                self.enc,
-                variable_scope='enc_pe')
-        else:
-            self.position_enc_embedding = embedder_utils.get_embedding(
-                hparams=self._hparams.embedding,
-                vocab_size=self._hparams.max_seq_length,
-                variable_scope='enc_pe')
-            self.enc += tf.nn.embedding_lookup(self.position_enc_embedding,\
-                tf.tile(tf.expand_dims(tf.range(tf.shape(inputs)[1]), 0), [tf.shape(inputs)[0], 1]))
-
+        self.enc = self.position_encoder(self.enc, sequence_length=None)
         self.enc = tf.layers.dropout(self.enc, \
             rate=self._hparams.dropout, training=context.global_mode_train())
         pad_remover = utils.padding_related.PadRemover(encoder_padding)
@@ -157,12 +150,11 @@ class TransformerEncoder(EncoderBase):
                 with tf.variable_scope('self_attention'):
                     selfatt_output = layers.multihead_attention(
                         queries=layers.layer_normalize(self.enc),
-                        keys=None,
-                        keys_padding=encoder_padding,
+                        memory=None,
+                        bias=encoder_self_attention_bias,
                         num_heads=self._hparams.num_heads,
                         dropout_rate=self._hparams.dropout,
                         num_units=self._hparams.embedding.dim,
-                        causality=False,
                         scope='multihead_attention'
                     )
                     self.enc = self.enc + tf.layers.dropout(
@@ -186,10 +178,9 @@ class TransformerEncoder(EncoderBase):
                         sub_output, axis=0)), original_shape
                     )
                     self.enc = self.enc + sub_output
-
         self.enc = layers.layer_normalize(self.enc)
         if not self._built:
             self._add_internal_trainable_variables()
             self._built = True
 
-        return encoder_padding, self.enc
+        return self.enc, encoder_decoder_attention_bias
