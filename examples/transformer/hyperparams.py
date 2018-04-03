@@ -37,7 +37,8 @@ argparser.add_argument('--max_epoch', type=int, default=40)
 argparser.add_argument('--random_seed', type=int, default=123)
 argparser.add_argument('--log_disk_dir', type=str, default='/home2/shr/transformer/')
 argparser.add_argument('--beam_width', type=int, default=2)
-argparser.add_argument('--alpha', type=float, default=0.6)
+argparser.add_argument('--alpha', type=float, default=0,\
+    help=' length_penalty=(5+len(decode)/6) ^ -\alpha')
 argparser.parse_args(namespace=args)
 
 args.data_dir = os.path.expanduser(args.data_dir)
@@ -102,6 +103,7 @@ test_dataset_hparams = {
         "vocab_share":True,
     },
     'batch_size': args.test_batch_size,
+    'allow_smaller_final_batch': True,
 }
 hidden_dim = 512
 encoder_hparams = {
