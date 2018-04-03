@@ -13,7 +13,7 @@ class Hyperparams:
 
 args = Hyperparams()
 argparser = argparse.ArgumentParser()
-argparser.add_argument('--data_dir', type=str, default='/home/shr/others_repo/Attention_is_All_You_Need/data/en_vi/data')
+argparser.add_argument('--data_dir', type=str, default='~/others_repo/Attention_is_All_You_Need/data/en_vi/data')
 argparser.add_argument('--src_language', type=str, default='en')
 argparser.add_argument('--tgt_language', type=str, default='vi')
 argparser.add_argument('--filename_prefix',type=str, default='processed.')
@@ -35,11 +35,13 @@ argparser.add_argument('--warmup_steps', type=int, default=16000)
 argparser.add_argument('--lr_constant', type=float, default=2)
 argparser.add_argument('--max_epoch', type=int, default=40)
 argparser.add_argument('--random_seed', type=int, default=123)
-argparser.add_argument('--log_disk_dir', type=str, default='/home2/shr/transformer/')
+#argparser.add_argument('--log_disk_dir', type=str, default='/home2/shr/transformer/')
+argparser.add_argument('--log_disk_dir', type=str, default='/space/shr/transformer_log/')
 argparser.add_argument('--beam_width', type=int, default=2)
 argparser.add_argument('--alpha', type=float, default=0.6)
 argparser.parse_args(namespace=args)
 
+print('args.data_dir:{}'.format(args.data_dir))
 args.data_dir = os.path.expanduser(args.data_dir)
 args.filename_prefix = args.filename_prefix + args.src_language + '_' + args.tgt_language
 args.train_src = os.path.join(args.data_dir, args.filename_prefix + '.train.' + args.src_language + '.txt')
