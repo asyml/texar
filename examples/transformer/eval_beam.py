@@ -49,8 +49,8 @@ def evaluate():
         mname = tf.train.latest_checkpoint(model_path).split('/')[-1]
         print('model name:{}'.format(mname))
         ## Inference
-        resultfile = model_path + mname + '.result.txt'
-        outputfile = model_path + mname + '.output.txt'
+        resultfile = model_path + mname + '.b{}alpha{}.result.txt'.format(hp.beam_width, hp.alpha)
+        outputfile = model_path + mname + '.b{}alpha{}.output.txt'.format(hp.beam_width, hp.alpha)
         print('result:{}'.format(resultfile))
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
@@ -58,7 +58,6 @@ def evaluate():
         with codecs.open(resultfile, "w", "utf-8") as fout, codecs.open(outputfile, 'w+','utf-8') as oout:
             try:
                 while not coord.should_stop():
-                    assert hp.test_batch_size == 1, 'batch beam search is not supported'
                     #outputs = np.ones((hp.batch_size, hp.maxlen), np.int32) #这里应该从BOS开始
                     fetches = [predictions, ori_src_text, ori_tgt_text]
                     predicts, src, tgt = sess.run(fetches, \
@@ -66,12 +65,18 @@ def evaluate():
                             context.global_mode(): tf.estimator.ModeKeys.PREDICT,
                         }
                     )
-                    sources, sampled_ids, targets = src.tolist(), predicts['sampled_ids'], tgt.tolist()
-                    print('sampled_ids:{}'.format(sampled_ids.shape))
-                    exit()
+                    sources, sampled_ids, targets = src.tolist(), predicts['sampled_ids'], tgt[:, 1:].tolist()
+
+                    #print('sampled_ids:{}'.format(sampled_ids.shape))
+                    #[batch_Size, top_k, token_ids]
+                    sampled_ids = sampled_ids[:, 0, :]
+                    sources = [' '.join([vocab._id_to_token_map_py[i] for i in sent]) for sent in sources]
+                    targets = [' '.join([vocab._id_to_token_map_py[i] for i in sent]) for sent in targets]
                     dwords = [ ' '.join([vocab._id_to_token_map_py[i] for i in sent]) for sent in sampled_ids]
+                    print('the {}-th sentence'.format(len(list_of_refs)))
                     for source, target, pred in zip(sources, targets, dwords): # sentence-wise
-                        pred = pred.output
+                        source = source.split('<EOS>')[0].strip()
+                        target = target.split('<EOS>')[0].strip()
                         got = pred.split("<EOS>")[0].strip()
                         fout.write("- source: " + source +"\n")
                         fout.write("- expected: " + target + "\n")

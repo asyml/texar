@@ -24,41 +24,23 @@ from __future__ import print_function
 import tensorflow as tf
 
 from tensorflow.python.util import nest
-
+from texar.core import layers
 # Assuming EOS_ID is 1
 EOS_ID = 1
 # Default value for INF
 INF = 1. * 1e7
 
 
-def _shape_list(x):
-  """Return list of dims, statically where possible."""
-  x = tf.convert_to_tensor(x)
-
-  # If unknown rank, return dynamic shape
-  if x.get_shape().dims is None:
-    return tf.shape(x)
-
-  static = x.get_shape().as_list()
-  shape = tf.shape(x)
-
-  ret = []
-  for i, _ in enumerate(static):
-    dim = static[i]
-    if dim is None:
-      dim = shape[i]
-    ret.append(dim)
-  return ret
-
-
 def _merge_beam_dim(tensor):
   """Reshapes first two dimensions in to single dimension.
+
   Args:
     tensor: Tensor to reshape of shape [A, B, ...]
+
   Returns:
     Reshaped tensor of shape [A*B, ...]
   """
-  shape = _shape_list(tensor)
+  shape = layers.shape_list(tensor)
   shape[0] *= shape[1]  # batch -> batch * beam_size
   shape.pop(1)  # Remove beam dim
   return tf.reshape(tensor, shape)
@@ -66,23 +48,27 @@ def _merge_beam_dim(tensor):
 
 def _unmerge_beam_dim(tensor, batch_size, beam_size):
   """Reshapes first dimension back to [batch_size, beam_size].
+
   Args:
     tensor: Tensor to reshape of shape [batch_size*beam_size, ...]
     batch_size: Tensor, original batch size.
     beam_size: int, original beam size.
+
   Returns:
     Reshaped tensor of shape [batch_size, beam_size, ...]
   """
-  shape = _shape_list(tensor)
+  shape = layers.shape_list(tensor)
   new_shape = [batch_size] + [beam_size] + shape[1:]
   return tf.reshape(tensor, new_shape)
 
 
 def _expand_to_beam_size(tensor, beam_size):
   """Tiles a given tensor by beam_size.
+
   Args:
     tensor: tensor to tile [batch_size, ...]
     beam_size: How much to tile the tensor by.
+
   Returns:
     Tiled tensor [batch_size, beam_size, ...]
   """
@@ -101,15 +87,17 @@ def get_state_shape_invariants(tensor):
   return tf.TensorShape(shape)
 
 
-def _log_prob_from_logits(logits):
-  return logits - tf.reduce_logsumexp(logits, axis=2, keepdims=True)
+def log_prob_from_logits(logits):
+  return logits - tf.reduce_logsumexp(logits, axis=2, keep_dims=True)
 
 
 def compute_batch_indices(batch_size, beam_size):
   """Computes the i'th coodinate that contains the batch index for gathers.
+
   Batch pos is a tensor like [[0,0,0,0,],[1,1,1,1],..]. It says which
   batch the beam item is in. This will create the i of the i,j coordinate
   needed for the gather.
+
   Args:
     batch_size: Batch size
     beam_size: Size of the beam.
@@ -125,14 +113,17 @@ def compute_topk_scores_and_seq(sequences, scores, scores_to_gather, flags,
                                 beam_size, batch_size, prefix="default",
                                 states_to_gather=None):
   """Given sequences and scores, will gather the top k=beam size sequences.
+
   This function is used to grow alive, and finished. It takes sequences,
   scores, and flags, and returns the top k from sequences, scores_to_gather,
   and flags based on the values in scores.
+
   This method permits easy introspection using tfdbg.  It adds three named ops
   that are prefixed by `prefix`:
     - _topk_seq: the tensor for topk_seq returned by this method.
     - _topk_flags: the tensor for topk_finished_flags returned by this method.
     - _topk_scores: the tensor for tokp_gathered_scores returned by this method.
+
   Args:
     sequences: Tensor of sequences that we need to gather from.
       [batch_size, beam_size, seq_length]
@@ -171,14 +162,14 @@ def compute_topk_scores_and_seq(sequences, scores, scores_to_gather, flags,
   # Gather up the highest scoring sequences.  For each operation added, give it
   # a concrete name to simplify observing these operations with tfdbg.  Clients
   # can capture these tensors by watching these node names.
-  def _gather(tensor, name):
+  def gather(tensor, name):
     return tf.gather_nd(tensor, top_coordinates, name=(prefix + name))
-  topk_seq = _gather(sequences, "_topk_seq")
-  topk_flags = _gather(flags, "_topk_flags")
-  topk_gathered_scores = _gather(scores_to_gather, "_topk_scores")
+  topk_seq = gather(sequences, "_topk_seq")
+  topk_flags = gather(flags, "_topk_flags")
+  topk_gathered_scores = gather(scores_to_gather, "_topk_scores")
   if states_to_gather:
     topk_gathered_states = nest.map_structure(
-        lambda state: _gather(state, "_topk_states"), states_to_gather)
+        lambda state: gather(state, "_topk_states"), states_to_gather)
   else:
     topk_gathered_states = states_to_gather
   return topk_seq, topk_gathered_scores, topk_flags, topk_gathered_states
@@ -194,24 +185,31 @@ def beam_search(symbols_to_logits_fn,
                 eos_id=EOS_ID,
                 stop_early=True):
   """Beam search with length penalties.
+
   Requires a function that can take the currently decoded sybmols and return
   the logits for the next symbol. The implementation is inspired by
   https://arxiv.org/abs/1609.08144.
+
   When running, the beam search steps can be visualized by using tfdbg to watch
   the operations generating the output ids for each beam step.  These operations
   have the pattern:
     (alive|finished)_topk_(seq,scores)
+
   Operations marked `alive` represent the new beam sequences that will be
   processed in the next step.  Operations marked `finished` represent the
   completed beam sequences, which may be padded with 0s if no beams finished.
+
   Operations marked `seq` store the full beam sequence for the time step.
   Operations marked `scores` store the sequence's final log scores.
+
   The beam search steps will be processed sequentially in order, so when
   capturing observed from these operations, tensors, clients can make
   assumptions about which step is being recorded.
+
   WARNING: Assumes 2nd dimension of tensors in `states` and not invariant, this
   means that the shape of the 2nd dimension of these tensors will not be
   available (i.e. set to None) inside symbols_to_logits_fn.
+
   Args:
     symbols_to_logits_fn: Interface to the model, to provide logits.
         Shoud take [batch_size, decoded_ids] and return [batch_size, vocab_size]
@@ -231,7 +229,7 @@ def beam_search(symbols_to_logits_fn,
     (decoded beams [batch_size, beam_size, decode_length]
      decoding probablities [batch_size, beam_size])
   """
-  batch_size = _shape_list(initial_ids)[0]
+  batch_size = layers.shape_list(initial_ids)[0]
 
   # Assume initial_ids are prob 1.0
   initial_log_probs = tf.constant([[0.] + [-float("inf")] * (beam_size - 1)])
@@ -250,7 +248,7 @@ def beam_search(symbols_to_logits_fn,
   # Finished will keep track of all the sequences that have finished so far
   # Finished log probs will be negative infinity in the beginning
   # finished_flags will keep track of booleans
-  finished_seq = tf.zeros(_shape_list(alive_seq), tf.int32)
+  finished_seq = tf.zeros(layers.shape_list(alive_seq), tf.int32)
   # Setting the scores of the initial to negative infinity.
   finished_scores = tf.ones([batch_size, beam_size]) * -INF
   finished_flags = tf.zeros([batch_size, beam_size], tf.bool)
@@ -258,6 +256,7 @@ def beam_search(symbols_to_logits_fn,
   def grow_finished(finished_seq, finished_scores, finished_flags, curr_seq,
                     curr_scores, curr_finished):
     """Given sequences and scores, will gather the top k=beam size sequences.
+
     Args:
       finished_seq: Current finished sequences.
         [batch_size, beam_size, current_decoded_length]
@@ -295,6 +294,7 @@ def beam_search(symbols_to_logits_fn,
 
   def grow_alive(curr_seq, curr_scores, curr_log_probs, curr_finished, states):
     """Given sequences and scores, will gather the top k=beam size sequences.
+
     Args:
       curr_seq: current topk sequence that has been grown by one position.
         [batch_size, beam_size, i+1]
@@ -319,6 +319,7 @@ def beam_search(symbols_to_logits_fn,
 
   def grow_topk(i, alive_seq, alive_log_probs, states):
     r"""Inner beam seach loop.
+
     This function takes the current alive sequences, and grows them to topk
     sequences where k = 2*beam. We use 2*beam because, we could have beam_size
     number of sequences that might hit <EOS> and there will be no alive
@@ -328,6 +329,7 @@ def beam_search(symbols_to_logits_fn,
     2*beam words.
     Length penalty is given by = (5+len(decode)/6) ^ -\alpha. Pls refer to
     https://arxiv.org/abs/1609.08144.
+
     Args:
       i: loop index
       alive_seq: Topk sequences decoded so far [batch_size, beam_size, i+1]
@@ -355,7 +357,7 @@ def beam_search(symbols_to_logits_fn,
     logits = tf.reshape(flat_logits, [batch_size, beam_size, -1])
 
     # Convert logits to normalized log probs
-    candidate_log_probs = _log_prob_from_logits(logits)
+    candidate_log_probs = log_prob_from_logits(logits)
 
     # Multiply the probabilites by the current probabilites of the beam.
     # (batch_size, beam_size, vocab_size) + (batch_size, beam_size, 1)
@@ -404,6 +406,7 @@ def beam_search(symbols_to_logits_fn,
   def inner_loop(i, alive_seq, alive_log_probs, finished_seq, finished_scores,
                  finished_flags, states):
     """Inner beam seach loop.
+
     There are three groups of tensors, alive, finished, and topk.
     The alive group contains information about the current alive sequences
     The topk group contains information about alive + topk current decoded words
@@ -422,6 +425,7 @@ def beam_search(symbols_to_logits_fn,
     that we add -ve INF to the score of the unfinished sequence so that when a
     true finished sequence does appear, it will have a higher score than all the
     unfinished ones.
+
     Args:
       i: loop index
       alive_seq: Topk sequences decoded so far [batch_size, beam_size, i+1]
@@ -433,6 +437,7 @@ def beam_search(symbols_to_logits_fn,
       finished_flags: finished bools for each of these sequences.
         [batch_size, beam_size]
       states: dict (possibly nested) of decoding states.
+
     Returns:
       Tuple of
         (Incremented loop index
@@ -462,9 +467,11 @@ def beam_search(symbols_to_logits_fn,
   def _is_finished(i, unused_alive_seq, alive_log_probs, unused_finished_seq,
                    finished_scores, finished_in_finished, unused_states):
     """Checking termination condition.
+
     We terminate when we decoded up to decode_length or the lowest scoring item
     in finished has a greater score that the higest prob item in alive divided
     by the max length penalty
+
     Args:
       i: loop index
       alive_log_probs: probabilities of the beams. [batch_size, beam_size]
@@ -472,6 +479,7 @@ def beam_search(symbols_to_logits_fn,
         [batch_size, beam_size]
       finished_in_finished: finished bools for each of these sequences.
         [batch_size, beam_size]
+
     Returns:
       Bool.
     """
@@ -500,6 +508,16 @@ def beam_search(symbols_to_logits_fn,
 
     return tf.logical_and(
         tf.less(i, decode_length), tf.logical_not(bound_is_met))
+
+  #shapes = [tf.TensorShape([]),
+  #        tf.TensorShape([None, None, None]),
+  #        alive_log_probs.get_shape(),
+  #        tf.TensorShape([None, None, None]),
+  #        finished_scores.get_shape(),
+  #        finished_flags.get_shape(),
+  #        nest.map_structure(get_state_shape_invariants, states),
+  #        ]
+  #print('shapes:{}'.format(shapes))
 
   (_, alive_seq, alive_log_probs, finished_seq, finished_scores,
    finished_flags, _) = tf.while_loop(

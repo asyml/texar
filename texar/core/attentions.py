@@ -1,5 +1,5 @@
 from texar.core import layers
-
+import tensorflow as tf
 def attention_bias_lower_triangle(length):
   """Create an bias tensor to be added to attention logits.
   Allows a query to attend to all positions up to and including its own.
@@ -23,13 +23,14 @@ def attention_bias_local(length, max_backward, max_forward):
       indicate unlimited.
   Returns:
     a `Tensor` with shape [1, 1, length, length].
+    [batch_size, num_heads, queri_len, queri_len]
   """
   band = layers.ones_matrix_band_part(
       length,
       length,
       max_backward,
       max_forward,
-      out_shape=[1, length, length])
+      out_shape=[1, 1, length, length])
   return -1e9 * (1.0 - band)
 
 def attention_bias_ignore_padding(memory_padding):
@@ -38,6 +39,7 @@ def attention_bias_ignore_padding(memory_padding):
     memory_padding: a float `Tensor` with shape [batch, memory_length].
   Returns:
     a `Tensor` with shape [batch, 1, 1, memory_length].
+    each dim corresponding to batch_size, num_heads, queries_len, memory_length
   """
   ret = memory_padding * -1e9
-  return ret
+  return tf.expand_dims(tf.expand_dims(ret, axis=1), axis=1)
