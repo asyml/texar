@@ -6,15 +6,18 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import pdb
 
 import copy
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import GreedyEmbeddingHelper
 
+import texar as tx
 from texar import context
 from texar.utils import switch_dropout
 from texar.modules.embedders import WordEmbedder
-from texar.modules.classifiers import Conv1DClassifier
+# from texar.modules.classifiers import Conv1DClassifier
+from texar.modules.classifiers import CNN as Conv1DClassifier
 from texar.modules.encoders import UnidirectionalRNNEncoder
 from texar.modules.decoders import BasicRNNDecoder
 from texar.modules.decoders import _get_training_helper, GumbelSoftmaxEmbeddingHelper
@@ -30,6 +33,9 @@ class TSF(ModelBase):
 
     def __init__(self, hparams=None):
         ModelBase.__init__(self, hparams)
+        self.build_inputs()
+        self.build_model(self.input_tensors)
+        self.saver = tf.train.Saver()
 
     @staticmethod
     def default_hparams():
@@ -46,11 +52,9 @@ class TSF(ModelBase):
             },
             "rnn_encoder": {
                 "rnn_cell": {
-                    "cell": {
-                        "type": "GRUCell",
-                        "kwargs": {
-                            "num_units": 700
-                        },
+                    "type": "GRUCell",
+                    "kwargs": {
+                        "num_units": 700
                     },
                     "dropout": {
                         "input_keep_prob": 0.5
@@ -59,11 +63,9 @@ class TSF(ModelBase):
             },
             "rnn_decoder": {
                 "rnn_cell": {
-                    "cell": {
-                        "type": "GRUCell",
-                        "kwargs": {
-                            "num_units": 700,
-                        },
+                    "type": "GRUCell",
+                    "kwargs": {
+                        "num_units": 700,
                     },
                     "dropout": {
                         "input_keep_prob": 0.5,
@@ -72,9 +74,15 @@ class TSF(ModelBase):
                 "max_decoding_length_train": 21,
                 "max_decoding_length_infer": 20,
             },
-            "cnn": Conv1DClassifier.default_hparams(),
-            # "output_keep_prob": 0.5,
+            "cnn": {
+                "name": "cnn",
+                "kernel_sizes": [3, 4, 5],
+                "num_filter": 128,
+                "output_keep_prob": 0.5,
+                "input_keep_prob": 1.,
+            },
             "opt": {
+                "name": "optimizer",
                 "optimizer": {
                     "type":  "AdamOptimizer",
                     "kwargs": {
@@ -86,7 +94,7 @@ class TSF(ModelBase):
             },
         }
 
-    def _build_inputs(self):
+    def build_inputs(self):
         batch_size = self._hparams.batch_size
         enc_inputs = tf.placeholder(tf.int32, [batch_size, None],
                                     name="enc_inputs")
@@ -100,7 +108,7 @@ class TSF(ModelBase):
         gamma = tf.placeholder(tf.float32, [], name="gamma")
         rho = tf.placeholder(tf.float32, [], name="rho")
 
-        input_tensors = {
+        self.input_tensors = {
             "enc_inputs": enc_inputs,
             "dec_inputs": dec_inputs,
             "targets": targets,
@@ -109,8 +117,6 @@ class TSF(ModelBase):
             "gamma": gamma,
             "rho": rho,
         }
-
-        return input_tensors
 
     def build_model(self, input_tensors):
         hparams = self._hparams
@@ -139,7 +145,7 @@ class TSF(ModelBase):
         seq_len = [tf.shape(input_tensors["dec_inputs"])[1]] * hparams.batch_size
         train_helper = _get_training_helper(input_tensors["dec_inputs"], seq_len,
                                             embedding=embedder)
-        g_outputs, _, _ = rnn_decoder(train_helper, h_ori)
+        g_outputs, _, _ = rnn_decoder(helper=train_helper, initial_state=h_ori)
 
         teach_h = tf.concat([tf.expand_dims(h_ori, 1), g_outputs.cell_output], 1)
 
@@ -153,19 +159,21 @@ class TSF(ModelBase):
         # gumbel and greedy decoder
         start_tokens = input_tensors["dec_inputs"][:, 0]
         start_tokens = tf.reshape(start_tokens, [-1])
+        end_token = 2
         gumbel_helper = GumbelSoftmaxEmbeddingHelper(
-            embedder.embedding, start_tokens, input_tensors["gamma"])
+            embedder.embedding, start_tokens, end_token, input_tensors["gamma"],
+            use_finish=False)
 
         #TODO(zichao): hard coded end_token
         end_token = 2
         greedy_helper = GreedyEmbeddingHelper(
             embedder.embedding, start_tokens, end_token)
 
-        soft_outputs_ori, _, _, = rnn_decoder(gumbel_helper, h_ori)
-        soft_outputs_tsf, _, _, = rnn_decoder(gumbel_helper, h_tsf)
+        soft_outputs_ori, _, _, = rnn_decoder(helper=gumbel_helper, initial_state=h_ori)
+        soft_outputs_tsf, _, _, = rnn_decoder(helper=gumbel_helper, initial_state=h_tsf)
 
-        hard_outputs_ori, _, _, = rnn_decoder(greedy_helper, h_ori)
-        hard_outputs_tsf, _, _, = rnn_decoder(greedy_helper, h_tsf)
+        hard_outputs_ori, _, _, = rnn_decoder(helper=greedy_helper, initial_state=h_ori)
+        hard_outputs_tsf, _, _, = rnn_decoder(helper=greedy_helper, initial_state=h_tsf)
 
         # discriminator
         half = hparams.batch_size // 2
@@ -191,7 +199,9 @@ class TSF(ModelBase):
         loss_d = loss_d0 + loss_d1
         loss = loss_g - input_tensors["rho"] * loss_d
 
-        var_eg = rnn_encoder.trainable_variables + rnn_decoder.trainable_variables \
+        var_eg = embedder.trainable_variables + \
+                 rnn_encoder.trainable_variables + \
+                 rnn_decoder.trainable_variables \
                  + label_proj_g.trainable_variables
         var_d0 = cnn0.trainable_variables
         var_d1 = cnn1.trainable_variables
@@ -205,34 +215,34 @@ class TSF(ModelBase):
         opt_ae_hparams.name = "optimizer_ae"
         opt_d0_hparams.name = "optimizer_d0"
         opt_d1_hparams.name = "optimizer_d1"
-        optimizer_all, _ = get_train_op(loss, variables=var_eg,
-                                        hparams=opt_all_hparams)
-        optimizer_ae, _ = get_train_op(loss_g, variables=var_eg,
-                                       hparams=opt_ae_hparams)
-        optimizer_d0, _ = get_train_op(loss_d0, variables=var_d0,
-                                       hparams=opt_d0_hparams)
-        optimizer_d1, _ = get_train_op(loss_d1, variables=var_d1,
-                                       hparams=opt_d1_hparams)
+        optimizer_all = get_train_op(loss, variables=var_eg,
+                                     hparams=opt_all_hparams)
+        optimizer_ae = get_train_op(loss_g, variables=var_eg,
+                                    hparams=opt_ae_hparams)
+        optimizer_d0 = get_train_op(loss_d0, variables=var_d0,
+                                    hparams=opt_d0_hparams)
+        optimizer_d1 = get_train_op(loss_d1, variables=var_d1,
+                                    hparams=opt_d1_hparams)
         
         self.output_tensors = {
-            "h_ori", h_ori,
-            "h_tsf", h_tsf,
-            "hard_logits_ori", hard_outputs_ori.logits,
-            "hard_logits_tsf", hard_outputs_tsf.logits,
-            "soft_logits_ori", soft_outputs_ori.logits,
-            "soft_logits_tsf", soft_outputs_tsf.logits,
-            "g_logits", g_outputs.logits,
-            "teach_h", teach_h,
-            "soft_h_tsf", soft_h_tsf,
+            "h_ori": h_ori,
+            "h_tsf": h_tsf,
+            "hard_logits_ori": hard_outputs_ori.logits,
+            "hard_logits_tsf": hard_outputs_tsf.logits,
+            "soft_logits_ori": soft_outputs_ori.logits,
+            "soft_logits_tsf": soft_outputs_tsf.logits,
+            "g_logits": g_outputs.logits,
+            "teach_h": teach_h,
+            "soft_h_tsf": soft_h_tsf,
         }
 
         self.loss = {
-            "loss", loss,
-            "loss_g", loss_g,
-            "ppl_g", ppl_g,
-            "loss_d", loss_d,
-            "loss_d0", loss_d0,
-            "loss_d1", loss_d1,
+            "loss": loss,
+            "loss_g": loss_g,
+            "ppl_g": ppl_g,
+            "loss_d": loss_d,
+            "loss_d0": loss_d0,
+            "loss_d1": loss_d1,
         }
 
         self.opt = {
@@ -249,8 +259,9 @@ class TSF(ModelBase):
         return loss_d0
 
     def train_d1_step(self, sess, batch, rho, gamma):
-        loss_d1, _ = sess.run([self.loss["loss_d1"], self.opt["optimizer_d1"]],
-                              self.feed_dict(batch, rho, gamma))
+        loss_d1, _ = sess.run(
+            [self.loss["loss_d1"], self.opt["optimizer_d1"]],
+            self.feed_dict(batch, rho, gamma))
         return loss_d1
 
     def train_g_step(self, sess, batch, rho, gamma):
@@ -281,7 +292,8 @@ class TSF(ModelBase):
              self.loss["loss_d"],
              self.loss["loss_d0"],
              self.loss["loss_d1"]],
-            self.feed_dict(batch, rho, gamma, is_train=False))
+            self.feed_dict(batch, rho, gamma,
+                           mode=tf.estimator.ModeKeys.EVAL))
         return loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1
 
     def decode_step(self, sess, batch):
@@ -289,15 +301,15 @@ class TSF(ModelBase):
             [self.output_tensors["hard_logits_ori"],
              self.output_tensors["hard_logits_tsf"]],
             feed_dict={
-                context.is_train(): False,
+                tx.global_mode(): tf.estimator.ModeKeys.EVAL,
                 self.input_tensors["enc_inputs"]: batch["enc_inputs"],
                 self.input_tensors["dec_inputs"]: batch["dec_inputs"],
                 self.input_tensors["labels"]: batch["labels"]})
         return logits_ori, logits_tsf
 
-    def feed_dict(self, batch, rho, gamma, is_train=True):
+    def feed_dict(self, batch, rho, gamma, mode=tf.estimator.ModeKeys.TRAIN):
         return {
-            context.is_train(): is_train,
+            tx.global_mode(): mode,
             self.input_tensors["enc_inputs"]: batch["enc_inputs"],
             self.input_tensors["dec_inputs"]: batch["dec_inputs"],
             self.input_tensors["targets"]: batch["targets"],

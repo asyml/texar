@@ -16,6 +16,7 @@ import numpy as np
 import tensorflow as tf
 
 import texar as tx
+from texar.data import SpecialTokens
 
 # pylint: disable=too-many-locals, too-many-branches, protected-access
 # pylint: disable=invalid-name
@@ -159,6 +160,45 @@ class PairedTextDataTest(tf.test.TestCase):
              "length_filter_mode": "discard"})
         self._run_and_test(hparams, discard_src=True)
 
+    def test_sequence_length(self):
+        hparams = {
+            "batch_size": 64,
+            "num_epochs": 1,
+            "shuffle": False,
+            "allow_smaller_final_batch": False,
+            "source_dataset": {
+                "files": "../../../data/yelp/sentiment.dev.sort.0",
+                "vocab_file": "../../../data/yelp/vocab",
+                "bos_token": SpecialTokens.BOS,
+                "eos_token": SpecialTokens.EOS,
+            },
+            "target_dataset": {
+                "files": "../../../data/yelp/sentiment.dev.sort.1",
+                "vocab_share": True,
+            },
+        }
+        data = tx.data.PairedTextData(hparams)
+
+        iterator = tx.data.TrainTestDataIterator(val=data)
+        text_data_batch = iterator.get_next()
+
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            sess.run(tf.local_variables_initializer())
+            sess.run(tf.tables_initializer())
+            iterator.switch_to_val_data(sess)
+
+            while True:
+                try:
+                    data_batch_ = sess.run(text_data_batch)
+                    src = data_batch_["source_text_ids"]
+                    src_len = data_batch_["source_length"]
+                    self.assertEqual(src.shape[1], np.max(src_len))
+                    tgt = data_batch_["target_text_ids"]
+                    tgt_len = data_batch_["target_length"]
+                    self.assertEqual(tgt.shape[1], np.max(tgt_len))
+                except tf.errors.OutOfRangeError:
+                    break
 
 if __name__ == "__main__":
     tf.test.main()
