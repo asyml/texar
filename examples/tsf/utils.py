@@ -24,7 +24,7 @@ def write_sent(sents, path):
           f.write(" ".join(sent) + "\n")
 
 def strip_eos(sents):
-    return [sent[:sent.index("_EOS")] if "_EOS" in sent else sent
+    return [sent[:sent.index("<EOS>")] if "<EOS>" in sent else sent
             for sent in sents]
 
 def logits2word(logits, id2word):
