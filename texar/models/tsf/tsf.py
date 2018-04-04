@@ -126,9 +126,9 @@ class TSF(ModelBase):
         # encoder
         rnn_encoder = UnidirectionalRNNEncoder(hparams=hparams.rnn_encoder)
         # seq_len - 1 to remove EOS
-        enc_inputs = embedder(input_tensors["enc_inputs"],
-                              sequence_length=input_tensors["seq_len"]-1)
-        _, z = rnn_encoder(enc_inputs)
+        enc_inputs = embedder(input_tensors["enc_inputs"])
+        _, z = rnn_encoder(enc_inputs,
+                           sequence_length=input_tensors["seq_len"]-1)
         z = z[:, hparams.dim_y:]
 
         # get state
@@ -306,7 +306,9 @@ class TSF(ModelBase):
                 tx.global_mode(): tf.estimator.ModeKeys.EVAL,
                 self.input_tensors["enc_inputs"]: batch["enc_inputs"],
                 self.input_tensors["dec_inputs"]: batch["dec_inputs"],
-                self.input_tensors["labels"]: batch["labels"]})
+                self.input_tensors["labels"]: batch["labels"],
+                self.input_tensors["seq_len"]: batch["seq_len"],
+            })
         return logits_ori, logits_tsf
 
     def feed_dict(self, batch, rho, gamma, mode=tf.estimator.ModeKeys.TRAIN):
