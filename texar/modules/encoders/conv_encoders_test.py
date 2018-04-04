@@ -68,6 +68,11 @@ class Conv1DEncoderTest(tf.test.TestCase):
         """Tests use of pooling layer when the seq_length dimension of inputs
         is `None`.
         """
+        encoder_1 = Conv1DEncoder()
+        inputs_1 = tf.placeholder(tf.float32, [64, None, 300])
+        outputs_1 = encoder_1(inputs_1)
+        self.assertEqual(outputs_1.shape, [64, 128])
+
         hparams = {
             # Conv layers
             "num_conv_layers": 2,
