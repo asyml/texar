@@ -107,7 +107,6 @@ class TSF(ModelBase):
         seq_len = tf.placeholder(tf.int32, [batch_size], name="seq_len")
         labels = tf.placeholder(tf.float32, [batch_size], name="labels")
         gamma = tf.placeholder(tf.float32, [], name="gamma")
-        rho = tf.placeholder(tf.float32, [], name="rho")
 
         self.input_tensors = {
             "enc_inputs": enc_inputs,
@@ -116,7 +115,6 @@ class TSF(ModelBase):
             "seq_len": seq_len,
             "labels": labels,
             "gamma": gamma,
-            "rho": rho,
         }
 
     def build_model(self, input_tensors):
@@ -198,9 +196,7 @@ class TSF(ModelBase):
         _, loss_ds = adv_losses.binary_adversarial_losses(
             targets[half:], targets[:half], cnn)
         _, loss_df = adv_losses.binary_adversarial_losses(
-            tsf_sample_id[:half],
-            tsf_sample_id[half:],
-            cnn)
+            tsf_sample_id[:half], tsf_sample_id[half:], cnn)
 
         # discriminator
         # plus the encoder h
@@ -223,10 +219,10 @@ class TSF(ModelBase):
 
         loss_d = loss_d0 + loss_d1
         loss = loss_g
-        if input_tensors["rho_adv"] > 0.:
-            loss -= input_tensors["rho_adv"] * loss_d
-        if input_tensors["rho_f"] > 0:
-            loss += input_tensors["rho_f"] * loss_df
+        if hparams.rho_adv > 0.:
+            loss -= hparmas.rho_adv * loss_d
+        if hparams.rho_f > 0:
+            loss += hparams.rho_f * loss_df
 
         var_eg = embedder.trainable_variables + \
                  rnn_encoder.trainable_variables + \
@@ -289,25 +285,25 @@ class TSF(ModelBase):
             "optimizer_d1": optimizer_d1,
         }
 
-    def train_ds_step(self, sess, batch, rho, gamma):
+    def train_ds_step(self, sess, batch, gamma):
         loss_ds, _ = sess.run(
             [self.loss["loss_ds"], self.opt["optimizer_ds"],],
-            self.feed_dict(batch, rho, gamma))
+            self.feed_dict(batch, gamma))
         return loss_ds
 
-    def train_d0_step(self, sess, batch, rho, gamma):
+    def train_d0_step(self, sess, batch,  gamma):
         loss_d0, _ = sess.run(
             [self.loss["loss_d0"], self.opt["optimizer_d0"],],
-            self.feed_dict(batch, rho, gamma))
+            self.feed_dict(batch, gamma))
         return loss_d0
 
-    def train_d1_step(self, sess, batch, rho, gamma):
+    def train_d1_step(self, sess, batch, gamma):
         loss_d1, _ = sess.run(
             [self.loss["loss_d1"], self.opt["optimizer_d1"]],
-            self.feed_dict(batch, rho, gamma))
+            self.feed_dict(batch, gamma))
         return loss_d1
 
-    def train_g_step(self, sess, batch, rho, gamma):
+    def train_g_step(self, sess, batch, gamma):
         loss, loss_g, ppl_g, loss_d, loss_df, _ = sess.run(
             [self.loss["loss"],
              self.loss["loss_g"],
@@ -315,10 +311,10 @@ class TSF(ModelBase):
              self.loss["loss_d"],
              self.loss["loss_df"],
              self.opt["optimizer_all"]],
-            self.feed_dict(batch, rho, gamma))
+            self.feed_dict(batch, gamma))
         return loss, loss_g, ppl_g, loss_d, loss_df
 
-    def train_ae_step(self, sess, batch, rho, gamma):
+    def train_ae_step(self, sess, batch, gamma):
         loss, loss_g, ppl_g, loss_d, loss_df, _ = sess.run(
             [self.loss["loss"],
              self.loss["loss_g"],
@@ -326,10 +322,10 @@ class TSF(ModelBase):
              self.loss["loss_d"],
              self.loss["loss_df"],
              self.opt["optimizer_ae"]],
-            self.feed_dict(batch, rho, gamma))
+            self.feed_dict(batch, gamma))
         return loss, loss_g, ppl_g, loss_d, loss_df
 
-    def eval_step(self, sess, batch, rho, gamma):
+    def eval_step(self, sess, batch, gamma):
         loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1, \
             loss_ds, loss_df = sess.run(
             [self.loss["loss"],
@@ -340,7 +336,7 @@ class TSF(ModelBase):
              self.loss["loss_d1"],
              self.loss["loss_ds"],
              self.loss["loss_df"],],
-            self.feed_dict(batch, rho, gamma,
+            self.feed_dict(batch, gamma,
                            mode=tf.estimator.ModeKeys.EVAL))
         return (loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1,
                 loss_ds, loss_df)
@@ -358,7 +354,7 @@ class TSF(ModelBase):
             })
         return logits_ori, logits_tsf
 
-    def feed_dict(self, batch, rho, gamma, mode=tf.estimator.ModeKeys.TRAIN):
+    def feed_dict(self, batch, gamma, mode=tf.estimator.ModeKeys.TRAIN):
         return {
             tx.global_mode(): mode,
             self.input_tensors["enc_inputs"]: batch["enc_inputs"],
@@ -366,7 +362,6 @@ class TSF(ModelBase):
             self.input_tensors["targets"]: batch["targets"],
             self.input_tensors["seq_len"]: batch["seq_len"],
             self.input_tensors["labels"]: batch["labels"],
-            self.input_tensors["rho"]: rho,
             self.input_tensors["gamma"]: gamma,
         }
 

@@ -101,7 +101,8 @@ class TSFTrainer:
             "expt_dir": "../../expt",
             "log_dir": "log",
             "name": "tsf",
-            "rho": 1.,
+            "rho_adv": 1.,
+            "rho_f": 0.,
             "gamma_init": 1,
             "gamma_decay": 0.5,
             "gamma_min": 0.001,
@@ -121,15 +122,18 @@ class TSFTrainer:
                 batch = sess.run(input_tensors,
                                  {tx.global_mode(): tf.estimator.ModeKeys.EVAL})
                 logits_ori, logits_tsf = model.decode_step(sess, batch)
-                loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1 = model.eval_step(
-                    sess, batch, self._hparams.rho, self._hparams.gamma_min)
+                loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1,\
+                    loss_ds, loss_df = model.eval_step(
+                        sess, batch, self._hparams.gamma_min)
 
                 batch_size = batch["enc_inputs"].shape[0]
                 word_size = np.sum(batch["seq_len"])
                 losses.append(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1,
+                              loss_ds, loss_df, 
                               w_loss=batch_size, w_g=batch_size,
                               w_ppl=word_size, w_d=batch_size,
-                              w_d0=batch_size, w_d1=batch_size)
+                              w_d0=batch_size, w_d1=batch_size,
+                              w_ds=batch_size, w_df=batch_size)
                 ori = logits2word(logits_ori, id2word)
                 tsf = logits2word(logits_tsf, id2word)
                 half = self._hparams.batch_size // 2
@@ -235,26 +239,25 @@ class TSFTrainer:
                         batch = sess.run(
                             input_tensors,
                             {tx.global_mode(): tf.estimator.ModeKeys.EVAL})
-                        loss_d0 = model.train_d0_step(
-                            sess, batch, self._hparams.rho, gamma)
-                        loss_d1 = model.train_d1_step(
-                            sess, batch, self._hparams.rho, gamma)
+                        loss_ds = model.train_ds_step(sess, batch, gamma)
+                        loss_d0 = model.train_d0_step(sess, batch, gamma)
+                        loss_d1 = model.train_d1_step(sess, batch, gamma)
 
-                        # if loss_d0 < 1.2 and loss_d1 < 1.2:
-                        #     loss, loss_g, ppl_g, loss_d = model.train_g_step(
-                        #         sess, batch, self._hparams.rho, gamma)
-                        # else:
-                        loss, loss_g, ppl_g, loss_d = model.train_ae_step(
-                            sess, batch, self._hparams.rho, gamma)
+                        if loss_ds < 1.2 or (loss_d0 < 1.2 and loss_d1 < 1.2):
+                            loss, loss_g, ppl_g, loss_d, loss_df \
+                                = model.train_g_step(sess, batch, gamma)
+                        else:
+                            loss, loss_g, ppl_g, loss_d, loss_df \
+                                = model.train_ae_step(sess, batch, gamma)
 
-                        losses.append(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1)
+                        losses.append(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1,
+                                      loss_ds, loss_f)
 
                         step += 1
                         if step % self._hparams.disp_interval == 0:
                             log_print("step %d: "%(step) + str(losses))
                             losses.reset()
                     except tf.errors.OutOfRangeError:
-                        log_print("end")
                         break
 
                 # eval on dev
