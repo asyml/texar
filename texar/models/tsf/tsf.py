@@ -185,14 +185,14 @@ class TSF(ModelBase):
         half = hparams.batch_size // 2
         h_len = tf.shape(g_outputs.cell_output)[1]
 
-        cnn_hparams = hparams.cnn
+        cnn_hparams = copy.deepcopy(hparams.cnn)
         cnn_hparams.use_embedding = True
-        cnn_hparams.vocab_size = hparmas.vocab_size
+        cnn_hparams.vocab_size = hparams.vocab_size
 
         targets = input_tensors["targets"]
         tsf_sample_id = soft_outputs_tsf.sample_id
         tsf_sample_id = tsf_sample_id[:, :h_len, :]
-        cnn = Conv1DClassifier(hparams.cnn)
+        cnn = Conv1DClassifier(cnn_hparams)
         _, loss_ds = adv_losses.binary_adversarial_losses(
             targets[half:], targets[:half], cnn)
         _, loss_df = adv_losses.binary_adversarial_losses(

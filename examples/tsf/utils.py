@@ -45,11 +45,11 @@ class Stats():
         self._loss, self._g, self._ppl, self._d, self._d0, self._d1, \
             self._ds, self._df, \
             = [], [], [], [], [], [], [], []
-        self._w_loss, self._w_g, self._w_ppl, self._w_d, self._w_d0, self._w_d1 \
+        self._w_loss, self._w_g, self._w_ppl, self._w_d, self._w_d0, self._w_d1, \
             self._w_ds, self._w_df, \
             = 0, 0, 0, 0, 0, 0, 0, 0
 
-    def append(self, loss, g, ppl, d, d0, d1,, ds, df,
+    def append(self, loss, g, ppl, d, d0, d1, ds, df,
                w_loss=1., w_g=1., w_ppl=1., w_d=1, w_d0=1., w_d1=1.,
                w_ds=1., w_df=1.):
         self._loss.append(loss*w_loss)

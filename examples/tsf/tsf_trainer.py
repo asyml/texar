@@ -101,8 +101,8 @@ class TSFTrainer:
             "expt_dir": "../../expt",
             "log_dir": "log",
             "name": "tsf",
-            "rho_adv": 1.,
-            "rho_f": 0.,
+            "rho_adv": 0.,
+            "rho_f": 1.,
             "gamma_init": 1,
             "gamma_decay": 0.5,
             "gamma_min": 0.001,
@@ -251,7 +251,7 @@ class TSFTrainer:
                                 = model.train_ae_step(sess, batch, gamma)
 
                         losses.append(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1,
-                                      loss_ds, loss_f)
+                                      loss_ds, loss_df)
 
                         step += 1
                         if step % self._hparams.disp_interval == 0:
