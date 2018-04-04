@@ -119,6 +119,7 @@ class TSFTrainer:
                 logits_ori, logits_tsf = model.decode_step(sess, batch)
                 loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1 = model.eval_step(
                     sess, batch, self._hparams.rho, self._hparams.gamma_min)
+
                 batch_size = batch["enc_inputs"].shape[0]
                 word_size = np.sum(batch["weights"])
                 losses.append(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1,
@@ -166,9 +167,8 @@ class TSFTrainer:
         enc_inputs = tf.reverse_sequence(enc_inputs, inputs_len - 1, seq_dim=1)
         dec_inputs = enc_inputs
         enc_inputs = dec_inputs[:, 1:]
-        enc_inputs = tf.reverse(enc_inputs, [1])
+        enc_inputs = tf.reverse_sequence(enc_inputs, inputs_len - 2, seq_dim=1)
         targets = inputs[:, 1:]
-        weights =  tf.sequence_mask(inputs_len - 1, l - 1, tf.float32)
         labels = tf.concat([tf.zeros([batch_size]),
                             tf.ones([batch_size])],
                            axis=0)
@@ -176,15 +176,14 @@ class TSFTrainer:
             "enc_inputs": enc_inputs,
             "dec_inputs": dec_inputs,
             "targets": targets,
-            "weights": weights,
+            "seq_len": inputs_len - 1,
             "labels": labels,
         }
-
 
     def train(self):
         if "config" in self._hparams.keys():
             with open(self._hparams.config) as f:
-                self._hparams = HParams(pkl.load(f))
+                self._hparams = HParams(pkl.load(f), None)
 
         log_print("Start training with hparams:")
         log_print(json.dumps(self._hparams.todict(), indent=2))
@@ -206,12 +205,12 @@ class TSFTrainer:
         with tf.Session() as sess:
             losses = Stats()
             model = TSF(self._hparams)
-            if "model" in self._hparams.keys():
-                model.saver.restore(sess, self._hparams.model)
+            if FLAGS.model:
+                model.saver.restore(sess, FLAGS.model)
             else:
                 sess.run(tf.global_variables_initializer())
                 sess.run(tf.local_variables_initializer())
-                sess.run(tf.tables_initializer())
+            sess.run(tf.tables_initializer())
 
             log_print("finished building model")
 
@@ -229,19 +228,20 @@ class TSFTrainer:
                 iterator.switch_to_train_data(sess)
                 while True:
                     try:
-                        batch = sess.run(input_tensors,
-                                         {tx.global_mode(): tf.estimator.ModeKeys.EVAL})
+                        batch = sess.run(
+                            input_tensors,
+                            {tx.global_mode(): tf.estimator.ModeKeys.EVAL})
                         loss_d0 = model.train_d0_step(
                             sess, batch, self._hparams.rho, gamma)
                         loss_d1 = model.train_d1_step(
                             sess, batch, self._hparams.rho, gamma)
 
-                        if loss_d0 < 1.2 and loss_d1 < 1.2:
-                            loss, loss_g, ppl_g, loss_d = model.train_g_step(
-                                sess, batch, self._hparams.rho, gamma)
-                        else:
-                            loss, loss_g, ppl_g, loss_d = model.train_ae_step(
-                                sess, batch, self._hparams.rho, gamma)
+                        # if loss_d0 < 1.2 and loss_d1 < 1.2:
+                        #     loss, loss_g, ppl_g, loss_d = model.train_g_step(
+                        #         sess, batch, self._hparams.rho, gamma)
+                        # else:
+                        loss, loss_g, ppl_g, loss_d = model.train_ae_step(
+                            sess, batch, self._hparams.rho, gamma)
 
                         losses.append(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1)
 
