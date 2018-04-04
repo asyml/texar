@@ -31,6 +31,8 @@ class TokenizerBase(object):
             strings if :attr:`text` is string.
         """
         if tf.contrib.framework.is_tensor(text):
-            return self._tokenize_tensor(text)
+            tokens = tf.py_func(
+                lambda x: self.tokenize(x), [text], tf.string)
         else:
             return self._tokenize_string(tf.compat.as_text(text))
+

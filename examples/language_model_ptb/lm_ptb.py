@@ -75,10 +75,8 @@ def _main(_):
     data = prepare_data(FLAGS.data_path)
     vocab_size = data["vocab_size"]
 
-    #inputs = tf.placeholder(tf.int32, [batch_size, num_steps])
-    #targets = tf.placeholder(tf.int32, [batch_size, num_steps])
-    inputs = tf.placeholder(tf.int32, [None, num_steps])
-    targets = tf.placeholder(tf.int32, [None, num_steps])
+    inputs = tf.placeholder(tf.int32, [batch_size, num_steps])
+    targets = tf.placeholder(tf.int32, [batch_size, num_steps])
 
     # Model architecture
     initializer = tf.random_uniform_initializer(
@@ -161,18 +159,18 @@ def _main(_):
         for epoch in range(config.num_epochs):
             # Train
             train_data_iter = ptb_iterator(
-                data["train_text_id"], batch_size, num_steps)
+                data["train_text_id"], config.batch_size, num_steps)
             train_ppl = _run_epoch(
                 sess, train_data_iter, epoch, is_train=True, verbose=True)
             print("Epoch: %d Train Perplexity: %.3f" % (epoch, train_ppl))
             # Valid
             valid_data_iter = ptb_iterator(
-                data["valid_text_id"], batch_size, num_steps)
+                data["valid_text_id"], config.batch_size, num_steps)
             valid_ppl = _run_epoch(sess, valid_data_iter, epoch)
             print("Epoch: %d Valid Perplexity: %.3f" % (epoch, valid_ppl))
         # Test
-        #test_data_iter = ptb_iterator(data["test_text_id"], 1, 1)
-        test_data_iter = ptb_iterator(data["test_text_id"], 1, num_steps)
+        test_data_iter = ptb_iterator(
+            data["test_text_id"], batch_size, num_steps)
         test_ppl = _run_epoch(sess, test_data_iter, 0)
         print("Test Perplexity: %.3f" % (test_ppl))
 
