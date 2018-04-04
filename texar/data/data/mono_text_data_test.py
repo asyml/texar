@@ -131,7 +131,7 @@ class MonoTextDataTest(tf.test.TestCase):
 
         hparams.update({
             "bucket_boundaries": [7],
-            "bucket_batch_sizes": [5, 5],
+            "bucket_batch_sizes": [7, 7],
             "allow_smaller_final_batch": False})
 
         text_data_1 = tx.data.MonoTextData(hparams)
@@ -163,7 +163,7 @@ class MonoTextDataTest(tf.test.TestCase):
                             len(data_batch_['text']) == 4 or
                             len(data_batch_['text']) == last_batch_size)
 
-                    self.assertEqual(len(data_batch_1_['text']), 5)
+                    self.assertEqual(len(data_batch_1_['text']), 7)
 
                 except tf.errors.OutOfRangeError:
                     print('Done -- epoch limit reached')
