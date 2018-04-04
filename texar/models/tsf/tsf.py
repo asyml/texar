@@ -76,6 +76,8 @@ class TSF(ModelBase):
             },
             "cnn": {
                 "name": "cnn",
+                "use_embedding": False,
+                "vocab_size": 10000,
                 "kernel_sizes": [3, 4, 5],
                 "num_filter": 128,
                 "output_keep_prob": 0.5,
@@ -171,15 +173,36 @@ class TSF(ModelBase):
         greedy_helper = GreedyEmbeddingHelper(
             embedder.embedding, start_tokens, end_token)
 
-        soft_outputs_ori, _, _, = rnn_decoder(helper=gumbel_helper, initial_state=h_ori)
-        soft_outputs_tsf, _, _, = rnn_decoder(helper=gumbel_helper, initial_state=h_tsf)
+        soft_outputs_ori, _, _, = rnn_decoder(
+            helper=gumbel_helper, initial_state=h_ori)
+        soft_outputs_tsf, _, _, = rnn_decoder(
+            helper=gumbel_helper, initial_state=h_tsf)
 
-        hard_outputs_ori, _, _, = rnn_decoder(helper=greedy_helper, initial_state=h_ori)
-        hard_outputs_tsf, _, _, = rnn_decoder(helper=greedy_helper, initial_state=h_tsf)
+        hard_outputs_ori, _, _, = rnn_decoder(
+            helper=greedy_helper, initial_state=h_ori)
+        hard_outputs_tsf, _, _, = rnn_decoder(
+            helper=greedy_helper, initial_state=h_tsf)
 
-        # discriminator
+        # classifier
         half = hparams.batch_size // 2
         h_len = tf.shape(g_outputs.cell_output)[1]
+
+        cnn_hparams = hparams.cnn
+        cnn_hparams.use_embedding = True
+        cnn_hparams.vocab_size = hparmas.vocab_size
+
+        targets = input_tensors["targets"]
+        tsf_sample_id = soft_outputs_tsf.sample_id
+        tsf_sample_id = tsf_sample_id[:, :h_len, :]
+        cnn = Conv1DClassifier(hparams.cnn)
+        _, loss_ds = adv_losses.binary_adversarial_losses(
+            targets[half:], targets[:half], cnn)
+        _, loss_df = adv_losses.binary_adversarial_losses(
+            tsf_sample_id[:half],
+            tsf_sample_id[half:],
+            cnn)
+
+        # discriminator
         # plus the encoder h
         soft_output_tsf \
             = soft_outputs_tsf.cell_output[:, :h_len, :]
@@ -199,28 +222,37 @@ class TSF(ModelBase):
             teach_h[half:], soft_h_tsf[:half], cnn1)
 
         loss_d = loss_d0 + loss_d1
-        loss = loss_g - input_tensors["rho"] * loss_d
+        loss = loss_g
+        if input_tensors["rho_adv"] > 0.:
+            loss -= input_tensors["rho_adv"] * loss_d
+        if input_tensors["rho_f"] > 0:
+            loss -= input_tensors["rho_f"] * loss_df
 
         var_eg = embedder.trainable_variables + \
                  rnn_encoder.trainable_variables + \
                  rnn_decoder.trainable_variables \
                  + label_proj_g.trainable_variables
+        var_ds = cnn.trainable_variables
         var_d0 = cnn0.trainable_variables
         var_d1 = cnn1.trainable_variables
 
         # optimization
         opt_all_hparams = copy.deepcopy(hparams.opt)
         opt_ae_hparams = copy.deepcopy(hparams.opt)
+        opt_ds_hparams = copy.deepcopy(hparams.opt)
         opt_d0_hparams = copy.deepcopy(hparams.opt)
         opt_d1_hparams = copy.deepcopy(hparams.opt)
         opt_all_hparams.name = "optimizer_all"
         opt_ae_hparams.name = "optimizer_ae"
+        opt_ds_hparams.name = "optimizer_ds"
         opt_d0_hparams.name = "optimizer_d0"
         opt_d1_hparams.name = "optimizer_d1"
         optimizer_all = get_train_op(loss, variables=var_eg,
                                      hparams=opt_all_hparams)
         optimizer_ae = get_train_op(loss_g, variables=var_eg,
                                     hparams=opt_ae_hparams)
+        optimizer_ds = get_train_op(loss_ds, variables=var_ds,
+                                    hparams=opt_ds_hparams)
         optimizer_d0 = get_train_op(loss_d0, variables=var_d0,
                                     hparams=opt_d0_hparams)
         optimizer_d1 = get_train_op(loss_d1, variables=var_d1,
@@ -245,14 +277,23 @@ class TSF(ModelBase):
             "loss_d": loss_d,
             "loss_d0": loss_d0,
             "loss_d1": loss_d1,
+            "loss_ds": loss_ds,
+            "loss_df": loss_df
         }
 
         self.opt = {
             "optimizer_all": optimizer_all,
             "optimizer_ae": optimizer_ae,
+            "optimizer_ds": optimizer_ds,
             "optimizer_d0": optimizer_d0,
             "optimizer_d1": optimizer_d1,
         }
+
+    def train_ds_step(self, sess, batch, rho, gamma):
+        loss_ds, _ = sess.run(
+            [self.loss["loss_ds"], self.opt["optimizer_ds"],],
+            self.feed_dict(batch, rho, gamma))
+        return loss_ds
 
     def train_d0_step(self, sess, batch, rho, gamma):
         loss_d0, _ = sess.run(
@@ -267,36 +308,42 @@ class TSF(ModelBase):
         return loss_d1
 
     def train_g_step(self, sess, batch, rho, gamma):
-        loss, loss_g, ppl_g, loss_d, _ = sess.run(
+        loss, loss_g, ppl_g, loss_d, loss_df, _ = sess.run(
             [self.loss["loss"],
              self.loss["loss_g"],
              self.loss["ppl_g"],
              self.loss["loss_d"],
+             self.loss["loss_df"],
              self.opt["optimizer_all"]],
             self.feed_dict(batch, rho, gamma))
-        return loss, loss_g, ppl_g, loss_d
+        return loss, loss_g, ppl_g, loss_d, loss_df
 
     def train_ae_step(self, sess, batch, rho, gamma):
-        loss, loss_g, ppl_g, loss_d, _ = sess.run(
+        loss, loss_g, ppl_g, loss_d, loss_df, _ = sess.run(
             [self.loss["loss"],
              self.loss["loss_g"],
              self.loss["ppl_g"],
              self.loss["loss_d"],
+             self.loss["loss_df"],
              self.opt["optimizer_ae"]],
             self.feed_dict(batch, rho, gamma))
-        return loss, loss_g, ppl_g, loss_d
+        return loss, loss_g, ppl_g, loss_d, loss_df
 
     def eval_step(self, sess, batch, rho, gamma):
-        loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1 = sess.run(
+        loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1, \
+            loss_ds, loss_df = sess.run(
             [self.loss["loss"],
              self.loss["loss_g"],
              self.loss["ppl_g"],
              self.loss["loss_d"],
              self.loss["loss_d0"],
-             self.loss["loss_d1"]],
+             self.loss["loss_d1"],
+             self.loss["loss_ds"],
+             self.loss["loss_df"],],
             self.feed_dict(batch, rho, gamma,
                            mode=tf.estimator.ModeKeys.EVAL))
-        return loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1
+        return (loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1,
+                loss_ds, loss_df)
 
     def decode_step(self, sess, batch):
         logits_ori, logits_tsf = sess.run(
