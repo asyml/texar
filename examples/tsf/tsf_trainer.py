@@ -22,6 +22,8 @@ from texar.models.tsf import TSF
 flags = tf.flags
 FLAGS = flags.FLAGS
 
+
+
 flags.DEFINE_string("expt_dir", "", "experiment dir")
 flags.DEFINE_string("log_dir", "", "log dir")
 flags.DEFINE_string("config", "", "config")
@@ -49,6 +51,8 @@ class TSFTrainer:
                 "batch_size": 64,
                 "num_epochs": 1,
                 "allow_smaller_final_batch": False,
+                "bucket_boundaries": np.arange(2, 20, 2).tolist(),
+                "bucket_length_fn": "len_pair",
                 "source_dataset": {
                     "files": "../../data/yelp/sentiment.train.sort.0",
                     "vocab_file": "../../data/yelp/vocab",
