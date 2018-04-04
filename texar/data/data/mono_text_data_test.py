@@ -117,13 +117,42 @@ class MonoTextDataTest(tf.test.TestCase):
         hparams.update({"allow_smaller_final_batch": False})
         self._run_and_test(hparams, test_batch_size=True)
 
-        ## bucketing
-        #raise TexarError("Only usible on TF-1.7")
-        #hparams = copy.copy(self._hparams)
-        #hparams.update({
-        #    "bucket_boundaries": [2, 4, 6],
-        #    "bucket_batch_sizes": [6, 4, 2]})
-        #self._run_and_test(hparams, test_batch_size=True)
+    def test_bucketing(self):
+        """Tests bucketing.
+        """
+        hparams = copy.copy(self._hparams)
+        hparams.update({
+            "bucket_boundaries": [7],
+            "bucket_batch_sizes": [6, 4]})
+
+        text_data = tx.data.MonoTextData(hparams)
+        iterator = text_data.dataset.make_initializable_iterator()
+        text_data_batch = iterator.get_next()
+
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            sess.run(tf.local_variables_initializer())
+            sess.run(tf.tables_initializer())
+            sess.run(iterator.initializer)
+
+            while True:
+                try:
+                    # Run the logics
+                    data_batch_ = sess.run(text_data_batch)
+                    length_ = data_batch_['length'][0]
+                    if length_ < 7:
+                        last_batch_size = hparams['num_epochs'] % 6
+                        self.assertTrue(
+                            len(data_batch_['text']) == 6 or
+                            len(data_batch_['text']) == last_batch_size)
+                    else:
+                        last_batch_size = hparams['num_epochs'] % 4
+                        self.assertTrue(
+                            len(data_batch_['text']) == 4 or
+                            len(data_batch_['text']) == last_batch_size)
+                except tf.errors.OutOfRangeError:
+                    print('Done -- epoch limit reached')
+                    break
 
     def test_shuffle(self):
         """Tests different shuffle strategies.
