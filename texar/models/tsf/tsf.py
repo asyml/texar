@@ -102,8 +102,7 @@ class TSF(ModelBase):
                                     name="dec_inputs")
         targets = tf.placeholder(tf.int32, [batch_size, None],
                                  name="targets")
-        weights = tf.placeholder(tf.float32, [batch_size, None],
-                                 name="weights")
+        seq_len = tf.placeholder(tf.int32, [batch_size], name="seq_len")
         labels = tf.placeholder(tf.float32, [batch_size], name="labels")
         gamma = tf.placeholder(tf.float32, [], name="gamma")
         rho = tf.placeholder(tf.float32, [], name="rho")
@@ -112,7 +111,7 @@ class TSF(ModelBase):
             "enc_inputs": enc_inputs,
             "dec_inputs": dec_inputs,
             "targets": targets,
-            "weights": weights,
+            "seq_len": seq_len,
             "labels": labels,
             "gamma": gamma,
             "rho": rho,
@@ -126,7 +125,9 @@ class TSF(ModelBase):
         embedder = WordEmbedder(vocab_size=hparams.vocab_size)
         # encoder
         rnn_encoder = UnidirectionalRNNEncoder(hparams=hparams.rnn_encoder)
-        enc_inputs = embedder(input_tensors["enc_inputs"])
+        # seq_len - 1 to remove EOS
+        enc_inputs = embedder(input_tensors["enc_inputs"],
+                              sequence_length=input_tensors["seq_len"]-1)
         _, z = rnn_encoder(enc_inputs)
         z = z[:, hparams.dim_y:]
 
@@ -151,9 +152,10 @@ class TSF(ModelBase):
 
         loss_g = tf.nn.sparse_softmax_cross_entropy_with_logits(
             labels=input_tensors["targets"], logits=g_outputs.logits)
-        loss_g *= input_tensors["weights"]
-        ppl_g = tf.reduce_sum(loss_g) / (tf.reduce_sum(input_tensors["weights"]) \
-                                         + 1e-8)
+        mask = tf.sequence_mask(input_tensors["seq_len"], tf.shape(loss_g)[1],
+                                tf.float32)
+        loss_g *= mask
+        ppl_g = tf.reduce_sum(loss_g) / (tf.reduce_sum(mask) + 1e-8)
         loss_g = tf.reduce_sum(loss_g) / hparams.batch_size
 
         # gumbel and greedy decoder
@@ -313,7 +315,7 @@ class TSF(ModelBase):
             self.input_tensors["enc_inputs"]: batch["enc_inputs"],
             self.input_tensors["dec_inputs"]: batch["dec_inputs"],
             self.input_tensors["targets"]: batch["targets"],
-            self.input_tensors["weights"]: batch["weights"],
+            self.input_tensors["seq_len"]: batch["seq_len"],
             self.input_tensors["labels"]: batch["labels"],
             self.input_tensors["rho"]: rho,
             self.input_tensors["gamma"]: gamma,
