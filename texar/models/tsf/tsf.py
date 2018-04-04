@@ -226,7 +226,7 @@ class TSF(ModelBase):
         if input_tensors["rho_adv"] > 0.:
             loss -= input_tensors["rho_adv"] * loss_d
         if input_tensors["rho_f"] > 0:
-            loss -= input_tensors["rho_f"] * loss_df
+            loss += input_tensors["rho_f"] * loss_df
 
         var_eg = embedder.trainable_variables + \
                  rnn_encoder.trainable_variables + \
