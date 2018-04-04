@@ -16,8 +16,8 @@ import texar as tx
 from texar import context
 from texar.utils import switch_dropout
 from texar.modules.embedders import WordEmbedder
-from texar.modules.classifiers import Conv1DClassifier
-# from texar.modules.classifiers import CNN as Conv1DClassifier
+# from texar.modules.classifiers import Conv1DClassifier
+from texar.modules.classifiers import CNN as Conv1DClassifier
 from texar.modules.encoders import UnidirectionalRNNEncoder
 from texar.modules.decoders import BasicRNNDecoder
 from texar.modules.decoders import _get_training_helper, GumbelSoftmaxEmbeddingHelper
@@ -76,10 +76,10 @@ class TSF(ModelBase):
             },
             "cnn": {
                 "name": "cnn",
-                # "kernel_sizes": [3, 4, 5],
-                # "num_filter": 128,
-                # "output_keep_prob": 0.5,
-                # "input_keep_prob": 1.,
+                "kernel_sizes": [3, 4, 5],
+                "num_filter": 128,
+                "output_keep_prob": 0.5,
+                "input_keep_prob": 1.,
             },
             "opt": {
                 "name": "optimizer",

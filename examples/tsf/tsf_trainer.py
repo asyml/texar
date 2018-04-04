@@ -235,24 +235,27 @@ class TSFTrainer:
                         batch = sess.run(
                             input_tensors,
                             {tx.global_mode(): tf.estimator.ModeKeys.EVAL})
-                        loss_d0 = model.train_d0_step(
-                            sess, batch, self._hparams.rho, gamma)
-                        loss_d1 = model.train_d1_step(
-                            sess, batch, self._hparams.rho, gamma)
+                        if batch["enc_inputs"].shape[0] < 128:
+                            pdb.set_trace()
+                            continue
+                        # loss_d0 = model.train_d0_step(
+                        #     sess, batch, self._hparams.rho, gamma)
+                        # loss_d1 = model.train_d1_step(
+                        #     sess, batch, self._hparams.rho, gamma)
 
-                        # if loss_d0 < 1.2 and loss_d1 < 1.2:
-                        #     loss, loss_g, ppl_g, loss_d = model.train_g_step(
-                        #         sess, batch, self._hparams.rho, gamma)
-                        # else:
-                        loss, loss_g, ppl_g, loss_d = model.train_ae_step(
-                            sess, batch, self._hparams.rho, gamma)
+                        # # if loss_d0 < 1.2 and loss_d1 < 1.2:
+                        # #     loss, loss_g, ppl_g, loss_d = model.train_g_step(
+                        # #         sess, batch, self._hparams.rho, gamma)
+                        # # else:
+                        # loss, loss_g, ppl_g, loss_d = model.train_ae_step(
+                        #     sess, batch, self._hparams.rho, gamma)
 
-                        losses.append(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1)
+                        # losses.append(loss, loss_g, ppl_g, loss_d, loss_d0, loss_d1)
 
-                        step += 1
-                        if step % self._hparams.disp_interval == 0:
-                            log_print("step %d: "%(step) + str(losses))
-                            losses.reset()
+                        # step += 1
+                        # if step % self._hparams.disp_interval == 0:
+                        #     log_print("step %d: "%(step) + str(losses))
+                        #     losses.reset()
                     except tf.errors.OutOfRangeError:
                         break
 
