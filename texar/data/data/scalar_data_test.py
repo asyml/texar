@@ -9,6 +9,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import copy
 import tempfile
 import numpy as np
 
@@ -95,6 +96,43 @@ class ScalarDataTest(tf.test.TestCase):
         """
         self._run_and_test(self._int_hparams)
         self._run_and_test(self._float_hparams)
+
+    def test_shuffle(self):
+        """Tests results of toggling shuffle.
+        """
+        hparams = copy.copy(self._int_hparams)
+        hparams["batch_size"] = 10
+        scalar_data = tx.data.ScalarData(hparams)
+        iterator = scalar_data.dataset.make_initializable_iterator()
+        data_batch = iterator.get_next()
+
+        hparams_sfl = copy.copy(hparams)
+        hparams_sfl["shuffle"] = True
+        scalar_data_sfl = tx.data.ScalarData(hparams_sfl)
+        iterator_sfl = scalar_data_sfl.dataset.make_initializable_iterator()
+        data_batch_sfl = iterator_sfl.get_next()
+
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            sess.run(tf.local_variables_initializer())
+            sess.run(tf.tables_initializer())
+            sess.run(iterator.initializer)
+            sess.run(iterator_sfl.initializer)
+
+            vals = []
+            vals_sfl = []
+            while True:
+                try:
+                    # Run the logics
+                    data_batch_, data_batch_sfl_ = sess.run([data_batch,
+                                                             data_batch_sfl])
+                    vals += data_batch_[scalar_data.data_name].tolist()
+                    vals_sfl += data_batch_sfl_[scalar_data.data_name].tolist()
+                except tf.errors.OutOfRangeError:
+                    print('Done -- epoch limit reached')
+                    break
+            self.assertEqual(len(vals), len(vals_sfl))
+            self.assertSetEqual(set(vals), set(vals_sfl))
 
 if __name__ == "__main__":
     tf.test.main()

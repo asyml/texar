@@ -23,8 +23,8 @@ python extract_data.py
 2. Remove the `<PAD> <EOS> <UNK>` tokens in the vocab.bpe.32000
 ```
 #enter the `~/t2t_data/' direcroty
-cp vocab.bpe.32000 vocab.bpe.filtered
-remove the 1st, 2nd, -1st line of `vocab.bpe.filtered' file
+#mkdir wmt_ende
+#move the corresponding training file, eval file and test file to wmt_ende directory
 ```
 
 # training the model:
@@ -35,10 +35,8 @@ python transformer.py
 
 # evaluation on test dataset newstest2014
 ```
-#enter the `~/t2t_data/' directory
-cp vocab.bpe.32000 vocab.bpe.eval
-add <BOS> token in the second line of vocab.bpe.eval
-
-python eval_greedy.py
-
-enter `log_dir' directory and run the `evaluate_bleu.sh'
+bash run_en_de_wmt.sh
+# enter the args.log_dir directory
+cat #model#.b5alpha0.6.output.txt | sed 's/@@ //g' > outputs.words
+t2t-bleu --translation=outputs.words --reference=newstest2014.tok.de
+```

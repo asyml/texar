@@ -14,7 +14,7 @@ import tensorflow.contrib.rnn as rnn
 from texar import context
 from texar.hyperparams import HParams
 from texar.utils import utils
-
+import numpy as np
 # pylint: disable=not-context-manager, redefined-variable-type, invalid-name
 # pylint: disable=too-many-branches, too-many-arguments, too-many-lines
 # pylint: disable=protected-access
@@ -1156,12 +1156,13 @@ def sinusoid_positional_encoding(inputs,
         return signal
 
 def multihead_attention(queries,
-                        keys,
-                        keys_padding=None,
+                        bias=None,
+                        memory=None,
                         causality=False,
                         num_heads=8,
                         num_units=None,
                         dropout_rate=0,
+                        cache=None,
                         scope='multihead_attention'):
     '''Applies multihead attention.
 
@@ -1181,58 +1182,49 @@ def multihead_attention(queries,
     with tf.variable_scope(scope):
         if num_units is None:
             num_units = queries.get_shape().as_list()[-1]
-        if keys is None:
-            keys = queries
         if num_units % num_heads != 0:
             raise ValueError("Value depth (%d) must be divisible by the number"
                              "of attention heads (%d)." % (\
                             num_units, num_heads))
-        Q = tf.layers.dense(queries, num_units, use_bias=False, name='q')
-        K = tf.layers.dense(keys, num_units, use_bias=False, name='k')
-        V = tf.layers.dense(keys, num_units, use_bias=False, name='v')
-
+        if memory is None:
+            #'self attention'
+            Q = tf.layers.dense(queries, num_units, use_bias=False, name='q')
+            K = tf.layers.dense(queries, num_units, use_bias=False, name='k')
+            V = tf.layers.dense(queries, num_units, use_bias=False, name='v')
+            if cache is not None:
+                # 'decoder self attention'
+                K = cache['self_keys'] = tf.concat([cache['self_keys'], K], axis=1)
+                V = cache['self_values'] = tf.concat([cache['self_values'], V], axis=1)
+                cache['self_keys'] = K
+                cache['self_values'] = V
+        else:
+            # 'encoder decoder attention'
+            Q = tf.layers.dense(queries, num_units, use_bias=False, name='q')
+            if cache is not None:
+                K, V = tf.cond(
+                    tf.equal(tf.shape(cache["memory_keys"])[1], 0),
+                    true_fn=lambda: [tf.layers.dense(memory, num_units, use_bias=False, name='k'),
+                        tf.layers.dense(memory, num_units, use_bias=False, name='v')],
+                    false_fn=lambda: [cache["memory_keys"], cache["memory_values"]])
+            else:
+                K, V = [tf.layers.dense(memory, num_units, use_bias=False, name='k'),
+                        tf.layers.dense(memory, num_units, use_bias=False, name='v')]
         Q_ = split_heads(Q, num_heads)
         #[batch_size, num_heads, seq_length, memory_depth]
         K_ = split_heads(K, num_heads)
         V_ = split_heads(V, num_heads)
-
         key_depth_per_head = num_units // num_heads
         Q_ *= key_depth_per_head**-0.5
-        outputs = tf.matmul(Q_, K_, transpose_b=True)
-        # attention scale => query scale
-        # outputs = outputs / (K_.get_shape().as_list()[-1] ** 0.5)
-        if keys_padding is not None:
-            key_attention_bias = keys_padding * -1e9
-            key_attention_bias = tf.expand_dims(
-                tf.expand_dims(key_attention_bias, 1),2)
-            outputs += key_attention_bias
 
-        if causality:
-            diag_vals = tf.ones_like(outputs[0, 0, :, :])
-            if tf.__version__.startswith('1.4'):
-                tril = tf.contrib.linalg.LinearOperatorTriL(diag_vals).to_dense()
-            elif tf.__version__.startswith('1.6'):
-                tril = tf.contrib.linalg.LinearOperatorLowerTriangular(diag_vals).to_dense()
-            masks = tf.expand_dims(tf.expand_dims(tril, 0), 1)
-            forward_attention_bias = (1 - masks)*(-1e9)
-            outputs += forward_attention_bias
+        logits = tf.matmul(Q_, K_, transpose_b=True)
+        if bias is not None:
+            logits += bias
+        weights = tf.nn.softmax(logits, name="attention_weights")
+        weights = tf.layers.dropout(
+            weights, rate=dropout_rate, training=context.global_mode_train())
 
-        outputs = tf.nn.softmax(outputs)
-        # outputs => probability simplex
+        outputs = tf.matmul(weights, V_)
 
-        #max_query_len =tf.to_int32(tf.shape(queries))[1]
-        #query_masks = tf.sequence_mask(
-        #    tf.to_int32(queries_valid_length), max_query_len, tf.float32)
-        #query_masks = tf.tile(query_masks, [num_heads,1])
-        #query_masks = tf.tile(tf.expand_dims(query_masks, -1), [1, 1, tf.shape(keys)[1]])
-        # batch, query_len, key_len
-        #outputs *= query_masks
-
-        #attention dropout
-        outputs = tf.layers.dropout(
-            outputs, rate=dropout_rate, training=context.global_mode_train())
-
-        outputs = tf.matmul(outputs, V_)
         outputs = combine_heads(outputs)
         outputs = tf.layers.dense(outputs, num_units, use_bias=False, name='output_transform')
         #(batch_size, length_query, attention_depth)
@@ -1300,3 +1292,26 @@ def shape_list(x):
       dim = shape[i]
     ret.append(dim)
   return ret
+
+def ones_matrix_band_part(rows, cols, num_lower, num_upper, out_shape=None):
+  """Matrix band part of ones."""
+  if all([isinstance(el, int) for el in [rows, cols, num_lower, num_upper]]):
+    # Needed info is constant, so we construct in numpy
+    if num_lower < 0:
+      num_lower = rows - 1
+    if num_upper < 0:
+      num_upper = cols - 1
+    lower_mask = np.tri(cols, rows, num_lower).T
+    upper_mask = np.tri(rows, cols, num_upper)
+    band = np.ones((rows, cols)) * lower_mask * upper_mask
+    if out_shape:
+      band = band.reshape(out_shape)
+    band = tf.constant(band, tf.float32)
+  else:
+    band = tf.matrix_band_part(tf.ones([rows, cols]),
+                               tf.cast(num_lower, tf.int64),
+                               tf.cast(num_upper, tf.int64))
+    if out_shape:
+      band = tf.reshape(band, out_shape)
+
+  return band
