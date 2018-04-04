@@ -129,16 +129,28 @@ class MonoTextDataTest(tf.test.TestCase):
         iterator = text_data.dataset.make_initializable_iterator()
         text_data_batch = iterator.get_next()
 
+        hparams.update({
+            "bucket_boundaries": [7],
+            "bucket_batch_sizes": [5, 5],
+            "allow_smaller_final_batch": False})
+
+        text_data_1 = tx.data.MonoTextData(hparams)
+        iterator_1 = text_data_1.dataset.make_initializable_iterator()
+        text_data_batch_1 = iterator_1.get_next()
+
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
             sess.run(tf.local_variables_initializer())
             sess.run(tf.tables_initializer())
             sess.run(iterator.initializer)
+            sess.run(iterator_1.initializer)
 
             while True:
                 try:
                     # Run the logics
-                    data_batch_ = sess.run(text_data_batch)
+                    data_batch_, data_batch_1_ = sess.run(
+                        [text_data_batch, text_data_batch_1])
+
                     length_ = data_batch_['length'][0]
                     if length_ < 7:
                         last_batch_size = hparams['num_epochs'] % 6
@@ -150,6 +162,9 @@ class MonoTextDataTest(tf.test.TestCase):
                         self.assertTrue(
                             len(data_batch_['text']) == 4 or
                             len(data_batch_['text']) == last_batch_size)
+
+                    self.assertEqual(len(data_batch_1_['text']), 5)
+
                 except tf.errors.OutOfRangeError:
                     print('Done -- epoch limit reached')
                     break
