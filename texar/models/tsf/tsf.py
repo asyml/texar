@@ -220,7 +220,7 @@ class TSF(ModelBase):
         loss_d = loss_d0 + loss_d1
         loss = loss_g
         if hparams.rho_adv > 0.:
-            loss -= hparmas.rho_adv * loss_d
+            loss -= hparams.rho_adv * loss_d
         if hparams.rho_f > 0:
             loss += hparams.rho_f * loss_df
 
