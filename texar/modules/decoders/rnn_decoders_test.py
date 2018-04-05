@@ -349,10 +349,10 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
 
         _, _, _ = decoder(helper=helper_train)
 
-        # 4+1 trainable variables: cell-kernel, cell-bias,
-        # fc-weight, fc-bias, and
-        # memory_layer: For LuongAttention, we only transform the memory layer;
-        # thus num_units *must* match the expected query depth.
+        ## 4+1 trainable variables: cell-kernel, cell-bias,
+        ## fc-weight, fc-bias, and
+        ## memory_layer: For LuongAttention, we only transform the memory layer;
+        ## thus num_units *must* match the expected query depth.
         self.assertEqual(len(decoder.trainable_variables), 5)
 
         beam_width = 3

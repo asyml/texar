@@ -485,6 +485,8 @@ class AttentionRNNDecoder(RNNDecoderBase):
                 cell_input_fn=self._cell_input_fn,
                 **self._attn_cell_kwargs)
 
+            self._beam_search_cell = bs_attn_cell
+
             return bs_attn_cell
 
     def initialize(self, name=None):
