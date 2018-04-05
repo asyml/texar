@@ -102,7 +102,7 @@ class TSFTrainer:
             "log_dir": "log",
             "name": "tsf",
             "rho_adv": 0.,
-            "rho_f": 1.,
+            "rho_f": 0.5,
             "gamma_init": 1,
             "gamma_decay": 0.5,
             "gamma_min": 0.001,
@@ -244,8 +244,14 @@ class TSFTrainer:
                         loss_d1 = model.train_d1_step(sess, batch, gamma)
 
                         if loss_ds < 1.2 or (loss_d0 < 1.2 and loss_d1 < 1.2):
-                            loss, loss_g, ppl_g, loss_d, loss_df \
-                                = model.train_g_step(sess, batch, gamma)
+                            try:
+                                loss, loss_g, ppl_g, loss_d, loss_df \
+                                    = model.train_g_step(sess, batch, gamma)
+                            except:
+                                print(batch)
+                                print(batch["seq_len"])
+                                print(batch["dec_inputs"].shape)
+                                print(batch["targets"].shape)
                         else:
                             loss, loss_g, ppl_g, loss_d, loss_df \
                                 = model.train_ae_step(sess, batch, gamma)
