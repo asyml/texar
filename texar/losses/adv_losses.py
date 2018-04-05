@@ -35,9 +35,13 @@ def binary_adversarial_losses(real_data,
         (scalar Tensor, scalar Tensor): (generator_loss, discriminator_loss).
     """
     real_logits = discriminator_fn(real_data)
+    if isinstance(real_logits, tuple):
+        real_logits = real_logits[0]
     real_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
         logits=real_logits, labels=tf.ones_like(real_logits)))
     fake_logits = discriminator_fn(fake_data)
+    if isinstance(fake_logits, tuple):
+        fake_logits = fake_logits[0]
     fake_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
         logits=fake_logits, labels=tf.zeros_like(fake_logits)))
     d_loss = real_loss + fake_loss
