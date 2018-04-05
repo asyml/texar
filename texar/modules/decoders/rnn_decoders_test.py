@@ -19,7 +19,7 @@ from texar.modules.decoders.rnn_decoder_helpers import get_helper
 from texar import context
 
 # pylint: disable=no-member, too-many-locals, too-many-instance-attributes
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments, protected-access
 
 class BasicRNNDecoderTest(tf.test.TestCase):
     """Tests :class:`~texar.modules.decoders.rnn_decoders.BasicRNNDecoder`.
@@ -211,7 +211,7 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
         self._max_time = 16
         self._batch_size = 8
         self._emb_dim = 20
-        self._attention_dim = 64
+        self._attention_dim = 256
         self._inputs = tf.random_uniform(
             [self._batch_size, self._max_time, self._emb_dim],
             maxval=1., dtype=tf.float32)
@@ -229,7 +229,7 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
         hparams = {
             "attention": {
                 "kwargs": {
-                    "num_units": 64,
+                    "num_units": self._attention_dim,
                     "probability_fn": "sparsemax"
                 }
             }
@@ -238,7 +238,7 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
             memory=self._encoder_output,
             memory_sequence_length=encoder_values_length,
             vocab_size=self._vocab_size,
-            hparams=hparams)   # Use default hyperparameters
+            hparams=hparams)
 
         helper_train = get_helper(
             decoder.hparams.helper_train.type,
@@ -247,6 +247,11 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
             **decoder.hparams.helper_train.kwargs.todict())
 
         outputs, final_state, sequence_lengths = decoder(helper=helper_train)
+        # 4+1 trainable variables: cell-kernel, cell-bias,
+        # fc-weight, fc-bias, and
+        # memory_layer: For LuongAttention, we only transform the memory layer;
+        # thus num_units *must* match the expected query depth.
+        self.assertEqual(len(decoder.trainable_variables), 5)
 
         cell_dim = decoder.hparams.rnn_cell.kwargs.num_units
         with self.test_session() as sess:
@@ -275,7 +280,7 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
         hparams = {
             "attention": {
                 "kwargs": {
-                    "num_units": 64,
+                    "num_units": 256,
                 }
             }
         }
@@ -315,6 +320,50 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
                 outputs_.sample_id.shape, (self._batch_size, max_length))
             self.assertEqual(final_state_.cell_state[0].shape,
                              (self._batch_size, cell_dim))
+
+    def test_beam_search_cell(self):
+        """Tests :meth:`texar.modules.AttentionRNNDecoder.get_beam_search_cell`.
+        """
+        seq_length = np.random.randint(
+            self._max_time, size=[self._batch_size]) + 1
+        encoder_values_length = tf.constant(seq_length)
+        hparams = {
+            "attention": {
+                "kwargs": {
+                    "num_units": self._attention_dim,
+                    "probability_fn": "sparsemax"
+                }
+            }
+        }
+        decoder = AttentionRNNDecoder(
+            memory=self._encoder_output,
+            memory_sequence_length=encoder_values_length,
+            vocab_size=self._vocab_size,
+            hparams=hparams)
+
+        helper_train = get_helper(
+            decoder.hparams.helper_train.type,
+            inputs=self._inputs,
+            sequence_length=[self._max_time]*self._batch_size,
+            **decoder.hparams.helper_train.kwargs.todict())
+
+        _, _, _ = decoder(helper=helper_train)
+
+        # 4+1 trainable variables: cell-kernel, cell-bias,
+        # fc-weight, fc-bias, and
+        # memory_layer: For LuongAttention, we only transform the memory layer;
+        # thus num_units *must* match the expected query depth.
+        self.assertEqual(len(decoder.trainable_variables), 5)
+
+        beam_width = 3
+        beam_cell = decoder._get_beam_search_cell(beam_width)
+        cell_input = tf.random_uniform([self._batch_size * beam_width,
+                                        self._emb_dim])
+        cell_state = beam_cell.zero_state(self._batch_size * beam_width,
+                                          tf.float32)
+        _ = beam_cell(cell_input, cell_state)
+        # Test if beam_cell is sharing variables with decoder cell.
+        self.assertEqual(len(beam_cell.trainable_variables), 0)
 
 if __name__ == "__main__":
     tf.test.main()

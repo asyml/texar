@@ -33,7 +33,9 @@ MAX_SEQ_LENGTH = np.iinfo(np.int32).max
 #}
 
 __all__ = [
+    "check_or_get_class",
     "get_class",
+    "check_or_get_instance",
     "get_instance",
     "get_instance_with_redundant_kwargs",
     "get_function",
@@ -68,21 +70,52 @@ def _expand_name(name):
     """
     return name
 
+def check_or_get_class(class_or_name, module_path=None, superclass=None):
+    """Returns the class and checks if the class inherits :attr:`superclass`.
+
+    Args:
+        class_or_name: Name or full path to the class, or the class itself.
+        module_paths (list, optional): Paths to candidate modules to search
+            for the class. This is used if :attr:`class_or_name` is a string and
+            the class cannot be located solely based on :attr:`class_or_name`.
+            The first module in the list that contains the class
+            is used.
+        superclass (optional): A (list of) classes that the target class
+            must inherit.
+
+    Returns:
+        The target class.
+
+    Raises:
+        ValueError: If class is not found based on :attr:`class_or_name` and
+            :attr:`module_paths`.
+        TypeError: If class does not inherits :attr:`superclass`.
+    """
+    class_ = class_or_name
+    if is_str(class_):
+        class_ = get_class(class_, module_path)
+    if superclass is not None:
+        if not issubclass(class_, superclass):
+            raise TypeError(
+                "A subclass of {} is expected. Got: {}".format(
+                    superclass, class_))
+    return class_
+
 def get_class(class_name, module_paths=None):
     """Returns the class based on class name.
 
     Args:
-        class_name: Name or full path of the class to instantiate.
-        module_paths: A list of paths to candidate modules to search for the
+        class_name (str): Name or full path to the class.
+        module_paths (list): Paths to candidate modules to search for the
             class. This is used if the class cannot be located solely based on
             `class_name`. The first module in the list that contains the class
             is used.
 
     Returns:
-        A class.
+        The target class.
 
     Raises:
-        TypeError: If class is not found based on :attr:`class_name` and
+        ValueError: If class is not found based on :attr:`class_name` and
             :attr:`module_paths`.
     """
     class_ = locate(class_name)
@@ -106,29 +139,68 @@ def get_class(class_name, module_paths=None):
 
     return class_
 
-
-def get_instance(class_name, kwargs, module_paths=None):
-    """Creates a class instance.
+def check_or_get_instance(ins_or_class_or_name, kwargs, module_paths=None,
+                          classtype=None):
+    """Returns a class instance and checks types.
 
     Args:
-        class_name: Name or full path of the class to instantiate.
-        kwargs: A dictionary of arguments for the class constructor.
-        module_paths: A list of paths to candidate modules to search for the
-            class. This is used if the class cannot be located solely based on
-            `class_name`. The first module in the list that contains the class
-            is used.
+        ins_or_class_or_name: Can be of 3 types:
 
-    Returns:
-        A class instance.
+            - A string representing the name or full path to a class to \
+              instantiate.
+            - The class itself to instantiate.
+            - The class instance itself to check types.
+
+        kwargs (dict): Keyword arguments for the class constructor.
+        module_paths (list, optional): Paths to candidate modules to
+            search for the class. This is used if the class cannot be
+            located solely based on :attr:`class_name`. The first module
+            in the list that contains the class is used.
+        classtype (optional): A (list of) classes of which the instance must
+            be an instantiation.
 
     Raises:
         ValueError: If class is not found based on :attr:`class_name` and
             :attr:`module_paths`.
         ValueError: If :attr:`kwargs` contains arguments that are invalid
             for the class construction.
+        TypeError: If the instance is not an instantiation of
+            :attr:`classtype`.
+    """
+    ret = ins_or_class_or_name
+    if is_str(ret) or isinstance(ret, type):
+        ret = get_instance(ret, kwargs, module_paths)
+    if classtype is not None:
+        if not isinstance(ret, classtype):
+            raise TypeError(
+                "An instance of {} is expected. Got: {}".format(classtype, ret))
+    return ret
+
+def get_instance(class_or_name, kwargs, module_paths=None):
+    """Creates a class instance.
+
+    Args:
+        class_or_name: Name or full path to a class to instantiate, or the
+            class itself.
+        kwargs (dict): Keyword arguments for the class constructor.
+        module_paths (list, optional): Paths to candidate modules to
+            search for the class. This is used if the class cannot be
+            located solely based on :attr:`class_name`. The first module
+            in the list that contains the class is used.
+
+    Returns:
+        A class instance.
+
+    Raises:
+        ValueError: If class is not found based on :attr:`class_or_name` and
+            :attr:`module_paths`.
+        ValueError: If :attr:`kwargs` contains arguments that are invalid
+            for the class construction.
     """
     # Locate the class
-    class_ = get_class(class_name, module_paths)
+    class_ = class_or_name
+    if is_str(class_):
+        class_ = get_class(class_, module_paths)
     # Check validity of arguments
     class_args = set(inspect.getargspec(class_.__init__).args)
     for key in kwargs.keys():

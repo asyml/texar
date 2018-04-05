@@ -13,7 +13,7 @@ import numpy as np
 import tensorflow as tf
 
 import texar.core.optimization as opt
-from texar.core import utils
+from texar.utils import utils
 
 
 class OptimizationTest(tf.test.TestCase):
@@ -23,8 +23,10 @@ class OptimizationTest(tf.test.TestCase):
     def test_get_optimizer(self):
         """Tests get_optimizer.
         """
-        default_optimizer = opt.get_optimizer(
+        default_optimizer_fn, optimizer_class = opt.get_optimizer_fn(
             opt.default_optimization_hparams()["optimizer"])
+        default_optimizer = default_optimizer_fn(1.0)
+        self.assertTrue(optimizer_class, tf.train.Optimizer)
         self.assertIsInstance(default_optimizer, tf.train.AdamOptimizer)
 
         hparams = {
@@ -35,8 +37,27 @@ class OptimizationTest(tf.test.TestCase):
                 "use_nesterov": True
             }
         }
-        momentum_optimizer = opt.get_optimizer(hparams)
+        momentum_optimizer_fn, _ = opt.get_optimizer_fn(hparams)
+        momentum_optimizer = momentum_optimizer_fn()
         self.assertIsInstance(momentum_optimizer, tf.train.MomentumOptimizer)
+
+        hparams = {
+            "type": tf.train.MomentumOptimizer,
+            "kwargs": {
+                "momentum": 0.9,
+                "use_nesterov": True
+            }
+        }
+        momentum_optimizer_fn, _ = opt.get_optimizer_fn(hparams)
+        momentum_optimizer = momentum_optimizer_fn(0.001)
+        self.assertIsInstance(momentum_optimizer, tf.train.MomentumOptimizer)
+
+        hparams = {
+            "type": tf.train.MomentumOptimizer(0.001, 0.9)
+        }
+        momentum_optimizer = opt.get_optimizer_fn(hparams)
+        self.assertIsInstance(momentum_optimizer, tf.train.MomentumOptimizer)
+
 
     def test_get_learning_rate_decay_fn(self): # pylint: disable=too-many-locals
         """Tests get_learning_rate_decay_fn.
@@ -130,16 +151,8 @@ class OptimizationTest(tf.test.TestCase):
         """
         var = tf.Variable(0.)
         loss = tf.nn.l2_loss(var)
-        _, _ = opt.get_train_op(loss)
-
-        hparams = opt.default_optimization_hparams()
-        hparams['optimizer']['kwargs'] = {}
-        hparams['name'] = 'opt'
-        _, global_step = opt.get_train_op(
-            loss, variables=[var], hparams=hparams)
-        self.assertEqual(global_step.name.split(':')[-2].split('/')[-1],
-                         'opt_step')
-
+        train_op = opt.get_train_op(loss)
+        self.assertTrue(tf.contrib.framework.is_tensor(train_op))
 
 if __name__ == "__main__":
     tf.test.main()

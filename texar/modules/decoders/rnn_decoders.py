@@ -11,13 +11,15 @@ from __future__ import print_function
 # pylint: disable=not-context-manager, protected-access, invalid-name
 
 import collections
+import copy
 
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import AttentionWrapper
 from tensorflow.python.util import nest
+from tensorflow.contrib.seq2seq import tile_batch
 
 from texar.modules.decoders.rnn_decoder_base import RNNDecoderBase
-from texar.utils.utils import get_instance, get_function
+from texar.utils import utils
 
 __all__ = [
     "BasicRNNDecoderOutput",
@@ -277,7 +279,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
         if 'probability_fn' in attn_kwargs:
             prob_fn = attn_kwargs['probability_fn']
             if prob_fn is not None and not callable(prob_fn):
-                prob_fn = get_function(
+                prob_fn = utils.get_function(
                     prob_fn,
                     ['tensorflow.nn', 'tensorflow.contrib.sparsemax',
                      'tensorflow.contrib.seq2seq'])
@@ -286,26 +288,29 @@ class AttentionRNNDecoder(RNNDecoderBase):
         attn_kwargs.update({
             "memory_sequence_length": memory_sequence_length,
             "memory": memory})
+        self._attn_kwargs = attn_kwargs
         attn_modules = ['tensorflow.contrib.seq2seq', 'texar.custom']
         # Use variable_scope to ensure all trainable variables created in
         # the attention mechanism are collected
         with tf.variable_scope(self.variable_scope):
-            attention_mechanism = get_instance(
-                attn_hparams["type"], attn_kwargs, attn_modules)
+            attention_mechanism = utils.check_or_get_instance(
+                attn_hparams["type"], attn_kwargs, attn_modules,
+                classtype=tf.contrib.seq2seq.AttentionMechanism)
 
-        attn_cell_kwargs = {
+        self._attn_cell_kwargs = {
             "attention_layer_size": attn_hparams["attention_layer_size"],
             "alignment_history": attn_hparams["alignment_history"],
             "output_attention": attn_hparams["output_attention"],
         }
+        self._cell_input_fn = cell_input_fn
         # Use variable_scope to ensure all trainable variables created in
         # AttentionWrapper are collected
         with tf.variable_scope(self.variable_scope):
             attn_cell = AttentionWrapper(
                 self._cell,
                 attention_mechanism,
-                cell_input_fn=cell_input_fn,
-                **attn_cell_kwargs)
+                cell_input_fn=self._cell_input_fn,
+                **self._attn_cell_kwargs)
             self._cell = attn_cell
 
     #TODO(zhiting): fix the TODOs in the docstring
@@ -326,13 +331,13 @@ class AttentionRNNDecoder(RNNDecoderBase):
                     "attention": {
                         "type": "LuongAttention",
                         "kwargs": {
-                            "num_units": 64,
+                            "num_units": 256,
                         },
                         "attention_layer_size": None,
                         "alignment_history": False,
                         "output_attention": True,
                     },
-                    # The following hyperparameters are common with
+                    # The following hyperparameters are the same with
                     # `BasicRNNDecoder`
                     "rnn_cell": default_rnn_cell_hparams(),
                     "helper_train": default_helper_train_hparams(),
@@ -377,7 +382,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
                         .. code-block:: python
 
                             {
-                                "num_units": 64,
+                                "num_units": 256,
                             }
 
                         - :attr:`"num_units"` is the depth of the attention \
@@ -447,13 +452,40 @@ class AttentionRNNDecoder(RNNDecoderBase):
         hparams["attention"] = {
             "type": "LuongAttention",
             "kwargs": {
-                "num_units": 64,
+                "num_units": 256,
             },
             "attention_layer_size": None,
             "alignment_history": False,
             "output_attention": True,
         }
         return hparams
+
+    def _get_beam_search_cell(self, beam_width):
+        """Returns the RNN cell for beam search decoding.
+        """
+        with tf.variable_scope(self.variable_scope, reuse=True):
+            attn_kwargs = copy.copy(self._attn_kwargs)
+
+            memory = attn_kwargs['memory']
+            attn_kwargs['memory'] = tile_batch(memory, multiplier=beam_width)
+
+            memory_seq_length = attn_kwargs['memory_sequence_length']
+            if memory_seq_length is not None:
+                attn_kwargs['memory_sequence_length'] = tile_batch(
+                    memory_seq_length, beam_width)
+
+            attn_modules = ['tensorflow.contrib.seq2seq', 'texar.custom']
+            bs_attention_mechanism = utils.check_or_get_instance(
+                self._hparams.attention.type, attn_kwargs, attn_modules,
+                classtype=tf.contrib.seq2seq.AttentionMechanism)
+
+            bs_attn_cell = AttentionWrapper(
+                self._cell._cell,
+                bs_attention_mechanism,
+                cell_input_fn=self._cell_input_fn,
+                **self._attn_cell_kwargs)
+
+            return bs_attn_cell
 
     def initialize(self, name=None):
         helper_init = self._helper.initialize()
@@ -533,12 +565,18 @@ class AttentionRNNDecoder(RNNDecoderBase):
                 lambda _: dtype, self._cell.state_size.attention))
 
     def zero_state(self, batch_size, dtype):
-        """Zero state of the basic cell.
+        """Returns zero state of the basic cell.
 
         Same as :attr:`decoder.cell._cell.zero_state`.
         """
-        return self._cell._cell.zero_state(
-            batch_size=batch_size, dtype=dtype)
+        return self._cell._cell.zero_state(batch_size=batch_size, dtype=dtype)
+
+    def wrapper_zero_state(self, batch_size, dtype):
+        """Returns zero state of the attention-wrapped cell.
+
+        Same as :attr:`decoder.cell.zero_state`.
+        """
+        return self._cell.zero_state(batch_size=batch_size, dtype=dtype)
 
     @property
     def state_size(self):
