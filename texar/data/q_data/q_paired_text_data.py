@@ -17,9 +17,8 @@ from texar.data.q_data.q_data_base import qDataBase
 from texar.data.q_data import q_mono_text_data
 from texar.data.q_data.q_data_providers import ParallelDataProvider
 from texar.data.data_decoders import TextDataDecoder
-from texar.data.vocabulary import Vocab
+from texar.data.vocabulary import Vocab, SpecialTokens
 from texar.data.embedding import Embedding
-from texar.data import constants
 
 # pylint: disable=invalid-name, arguments-differ, not-context-manager
 # pylint: disable=protected-access, no-member
@@ -93,9 +92,9 @@ class qPairedTextData(qDataBase):
 
         # Make vocabulary
         bos_token = utils.default_string(tgt_proc_hparams["bos_token"],
-                                         constants.BOS_TOKEN)
+                                         SpecialTokens.BOS)
         eos_token = utils.default_string(tgt_proc_hparams["eos_token"],
-                                         constants.EOS_TOKEN)
+                                         SpecialTokens.EOS)
         if tgt_hparams["vocab_share"]:
             if bos_token == src_dataset.vocab.bos_token and \
                     eos_token == src_dataset.vocab.eos_token:

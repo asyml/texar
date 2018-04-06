@@ -71,7 +71,7 @@ def default_rnn_cell_hparams():
                 # named in `type` passing the arguments specified in
                 # `kwargs` as `cell_class(**kwargs)`
                 "kwargs": {
-                    "num_units": 64
+                    "num_units": 256
                 }
 
                 # Number of cell layers
@@ -109,7 +109,7 @@ def default_rnn_cell_hparams():
     return {
         "type": "BasicLSTMCell",
         "kwargs": {
-            "num_units": 64
+            "num_units": 256,
         },
         "num_layers": 1,
         "dropout": {
@@ -167,7 +167,7 @@ def get_rnn_cell(hparams=None, mode=None):
     for layer_i in range(num_layers):
         # Create the basic cell
         cell_type = hparams["type"]
-        if utils.is_str_or_unicode(cell_type):
+        if utils.is_str(cell_type):
             cell_modules = ['tensorflow.contrib.rnn', 'texar.custom']
             cell = utils.get_instance(cell_type, cell_kwargs, cell_modules)
         else:
@@ -286,7 +286,7 @@ def get_regularizer(hparams=None):
 
     if isinstance(hparams, dict):
         hparams = HParams(hparams, default_regularizer_hparams())
-    if utils.is_str_or_unicode(hparams.type):
+    if utils.is_str(hparams.type):
         rgl = utils.get_instance(
             hparams.type, hparams.kwargs.todict(),
             ["tensorflow.keras.regularizers", "texar.custom"])
@@ -312,7 +312,7 @@ def get_initializer(hparams=None):
     if hparams is None:
         return None
 
-    if utils.is_str_or_unicode(hparams["type"]):
+    if utils.is_str(hparams["type"]):
         kwargs = hparams["kwargs"]
         if isinstance(kwargs, HParams):
             kwargs = kwargs.todict()
@@ -454,7 +454,7 @@ def get_layer(hparams):
         raise ValueError("`hparams` must not be `None`.")
 
     layer_type = hparams["type"]
-    if not utils.is_str_or_unicode(layer_type):
+    if not utils.is_str(layer_type):
         layer = layer_type
     else:
         layer_modules = ["tensorflow.layers", "texar.core", "texar.costum"]
