@@ -30,6 +30,10 @@ class Conv1DClassifierTest(tf.test.TestCase):
         self.assertEqual(logits.shape, [64, 2])
         self.assertEqual(pred.shape, [64])
 
+        inputs = tf.placeholder(tf.float32, [64, None, 300])
+        logits, pred = classifier(inputs)
+        self.assertEqual(logits.shape, [64, 2])
+        self.assertEqual(pred.shape, [64])
 
 if __name__ == "__main__":
     tf.test.main()

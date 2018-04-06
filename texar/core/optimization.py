@@ -60,8 +60,11 @@ def default_optimization_hparams():
     }
 
 def get_optimizer_fn(hparams=None):
-    """Returns a function with the signiture:
-    (learning_rate=None) -> instance of optimizer class
+    """Returns a function of making optimizer instance, along with the
+    optimizer class.
+
+    The function has the signiture:
+        (learning_rate=None) -> instance of the optimizer class,
 
     The optimizer class must be a subclass of :tf_main:`~tf.train.Optimizer`.
 
@@ -77,27 +80,29 @@ def get_optimizer_fn(hparams=None):
             hyperparameters are set to default values automatically.
 
     Returns:
-        A function that creates optimizer instance, or an optimizer instance.
+        (function that creates optimizer instance, optimizer class),
+        or the optimizer instance.
     """
     if hparams is None or isinstance(hparams, dict):
         hparams = HParams(
             hparams, default_optimization_hparams()["optimizer"])
 
     opt = hparams["type"]
-    if utils.is_str(opt):
+    if isinstance(opt, tf.train.Optimizer):
+        return opt
+    else:
         opt_modules = ['tensorflow.train',
                        'tensorflow.contrib.opt',
                        'texar.custom']
-        opt_class = utils.get_class(opt, opt_modules)
-    elif isinstance(opt, type) and issubclass(opt, tf.train.Optimizer):
-        opt_class = opt
-    elif isinstance(opt, tf.train.Optimizer):
-        return opt
-    else:
-        raise ValueError(
-            "Unrecognized optimizer. Must be string name of the optimizer "
-            "class, or the class which is a subclass of tf.train.Optimizer, "
-            "or an instance of the subclass of Optimizer.")
+        try:
+            opt_class = utils.check_or_get_class(opt, opt_modules,
+                                                 tf.train.Optimizer)
+        except TypeError:
+            raise ValueError(
+                "Unrecognized optimizer. Must be string name of the "
+                "optimizer class, or the class which is a subclass of "
+                "tf.train.Optimizer, or an instance of the subclass of "
+                "Optimizer.")
 
     def _get_opt(learning_rate=None):
         opt_kwargs = hparams["kwargs"].todict()

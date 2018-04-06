@@ -11,7 +11,9 @@ from __future__ import unicode_literals
 import tensorflow as tf
 
 from texar.data.data.data_base import DataBase
+from texar.data.data import dataset_utils as dsutils
 
+# pylint: disable=protected-access
 
 __all__ = [
     "TextDataBase"
@@ -55,6 +57,15 @@ class TextDataBase(DataBase): # pylint: disable=too-few-public-methods
                 bucket_batch_size = [batch_size] * (len(bucket_boundaries) + 1)
             dataset = dataset.apply(tf.contrib.data.bucket_by_sequence_length(
                 element_length_func, bucket_boundaries, bucket_batch_size))
+            if not hparams["allow_smaller_final_batch"]:
+                if len(set(bucket_batch_size)) > 1:
+                    raise ValueError(
+                        "Batch size of every bucket must be the same if "
+                        "smaller final batch is not allowed.")
+                batch_size = bucket_batch_size[0]
+                filter_fn = dsutils._make_smaller_batch_filter_fn(batch_size)
+                dataset = dataset.filter(
+                    lambda *args: filter_fn(dsutils.maybe_tuple(args)))
 
         return dataset
 

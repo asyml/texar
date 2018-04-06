@@ -90,6 +90,20 @@ def _make_length_filter_fn(length_name, max_length):
         return data[length_name] <= max_length
     return _filter_fn
 
+def _make_smaller_batch_filter_fn(batch_size):
+    """Returns a predicate function which takes in a batched data
+    and returns a bool indicating whether the batch is of :attr:`batch_size`.
+    """
+    def _filter_fn(data):
+        if isinstance(data, (list, tuple)):
+            return _filter_fn(data[0])
+        elif isinstance(data, dict):
+            return _filter_fn(data[next(iter(data))])
+        else:
+            return tf.equal(tf.shape(data)[0], batch_size)
+
+    return _filter_fn
+
 def _make_combined_filter_fn(filter_fns, mode="and"):
     """Returns a new predicate function that combines multiple
     predicate functions with certain mode.

@@ -73,7 +73,6 @@ def _main(_):
     batch_size = config.batch_size
     num_steps = config.num_steps
     data = prepare_data(FLAGS.data_path)
-    data_iter = lambda data: ptb_iterator(data, batch_size, num_steps)
     vocab_size = data["vocab_size"]
 
     inputs = tf.placeholder(tf.int32, [batch_size, num_steps])
@@ -112,7 +111,7 @@ def _main(_):
         mle_loss, global_step=global_step, increment_global_step=False,
         hparams=config.opt)
 
-    def _run_epoch(sess, data, epoch, is_train=False, verbose=False):
+    def _run_epoch(sess, data_iter, epoch, is_train=False, verbose=False):
         start_time = time.time()
         loss = 0.
         iters = 0
@@ -129,7 +128,7 @@ def _main(_):
                 if is_train
                 else tf.estimator.ModeKeys.EVAL)
         epoch_size = (len(data) // batch_size - 1) // num_steps
-        for step, (x, y) in enumerate(data_iter(data)):
+        for step, (x, y) in enumerate(data_iter):
             feed_dict = {
                 inputs: x, targets: y, global_step: epoch,
                 tx.global_mode(): mode,
@@ -158,13 +157,21 @@ def _main(_):
         sess.run(tf.tables_initializer())
 
         for epoch in range(config.num_epochs):
+            # Train
+            train_data_iter = ptb_iterator(
+                data["train_text_id"], config.batch_size, num_steps)
             train_ppl = _run_epoch(
-                sess, data["train_text_id"], epoch, is_train=True, verbose=True)
+                sess, train_data_iter, epoch, is_train=True, verbose=True)
             print("Epoch: %d Train Perplexity: %.3f" % (epoch, train_ppl))
-            valid_ppl = _run_epoch(
-                sess, data["valid_text_id"], epoch)
+            # Valid
+            valid_data_iter = ptb_iterator(
+                data["valid_text_id"], config.batch_size, num_steps)
+            valid_ppl = _run_epoch(sess, valid_data_iter, epoch)
             print("Epoch: %d Valid Perplexity: %.3f" % (epoch, valid_ppl))
-        test_ppl = _run_epoch(sess, data["test_text_id"], 0)
+        # Test
+        test_data_iter = ptb_iterator(
+            data["test_text_id"], batch_size, num_steps)
+        test_ppl = _run_epoch(sess, test_data_iter, 0)
         print("Test Perplexity: %.3f" % (test_ppl))
 
 if __name__ == '__main__':

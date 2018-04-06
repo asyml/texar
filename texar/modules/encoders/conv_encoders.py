@@ -9,7 +9,9 @@ from __future__ import print_function
 
 import tensorflow as tf
 
+from texar.hyperparams import HParams
 from texar.utils.exceptions import TexarError
+from texar.core.layers import get_pooling_layer_hparams
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.networks import FeedForwardNetwork
 from texar.utils.utils import uniquify_str
@@ -62,7 +64,7 @@ class Conv1DEncoder(EncoderBase):
             "other_conv_kwargs": None,
             # Pooling layers
             "pooling": "MaxPooling1D",
-            "pool_size": 1,
+            "pool_size": None,
             "pool_strides": 1,
             "other_pool_kwargs": None,
             # Dense layers
@@ -93,18 +95,20 @@ class Conv1DEncoder(EncoderBase):
         pool_size = _to_list(self._hparams.pool_size, "pool_size", npool)
         strides = _to_list(self._hparams.pool_strides, "pool_strides", npool)
 
-        other_kwargs = {}
-        if self._hparams.other_pool_kwargs is not None:
-            if not isinstance(self._hparams.other_pool_kwargs, dict):
-                raise ValueError("hparams['other_pool_kwargs'] must be a dict.")
-            other_kwargs = self._hparams.other_pool_kwargs
+        other_kwargs = self._hparams.other_pool_kwargs or {}
+        if isinstance(other_kwargs, HParams):
+            other_kwargs = other_kwargs.todict()
+        if not isinstance(other_kwargs, dict):
+            raise ValueError("hparams['other_pool_kwargs'] must be a dict.")
 
         pool_hparams = []
         for i in range(npool):
             kwargs_i = {"pool_size": pool_size[i], "strides": strides[i],
                         "name": "pool_%d" % (i+1)}
             kwargs_i.update(other_kwargs)
-            pool_hparams.append({"type": pool_type, "kwargs": kwargs_i})
+            pool_hparams_ = get_pooling_layer_hparams({"type": pool_type,
+                                                       "kwargs": kwargs_i})
+            pool_hparams.append(pool_hparams_)
 
         return pool_hparams
 
@@ -126,11 +130,11 @@ class Conv1DEncoder(EncoderBase):
                                    'kernel_size', nconv)
             kernel_size = [_to_list(ks) for ks in kernel_size]
 
-        other_kwargs = {}
-        if self._hparams.other_conv_kwargs is not None:
-            if not isinstance(self._hparams.other_conv_kwargs, dict):
-                raise ValueError("hparams['other_conv_kwargs'] must be a dict.")
-            other_kwargs = self._hparams.other_conv_kwargs
+        other_kwargs = self._hparams.other_conv_kwargs or {}
+        if isinstance(other_kwargs, HParams):
+            other_kwargs = other_kwargs.todict()
+        if not isinstance(other_kwargs, dict):
+            raise ValueError("hparams['other_conv_kwargs'] must be a dict.")
 
         conv_pool_hparams = []
         for i in range(nconv):
@@ -167,12 +171,11 @@ class Conv1DEncoder(EncoderBase):
         ndense = self._hparams.num_dense_layers
         dense_size = _to_list(self._hparams.dense_size, 'dense_size', ndense)
 
-        other_kwargs = {}
-        if self._hparams.other_dense_kwargs is not None:
-            if not isinstance(self._hparams.other_dense_kwargs, dict):
-                raise ValueError(
-                    "hparams['other_dense_kwargs'] must be a dict.")
-            other_kwargs = self._hparams.other_dense_kwargs
+        other_kwargs = self._hparams.other_dense_kwargs or {}
+        if isinstance(other_kwargs, HParams):
+            other_kwargs = other_kwargs.todict()
+        if not isinstance(other_kwargs, dict):
+            raise ValueError("hparams['other_dense_kwargs'] must be a dict.")
 
         dense_hparams = []
         for i in range(ndense):
