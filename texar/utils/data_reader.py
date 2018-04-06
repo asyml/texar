@@ -16,7 +16,8 @@ def _batching_scheme(batch_size,
                      drop_long_sequences=False,
                      shard_multiplier=1,
                      length_multiplier=1,
-                     min_length=0):
+                     min_length=0,
+                     batch_relax=False):
   """A batching scheme based on model hyperparameters.
   Every batch containins a number of sequences divisible by `shard_multiplier`.
   Args:
