@@ -1,6 +1,8 @@
 # Hierarchical Recurrent Encoder-Decoder (HRED) Dialogue Model
 
-This example builds a HRED dialogue model, training with [switchboard-1 Release 2](https://catalog.ldc.upenn.edu/ldc97s62). The basic HRED structure is described in [(Serban et al.) Building End-To-End Dialogue Systems Using Generative Hierarchical Neural Network Models](https://arxiv.org/abs/1507.04808), and this example follows the setting of baseline from [Zhao et al., Learning Discourse-level Diversity for Neural Dialog Models using Conditional Variational Autoencoders](https://arxiv.org/abs/1703.10960).
+This example builds a HRED dialogue model, training with [switchboard-1 Release 2](https://catalog.ldc.upenn.edu/ldc97s62). This example follows the setting of baseline from [(Zhao et al. ) Learning Discourse-level Diversity for Neural Dialog Models using Conditional Variational Autoencoders](https://arxiv.org/abs/1703.10960).
+
+The basic HRED structure is described in [(Serban et al.) Building End-To-End Dialogue Systems Using Generative Hierarchical Neural Network Models](https://arxiv.org/abs/1507.04808).
 
 This example shows:
 + Construct data for seq-to-seq dialogue model.
