@@ -34,7 +34,7 @@ class Dataset():
 
         utts = [WordPunctTokenizer().tokenize(uttr) for speaker, uttr in source]
         source = '|||'.join([' '.join(uttr) for uttr in utts])
-        target = ' '.join(target[1])
+        target = ' '.join(WordPunctTokenizer().tokenize(target[1]))
 
         return source, target
 
