@@ -144,12 +144,6 @@ class HierarchicalRNNEncoder(EncoderBase):
             otherwise it will be shared to both of them, except `initial_state`
             and `sequence_length`, which are only sent to MINOR encoder.
 
-            `sequence_length` and `initial_state` for the MINOR encoder must be
-            flatten manually, ensure that it follows the order [B, T] when
-            time_major=false or [T, B] otherwise.
-
-            Currently, `time_major` should be the same in both two encoders.
-
         Returns:
             Outputs and final state of the MAJOR encoder.
         """
