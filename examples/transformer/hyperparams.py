@@ -17,6 +17,7 @@ argparser.add_argument('--data_dir', type=str, default='/home/shr/others_repo/At
 argparser.add_argument('--src_language', type=str, default='en')
 argparser.add_argument('--tgt_language', type=str, default='vi')
 argparser.add_argument('--filename_prefix',type=str, default='processed.')
+argparser.add_argument('--debug', type=int, default=0)
 #argparser.add_argument('--train_src', type=str, default='train_ende_wmt_bpe32k_en.txt.filtered')
 #argparser.add_argument('--train_tgt', type=str, default='train_ende_wmt_bpe32k_de.txt.filtered')
 #argparser.add_argument('--source_test', type=str, default='/tmp/t2t_datagen/newstest2014.tok.bpe.32000.en')
@@ -39,6 +40,10 @@ argparser.add_argument('--log_disk_dir', type=str, default='/home2/shr/transform
 argparser.add_argument('--beam_width', type=int, default=2)
 argparser.add_argument('--alpha', type=float, default=0,\
     help=' length_penalty=(5+len(decode)/6) ^ -\alpha')
+argparser.add_argument('--save_eval_output', default=1, \
+    help='save the eval output to file')
+#argparser.add_argument('--batch_relax', type=int, default=True)
+
 argparser.parse_args(namespace=args)
 
 args.data_dir = os.path.expanduser(args.data_dir)
@@ -53,9 +58,10 @@ args.test_tgt = os.path.join(args.data_dir, args.filename_prefix + '.test.' + ar
 args.vocab_file = os.path.join(args.data_dir, args.filename_prefix + '.vocab.text')
 print('vocabulary{}'.format(args.vocab_file))
 
-log_params_dir = 'log_dir/{}_{}.srcbsize{}.step{}.lr_c{}warm{}/'.format(args.src_language, args.tgt_language, \
-    args.batch_size, args.max_training_steps, args.lr_constant, args.warmup_steps)
-
+log_params_dir = 'log_dir/{}_{}.bsize{}.epoch{}.lr_c{}warm{}/'.format(args.src_language, args.tgt_language, \
+    args.batch_size, args.max_epoch, args.lr_constant, args.warmup_steps)
+if args.debug:
+    args.log_disk_dir += '/debug/'
 args.log_dir = os.path.join(args.log_disk_dir, log_params_dir)
 print('args.log_dir:{}'.format(args.log_dir))
 batching_scheme = _batching_scheme(
@@ -64,6 +70,7 @@ batching_scheme = _batching_scheme(
     args.min_length_bucket,
     args.length_bucket_step,
     drop_long_sequences=True,
+    #batch_relax=args.batch_relex,
 )
 batching_scheme['boundaries'] = [b + 1 for b in batching_scheme['boundaries']]
 
