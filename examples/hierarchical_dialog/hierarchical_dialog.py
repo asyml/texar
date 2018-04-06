@@ -8,6 +8,7 @@ from __future__ import print_function
 
 # pylint: disable=invalid-name, no-name-in-module
 
+import os
 import numpy as np
 import tensorflow as tf
 import texar as tx
@@ -21,12 +22,18 @@ from argparse import ArgumentParser
 
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 
+from sw_loader import download_and_process
+
 parser = ArgumentParser()
 parser.add_argument('-l', '--load_path', default=None, type=str)
 parser.add_argument('--stage', nargs='+', 
                     default=['train', 'val', 'test'], type=str)
 parser.add_argument('--test_batch_num', default=None, type=int)
+parser.add_argument('--data_root', default='../../data/sw1c2r/', type=str)
+parser.add_argument('--save_root', default='/tmp', type=str)
 args = parser.parse_args()
+
+download_and_process(args.data_root)
 
 data_hparams = {
     stage: {
@@ -34,16 +41,20 @@ data_hparams = {
         "batch_size": 30,
         "source_dataset": {
             "variable_utterance": True,
-            "max_utterance_cnt": 2, 
-            "files": ['../data/dialog/source.txt'],
-            "vocab_file": '../data/dialog/vocab.txt',
+            "max_utterance_cnt": 10, 
+            "files": [
+                os.path.join(args.data_root, '{}-source.txt'.format(stage))],
+            "vocab_file": os.path.join(args.data_root, 'vocab.txt'),
             "embedding_init": {
+                "file": os.path.join(args.data_root, 'embedding.txt'),
                 "dim": 200,
+                "read_fn": "load_glove"
             },
             "bos_token": tx.data.SpecialTokens.BOS
         },
         "target_dataset": {
-            "files": ['../data/dialog/target.txt'],
+            "files": [
+                os.path.join(args.data_root, '{}-target.txt'.format(stage))],
             "vocab_share": True,
             "processing_share": True,
             "embedding_init_share": True,
@@ -109,7 +120,7 @@ def main():
 
     # declare modules
     embedder = tx.modules.WordEmbedder(
-        vocab_size=train_data.source_vocab.size, hparams={'dim':200})
+        init_value=train_data.embedding_init_value()[0])
 
     encoder_minor = tx.modules.BidirectionalRNNEncoder(
         hparams=encoder_minor_hparams)
@@ -262,10 +273,6 @@ def main():
                     hyps = [beam[:l-1, i] for i, l in enumerate(beam_len)]
                     refs = [target[:tgt_len-1]]
 
-                    # calc BLEU score 
-                    # i think there is something wrong?
-                    #scrs = [tx.evals.sentence_bleu(refs, hyp) for hyp in hyps]
-
                     scrs = [sentence_bleu(
                         refs, hyp, 
                         smoothing_function=SmoothingFunction().method7,
@@ -296,7 +303,7 @@ def main():
         print('test epoch {}: bleu_recall={}, bleu_pred={}'.format(
             epoch, bleu_recall, bleu_prec))
 
-        with open('/tmp/hierarchical_example_test_txt_results.txt', 'w') as f:
+        with open('test_txt_results.txt', 'w') as f:
             f.write('\n\n'.join(txt_results))
 
 
