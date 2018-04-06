@@ -23,7 +23,10 @@ argparser.add_argument('--debug', type=int, default=0)
 #argparser.add_argument('--train_tgt', type=str, default='train_ende_wmt_bpe32k_de.txt.filtered')
 #argparser.add_argument('--source_test', type=str, default='/tmp/t2t_datagen/newstest2014.tok.bpe.32000.en')
 #argparser.add_argument('--target_test', type=str, default='/tmp/t2t_datagen/newstest2014.tok.bpe.32000.de')
-argparser.add_argument('--data_dir', type=str, default='/home/hzt/shr/t2t_data/')
+
+#argparser.add_argument('--data_dir', type=str, default='/home/hzt/shr/t2t_data/')
+argparser.add_argument('--data_dir', type=str, default='/home/shr/t2t_data/')
+
 #argparser.add_argument('--t2t_vocab', type=str, default='vocab.bpe.32000')
 #batch size is only used when testing the model
 argparser.add_argument('--batch_size', type=int, default=4096)
@@ -37,8 +40,8 @@ argparser.add_argument('--warmup_steps', type=int, default=16000)
 argparser.add_argument('--lr_constant', type=float, default=2)
 argparser.add_argument('--max_epoch', type=int, default=40)
 argparser.add_argument('--random_seed', type=int, default=123)
-#argparser.add_argument('--log_disk_dir', type=str, default='/home2/shr/transformer/')
-argparser.add_argument('--log_disk_dir', type=str, default='/space/shr/transformer_log/')
+argparser.add_argument('--log_disk_dir', type=str, default='/home2/shr/transformer/')
+#argparser.add_argument('--log_disk_dir', type=str, default='/space/shr/transformer_log/')
 argparser.add_argument('--beam_width', type=int, default=2)
 argparser.add_argument('--alpha', type=float, default=0,\
     help=' length_penalty=(5+len(decode)/6) ^ -\alpha')
