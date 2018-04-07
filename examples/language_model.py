@@ -16,15 +16,15 @@ train_data_hparams = {
     "num_epochs": 1,
     "seed": 123,
     "dataset": {
-        "files": '/space/hzt/text/data/ptb/ptb.train.txt',
-        "vocab_file": '/space/hzt/text/data/ptb/vocab.txt'
+        "files": 'data/sent.txt'
+        "vocab_file": 'data/vocab.txt'
     }
 }
 test_data_hparams = {
     "num_epochs": 1,
     "dataset": {
-        "files": '/space/hzt/text/data/ptb/ptb.test.txt', # TODO(zhiting): use new data
-        "vocab_file": '/space/hzt/text/data/ptb/vocab.txt'
+        "files": 'data/sent.txt', # TODO(zhiting): use new data
+        "vocab_file": 'data/vocab.txt'
     }
 }
 opt_hparams = {
