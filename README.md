@@ -14,7 +14,7 @@
       ```
     - Run unit tests, e.g.,
       ```bash
-      python ./txtgen/modules/encoders/rnn_encoders_test.py
+      python ./texar/modules/encoders/rnn_encoders_test.py
       ```
 
 # Code style
@@ -64,7 +64,3 @@ View HTML
 
   * [tensorflow](https://github.com/tensorflow/tensorflow)
 
-
-# TODO
-    
-  * New name of the project ?

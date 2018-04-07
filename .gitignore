@@ -216,4 +216,8 @@ doc/_build
 
 
 ### Project ###
-data/
+/data/
+checkpoints/
+/language_models/
+/examples/language_model_ptb/simple-examples/
+simple-examples.tgz
