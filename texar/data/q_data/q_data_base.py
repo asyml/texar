@@ -34,7 +34,7 @@ class qDataBase(object):
             "name": "data",
             "num_epochs": None,
             "batch_size": 64,
-            "bucket_batch_size": None,
+            "bucket_batch_sizes": None,
             "allow_smaller_final_batch": False,
             "bucket_boundaries": [],
             "shuffle": True,

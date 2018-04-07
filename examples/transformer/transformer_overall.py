@@ -32,9 +32,9 @@ if __name__ == "__main__":
     random.seed(1234)
     hidden_dim = 512
     # Construct the database
-    train_database = tx.data.qPairedTextData(train_dataset_hparams)
+    train_database = tx.data.PairedTextData(train_dataset_hparams)
     #eval_database = qPairedTextData(eval_dataset_hparams)
-    test_database  =tx.data.qPairedTextData(test_dataset_hparams)
+    test_database  =tx.data.PairedTextData(test_dataset_hparams)
     iterator = tx.data.TrainTestDataIterator(train=train_database,
                       test=test_database)
     text_data_batch = iterator.get_next()

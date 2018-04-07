@@ -201,7 +201,7 @@ class qPairedTextData(qDataBase):
                 data[self._tgt_dataset.decoder.length_tensor_name]
             )
             #input_length = data[self._src_dataset.decoder.length_tensor_name]
-            batch_size = self._hparams.bucket_batch_size
+            batch_size = self._hparams.bucket_batch_sizes
             if batch_size is None:
                 batch_size = self._hparams.batch_size
             _, data_batch = tf.contrib.training.bucket_by_sequence_length(

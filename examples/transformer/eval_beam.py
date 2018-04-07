@@ -21,7 +21,10 @@ def evaluate():
     ori_tgt_text = text_data_batch['target_text_ids']
     encoder_input = ori_src_text[:, 1:]
     enc_input_length = tf.reduce_sum(tf.to_float(tf.not_equal(encoder_input, 0)))
-
+    WordEmbedder = texar.modules.WordEmbedder(
+        vocab_size=text_database.source_vocab.size,
+        hparams=args.word_embedding_hparams,
+    )
     encoder = TransformerEncoder(vocab_size=test_database.source_vocab.size, \
         hparams=encoder_hparams)
     encoder_output, encoder_decoder_attention_bias = encoder(encoder_input,
