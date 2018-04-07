@@ -52,8 +52,6 @@ class TransformerDecoder(ModuleBase):
                 if self._hparams.zero_pad:
                     self._embedding = tf.concat((tf.zeros(shape=[1, self._embed_dim]),\
                         self._embedding[1:, :]), 0)
-                if self._hparams.embedding.trainable:
-                    self._add_trainable_variable(self._embedding)
             if self._vocab_size is None:
                 self._vocab_size = self._embedding.get_shape().as_list()[0]
             self.position_encoder = SinusoidalPositionEncoder()
@@ -64,7 +62,6 @@ class TransformerDecoder(ModuleBase):
             'multiply_embedding_mode': 'sqrt_depth',
             'share_embed_and_transform': True,
             "use_embedding": True,
-            "embedding": embedder_utils.default_embedding_hparams(),
             "name":"decoder",
             "num_heads":8,
             "num_blocks":6,
@@ -76,6 +73,7 @@ class TransformerDecoder(ModuleBase):
             "dropout":0.1,
             "sinusoid":True,
             'poswise_feedforward':None,
+            'num_units':512,
         }
     def prepare_tokens_to_embeds(self, tokens):
         token_emb = tf.nn.embedding_lookup(self._embedding, tokens)
@@ -195,7 +193,7 @@ class TransformerDecoder(ModuleBase):
                         queries=layers.layer_normalize(x),
                         memory=None,
                         bias=decoder_self_attention_bias,
-                        num_units=self._hparams.embedding.dim,
+                        num_units=self._hparams.num_units,
                         num_heads=self._hparams.num_heads,
                         dropout_rate=self._hparams.dropout,
                         cache=layer_cache,
@@ -213,7 +211,7 @@ class TransformerDecoder(ModuleBase):
                         queries=layers.layer_normalize(x),
                         memory=encoder_output,
                         bias=encoder_decoder_attention_bias,
-                        num_units=self._hparams.embedding.dim,
+                        num_units=self._hparams.num_units,
                         num_heads=self._hparams.num_heads,
                         dropout_rate=self._hparams.dropout,
                         causality=False,

@@ -13,7 +13,6 @@ from texar import context
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.encoders.position_encoders import SinusoidalPositionEncoder
 from texar.modules.networks import FeedForwardNetwork
-from texar.modules.embedders import embedder_utils
 from texar import utils
 class TransformerEncoder(EncoderBase):
     """Base class for all encoder classes.
@@ -36,7 +35,7 @@ class TransformerEncoder(EncoderBase):
             :attr:`default_hparams` for the sturcture and default values.
     """
     def __init__(self,
-                 embedding=None,
+                 embedding,
                  vocab_size=None,
                  hparams=None):
         EncoderBase.__init__(self, hparams)
@@ -46,15 +45,8 @@ class TransformerEncoder(EncoderBase):
         self.enc = None
         self.position_enc_embedding = None
         if self._hparams.use_embedding:
-            if embedding is None and self._vocab_size is None:
-                raise ValueError("If `embedding` is not provided, "
-                                 "`vocab_size` must be specified.")
             if isinstance(embedding, tf.Variable):
                 self._embedding = embedding
-            else:
-                self._embedding = embedder_utils.get_embedding(
-                    self._hparams.embedding, embedding, vocab_size,
-                    self.variable_scope)
             embed_dim = self._embedding.get_shape().as_list()[-1]
             if self._hparams.zero_pad: # TODO(zhiting): vocab has zero pad
                 if not self._hparams.bos_pad:
@@ -111,7 +103,6 @@ class TransformerEncoder(EncoderBase):
         return {
             'multiply_embedding_mode': 'sqrt_depth',
             "use_embedding": True,
-            "embedding": embedder_utils.default_embedding_hparams(),
             "name":"encoder",
             "zero_pad":True,
             "bos_pad":True,
@@ -124,13 +115,11 @@ class TransformerEncoder(EncoderBase):
             'num_heads':8,
             'poswise_feedforward':None,
             'target_space_id': 1,
+            'num_units': 512,
         }
 
     def _build(self, inputs,  **kwargs):
-        if self._embedding is not None:
-            self.enc = tf.nn.embedding_lookup(self._embedding, inputs)
-        else:
-            self.enc = inputs
+        self.enc = tf.nn.embedding_lookup(self._embedding, inputs)
         if self._hparams.multiply_embedding_mode =='sqrt_depth':
             self.enc = self.enc * (self._embedding.shape.as_list()[-1]**0.5)
 
@@ -154,7 +143,7 @@ class TransformerEncoder(EncoderBase):
                         bias=encoder_self_attention_bias,
                         num_heads=self._hparams.num_heads,
                         dropout_rate=self._hparams.dropout,
-                        num_units=self._hparams.embedding.dim,
+                        num_units=self._hparams.num_units,
                         scope='multihead_attention'
                     )
                     self.enc = self.enc + tf.layers.dropout(

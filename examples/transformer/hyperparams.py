@@ -37,8 +37,10 @@ argparser.add_argument('--min_length_bucket', type=int, default=8)
 argparser.add_argument('--length_bucket_step', type=float, default=1.1)
 argparser.add_argument('--max_training_steps', type=int, default=250000)
 argparser.add_argument('--warmup_steps', type=int, default=16000)
+argparser.add_argument('--save_checkpoint_interval', type=int, default=1500)
 argparser.add_argument('--lr_constant', type=float, default=2)
-argparser.add_argument('--max_epoch', type=int, default=40)
+argparser.add_argument('--max_train_epoch', type=int, default=40)
+argparser.add_argument('--num_epochs', type=int, default=1)
 argparser.add_argument('--random_seed', type=int, default=123)
 argparser.add_argument('--log_disk_dir', type=str, default='/home2/shr/transformer/')
 #argparser.add_argument('--log_disk_dir', type=str, default='/space/shr/transformer_log/')
@@ -65,7 +67,7 @@ args.vocab_file = os.path.join(args.data_dir, args.filename_prefix + '.vocab.tex
 print('vocabulary{}'.format(args.vocab_file))
 
 log_params_dir = 'log_dir/{}_{}.bsize{}.epoch{}.lr_c{}warm{}/'.format(args.src_language, args.tgt_language, \
-    args.batch_size, args.max_epoch, args.lr_constant, args.warmup_steps)
+    args.batch_size, args.max_train_epoch, args.lr_constant, args.warmup_steps)
 if args.debug:
     args.log_disk_dir += '/debug/'
 args.log_dir = os.path.join(args.log_disk_dir, log_params_dir)
@@ -81,23 +83,25 @@ batching_scheme = _batching_scheme(
 batching_scheme['boundaries'] = [b + 1 for b in batching_scheme['boundaries']]
 
 train_dataset_hparams = {
-    "num_epochs": args.max_epoch,
+    #"num_epochs": args.num_epochs,
+    "num_epochs": args.max_train_epoch,
     "seed": args.random_seed,
     "shuffle": True,
     "source_dataset": {
         "files": [args.train_src],
         "vocab_file": args.vocab_file,
-        "processing": {
-            "bos_token": "<BOS>",
-            "eos_token": "<EOS>",
-        }
+        #"max_seq_length": 256,
+        #"length_filter_mode": "truncate",
     },
     "target_dataset": {
         "files": [args.train_tgt],
         "vocab_share":True,
+        #"max_seq_length": 256,
+        #"length_filter_mode": "truncate",
     },
     'bucket_boundaries': batching_scheme['boundaries'],
-    'bucket_batch_size': batching_scheme['batch_sizes'],
+    'bucket_batch_sizes': batching_scheme['batch_sizes'],
+    'allow_smaller_final_batch': True,
 }
 test_dataset_hparams = {
     "num_epochs": 1,
@@ -118,16 +122,18 @@ test_dataset_hparams = {
     'batch_size': args.test_batch_size,
     'allow_smaller_final_batch': True,
 }
-hidden_dim = 512
+args.hidden_dim = 512
+args.word_embedding_hparams={
+    'name': 'lookup_table',
+    'dim': args.hidden_dim,
+    'initializer': {
+        'type': 'uniform_unit_scaling',
+        'kwargs': {},
+    }
+    # in get_initializer function: kwargs cannot be accessed, bug
+}
 encoder_hparams = {
     'multiply_embedding_mode': "sqrt_depth",
-    'embedding': {
-        'name': 'lookup_table',
-        'dim': hidden_dim,
-        'initializer': {
-            'type': 'uniform_unit_scaling',
-            }
-        },
     'sinusoid': True,
     'num_blocks': 6,
     'num_heads': 8,
@@ -138,7 +144,7 @@ encoder_hparams = {
                 'type':'Dense',
                 'kwargs': {
                     'name':'conv1',
-                    'units':hidden_dim*4,
+                    'units':args.hidden_dim*4,
                     'activation':'relu',
                     'use_bias':True,
                 }
@@ -153,7 +159,7 @@ encoder_hparams = {
                 'type':'Dense',
                 'kwargs': {
                     'name':'conv2',
-                    'units':hidden_dim,
+                    'units':args.hidden_dim,
                     'use_bias':True,
                     }
             }

@@ -10,6 +10,7 @@ import random
 import numpy as np
 import tensorflow as tf
 import logging
+import texar
 from texar.data import qPairedTextData
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.losses import mle_losses
@@ -45,7 +46,12 @@ if __name__ == "__main__":
     #enc_input_length = tf.Print(enc_input_length,
     #    data=[tf.shape(ori_src_text), tf.shape(ori_tgt_text), enc_input_length, dec_input_length, labels_length])
 
+    WordEmbedder = texar.modules.WordEmbedder(
+        vocab_size=text_database.source_vocab.size,
+        hparams=args.word_embedding_hparams,
+        )
     encoder = TransformerEncoder(
+        embedding=WordEmbedder._embedding,
         vocab_size=text_database.source_vocab.size,\
         hparams=encoder_hparams)
     encoder_output, encoder_decoder_attention_bias = encoder(encoder_input, inputs_length=enc_input_length)
@@ -74,7 +80,7 @@ if __name__ == "__main__":
         learning_rate = opt_hparams['lr_constant'] \
             * tf.minimum(1.0, (fstep / opt_hparams['warmup_steps'])) \
             * tf.rsqrt(tf.maximum(fstep, opt_hparams['warmup_steps'])) \
-            * encoder_hparams['embedding']['dim']**-0.5
+            * args.hidden_dim**-0.5
     optimizer = tf.train.AdamOptimizer(
         learning_rate=learning_rate,
         beta1=opt_hparams['Adam_beta1'],
@@ -121,7 +127,7 @@ if __name__ == "__main__":
                 dwords = [ ' '.join([vocab._id_to_token_map_py[i] for i in sent]) for sent in dec_in ]
                 twords = [ ' '.join([vocab._id_to_token_map_py[i] for i in sent]) for sent in target ]
                 writer.add_summary(mgd, global_step=step)
-                if step % 1000 == 0:
+                if step % args.save_checkpoint_interval == 0:
                     print('step:{} loss:{}'.format(step, loss))
                     saver.save(sess, args.log_dir+'my-model', global_step=step)
                 if step == opt_hparams['max_training_steps']:

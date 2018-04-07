@@ -318,6 +318,7 @@ def get_initializer(hparams=None):
         return None
 
     if utils.is_str(hparams["type"]):
+        #print('hparams:{}'.format(hparams))
         kwargs = hparams["kwargs"]
         if isinstance(kwargs, HParams):
             kwargs = kwargs.todict()
