@@ -22,39 +22,30 @@ from argparse import ArgumentParser
 
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 
-from sw_loader import download_and_process
-
 parser = ArgumentParser()
 parser.add_argument('-l', '--load_path', default=None, type=str)
 parser.add_argument('--stage', nargs='+', 
                     default=['train', 'val', 'test'], type=str)
 parser.add_argument('--test_batch_num', default=None, type=int)
-parser.add_argument('--data_root', default='../../data/sw1c2r/', type=str)
+parser.add_argument('--data_root', default='../data/dialog/', type=str)
 parser.add_argument('--save_root', default='/tmp', type=str)
 args = parser.parse_args()
-
-download_and_process(args.data_root)
 
 data_hparams = {
     stage: {
         "num_epochs": 1,
-        "batch_size": 10,
+        "batch_size": 30,
         "source_dataset": {
             "variable_utterance": True,
-            "max_utterance_cnt": 10, 
+            "max_utterance_cnt": 2, 
             "files": [
-                os.path.join(args.data_root, '{}-source.txt'.format(stage))],
+                os.path.join(args.data_root, 'source.txt')],
             "vocab_file": os.path.join(args.data_root, 'vocab.txt'),
-            "embedding_init": {
-                "file": os.path.join(args.data_root, 'embedding.txt'),
-                "dim": 200,
-                "read_fn": "load_glove"
-            },
             "bos_token": tx.data.SpecialTokens.BOS
         },
         "target_dataset": {
             "files": [
-                os.path.join(args.data_root, '{}-target.txt'.format(stage))],
+                os.path.join(args.data_root, 'target.txt')],
             "vocab_share": True,
             "processing_share": True,
             "embedding_init_share": True,
@@ -120,7 +111,7 @@ def main():
 
     # declare modules
     embedder = tx.modules.WordEmbedder(
-        init_value=train_data.embedding_init_value()[0])
+        vocab_size=train_data.source_vocab.size, hparams={'dim':200})
 
     encoder_minor = tx.modules.BidirectionalRNNEncoder(
         hparams=encoder_minor_hparams)
@@ -211,9 +202,7 @@ def main():
 
     def _train_epochs(sess, epoch, display=10):
         iterator.switch_to_train_data(sess)
-
-        for i in range(3000): # speed up a epoch.
-        #while True:
+        while True:
             try:
                 feed = {tx.global_mode(): tf.estimator.ModeKeys.TRAIN}
                 step, loss, _ = sess.run(
@@ -224,9 +213,8 @@ def main():
                         step, epoch, loss))
 
             except tf.errors.OutOfRangeError:
+                print('epoch {} fin: loss={}'.format(epoch, loss))
                 break 
-
-        print('epoch {} train fin: loss={}'.format(epoch, loss))
 
     def _val_epochs(sess, epoch, loss_histories):
         iterator.switch_to_val_data(sess)
@@ -241,7 +229,7 @@ def main():
 
             except tf.errors.OutOfRangeError:
                 loss = np.mean(valid_loss)
-                print('epoch {} valid fin: loss={}'.format(epoch, loss))
+                print('epoch {} fin: loss={}'.format(epoch, loss))
                 break 
 
         loss_histories.append(loss)
@@ -308,7 +296,7 @@ def main():
         bleu_recall = np.mean(max_bleus)
         bleu_prec = np.mean(avg_bleus)
                 
-        print('epoch {} test fin: bleu_recall={}, bleu_pred={}'.format(
+        print('test epoch {}: bleu_recall={}, bleu_pred={}'.format(
             epoch, bleu_recall, bleu_prec))
 
         with open('test_txt_results.txt', 'w') as f:
@@ -341,7 +329,7 @@ def main():
             if 'train' in args.stage:
                 if best_index_diff == 0:
                     saver.save(sess, '/tmp/hierarchical_example_best.ckpt')
-                elif best_index_diff > 15:
+                elif best_index_diff > 5:
                     print('overfit at epoch {}'.format(epoch))
                     break
             else:
