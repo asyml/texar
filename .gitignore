@@ -221,3 +221,4 @@ checkpoints/
 /language_models/
 /examples/language_model_ptb/simple-examples/
 simple-examples.tgz
+/examples/sequence_tagging/data/
