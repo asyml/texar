@@ -46,15 +46,16 @@ import numpy as np
 import tensorflow as tf
 import texar as tx
 
-num_epochs = 100
+num_epochs = 30
 hidden_size = 256
 keep_prob = 0.5
-batch_size = 20
+batch_size = 30
 emb_size = 256
+new_kl_rate = 0
 
-annealing_rate = 1.0 / 5000
+annealing_rate = 1.0 / 7000
 
-latent_dims = 16
+latent_dims = 64
 
 cell_hparams = {
     "type": "LSTMBlockCell",
@@ -71,26 +72,26 @@ emb_hparams = {
 }
 
 connector_hparams = {
-    
+
 }
 
 train_data_hparams = {
-    "num_epochs": 10,
+    "num_epochs": 1,
     "batch_size": batch_size,
     "seed": 123,
     "dataset": {
-        "files": './ptb.train.txt',
-        "vocab_file": './vocab.txt'
+        "files": '/space/hzt/text/data/ptb/ptb.train.txt',
+        "vocab_file": '/space/hzt/text/data/ptb/vocab.txt'
     }
 }
 
 val_data_hparams = {
-    "num_epochs": 10,
+    "num_epochs": 1,
     "batch_size": batch_size,
     "seed": 123,
     "dataset": {
-        "files": './ptb.val.txt',
-        "vocab_file": './vocab.txt'
+        "files": '/space/hzt/text/data/ptb/ptb.val.txt',
+        "vocab_file": '/space/hzt/text/data/ptb/vocab.txt'
     }
 }
 
@@ -98,46 +99,46 @@ test_data_hparams = {
     "num_epochs": 1,
     "batch_size": batch_size,
     "dataset": {
-        "files": './ptb.test.txt', # TODO(zhiting): use new data
-        "vocab_file": './vocab.txt'
+        "files": '/space/hzt/text/data/ptb/ptb.test.txt', # TODO(zhiting): use new data
+        "vocab_file": '/space/hzt/text/data/ptb/vocab.txt'
+    }
+}
+
+opt_hparams = {
+    "optimizer": {
+        "type": "GradientDescentOptimizer",
+        "kwargs": {"learning_rate": 1.0}
+    },
+    "gradient_clip": {
+        "type": "clip_by_global_norm",
+        "kwargs": {"clip_norm": 5.}
+    },
+    "learning_rate_decay": {
+        "type": "exponential_decay",
+        "kwargs": {
+            "decay_steps": 1,
+            "decay_rate": 0.5,
+            "staircase": True
+        },
+        "start_decay_step": 3
     }
 }
 
 # opt_hparams = {
 #     "optimizer": {
-#         "type": "GradientDescentOptimizer",
-#         "kwargs": {"learning_rate": 1.0}
+#         "type": "AdamOptimizer",
+#         "kwargs": {"learning_rate": 0.01}
 #     },
+
 #     "gradient_clip": {
 #         "type": "clip_by_global_norm",
 #         "kwargs": {"clip_norm": 5.}
 #     },
-#     "learning_rate_decay": {
-#         "type": "exponential_decay",
-#         "kwargs": {
-#             "decay_steps": 1,
-#             "decay_rate": 0.5,
-#             "staircase": True
-#         },
-#         "start_decay_step": 3
-#     }
 # }
 
-opt_hparams = {
-    "optimizer": {
-        "type": "AdamOptimizer",
-        "kwargs": {"learning_rate": 0.01}
-    },
-
-    "gradient_clip": {
-        "type": "clip_by_global_norm",
-        "kwargs": {"clip_norm": 5.}
-    },
-}
-
-def kl_dvg(means, logvars):
-    kl_cost = -0.5 * (logvars - tf.square(means) - 
-        tf.exp(logvars) + 1.0)
+def kl_dvg(means, var):
+    kl_cost = -0.5 * (tf.log(var) - tf.square(means) -
+        var + 1.0)
     kl_cost = tf.reduce_mean(kl_cost, 0)
 
     return tf.reduce_sum(kl_cost)
@@ -178,8 +179,10 @@ def _main(_):
     decoder = tx.modules.BasicRNNDecoder(
         vocab_size=train_data.vocab.size, hparams={"rnn_cell": cell_hparams})
 
-    connector_mlp = tx.modules.connectors.MLPTransformConnector(emb_size * 2)
-    connector_stoch = tx.modules.connectors.ReparameterizedStochasticConnector(decoder.cell.state_size)
+    connector_mlp = tx.modules.connectors.MLPTransformConnector(
+            latent_dims * 2, hparams={"activation_fn": "relu"})
+    connector_stoch = tx.modules.connectors.ReparameterizedStochasticConnector(
+            decoder.cell.state_size, hparams={"activation_fn": "relu"})
 
     # initial_state = decoder.zero_state(batch_size, tf.float32)
     _, ecdr_states = encoder(
@@ -188,10 +191,11 @@ def _main(_):
 
     mean_logvar = connector_mlp(ecdr_states)
     mean, logvar = tf.split(mean_logvar, 2, 1)
+    var = tf.nn.softplus(logvar)
 
     dst = tf.contrib.distributions.MultivariateNormalDiag(
         loc=mean,
-        scale_diag=tf.sqrt(tf.exp(logvar)))
+        scale_diag=tf.sqrt(var))
 
     dcdr_states = connector_stoch(dst)
 
@@ -208,21 +212,26 @@ def _main(_):
         logits=outputs.logits,
         sequence_length=seq_lengths)
 
-    kl_loss = kl_dvg(mean, logvar)
+    kl_loss = kl_dvg(mean, var)
 
     # annealing
     kl_rate = tf.placeholder(tf.float32, shape=())
 
     total_loss = mle_loss + kl_rate * kl_loss
 
-    train_op = tx.core.get_train_op(total_loss, hparams=opt_hparams)
+    global_step = tf.placeholder(tf.int32)
+    train_op = tx.core.get_train_op(total_loss,
+                                    global_step=global_step,
+                                    increment_global_step=False,
+                                    hparams=opt_hparams)
 
     def _train_epochs(sess, epoch, display=10):
+        global new_kl_rate
+
         start_time = time.time()
         iterator.switch_to_train_data(sess)
-        new_kl_rate = 0
         num_words = 0
-        t_mle_loss = []
+        t_nll = []
         t_kl_loss = []
         t_total_loss = []
         step = 0
@@ -233,39 +242,42 @@ def _main(_):
                            "mle_loss": mle_loss,
                            "kl_loss": kl_loss,
                            "lengths": seq_lengths}
+
+                assert new_kl_rate <= 1.0
                 feed = {tx.global_mode(): tf.estimator.ModeKeys.TRAIN,
-                        kl_rate: new_kl_rate}
+                        kl_rate: new_kl_rate,
+                        global_step: epoch}
                 fetches_ = sess.run(fetches, feed_dict=feed)
                 new_kl_rate = new_kl_rate + annealing_rate \
                               if new_kl_rate <= 1.0 - annealing_rate \
                               else 1.0
 
                 num_words += sum(fetches_["lengths"])
-                t_mle_loss.append(fetches_["mle_loss"])
+                t_nll.append(fetches_["mle_loss"] + fetches_["kl_loss"])
                 t_kl_loss.append(fetches_["kl_loss"])
                 t_total_loss.append(fetches_["total_loss"])
-                ppl = np.exp(np.sum(t_mle_loss) / num_words)
+                log_ppl = batch_size * np.sum(t_nll) / num_words
 
                 if step % display == 0:
                     print('epoch %d, step %d, total_loss %.4f, \
-                           mle_loss %.4f, KL %.4f, pll %.4f, time %.1f' %
-                          (epoch, step, np.mean(t_total_loss), 
-                           np.mean(t_mle_loss), np.mean(t_kl_loss), ppl, 
+                           nll %.4f, KL %.4f, log_pll %.4f, time %.1f' %
+                          (epoch, step, np.mean(t_total_loss),
+                           np.mean(t_nll), np.mean(t_kl_loss), log_ppl,
                            time.time() - start_time))
 
                 step += 1
 
             except tf.errors.OutOfRangeError:
-                print('epoch %d, total_loss %.4f, \
-                       mle_loss %.4f, KL %.4f, pll %.4f' %
-                      (epoch, np.mean(t_total_loss), 
-                       np.mean(t_mle_loss), np.mean(t_kl_loss), ppl))
-                break  
+                print('\nepoch %d End, total_loss %.4f, \
+                       nll %.4f, KL %.4f, log_pll %.4f' %
+                      (epoch, np.mean(t_total_loss),
+                       np.mean(t_nll), np.mean(t_kl_loss), log_ppl))
+                break
 
     def _test_epochs(sess, epoch):
         iterator.switch_to_test_data(sess)
         num_words = 0
-        t_mle_loss = []
+        t_nll = []
         t_kl_loss = []
         t_total_loss = []
         while True:
@@ -275,31 +287,33 @@ def _main(_):
                            "kl_loss": kl_loss,
                            "lengths": seq_lengths}
                 feed = {tx.global_mode(): tf.estimator.ModeKeys.TRAIN,
-                        kl_rate: 1.0}
+                        kl_rate: 1.0,
+                        global_step: epoch}
                 fetches_ = sess.run(fetches, feed_dict=feed)
 
                 num_words += sum(fetches_["lengths"])
-                t_mle_loss.append(fetches_["mle_loss"])
+                t_nll.append(fetches_["mle_loss"] + fetches_["kl_loss"])
                 t_kl_loss.append(fetches_["kl_loss"])
                 t_total_loss.append(fetches_["total_loss"])
 
 
             except tf.errors.OutOfRangeError:
-                ppl = np.exp(np.sum(t_mle_loss) / num_words)
-                print('epoch %d, total_loss %.4f, \
-                       mle_loss %.4f, KL %.4f, pll %.4f' %
-                      (epoch, np.mean(t_total_loss), 
-                       np.mean(t_mle_loss), np.mean(t_kl_loss), ppl))
-                break   
+                log_ppl = batch_size * np.sum(t_nll) / num_words
+                print('TEST: epoch %d, total_loss %.4f, \
+                       nll %.4f, KL %.4f, pll %.4f\n' %
+                      (epoch, np.mean(t_total_loss),
+                       np.mean(t_nll), np.mean(t_kl_loss), log_ppl))
+                break
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
 
-        for epoch in range(100):
-            _train_epochs(sess, epoch, display=1000)
+        for epoch in range(num_epochs):
+            _train_epochs(sess, epoch, display=200)
+            print('\nepoch %d, new kl rate %.4f\n' % (epoch, new_kl_rate))
             _test_epochs(sess, epoch)
-            
+
 if __name__ == '__main__':
     tf.app.run(main=_main)

@@ -71,8 +71,8 @@ def reinforce_loss_with_MCtree(sample_fn,   # pylint: disable=invalid-name
     """Computes REINFORCE loss with Monte Carlo tree search.
 
     Args:
-        sample_fn: A callable that takes :attr:`num_samples` and returns
-            `(samples, probabilities, sequence_lengths)`, where:
+        sample_fn: A callable that takes :attr:`num_samples`, 'given_actions'
+            and returns `(samples, probabilities, sequence_lengths)`, where:
 
             `samples` is a Tensor of shape `[num_samples, max_sequence_length]`
             containing the generated samples;

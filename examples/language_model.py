@@ -13,10 +13,10 @@ import tensorflow as tf
 import texar as tx
 
 train_data_hparams = {
-    "num_epochs": 10,
+    "num_epochs": 1,
     "seed": 123,
     "dataset": {
-        "files": 'data/sent.txt',
+        "files": 'data/sent.txt'
         "vocab_file": 'data/vocab.txt'
     }
 }
@@ -62,7 +62,7 @@ def _main(_): #pylint: disable=too-many-locals
         labels=data_batch['text_ids'][:, 1:],
         logits=outputs.logits,
         sequence_length=seq_lengths)
-    train_op, global_step = tx.core.get_train_op(mle_loss, hparams=opt_hparams)
+    train_op= tx.core.get_train_op(mle_loss, hparams=opt_hparams)
 
     # Prediction
     outputs_sample, _, _ = decoder(
@@ -74,17 +74,18 @@ def _main(_): #pylint: disable=too-many-locals
 
     def _train_epochs(sess, epoch, display=1000):
         iterator.switch_to_train_data(sess)
+        step = 0
         while True:
             try:
                 fetches = {"train_op": train_op,
-                           "global_step": global_step,
                            "mle_loss": mle_loss}
                 feed = {tx.global_mode(): tf.estimator.ModeKeys.TRAIN}
                 fetches_ = sess.run(fetches, feed_dict=feed)
-                step = fetches_["global_step"]
                 if step % display == 0:
                     print('epoch %d, step %d, loss %.4f' %
                           (epoch, step, fetches_["mle_loss"]))
+
+                step += 1
             except tf.errors.OutOfRangeError:
                 print('epoch %d, loss %.4f' % (epoch, fetches_["mle_loss"]))
                 break
@@ -94,8 +95,7 @@ def _main(_): #pylint: disable=too-many-locals
         test_loss = []
         while True:
             try:
-                fetches = {"global_step": global_step,
-                           "mle_loss": mle_loss,
+                fetches = {"mle_loss": mle_loss,
                            "sample": sample_text}
                 feed = {tx.global_mode(): tf.estimator.ModeKeys.EVAL}
                 fetches_ = sess.run(fetches, feed_dict=feed)
@@ -112,7 +112,7 @@ def _main(_): #pylint: disable=too-many-locals
         sess.run(tf.tables_initializer())
 
         for epoch in range(100):
-            _train_epochs(sess, epoch, display=1000)
+            _train_epochs(sess, epoch, display=100)
             _test_epochs(sess, epoch)
 
 if __name__ == '__main__':
