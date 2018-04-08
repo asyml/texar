@@ -55,8 +55,6 @@ class TransformerEncoder(EncoderBase):
                 else:
                     self._embedding = tf.concat((tf.zeros(shape=[2, embed_dim]),
                         self._embedding[2:, :]), 0)
-            if self._hparams.embedding.trainable:
-                self._add_trainable_variable(self._embedding)
             if self._vocab_size is None:
                 self._vocab_size = self._embedding.get_shape().as_list()[0]
         with tf.variable_scope(self.variable_scope):
