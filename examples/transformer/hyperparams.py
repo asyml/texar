@@ -56,14 +56,14 @@ argparser.parse_args(namespace=args)
 
 print('args.data_dir:{}'.format(args.data_dir))
 args.data_dir = os.path.expanduser(args.data_dir)
-args.train_src = os.path.join(args.data_dir, args.filename_prefix + '.train.' + args.src_language + '.txt')
-args.train_tgt = os.path.join(args.data_dir, args.filename_prefix + '.train.' + args.tgt_language + '.txt')
-args.dev_src = os.path.join(args.data_dir, args.filename_prefix + '.dev.' + args.src_language + '.txt')
-args.dev_tgt = os.path.join(args.data_dir, args.filename_prefix + '.dev.' + args.tgt_language + '.txt')
-args.test_src = os.path.join(args.data_dir, args.filename_prefix + '.test.' + args.src_language +'.txt')
-args.test_tgt = os.path.join(args.data_dir, args.filename_prefix + '.test.' + args.tgt_language + '.txt')
+args.train_src = os.path.join(args.data_dir, args.filename_prefix + 'train.' + args.src_language + '.txt')
+args.train_tgt = os.path.join(args.data_dir, args.filename_prefix + 'train.' + args.tgt_language + '.txt')
+args.dev_src = os.path.join(args.data_dir, args.filename_prefix + 'dev.' + args.src_language + '.txt')
+args.dev_tgt = os.path.join(args.data_dir, args.filename_prefix + 'dev.' + args.tgt_language + '.txt')
+args.test_src = os.path.join(args.data_dir, args.filename_prefix + 'test.' + args.src_language +'.txt')
+args.test_tgt = os.path.join(args.data_dir, args.filename_prefix + 'test.' + args.tgt_language + '.txt')
 
-args.vocab_file = os.path.join(args.data_dir, args.filename_prefix + '.vocab.text')
+args.vocab_file = os.path.join(args.data_dir, args.filename_prefix + 'vocab.text')
 print('vocabulary{}'.format(args.vocab_file))
 
 log_params_dir = 'log_dir/{}_{}.bsize{}.epoch{}.lr_c{}warm{}/'.format(args.src_language, args.tgt_language, \
