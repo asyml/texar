@@ -12,6 +12,7 @@ import tensorflow as tf
 import logging
 import texar as tx
 import codecs
+import os
 from nltk.translate.bleu_score import corpus_bleu
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.losses import mle_losses
@@ -19,8 +20,9 @@ from texar.losses import mle_losses
 from texar import context
 from hyperparams import train_dataset_hparams, test_dataset_hparams, encoder_hparams, decoder_hparams, \
     opt_hparams, loss_hparams, args
+
 def config_logging(filepath):
-    logging.basicConfig(filename = filepath+'logging.txt', \
+    logging.basicConfig(filename = os.path.join(filepath,'logging.txt'), \
         format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',\
         datefmt='%a, %d %b %Y %H:%M:%S',\
         level=logging.INFO)
@@ -171,8 +173,9 @@ if __name__ == "__main__":
             except tf.errors.OutOfRangeError:
                 break
         test_bleu= float(corpus_bleu(targets_list, hypothesis_list))
-        test_loss = float(np.mean(np.array(test_loss)))
-        print('test_blue:{} test_loss:{}'.format(test_bleu, test_loss))
+        test_loss = float(np.sum(np.array(test_loss)))
+        print('epoch:{} test_blue:{} test_loss:{}'.format(epoch, \
+            test_bleu, test_loss))
         model_path = args.log_dir
         if args.save_eval_output:
             with codecs.open(model_path + 'my_model_epoch{}.beam{}alpha{}.outputs.bleu{:.3f}'.format(epoch, args.beam_width, args.alpha, test_bleu), 'w+', 'utf-8') as outputfile, \
@@ -207,38 +210,3 @@ if __name__ == "__main__":
                     lowest_loss = eval_loss
         elif args.running_mode == 'test':
             _test_epoch(sess, epoch)
-    def _test_epoch(sess, epoch):
-        iterator.switch_to_test_data(sess)
-        sources_list, targets_list, hypothesis_list = [], [], []
-        while True:
-            try:
-                fetches = {
-                    'predictions': predictions,
-                    'source': ori_src_text,
-                    'target': ori_tgt_text,
-                    'step': global_step,
-                }
-                feed = {context.global_mode(): tf.estimator.ModeKeys.PREDICT}
-                _fetches = sess.run(fetches, feed_dict=feed)
-                sources, sampled_ids, targets = \
-                    _fetches['source'].tolist(), \
-                    _fetches['predictions']['sampled_ids'][:, 0, :].tolist(), \
-                    _fetches['target'][:, 1:].tolist()
-                def _id2word_map(id_arrays):
-                    return [' '.join([vocab._id_to_token_map_py[i] for i in sent]) for sent in id_arrays]
-                sources, targets, dwords = \
-                    _id2word_map(sources), _id2word_map(targets), _id2word_map(sampled_ids)
-                for source, target, pred in zip(sources, targets, dwords):
-                    source = source.split('<EOS>')[0].strip().split()
-                    target = target.split('<EOS>')[0].strip().split()
-                    got = pred.split('<EOS>')[0].strip().split()
-                    sources_list.append(source)
-                    targets_list.append(target)
-                    hypothesis_list.append(got)
-            except tf.errors.OutOfRangeError:
-                break
-        if args.save_eval_output:
-            with codecs.open(args.model_path + 'my_model_epoch{}.beam{}alpha{}.outputs', 'w+', 'utf-8') as outputfile:
-                for sent in hypothesis_list:
-                    outputfile.write(' '.join(sent) + '\n')
-

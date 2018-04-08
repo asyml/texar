@@ -45,7 +45,7 @@ argparser.add_argument('--num_epochs', type=int, default=1)
 argparser.add_argument('--random_seed', type=int, default=123)
 argparser.add_argument('--log_disk_dir', type=str)
 argparser.add_argument('--beam_width', type=int, default=2)
-argparser.add_argument('--alpha', type=float, default=0,\
+argparser.add_argument('--alpha', type=float, default=0.6,\
     help=' length_penalty=(5+len(decode)/6) ^ -\alpha')
 argparser.add_argument('--save_eval_output', default=1, \
     help='save the eval output to file')
