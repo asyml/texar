@@ -92,7 +92,7 @@ if __name__ == "__main__":
     tf.summary.scalar('mle_loss', mle_loss)
 
     merged = tf.summary.merge_all()
-    saver = tf.train.Saver(max_to_keep=5)
+    saver = tf.train.Saver(max_to_keep=10)
     config = tf.ConfigProto(
         allow_soft_placement=True)
     config.gpu_options.allow_growth=True

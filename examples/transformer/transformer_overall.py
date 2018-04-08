@@ -137,8 +137,13 @@ if __name__ == "__main__":
                 if step % 3000 == 0:
                     print('step:{} loss:{}'.format(step, loss))
                     #normal_saver.save(sess, args.log_dir+'my-model', global_step=step)
+                if step == opt_hparams['max_training_steps']:
+                    print('reach max training steps')
+                    logging.info('reached max training steps')
+                    return 'finished'
             except tf.errors.OutOfRangeError:
                 break
+        return 'done'
     def _test_epoch(sess, epoch):
         iterator.switch_to_test_data(sess)
         sources_list, targets_list, hypothesis_list = [], [], []
@@ -201,12 +206,16 @@ if __name__ == "__main__":
         lowest_loss, lowest_epoch = -1, -1
         if args.running_mode == 'train':
             for epoch in range(args.max_train_epoch):
-                _train_epochs(sess, epoch, writer)
+                status = _train_epochs(sess, epoch, writer)
                 eval_result = _test_epoch(sess, epoch)
                 eval_loss, eval_score = eval_result['loss'], eval_result['bleu']
                 if lowest_loss < 0 or eval_loss < lowest_loss:
                     logging.info('the {} epoch(0-idx) got lowest loss'.format(epoch))
                     eval_saver.save(sess, args.log_dir+'my-model-lowest_loss.epoch{}'.format(epoch))
                     lowest_loss = eval_loss
+                if status == 'finished':
+                    logging.info('saving model for max training steps')
+                    eval_saver.save(sess, args.log_dir+'my-model.max_step{}'.format(args.max_training_steps))
+                    break
         elif args.running_mode == 'test':
             _test_epoch(sess, epoch)

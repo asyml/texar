@@ -4,6 +4,7 @@ from __future__ import print_function
 import codecs
 import tensorflow as tf
 #import numpy as np
+import texar
 from texar.data import qPairedTextData
 from hyperparams import args as hp
 from nltk.translate.bleu_score import corpus_bleu
@@ -22,10 +23,11 @@ def evaluate():
     encoder_input = ori_src_text[:, 1:]
     enc_input_length = tf.reduce_sum(tf.to_float(tf.not_equal(encoder_input, 0)))
     WordEmbedder = texar.modules.WordEmbedder(
-        vocab_size=text_database.source_vocab.size,
-        hparams=args.word_embedding_hparams,
+        vocab_size=test_database.source_vocab.size,
+        hparams=hp.word_embedding_hparams,
     )
     encoder = TransformerEncoder(vocab_size=test_database.source_vocab.size, \
+        embedding=WordEmbedder._embedding,
         hparams=encoder_hparams)
     encoder_output, encoder_decoder_attention_bias = encoder(encoder_input,
         inputs_length=enc_input_length)
@@ -47,6 +49,17 @@ def evaluate():
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
+        saver = tf.train.Saver()
+        print('model path:{}'.format(model_path))
+        #var_map = {}
+        #for var in tf.trainable_variables():
+        #    if var.name.startswith('lookup_table'):
+        #        var_map['encoder/lookup_table'] = var
+        #    elif var.name.endswith(':0'):
+        #        var_map[var.name[:-2]] = var
+        #    else:
+        #        var_map[var.name] = var
+        #saver = tf.train.Saver(var_list=var_map)
         saver = tf.train.Saver()
         saver.restore(sess, tf.train.latest_checkpoint(model_path))
         mname = tf.train.latest_checkpoint(model_path).split('/')[-1]
