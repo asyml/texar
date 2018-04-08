@@ -39,6 +39,9 @@ emb_hparams = {
     "dim": emb_size
 }
 
+
+# KL annealing
+# kl_weight = 1.0 / (1 + np.exp(-k*(step-x0)))
 anneal_hparams = {
         "x0": 2500,
         "k": 0.0025
@@ -49,8 +52,8 @@ train_data_hparams = {
     "batch_size": batch_size,
     "seed": 123,
     "dataset": {
-        "files": '/space/hzt/text/data/ptb/ptb.train.txt',
-        "vocab_file": '/space/hzt/text/data/ptb/vocab.txt'
+        "files": 'data/ptb/ptb.train.txt',
+        "vocab_file": 'data/ptb/vocab.txt'
     }
 }
 
@@ -59,8 +62,8 @@ val_data_hparams = {
     "batch_size": batch_size,
     "seed": 123,
     "dataset": {
-        "files": '/space/hzt/text/data/ptb/ptb.val.txt',
-        "vocab_file": '/space/hzt/text/data/ptb/vocab.txt'
+        "files": 'data/ptb/ptb.val.txt',
+        "vocab_file": 'data/ptb/vocab.txt'
     }
 }
 
@@ -68,8 +71,8 @@ test_data_hparams = {
     "num_epochs": 1,
     "batch_size": batch_size,
     "dataset": {
-        "files": '/space/hzt/text/data/ptb/ptb.test.txt', # TODO(zhiting): use new data
-        "vocab_file": '/space/hzt/text/data/ptb/vocab.txt'
+        "files": 'data/ptb/ptb.test.txt',
+        "vocab_file": 'data/ptb/vocab.txt'
     }
 }
 
