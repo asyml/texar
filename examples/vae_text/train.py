@@ -142,7 +142,8 @@ def _main(_):
                            "kl_loss": kl_loss,
                            "lengths": seq_lengths}
 
-                kl_weight_n = kl_anneal_function(step, config.anneal_hparams["k"],
+                kl_weight_n = kl_anneal_function(step,
+                                                 config.anneal_hparams["k"],
                                                  config.anneal_hparams["x0"])
                 feed = {tx.global_mode(): tf.estimator.ModeKeys.TRAIN,
                         kl_weight: kl_weight_n,
