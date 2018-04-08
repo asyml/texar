@@ -116,7 +116,7 @@ class TransformerDecoder(ModuleBase):
         return logits, preds
 
     def dynamic_decode(self, encoder_output, encoder_decoder_attention_bias):
-        with tf.variable_scope(self.variable_scope):
+        with tf.variable_scope(self.variable_scope, reuse=True):
             batch_size = tf.shape(encoder_decoder_attention_bias)[0]
             beam_width = self._hparams.beam_width
             maximum_decode_length = self.hparams.maximum_decode_length

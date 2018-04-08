@@ -14,6 +14,7 @@ class Hyperparams:
 args = Hyperparams()
 argparser = argparse.ArgumentParser()
 #argparser.add_argument('--data_dir', type=str, default='~/others_repo/Attention_is_All_You_Need/data/en_vi/data')
+argparser.add_argument('--running_mode', type=str, default='train')
 argparser.add_argument('--src_language', type=str, default='en')
 #argparser.add_argument('--tgt_language', type=str, default='vi')
 argparser.add_argument('--tgt_language', type=str, default='de')
@@ -43,8 +44,7 @@ argparser.add_argument('--lr_constant', type=float, default=2)
 argparser.add_argument('--max_train_epoch', type=int, default=40)
 argparser.add_argument('--num_epochs', type=int, default=1)
 argparser.add_argument('--random_seed', type=int, default=123)
-argparser.add_argument('--log_disk_dir', type=str, default='/home2/shr/transformer/')
-#argparser.add_argument('--log_disk_dir', type=str, default='/space/shr/transformer_log/')
+argparser.add_argument('--log_disk_dir', type=str)
 argparser.add_argument('--beam_width', type=int, default=2)
 argparser.add_argument('--alpha', type=float, default=0,\
     help=' length_penalty=(5+len(decode)/6) ^ -\alpha')
@@ -83,8 +83,8 @@ batching_scheme = _batching_scheme(
 batching_scheme['boundaries'] = [b + 1 for b in batching_scheme['boundaries']]
 
 train_dataset_hparams = {
-    #"num_epochs": args.num_epochs,
-    "num_epochs": args.max_train_epoch,
+    "num_epochs": args.num_epochs,
+    #"num_epochs": args.max_train_epoch,
     "seed": args.random_seed,
     "shuffle": True,
     "source_dataset": {
@@ -103,6 +103,21 @@ train_dataset_hparams = {
     'bucket_batch_sizes': batching_scheme['batch_sizes'],
     'allow_smaller_final_batch': True,
 }
+eval_dataset_hparams = {
+    "num_epochs": 1,
+    'seed': 123,
+    'shuffle': False,
+    'source_dataset' : {
+        'files': [os.path.join(args.data_dir, args.dev_src)],
+        'vocab_file': args.vocab_file,
+    },
+    'target_dataset': {
+        'files': [os.path.join(args.data_dir, args.dev_tgt)],
+        'vocab_share': True,
+    },
+    'batch_size': args.test_batch_size,
+    'allow_smaller_final_batch': True,
+}
 test_dataset_hparams = {
     "num_epochs": 1,
     "seed": 123,
@@ -110,10 +125,6 @@ test_dataset_hparams = {
     "source_dataset": {
         "files": [os.path.join(args.data_dir, args.test_src)],
         "vocab_file": args.vocab_file,
-        "processing": {
-            "bos_token": "<BOS>",
-            "eos_token": "<EOS>",
-         }
     },
     "target_dataset": {
         "files": [os.path.join(args.data_dir, args.test_tgt)],
