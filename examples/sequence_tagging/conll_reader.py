@@ -112,11 +112,11 @@ def iterate_batch(data, batch_size, shuffle=False):
 
         batch_length = max([len(batch[i][0]) for i in range(len(batch))])
 
-        wid_inputs = np.empty([len(batch), batch_length], dtype=np.int32)
-        cid_inputs = np.empty([len(batch), batch_length, MAX_CHAR_LENGTH], dtype=np.int32)
-        nid_inputs = np.empty([len(batch), batch_length], dtype=np.int32)
+        wid_inputs = np.empty([len(batch), batch_length], dtype=np.int64)
+        cid_inputs = np.empty([len(batch), batch_length, MAX_CHAR_LENGTH], dtype=np.int64)
+        nid_inputs = np.empty([len(batch), batch_length], dtype=np.int64)
         masks = np.zeros([len(batch), batch_length], dtype=np.float32)
-        lengths = np.empty(len(batch), dtype=np.int32)
+        lengths = np.empty(len(batch), dtype=np.int64)
 
         for i, inst in enumerate(batch):
             wids, cid_seqs, nids = inst

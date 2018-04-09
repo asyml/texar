@@ -43,7 +43,7 @@ opt = {
         "kwargs": {"clip_norm": 5.}
     },
     "learning_rate_decay": {
-        "type": "linear_decay",
+        "type": "inverse_time_decay",
         "kwargs": {
             "decay_steps": 1,
             "decay_rate": 0.05,

@@ -16,6 +16,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
 import time
 import importlib
 import numpy as np
@@ -34,7 +35,7 @@ flags.DEFINE_string("dev", "eng.dev.bio.conll",
                     "the file name of the dev data.")
 flags.DEFINE_string("test", "eng.test.bio.conll",
                     "the file name of the test data.")
-flags.DEFINE_string("embedding", "glove.6B.100d.gz",
+flags.DEFINE_string("embedding", "glove.6B.100d.txt",
                     "the file name of the GloVe embedding.")
 flags.DEFINE_string("config", "config", "The config to use.")
 
@@ -42,10 +43,10 @@ FLAGS = flags.FLAGS
 
 config = importlib.import_module(FLAGS.config)
 
-train_path = FLAGS.train
-dev_path = FLAGS.dev
-test_path = FLAGS.test
-embedding_path = FLAGS.embedding
+train_path = os.path.join(FLAGS.data_path, FLAGS.train)
+dev_path = os.path.join(FLAGS.data_path, FLAGS.dev)
+test_path = os.path.join(FLAGS.data_path, FLAGS.test)
+embedding_path = os.path.join(FLAGS.data_path, FLAGS.embedding)
 EMBEDD_DIM = 100
 
 (word_vocab, char_vocab, ner_vocab), (i2w, i2n) = create_vocabs(train_path)
@@ -61,19 +62,21 @@ data_test = read_data(test_path, word_vocab, char_vocab, ner_vocab)
 
 vocab_size = len(word_vocab)
 
-inputs = tf.placeholder(tf.int32, [None, None])
-targets = tf.placeholder(tf.int32, [None, None])
+inputs = tf.placeholder(tf.int64, [None, None])
+targets = tf.placeholder(tf.int64, [None, None])
 masks = tf.placeholder(tf.float32, [None, None])
-seq_lengths = tf.placeholder(tf.int32, [None])
+seq_lengths = tf.placeholder(tf.int64, [None])
 
 embedder = tx.modules.WordEmbedder(vocab_size=vocab_size, init_value=word_vecs)
 emb_inputs = embedder(inputs)
 
 encoder = tx.modules.BidirectionalRNNEncoder(hparams={"rnn_cell_fw": config.cell, "rnn_cell_bw": config.cell})
 
-outputs, _ = encoder(inputs, sequence_lengths=seq_lengths)
+outputs, _ = encoder(emb_inputs, sequence_length=seq_lengths)
 
-rnn_shape = outputs.shape
+outputs = tf.concat(outputs, axis=2)
+
+rnn_shape = tf.shape(outputs)
 
 outputs = tf.reshape(outputs, (-1, outputs.shape[2]))
 
@@ -81,17 +84,18 @@ outputs = tf.layers.dense(outputs, config.tag_space, activation=tf.nn.elu)
 
 logits = tf.layers.dense(outputs, len(ner_vocab))
 
-logits = tf.reshape(logits, (rnn_shape[0], rnn_shape[1], len(ner_vocab)))
+logits = tf.reshape(logits, tf.concat([rnn_shape[0:2], [len(ner_vocab)]], axis=0))
 
 mle_loss = tx.losses.sequence_sparse_softmax_cross_entropy(
     labels=targets,
     logits=logits,
     sequence_length=seq_lengths,
     average_across_batch=True,
-    average_across_timesteps=True)
+    average_across_timesteps=True,
+    sum_over_timesteps=False)
 
-predicts = tf.arg_max(logits, dimension=2)
-corrects = tf.reduce_sum(tf.equal(targets, predicts) * masks)
+predicts = tf.argmax(logits, axis=2)
+corrects = tf.reduce_sum(tf.cast(tf.equal(targets, predicts), tf.float32) * masks)
 
 global_step = tf.placeholder(tf.int32)
 train_op = tx.core.get_train_op(
@@ -111,6 +115,7 @@ def _train_epoch(sess, epoch):
     fetches["train_op"] = train_op
 
     mode = tf.estimator.ModeKeys.TRAIN
+    num_inst = 0
     for batch in iterate_batch(data_train, config.batch_size, shuffle=True):
         word, char, ner, mask, length = batch
         feed_dict = {
@@ -120,11 +125,12 @@ def _train_epoch(sess, epoch):
 
         rets = sess.run(fetches, feed_dict)
         nums = np.sum(length)
+        num_inst += len(word)
         loss += rets["mle_loss"] * nums
         corr += rets["correct"]
         num_tokens += nums
 
-        print("train: %d loss: %.4f, acc: %.2f%%" % (epoch, loss / num_tokens, corr / num_tokens * 100))
+        print("train: %d (%d/%d) loss: %.4f, acc: %.2f%%" % (epoch, num_inst, len(data_train), loss / num_tokens, corr / num_tokens * 100))
     print("train: %d loss: %.4f, acc: %.2f%%, time: %.2fs" % (epoch, loss / num_tokens, corr / num_tokens * 100, time.time() - start_time))
 
 with tf.Session() as sess:
