@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # This code was taken from Tensor2Tensor on 03/30/2018
 # Usage: t2t-bleu --translation=my-wmt13.de --reference=wmt13_deen.de
 
@@ -9,6 +7,8 @@
 # 'Also, for historical reasons, we split compound words, e.g.,
 #    "rich-text format" --> rich ##AT##-##AT## text format."'
 # BLEU score will be similar to the one obtained using: mteval-v14.pl
+# Note:compound splitting is not implemented in this module
+
 
 # coding=utf-8
 # Copyright 2018 The Tensor2Tensor Authors.
@@ -33,10 +33,8 @@ from __future__ import print_function
 from argparse import ArgumentParser
 import collections
 import math
-import os
 import re
 import sys
-import time
 import unicodedata
 
 # Dependency imports

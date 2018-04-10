@@ -36,6 +36,10 @@ class TransformerDecoder(ModuleBase):
         self._vocab_size = vocab_size
         self._embedding = None
         self.position_dec_embedding = None
+        if self._hparams.initializer:
+            with tf.variable_scope(self.variable_scope):
+                tf.get_variable_scope().set_initializer(
+                        layers.get_initializer(self._hparams.initializer))
         if self._hparams.use_embedding:
             if embedding is None and vocab_size is None:
                 raise ValueError("If 'embedding' is not provided, 'vocab_size' must be specified.")
@@ -59,6 +63,7 @@ class TransformerDecoder(ModuleBase):
     @staticmethod
     def default_hparams():
         return {
+            'initializer':None,
             'multiply_embedding_mode': 'sqrt_depth',
             'share_embed_and_transform': True,
             "use_embedding": True,

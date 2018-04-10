@@ -21,6 +21,8 @@ argparser.add_argument('--tgt_language', type=str, default='de')
 argparser.add_argument('--filename_prefix',type=str, default='processed.')
 argparser.add_argument('--debug', type=int, default=0)
 argparser.add_argument('--average_model', type=int, default=0)
+argparser.add_argument('--model_dir', type=str, default='default')
+argparser.add_argument('--verbose', type=int, default=0)
 #argparser.add_argument('--train_src', type=str, default='train_ende_wmt_bpe32k_en.txt.filtered')
 #argparser.add_argument('--train_tgt', type=str, default='train_ende_wmt_bpe32k_de.txt.filtered')
 #argparser.add_argument('--source_test', type=str, default='/tmp/t2t_datagen/newstest2014.tok.bpe.32000.en')
@@ -51,7 +53,6 @@ argparser.add_argument('--alpha', type=float, default=0.6,\
 argparser.add_argument('--save_eval_output', default=1, \
     help='save the eval output to file')
 #argparser.add_argument('--batch_relax', type=int, default=True)
-
 argparser.parse_args(namespace=args)
 
 print('args.data_dir:{}'.format(args.data_dir))
@@ -81,7 +82,8 @@ batching_scheme = _batching_scheme(
     #batch_relax=args.batch_relex,
 )
 batching_scheme['boundaries'] = [b + 1 for b in batching_scheme['boundaries']]
-
+print('train_src:{}'.format(args.train_src))
+print('dev src:{}'.format(args.dev_src))
 train_dataset_hparams = {
     "num_epochs": args.num_epochs,
     #"num_epochs": args.max_train_epoch,
@@ -108,11 +110,11 @@ eval_dataset_hparams = {
     'seed': 123,
     'shuffle': False,
     'source_dataset' : {
-        'files': [os.path.join(args.data_dir, args.dev_src)],
+        'files': [args.dev_src],
         'vocab_file': args.vocab_file,
     },
     'target_dataset': {
-        'files': [os.path.join(args.data_dir, args.dev_tgt)],
+        'files': [args.dev_tgt],
         'vocab_share': True,
     },
     'batch_size': args.test_batch_size,
@@ -123,11 +125,11 @@ test_dataset_hparams = {
     "seed": 123,
     "shuffle": False,
     "source_dataset": {
-        "files": [os.path.join(args.data_dir, args.test_src)],
+        "files": [args.test_src],
         "vocab_file": args.vocab_file,
     },
     "target_dataset": {
-        "files": [os.path.join(args.data_dir, args.test_tgt)],
+        "files": [args.test_tgt],
         "vocab_share":True,
     },
     'batch_size': args.test_batch_size,
@@ -138,8 +140,13 @@ args.word_embedding_hparams={
     'name': 'lookup_table',
     'dim': args.hidden_dim,
     'initializer': {
-        'type': 'uniform_unit_scaling',
-        'kwargs': {},
+        #'type': 'uniform_unit_scaling',
+        'type': 'variance_scaling_initializer',
+        'kwargs': {
+            'scale':1.0,
+            'mode':'fan_avg',
+            'distribution':'uniform',
+        },
     }
     # in get_initializer function: kwargs cannot be accessed, bug
 }
@@ -148,6 +155,15 @@ encoder_hparams = {
     'sinusoid': True,
     'num_blocks': 6,
     'num_heads': 8,
+    'initializer': {
+        #'type': 'uniform_unit_scaling',
+        'type': 'variance_scaling_initializer',
+        'kwargs': {
+            'scale':1.0,
+            'mode':'fan_avg',
+            'distribution':'uniform',
+        },
+    },
     'poswise_feedforward': {
         'name':'ffn',
         'layers':[

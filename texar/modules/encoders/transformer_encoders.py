@@ -44,6 +44,10 @@ class TransformerEncoder(EncoderBase):
         self._embedding = None
         self.enc = None
         self.position_enc_embedding = None
+        with tf.variable_scope(self.variable_scope):
+            if self._hparams.initializer:
+                tf.get_variable_scope().set_initializer(
+                    layers.get_initializer(self._hparams.initializer))
         if self._hparams.use_embedding:
             if isinstance(embedding, tf.Variable):
                 self._embedding = embedding
@@ -59,7 +63,7 @@ class TransformerEncoder(EncoderBase):
                 self._vocab_size = self._embedding.get_shape().as_list()[0]
         with tf.variable_scope(self.variable_scope):
             if self._hparams.target_space_id is not None:
-                space_embedding = tf.get_variable('target_space_embedding', \
+                space_embedding = tf.get_variable('target_space_embedding',
                     [32, embed_dim])
                 self.target_symbol_embedding = tf.gather(space_embedding, \
                     self._hparams.target_space_id)
@@ -99,6 +103,7 @@ class TransformerEncoder(EncoderBase):
             }
         """
         return {
+            'initializer':None,
             'multiply_embedding_mode': 'sqrt_depth',
             "use_embedding": True,
             "name":"encoder",

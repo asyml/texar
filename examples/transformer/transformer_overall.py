@@ -13,13 +13,14 @@ import logging
 import texar as tx
 import codecs
 import os
-from nltk.translate.bleu_score import corpus_bleu
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.losses import mle_losses
 #from texar.core import optimization as opt
 from texar import context
-from hyperparams import train_dataset_hparams, test_dataset_hparams, encoder_hparams, decoder_hparams, \
+from hyperparams import train_dataset_hparams, eval_dataset_hparams, test_dataset_hparams, \
+    encoder_hparams, decoder_hparams, \
     opt_hparams, loss_hparams, args
+import bleu_tool
 
 def config_logging(filepath):
     logging.basicConfig(filename = os.path.join(filepath,'logging.txt'), \
@@ -36,10 +37,11 @@ if __name__ == "__main__":
     hidden_dim = 512
     # Construct the database
     train_database = tx.data.PairedTextData(train_dataset_hparams)
-    #eval_database = qPairedTextData(eval_dataset_hparams)
-    test_database  =tx.data.PairedTextData(test_dataset_hparams)
-    iterator = tx.data.TrainTestDataIterator(train=train_database,
-                      test=test_database)
+    eval_database = tx.data.PairedTextData(eval_dataset_hparams)
+    test_database = tx.data.PairedTextData(test_dataset_hparams)
+    iterator = tx.data.TrainTestDataIterator(train=train_database,\
+            val=eval_database,
+            test=test_database)
     text_data_batch = iterator.get_next()
 
     ori_src_text = text_data_batch['source_text_ids']
@@ -84,7 +86,6 @@ if __name__ == "__main__":
     acc = tf.reduce_sum(tf.to_float(tf.equal(tf.to_int64(preds), labels))*istarget) / tf.to_float((tf.reduce_sum(istarget)))
     tf.summary.scalar('acc', acc)
     global_step = tf.Variable(0, trainable=False)
-
     fstep = tf.to_float(global_step)
     if opt_hparams['learning_rate_schedule'] == 'static':
         learning_rate = 1e-3
@@ -138,13 +139,77 @@ if __name__ == "__main__":
                     print('step:{} loss:{}'.format(step, loss))
                     #normal_saver.save(sess, args.log_dir+'my-model', global_step=step)
                 if step == opt_hparams['max_training_steps']:
-                    print('reach max training steps')
+                    print('reach max training steps:{} loss:{}'.format(step, loss))
                     logging.info('reached max training steps')
                     return 'finished'
             except tf.errors.OutOfRangeError:
                 break
+        logging.info('step:{} loss:{} epoch:{}'.format(step, loss, epoch))
+        print('step:{} loss:{} epoch:{}'.format(step, loss, epoch))
         return 'done'
-    def _test_epoch(sess, epoch):
+
+    def _eval_epoch(sess, epoch=None, eval_writer=None, outputs_tmp_filename=None):
+        iterator.switch_to_val_data(sess)
+        sources_list, targets_list, hypothesis_list = [], [], []
+        eval_loss = []
+        while True:
+            try:
+                fetches = {
+                    'predictions': predictions,
+                    'source': ori_src_text,
+                    'target': ori_tgt_text,
+                    'step': global_step,
+                    'mle_loss': mle_loss,
+                }
+                feed = {context.global_mode(): tf.estimator.ModeKeys.EVAL}
+                _fetches = sess.run(fetches, feed_dict=feed)
+                sources, sampled_ids, targets = \
+                    _fetches['source'].tolist(), \
+                    _fetches['predictions']['sampled_ids'][:, 0, :].tolist(), \
+                    _fetches['target'][:, 1:].tolist()
+                eval_loss.append(_fetches['mle_loss'])
+                if args.verbose:
+                    print('cur loss:{}'.format(_fetches['mle_loss']))
+                def _id2word_map(id_arrays):
+                    return [' '.join([vocab._id_to_token_map_py[i] for i in sent]) for sent in id_arrays]
+                sources, targets, dwords = \
+                    _id2word_map(sources), _id2word_map(targets), _id2word_map(sampled_ids)
+                for source, target, pred in zip(sources, targets, dwords):
+                    source = source.split('<EOS>')[0].strip().split()
+                    target = target.split('<EOS>')[0].strip().split()
+                    got = pred.split('<EOS>')[0].strip().split()
+                    sources_list.append(source)
+                    targets_list.append(target)
+                    hypothesis_list.append(got)
+            except tf.errors.OutOfRangeError:
+                break
+        outputs_tmp_filename = args.log_dir + 'my_model_epoch{}.beam{}alpha{}.outputs.tmp'.format(\
+            epoch, args.beam_width, args.alpha)
+        refer_tmp_filename = os.path.join(args.log_dir, 'eval_reference.tmp')
+        with codecs.open(outputs_tmp_filename, 'w+', 'utf-8') as tmpfile, \
+                codecs.open(refer_tmp_filename, 'w+', 'utf-8') as tmpreffile:
+            for hyp, tgt in zip(hypothesis_list, targets_list):
+                tmpfile.write(' '.join(hyp) + '\n')
+                tmpreffile.write(' '.join(tgt) + '\n')
+        eval_bleu = float(100 * bleu_tool.bleu_wrapper(refer_tmp_filename,
+            outputs_tmp_filename, case_sensitive=True))
+        eval_loss = float(np.sum(np.array(eval_loss)))
+        print('epoch:{} eval_blue:{} eval_loss:{}'.format(epoch, \
+            eval_bleu, eval_loss))
+        logging.info('epoch:{} eval_bleu:{} eval_loss:{}'.format(epoch, \
+            eval_bleu, eval_loss))
+        if args.save_eval_output:
+            with codecs.open(args.log_dir + 'my_model_epoch{}.beam{}alpha{}.outputs.bleu{:.3f}'.format(epoch, args.beam_width, args.alpha, eval_bleu), 'w+', 'utf-8') as outputfile, \
+                    codecs.open(args.log_dir + 'my_model_epoch{}.beam{}alpha{}.results.bleu{:.3f}'.format(epoch, args.beam_width, args.alpha, eval_bleu), 'w+', 'utf-8') as resultfile:
+                for src, tgt, hyp in zip(sources_list, targets_list, hypothesis_list):
+                    outputfile.write(' '.join(hyp) + '\n')
+                    resultfile.write("- source: " + ' '.join(src) + '\n')
+                    resultfile.write("- expected: " + ' '.join(tgt) + '\n')
+                    resultfile.write('- got: ' + ' '.join(hyp)+ '\n\n')
+        return {'loss': eval_loss,
+                'bleu': eval_bleu
+                }
+    def _test_epoch(sess, epoch=None, eval_writer=None, outputs_tmp_filename=None):
         iterator.switch_to_test_data(sess)
         sources_list, targets_list, hypothesis_list = [], [], []
         test_loss, test_bleu = [], 0
@@ -164,6 +229,8 @@ if __name__ == "__main__":
                     _fetches['predictions']['sampled_ids'][:, 0, :].tolist(), \
                     _fetches['target'][:, 1:].tolist()
                 test_loss.append(_fetches['mle_loss'])
+                if args.verbose:
+                    print('cur loss:{}'.format(_fetches['mle_loss']))
                 def _id2word_map(id_arrays):
                     return [' '.join([vocab._id_to_token_map_py[i] for i in sent]) for sent in id_arrays]
                 sources, targets, dwords = \
@@ -177,19 +244,21 @@ if __name__ == "__main__":
                     hypothesis_list.append(got)
             except tf.errors.OutOfRangeError:
                 break
-        test_bleu= float(corpus_bleu(targets_list, hypothesis_list))
+        outputs_tmp_filename = args.model_dir + 'test.beam{}alpha{}.outputs.decodes'.format(\
+                args.beam_width, args.alpha)
+        refer_tmp_filename = args.model_dir + 'test_reference.tmp'
+        with codecs.open(outputs_tmp_filename, 'w+', 'utf-8') as tmpfile, \
+                codecs.open(refer_tmp_filename, 'w+', 'utf-8') as tmpreffile:
+            for hyp, tgt in zip(hypothesis_list, targets_list):
+                tmpfile.write(' '.join(hyp) + '\n')
+                tmpreffile.write(' '.join(tgt) + '\n')
+        test_bleu = float(100 * bleu_tool.bleu_wrapper(refer_tmp_filename,
+            outputs_tmp_filename, case_sensitive=True))
         test_loss = float(np.sum(np.array(test_loss)))
         print('epoch:{} test_blue:{} test_loss:{}'.format(epoch, \
             test_bleu, test_loss))
-        model_path = args.log_dir
-        if args.save_eval_output:
-            with codecs.open(model_path + 'my_model_epoch{}.beam{}alpha{}.outputs.bleu{:.3f}'.format(epoch, args.beam_width, args.alpha, test_bleu), 'w+', 'utf-8') as outputfile, \
-                    codecs.open(model_path + 'my_model_epoch{}.beam{}alpha{}.results.bleu{:.3f}'.format(epoch, args.beam_width, args.alpha, test_bleu), 'w+', 'utf-8') as resultfile:
-                for src, tgt, hyp in zip(sources_list, targets_list, hypothesis_list):
-                    outputfile.write(' '.join(hyp) + '\n')
-                    resultfile.write("- source: " + ' '.join(src) + '\n')
-                    resultfile.write("- expected: " + ' '.join(tgt) + '\n')
-                    resultfile.write('- got: ' + ' '.join(hyp)+ '\n')
+        logging.info('epoch:{} test_blue:{} test_loss:{}'.format(epoch, \
+            test_bleu, test_loss))
         return {'loss': test_loss,
                 'bleu': test_bleu}
 
@@ -203,19 +272,24 @@ if __name__ == "__main__":
                 outfile.write('var:{} shape:{} dtype:{}\n'.format(var.name, var.shape, var.dtype))
                 logging.info('var:{} shape:{}'.format(var.name, var.shape, var.dtype))
         writer = tf.summary.FileWriter(args.log_dir, graph=sess.graph)
+        eval_writer = tf.summary.FileWriter(os.path.join(args.log_dir, 'eval/'), graph=sess.graph)
         lowest_loss, lowest_epoch = -1, -1
-        if args.running_mode == 'train':
+        if args.running_mode == 'train_and_evaluate':
             for epoch in range(args.max_train_epoch):
                 status = _train_epochs(sess, epoch, writer)
-                eval_result = _test_epoch(sess, epoch)
-                eval_loss, eval_score = eval_result['loss'], eval_result['bleu']
-                if lowest_loss < 0 or eval_loss < lowest_loss:
-                    logging.info('the {} epoch(0-idx) got lowest loss'.format(epoch))
-                    eval_saver.save(sess, args.log_dir+'my-model-lowest_loss.epoch{}'.format(epoch))
-                    lowest_loss = eval_loss
+                eval_saver.save(sess, args.log_dir+'my-model.epoch{}'.format(epoch))
+                eval_result = _eval_epoch(sess, epoch, eval_writer)
+                #eval_loss, eval_score = eval_result['loss'], eval_result['bleu']
+                #if lowest_loss < 0 or eval_loss < lowest_loss:
+                #    logging.info('the {} epoch(0-idx) got lowest loss'.format(epoch))
+                #    eval_saver.save(sess, args.log_dir+'my-model-lowest_loss.epoch{}'.format(epoch))
+                #    lowest_loss = eval_loss
                 if status == 'finished':
                     logging.info('saving model for max training steps')
                     eval_saver.save(sess, args.log_dir+'my-model.max_step{}'.format(args.max_training_steps))
                     break
         elif args.running_mode == 'test':
-            _test_epoch(sess, epoch)
+            print('load model from {}'.format(args.model_dir))
+            eval_saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
+            mname = tf.train.latest_checkpoint(args.model_dir).split('/')[-1]
+            _test_epoch(sess)
