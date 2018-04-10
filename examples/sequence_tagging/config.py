@@ -11,21 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""VAE config.
+"""NER config.
 """
 
 # pylint: disable=invalid-name, too-few-public-methods, missing-docstring
 
-num_epochs = 30
+num_epochs = 200
 hidden_size = 256
+tag_space = 128
 keep_prob = 0.5
-batch_size = 32
-emb_size = 300
+batch_size = 16
 
-latent_dims = 16
-
-cell_hparams = {
+cell = {
     "type": "LSTMBlockCell",
     "kwargs": {
         "num_units": hidden_size,
@@ -34,64 +31,24 @@ cell_hparams = {
     "dropout": {"output_keep_prob": keep_prob},
     "num_layers": 1
 }
-
-emb_hparams = {
-    "dim": emb_size
-}
-
-
-# KL annealing
-# kl_weight = 1.0 / (1 + np.exp(-k*(step-x0)))
-anneal_hparams = {
-        "x0": 2500,
-        "k": 0.0025
-}
-
-train_data_hparams = {
-    "num_epochs": 1,
-    "batch_size": batch_size,
-    "seed": 123,
-    "dataset": {
-        "files": 'data/ptb/ptb.train.txt',
-        "vocab_file": 'data/ptb/vocab.txt'
-    }
-}
-
-val_data_hparams = {
-    "num_epochs": 1,
-    "batch_size": batch_size,
-    "seed": 123,
-    "dataset": {
-        "files": 'data/ptb/ptb.val.txt',
-        "vocab_file": 'data/ptb/vocab.txt'
-    }
-}
-
-test_data_hparams = {
-    "num_epochs": 1,
-    "batch_size": batch_size,
-    "dataset": {
-        "files": 'data/ptb/ptb.test.txt',
-        "vocab_file": 'data/ptb/vocab.txt'
-    }
-}
-
-opt_hparams = {
+opt = {
     "optimizer": {
-        "type": "GradientDescentOptimizer",
-        "kwargs": {"learning_rate": 1.0}
+        "type": "MomentumOptimizer",
+        "kwargs": {"learning_rate": 0.1,
+                   "momentum": 0.9,
+                   "use_nesterov": True}
     },
     "gradient_clip": {
         "type": "clip_by_global_norm",
         "kwargs": {"clip_norm": 5.}
     },
     "learning_rate_decay": {
-        "type": "exponential_decay",
+        "type": "inverse_time_decay",
         "kwargs": {
             "decay_steps": 1,
-            "decay_rate": 0.5,
+            "decay_rate": 0.05,
             "staircase": True
         },
-        "start_decay_step": 3
+        "start_decay_step": 1
     }
 }
