@@ -108,7 +108,7 @@ class TransformerEncoder(EncoderBase):
             "use_embedding": True,
             "name":"encoder",
             "zero_pad":True,
-            "bos_pad":True,
+            "bos_pad":False,
             #https://github.com/tensorflow/tensor2tensor/blob/master/tensor2tensor/layers/common_attention.py
             #Line678
             "max_seq_length":100000000,
@@ -133,6 +133,7 @@ class TransformerEncoder(EncoderBase):
         encoder_decoder_attention_bias = ignore_padding
         emb_target_space = tf.reshape(self.target_symbol_embedding, [1,1,-1])
         self.enc = self.enc + emb_target_space
+
         self.enc = self.position_encoder(self.enc, sequence_length=None)
         self.enc = tf.layers.dropout(self.enc, \
             rate=self._hparams.dropout, training=context.global_mode_train())

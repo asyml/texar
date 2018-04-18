@@ -209,7 +209,7 @@ if __name__ == "__main__":
         return {'loss': eval_loss,
                 'bleu': eval_bleu
                 }
-    def _test_epoch(sess, epoch=None, eval_writer=None, outputs_tmp_filename=None):
+    def _test_epoch(sess, mname, epoch=None, eval_writer=None):
         iterator.switch_to_test_data(sess)
         sources_list, targets_list, hypothesis_list = [], [], []
         test_loss, test_bleu = [], 0
@@ -244,8 +244,8 @@ if __name__ == "__main__":
                     hypothesis_list.append(got)
             except tf.errors.OutOfRangeError:
                 break
-        outputs_tmp_filename = args.model_dir + 'test.beam{}alpha{}.outputs.decodes'.format(\
-                args.beam_width, args.alpha)
+        outputs_tmp_filename = args.model_dir + '{}.test.beam{}alpha{}.outputs.decodes'.format(\
+                mname, args.beam_width, args.alpha)
         refer_tmp_filename = args.model_dir + 'test_reference.tmp'
         with codecs.open(outputs_tmp_filename, 'w+', 'utf-8') as tmpfile, \
                 codecs.open(refer_tmp_filename, 'w+', 'utf-8') as tmpreffile:
@@ -278,7 +278,8 @@ if __name__ == "__main__":
             for epoch in range(args.max_train_epoch):
                 status = _train_epochs(sess, epoch, writer)
                 eval_saver.save(sess, args.log_dir+'my-model.epoch{}'.format(epoch))
-                eval_result = _eval_epoch(sess, epoch, eval_writer)
+                if (epoch+1) % args.eval_interval == 0:
+                    eval_result = _eval_epoch(sess, epoch, eval_writer)
                 #eval_loss, eval_score = eval_result['loss'], eval_result['bleu']
                 #if lowest_loss < 0 or eval_loss < lowest_loss:
                 #    logging.info('the {} epoch(0-idx) got lowest loss'.format(epoch))
@@ -289,7 +290,14 @@ if __name__ == "__main__":
                     eval_saver.save(sess, args.log_dir+'my-model.max_step{}'.format(args.max_training_steps))
                     break
         elif args.running_mode == 'test':
-            print('load model from {}'.format(args.model_dir))
-            eval_saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
-            mname = tf.train.latest_checkpoint(args.model_dir).split('/')[-1]
-            _test_epoch(sess)
+            if args.model_fullpath == 'default':
+                print('load model from {}'.format(args.model_dir))
+                eval_saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
+                mname = tf.train.latest_checkpoint(args.model_dir).split('/')[-1]
+            else:
+                print('load model from {}'.format(args.model_fullpath))
+                mname = args.model_fullpaths.split('/')[-1]
+                eval_saver.restore(sess, args.model_fullpath)
+            _test_epoch(sess, mname)
+        else:
+            raise NotImplementedError
