@@ -18,7 +18,7 @@ from texar.core import layers, attentions
 from texar import context
 from texar.module_base import ModuleBase
 from texar.modules.encoders.position_encoders import SinusoidalPositionEncoder
-from texar.modules.networks import FeedForwardNetwork
+from texar.modules.networks.networks import FeedForwardNetwork
 from texar.modules.embedders import embedder_utils
 from texar.utils import beam_search
 

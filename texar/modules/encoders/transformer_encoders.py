@@ -12,7 +12,7 @@ from texar.core import layers, attentions
 from texar import context
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.encoders.position_encoders import SinusoidalPositionEncoder
-from texar.modules.networks import FeedForwardNetwork
+from texar.modules.networks.networks import FeedForwardNetwork
 from texar import utils
 class TransformerEncoder(EncoderBase):
     """Base class for all encoder classes.
