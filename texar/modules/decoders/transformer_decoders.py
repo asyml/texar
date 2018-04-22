@@ -162,7 +162,7 @@ class TransformerDecoder(ModuleBase):
                cache=None
         ):
         inputs = inputs * (self._embedding.shape.as_list()[-1]**0.5)
-        inputs = inputs + self.position_encoder(inputs)
+        inputs = self.position_encoder(inputs)
         decoder_output = self._self_attention_stack(
             inputs,
             encoder_output,
@@ -183,7 +183,6 @@ class TransformerDecoder(ModuleBase):
                               cache=None):
         inputs = tf.layers.dropout(inputs, rate=self._hparams.dropout,
             training=context.global_mode_train())
-
         if encoder_output is not None:
             if cache is not None:
                 encoder_decoder_attention_bias = cache['encoder_decoder_attention_bias']
