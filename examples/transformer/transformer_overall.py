@@ -6,11 +6,15 @@ from __future__ import division
 from __future__ import print_function
 
 # pylint: disable=invalid-name, no-name-in-module
+import pickle
 import random
 import numpy as np
 import tensorflow as tf
 import logging
 import texar as tx
+from matplotlib import pyplot as plt
+plt.switch_backend('agg')
+
 import codecs
 import os
 from texar.modules import TransformerEncoder, TransformerDecoder
@@ -79,7 +83,8 @@ if __name__ == "__main__":
     )
 
     mle_loss = mle_losses.smoothing_cross_entropy(logits, labels, train_database.target_vocab.size,
-        loss_hparams['label_confidence'])
+        loss_hparams['label_confidence'],
+    )
     istarget = tf.to_float(tf.not_equal(labels, 0))
     mle_loss = tf.reduce_sum(mle_loss * istarget) / tf.reduce_sum(istarget)
 
@@ -117,6 +122,8 @@ if __name__ == "__main__":
 
     def _train_epochs(sess, epoch, writer):
         iterator.switch_to_train_data(sess)
+        if args.draw_for_debug:
+            loss_lists = []
         while True:
             try:
                 fetches = {'source': encoder_input,
@@ -131,6 +138,8 @@ if __name__ == "__main__":
                 _fetches = sess.run(fetches, feed_dict=feed)
                 step, source, target, loss, mgd = _fetches['step'], _fetches['source'], \
                     _fetches['target'], _fetches['loss'], _fetches['mgd']
+                if args.draw_for_debug:
+                    loss_lists.append(loss)
                 if step % 100 == 0:
                     logging.info('step:{} source:{} targets:{} loss:{}'.format(\
                         step, source.shape, target.shape, loss))
@@ -145,6 +154,12 @@ if __name__ == "__main__":
             except tf.errors.OutOfRangeError:
                 break
         logging.info('step:{} loss:{} epoch:{}'.format(step, loss, epoch))
+        if args.draw_for_debug:
+            plt.figure(figsize=(14, 10))
+            plt.plot(loss_lists, '--', linewidth=1, label='loss trend')
+            plt.ylabel('training loss')
+            plt.xlabel('training steps in one epoch')
+            plt.savefig('train_loss_curve.epoch{}.png'.format(epoch))
         print('step:{} loss:{} epoch:{}'.format(step, loss, epoch))
         return 'done'
 
@@ -290,6 +305,13 @@ if __name__ == "__main__":
                     eval_saver.save(sess, args.log_dir+'my-model.max_step{}'.format(args.max_training_steps))
                     break
         elif args.running_mode == 'test':
+            if args.load_from_pytorch:
+                modelpath='/home/hzt/shr/transformer_pytorch/temp/run_en_vi_bk/models/ckpt_from_pytorch.p'
+                pytorch_params = pickle.load(modelpath,'rb')
+                params = tf.trainable_parameters()
+                for param in params:
+                    sess.run(param.assign(pytorch_params[param]))
+                print('load model from pytorch {}'.format(modelpath))
             if args.model_fullpath == 'default':
                 print('load model from {}'.format(args.model_dir))
                 eval_saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))

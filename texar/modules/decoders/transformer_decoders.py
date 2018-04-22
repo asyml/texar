@@ -66,6 +66,7 @@ class TransformerDecoder(ModuleBase):
             'initializer':None,
             'multiply_embedding_mode': 'sqrt_depth',
             'share_embed_and_transform': True,
+            'transform_with_bias': True,
             "use_embedding": True,
             "name":"decoder",
             "num_heads":8,
@@ -191,7 +192,7 @@ class TransformerDecoder(ModuleBase):
         for i in range(self._hparams.num_blocks):
             layer_name = 'layer_{}'.format(i)
             layer_cache = cache[layer_name] if cache is not None else None
-            with tf.variable_scope('num_blocks_{}'.format(i)):
+            with tf.variable_scope(layer_name):
                 with tf.variable_scope("self_attention"):
                     selfatt_output = layers.multihead_attention(
                         queries=layers.layer_normalize(x),
@@ -238,15 +239,22 @@ class TransformerDecoder(ModuleBase):
         # share the projection weight with word embedding
     def build_output_layer(self, num_units):
         if self._hparams.share_embed_and_transform:
+            with tf.variable_scope(self.variable_scope):
+                affine_bias = tf.get_variable('affine_bias',
+                    [self._vocab_size])
+            affine_bias = None
             def outputs_to_logits(outputs):
                 shape = layers.shape_list(outputs)
                 outputs = tf.reshape(outputs, [-1, num_units])
                 logits = tf.matmul(outputs, self._embedding, transpose_b=True)
+                if affine_bias:
+                    logits += affine_bias
                 logits = tf.reshape(logits, shape[:-1] + [self._vocab_size])
                 return logits
             return outputs_to_logits
         else:
-            layer = tf.layers.Dense(self._vocab_size, use_bias=True)
+            layer = tf.layers.Dense(self._vocab_size, \
+                use_bias=self._hparams.transform_with_bias)
             layer.build([None, num_units])
             return layer
 

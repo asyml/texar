@@ -67,6 +67,8 @@ class TransformerEncoder(EncoderBase):
                     [32, embed_dim])
                 self.target_symbol_embedding = tf.gather(space_embedding, \
                     self._hparams.target_space_id)
+            else:
+                self.target_symbol_embedding = None
             self.position_encoder = SinusoidalPositionEncoder()
 
     @staticmethod
@@ -117,7 +119,9 @@ class TransformerEncoder(EncoderBase):
             'num_blocks':6,
             'num_heads':8,
             'poswise_feedforward':None,
-            'target_space_id': 1,
+            'target_space_id': None,
+            #changed from 1 to None, because we are not in multitask learning
+            #2018.4.22
             'num_units': 512,
         }
 
@@ -131,8 +135,9 @@ class TransformerEncoder(EncoderBase):
         ignore_padding = attentions.attention_bias_ignore_padding(encoder_padding)
         encoder_self_attention_bias = ignore_padding
         encoder_decoder_attention_bias = ignore_padding
-        emb_target_space = tf.reshape(self.target_symbol_embedding, [1,1,-1])
-        self.enc = self.enc + emb_target_space
+        if self.target_symbol_embedding:
+            emb_target_space = tf.reshape(self.target_symbol_embedding, [1,1,-1])
+            self.enc = self.enc + emb_target_space
 
         self.enc = self.position_encoder(self.enc, sequence_length=None)
         self.enc = tf.layers.dropout(self.enc, \
