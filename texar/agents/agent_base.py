@@ -1,13 +1,17 @@
 #
 """
-Base class for RL agents.
+Base class for reinforcement learning agents.
 """
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from texar.hyperparams import HParams
+import tensorflow as tf
 
+from texar.hyperparams import HParams
+from texar.utils import utils
+
+# pylint: disable=too-many-instance-attributes
 
 class AgentBase(object):
     """
@@ -16,67 +20,76 @@ class AgentBase(object):
     Args:
         TODO
     """
-    def __init__(self, actions, state_shape, hparams=None):
+    def __init__(self, env_config, hparams=None):
         self._hparams = HParams(hparams, self.default_hparams())
-        self._variable_scope = None
+        self._env_config = env_config
 
-        self.actions = actions
-        self.state_shape = state_shape
+        name = self._hparams.name
+        self._variable_scope = utils.get_unique_named_variable_scope(name)
+        self._unique_name = self.variable_scope.name.split("/")[-1]
 
-        self.current_state = None
-        self.timestep = 0
+        self._reset_tmplt_fn = tf.make_template(
+            "{}_reset".format(self.name), self._reset)
+        self._observe_tmplt_fn = tf.make_template(
+            "{}_observe".format(self.name), self._observe)
+        self._get_action_tmplt_fn = tf.make_template(
+            "{}_get_action".format(self.name), self._get_action)
+
+        self._timestep = 0
 
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
         """
         return {
-            'name': 'agent_base'
+            'name': 'agent'
         }
 
-    def set_initial_state(self, observation):
-        """Resets the current state.
-
-        Args:
-            observation: observation in the beginning
+    def reset(self):
+        """Resets the states to begin new episodes.
         """
+        self._reset_tmplt_fn()
+
+    def _reset(self):
         raise NotImplementedError
 
-    def perceive(self, action_id, reward, is_terminal, next_observation):
-        """Perceives from environment.
+    def observe(self, reward, terminal, mode):
+        """Observes experience from environment.
 
         Args:
-            action_id: A number indicate the action
-            reward: A number indicate the reward
-            is_terminal: True iff it is a terminal state
-            next_observation: New Observation from environment
         """
+        return self._observe_tmplt_fn(reward, terminal, mode)
+
+    def _observe(self, reward, terminal, mode):
         raise NotImplementedError
 
-    def get_action(self, state=None, action_mask=None):
-        """Get Action according to state and action_mask
+    def get_action(self, observ, mode, feed_dict=None):
+        """Gets action according to observation.
 
         Args:
-            state(numpy.array): assign a state if it is not 'None', otherwise it
-                is current state by default
-            action_mask(list): A List of True or False, indicate this time each
-                action can be take or not, if it is 'None', then all the actions
-                can be take.
 
         Returns:
-            list: The possibility of taking each action.
         """
+        return self._get_action_tmplt_fn(observ, mode, feed_dict)
+
+    def _get_action(self, observ, mode, feed_dict=None):
         raise NotImplementedError
 
     @property
     def variable_scope(self):
         """The variable scope of the agent.
         """
-        return self._variable_scope
+        return self.variable_scope
 
     @property
     def name(self):
         """The uniquified name of the module.
         """
-        # pylint: disable=protected-access
-        return self.variable_scope._pure_variable_scope._name_or_scope
+        return self._unique_name
+
+    @property
+    def hparams(self):
+        """A :class:`~texar.hyperparams.HParams` instance. The hyperparameters
+        of the module.
+        """
+        return self._hparams

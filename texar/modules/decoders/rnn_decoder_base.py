@@ -268,15 +268,12 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 raise ValueError(
                     "Unknown decoding strategy: {}".format(decoding_strategy))
         else:
-            if mode is None or mode == tf.estimator.ModeKeys.TRAIN:
+            if utils.is_train_mode_py(mode):
                 kwargs_ = copy.copy(self._hparams.helper_train.kwargs.todict())
                 helper_type = self._hparams.helper_train.type
-            elif mode == tf.estimator.ModeKeys.EVAL or \
-                    mode == tf.estimator.ModeKeys.PREDICT:
+            else:
                 kwargs_ = copy.copy(self._hparams.helper_infer.kwargs.todict())
                 helper_type = self._hparams.helper_infer.type
-            else:
-                raise ValueError("Unknown mode: {}".format(mode))
             kwargs_.update({
                 "inputs": inputs,
                 "sequence_length": sequence_length,

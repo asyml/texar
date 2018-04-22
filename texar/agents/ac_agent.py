@@ -10,7 +10,7 @@ import tensorflow as tf
 
 from texar.agents.agent_base import AgentBase
 from texar.core import optimization as opt
-from texar.core import get_instance
+from texar.utils.utils import get_instance
 from texar.losses.pg_losses import pg_loss
 from texar.losses.dqn_losses import l2_loss
 

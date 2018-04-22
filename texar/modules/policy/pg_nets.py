@@ -12,6 +12,8 @@ from texar.modules.pg_nets import PGNetBase
 from texar.modules import FeedForwardNetwork
 
 
+# TODO (zhiting): return distribution, as in tf agents
+
 class PGNet(PGNetBase):
     """
     Vanilla Policy Gradient Network

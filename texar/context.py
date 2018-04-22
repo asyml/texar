@@ -13,7 +13,8 @@ __all__ = [
     "global_mode",
     "global_mode_train",
     "global_mode_eval",
-    "global_mode_predict"
+    "global_mode_predict",
+    "valid_modes"
 ]
 
 _GLOBAL_MODE_KEY = "GLOBAL_MODE"
@@ -44,3 +45,9 @@ def global_mode_predict():
     mode = global_mode()
     return tf.equal(mode, tf.estimator.ModeKeys.PREDICT)
 
+def valid_modes():
+    """Returns a set of possible values of mode.
+    """
+    return {tf.estimator.ModeKeys.TRAIN,
+            tf.estimator.ModeKeys.EVAL,
+            tf.estimator.ModeKeys.PREDICT}

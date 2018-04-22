@@ -12,7 +12,7 @@ import tensorflow as tf
 
 from texar.agents.agent_base import AgentBase
 from texar.core import optimization as opt
-from texar.core import get_instance, get_function
+from texar.utils.utils import get_instance, get_function
 
 # pylint: disable=too-many-instance-attributes, too-many-arguments, invalid-name
 
