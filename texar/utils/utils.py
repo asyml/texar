@@ -363,24 +363,25 @@ def get_tf_dtype(dtype): # pylint: disable=too-many-return-statements
     Returns:
         The respective tf dtype.
     """
-    if dtype in {'float', 'float32', float, np.float32, tf.float32}:
+    if dtype in {'float', 'float32', 'tf.float32', float,
+                 np.float32, tf.float32}:
         return tf.float32
-    elif dtype in {'float64', np.float64, np.float_, tf.float64}:
+    elif dtype in {'float64', 'tf.float64', np.float64, np.float_, tf.float64}:
         return tf.float64
-    elif dtype in {'float16', np.float16, tf.float16}:
+    elif dtype in {'float16', 'tf.float16', np.float16, tf.float16}:
         return tf.float16
-    elif dtype in {'int', 'int32', int, np.int32, tf.int32}:
+    elif dtype in {'int', 'int32', 'tf.int32', int, np.int32, tf.int32}:
         return tf.int32
-    elif dtype in {'int64', np.int64, tf.int64}:
+    elif dtype in {'int64', 'tf.int64', np.int64, tf.int64}:
         return tf.int64
-    elif dtype in {'int16', np.int16, tf.int16}:
+    elif dtype in {'int16', 'tf.int16', np.int16, tf.int16}:
         return tf.int16
-    elif dtype in {'bool', bool, np.bool_, tf.bool}:
+    elif dtype in {'bool', 'tf.bool', bool, np.bool_, tf.bool}:
         return tf.bool
-    elif dtype in {'string', 'str', str, np.str, tf.string}:
+    elif dtype in {'string', 'str', 'tf.string', str, np.str, tf.string}:
         return tf.string
     try:
-        if dtype == unicode:
+        if dtype == {'unicode', unicode}:
             return tf.string
     except NameError:
         pass

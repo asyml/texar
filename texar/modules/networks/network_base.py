@@ -106,7 +106,7 @@ class FeedForwardNetworkBase(ModuleBase):
 
         return outputs
 
-    def _append_layer(self, layer):
+    def append_layer(self, layer):
         """Appends a layer to the end of the network. The method is only
         feasible before :attr:`_build` is called.
 
@@ -115,7 +115,7 @@ class FeedForwardNetworkBase(ModuleBase):
                 a dict of layer hyperparameters.
         """
         if self._built:
-            raise TexarError("`FeedForwardNetwork._append_layer` can be "
+            raise TexarError("`FeedForwardNetwork.append_layer` can be "
                              "called only before `_build` is called.")
 
         with tf.variable_scope(self.variable_scope):

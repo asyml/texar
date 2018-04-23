@@ -40,6 +40,8 @@ class AgentBase(object):
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
+
+        TODO
         """
         return {
             'name': 'agent'

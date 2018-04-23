@@ -16,12 +16,16 @@ __all__ = [
     "FeedForwardNetwork"
 ]
 
-#TDDO(zhiting): complete the docs
 class FeedForwardNetwork(FeedForwardNetworkBase):
     """Feed forward neural network that consists of a sequence of layers.
 
     Args:
-        layers (list, optional):
+        layers (list, optional): A list of :tf_main:`Layer <layers/Layer>`
+            instances composing the network. If given,
+            :attr:`hparams['layers']` will be ignored.
+        hparams (optional): A `dict` or an :class:`~texar.HParams` instance
+            containing the hyperparameters. See :meth:`default_hparams` for
+            valid hyperparameters.
     """
 
     def __init__(self, layers=None, hparams=None):
@@ -31,6 +35,7 @@ class FeedForwardNetwork(FeedForwardNetworkBase):
             _build_layers(
                 self, layers=layers, layer_hparams=self._hparams.layers)
 
+    #TODO(zhiting): complete the docs
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
