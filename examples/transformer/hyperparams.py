@@ -53,7 +53,7 @@ argparser.add_argument('--alpha', type=float, default=0.6,\
     help=' length_penalty=(5+len(decode)/6) ^ -\alpha')
 argparser.add_argument('--save_eval_output', default=1, \
     help='save the eval output to file')
-argparser.add_argument('--eval_interval', default=5)
+argparser.add_argument('--eval_interval_epoch', default=5)
 argparser.add_argument('--load_from_pytorch', type=str, default='')
 
 argparser.parse_args(namespace=args)
@@ -86,7 +86,7 @@ batching_scheme['boundaries'] = [b + 1 for b in batching_scheme['boundaries']]
 print('train_src:{}'.format(args.train_src))
 print('dev src:{}'.format(args.dev_src))
 train_dataset_hparams = {
-    "num_epochs": args.num_epochs,
+    "num_epochs": args.eval_interval_epoch,
     #"num_epochs": args.max_train_epoch,
     "seed": args.random_seed,
     "shuffle": True,

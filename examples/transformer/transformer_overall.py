@@ -291,10 +291,11 @@ if __name__ == "__main__":
         lowest_loss, lowest_epoch = -1, -1
         if args.running_mode == 'train_and_evaluate':
             for epoch in range(args.max_train_epoch):
+                if epoch % args.eval_interval_epoch != 0:
+                    continue
                 status = _train_epochs(sess, epoch, writer)
                 eval_saver.save(sess, args.log_dir+'my-model.epoch{}'.format(epoch))
-                if (epoch+1) % args.eval_interval == 0:
-                    eval_result = _eval_epoch(sess, epoch, eval_writer)
+                eval_result = _eval_epoch(sess, epoch, eval_writer)
                 #eval_loss, eval_score = eval_result['loss'], eval_result['bleu']
                 #if lowest_loss < 0 or eval_loss < lowest_loss:
                 #    logging.info('the {} epoch(0-idx) got lowest loss'.format(epoch))

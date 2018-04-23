@@ -30,9 +30,9 @@ case $mode in
     2)
     echo 'test_given_path'
     export CUDA_VISIBLE_DEVICES=1
-        python transformer_overall.py --running_mode=test --data_dir=${DATA_DIR} \
+        python transformer_overall.py --running_mode=test --data_dir=${DATA_DIR} --batch_size=${BATCH_SIZE} \
         --src_language=en --tgt_language=vi --test_batch_size=32 --beam_width=${beam_size} --alpha=0.6 \
-        --model_dir=/space/shr/transformer_wpm/log_dir/en_vi.bsize${BATCH_SIZE}.epoch${MAX_EPOCH}.lr_c2warm16000/ \
+        --model_dir=/space/shr/transformer_${ENCODER}/log_dir/en_vi.bsize${BATCH_SIZE}.epoch${MAX_EPOCH}.lr_c2warm16000/ \
         --filename_prefix=processed.${ENCODER}. --log_disk_dir=${LOG_DISK_DIR} ;;
     3)
     echo 'test_given_fullpath'
