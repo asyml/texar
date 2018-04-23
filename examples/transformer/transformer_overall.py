@@ -307,13 +307,16 @@ if __name__ == "__main__":
                     break
         elif args.running_mode == 'test':
             if args.load_from_pytorch:
-                modelpath='/home/hzt/shr/transformer_pytorch/temp/run_en_vi_bk/models/ckpt_from_pytorch.p'
-                pytorch_params = pickle.load(modelpath,'rb')
-                params = tf.trainable_parameters()
+                modelpath=os.path.join(args.model_dir, args.model_filename)
+                pytorch_params = pickle.load(open(modelpath, 'rb'))
+                params = tf.trainable_variables()
+                mname = modelpath.split('./')[-1]
                 for param in params:
-                    sess.run(param.assign(pytorch_params[param]))
-                print('load model from pytorch {}'.format(modelpath))
-            if args.model_fullpath == 'default':
+                    param_key = param.name
+                    param_key = param_key.replace(':0', '')
+                    sess.run(param.assign(pytorch_params[param_key]))
+                print('loaded model from pytorch {}'.format(modelpath))
+            elif args.model_dir == 'default':
                 print('load model from {}'.format(args.model_dir))
                 eval_saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
                 mname = tf.train.latest_checkpoint(args.model_dir).split('/')[-1]

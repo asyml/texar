@@ -11,7 +11,6 @@ import tensorflow as tf
 from texar.core import layers, attentions
 from texar import context
 from texar.modules.encoders.encoder_base import EncoderBase
-from texar.modules.encoders.position_encoders import SinusoidalPositionEncoder
 from texar.modules.networks.networks import FeedForwardNetwork
 from texar import utils
 class TransformerEncoder(EncoderBase):
@@ -43,7 +42,6 @@ class TransformerEncoder(EncoderBase):
         self._vocab_size = vocab_size
         self._embedding = None
         self.enc = None
-        self.position_enc_embedding = None
         with tf.variable_scope(self.variable_scope):
             if self._hparams.initializer:
                 tf.get_variable_scope().set_initializer(
@@ -69,7 +67,6 @@ class TransformerEncoder(EncoderBase):
                     self._hparams.target_space_id)
             else:
                 self.target_symbol_embedding = None
-            self.position_encoder = SinusoidalPositionEncoder()
 
     @staticmethod
     def default_hparams():
@@ -129,8 +126,9 @@ class TransformerEncoder(EncoderBase):
 
     def _build(self, inputs,  **kwargs):
         self.enc = tf.nn.embedding_lookup(self._embedding, inputs)
+        batch_size, length, channels = layers.shape_list(self.enc)
         if self._hparams.multiply_embedding_mode =='sqrt_depth':
-            self.enc = self.enc * (self._embedding.shape.as_list()[-1]**0.5)
+            self.enc = self.enc * channels**0.5
 
         #### transformer_prepare_encoder
         encoder_padding = utils.embedding_to_padding(self.enc)
@@ -141,7 +139,7 @@ class TransformerEncoder(EncoderBase):
             emb_target_space = tf.reshape(self.target_symbol_embedding, [1,1,-1])
             self.enc = self.enc + emb_target_space
 
-        self.enc = self.position_encoder(self.enc, sequence_length=None)
+        self.enc = layers.add_timing_signal_1d(self.enc)
         self.enc = tf.layers.dropout(self.enc,
             rate=self._hparams.embedding_dropout,
             training=context.global_mode_train())
