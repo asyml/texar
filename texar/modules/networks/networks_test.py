@@ -1,5 +1,5 @@
 """
-Unit tests for :class:`~texar.modules.networks.FeedForwardNetwork`.
+Unit tests for feed forward neural networks.
 """
 
 from __future__ import absolute_import
@@ -8,12 +8,13 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from texar.modules.networks import FeedForwardNetwork
+from texar.modules.networks.networks import FeedForwardNetwork
 
 # pylint: disable=no-member, invalid-name
 
 class FeedForwardNetworkTest(tf.test.TestCase):
-    """Tests the class :class:`~texar.modules.networks.FeedForwardNetwork`.
+    """Tests the class
+    :class:`~texar.modules.networks.networks.FeedForwardNetwork`.
     """
 
     def test_feedforward(self):
@@ -32,14 +33,11 @@ class FeedForwardNetworkTest(tf.test.TestCase):
 
         nn = FeedForwardNetwork(hparams=hparams)
 
-        print(nn.hparams.todict())
-        print(nn(tf.placeholder(dtype=tf.float32, shape=(None, 16))))
-        #
-        # self.assertEqual(len(nn.layers), len(hparams["layers"]))
-        # _ = nn(tf.ones([64, 16, 16]))
-        # self.assertEqual(len(nn.trainable_variables),
-        #                  len(hparams["layers"]) * 2)
-        # self.assertEqual(len(nn.layer_outputs), len(hparams["layers"]))
+        self.assertEqual(len(nn.layers), len(hparams["layers"]))
+        _ = nn(tf.ones([64, 16, 16]))
+        self.assertEqual(len(nn.trainable_variables),
+                         len(hparams["layers"]) * 2)
+        self.assertEqual(len(nn.layer_outputs), len(hparams["layers"]))
 
 if __name__ == "__main__":
     tf.test.main()

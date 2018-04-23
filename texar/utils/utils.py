@@ -42,22 +42,27 @@ __all__ = [
     "call_function_with_redundant_kwargs",
     "get_default_arg_values",
     "add_variable",
+    "get_unique_named_variable_scope",
+    "get_tf_dtype",
     "is_callable",
+    "is_str",
     "maybe_gloabl_mode",
     "is_train_mode",
     "is_eval_mode",
     "is_predict_mode",
+    "is_train_mode_py",
+    "is_eval_mode_py",
+    "is_predict_mode_py",
     "switch_dropout",
     "transpose_batch_time",
+    "get_batch_size",
     "default_string",
     "patch_dict",
-    "is_str",
     "uniquify_str",
     "_bucket_boundaries",
     "soft_sequence_embedding",
     "straight_through",
     "ceildiv",
-    "get_batch_size",
 ]
 
 
@@ -337,6 +342,51 @@ def add_variable(variable, var_list):
         if variable not in var_list:
             var_list.append(variable)
 
+def get_unique_named_variable_scope(base_name):
+    """Returns a variable scope with a unique name.
+
+    Args:
+        base_name (str): The base name to uniquified.
+
+    Returns:
+        An instance of :tf_main:`variable_scope <variable_scope>`.
+    """
+    return tf.variable_scope(None, default_name=base_name)
+
+def get_tf_dtype(dtype): # pylint: disable=too-many-return-statements
+    """Returns respective tf dtype.
+
+    Args:
+        dtype: A str, python numeric or string type, numpy data type, or
+            tf dtype.
+
+    Returns:
+        The respective tf dtype.
+    """
+    if dtype in {'float', 'float32', float, np.float32, tf.float32}:
+        return tf.float32
+    elif dtype in {'float64', np.float64, np.float_, tf.float64}:
+        return tf.float64
+    elif dtype in {'float16', np.float16, tf.float16}:
+        return tf.float16
+    elif dtype in {'int', 'int32', int, np.int32, tf.int32}:
+        return tf.int32
+    elif dtype in {'int64', np.int64, tf.int64}:
+        return tf.int64
+    elif dtype in {'int16', np.int16, tf.int16}:
+        return tf.int16
+    elif dtype in {'bool', bool, np.bool_, tf.bool}:
+        return tf.bool
+    elif dtype in {'string', 'str', str, np.str, tf.string}:
+        return tf.string
+    try:
+        if dtype == unicode:
+            return tf.string
+    except NameError:
+        pass
+
+    raise ValueError(
+        "Unsupported conversion from type {} to tf dtype".format(str(dtype)))
 
 def is_callable(x):
     """Return `True` if :attr:`x` is callable.
@@ -346,6 +396,12 @@ def is_callable(x):
     except: # pylint: disable=bare-except
         _is_callable = hasattr(x, '__call__')
     return _is_callable
+
+def is_str(x):
+    """Returns `True` if :attr:`x` is either a str or unicode. Returns `False`
+    otherwise.
+    """
+    return isinstance(x, six.string_types)
 
 def maybe_gloabl_mode(mode):
     """Returns :func:`texar.contex.global_mode` if :attr:`mode` is `None`,
@@ -386,6 +442,63 @@ def is_predict_mode(mode):
     else:
         return tf.equal(mode, tf.estimator.ModeKeys.PREDICT)
 
+def is_train_mode_py(mode, default=True):
+    """Returns a python boolean indicating whether the mode is TRAIN.
+
+    Args:
+        mode: A string taking value in
+            :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`.
+            Can be `None`.
+        default (bool): The return value when :attr:`mode` is `None`. Default
+            is `True`.
+
+    Returns:
+        A python boolean.
+    """
+    if mode is None:
+        return default
+    if mode not in context.valid_modes():
+        raise ValueError('Unknown mode: {}'.format(mode))
+    return mode == tf.estimator.ModeKeys.TRAIN
+
+def is_eval_mode_py(mode, default=False):
+    """Returns a python boolean indicating whether the mode is EVAL.
+
+    Args:
+        mode: A string taking value in
+            :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`.
+            Can be `None`.
+        default (bool): The return value when :attr:`mode` is `None`. Default
+            is `False`.
+
+    Returns:
+        A python boolean.
+    """
+    if mode is None:
+        return default
+    if mode not in context.valid_modes():
+        raise ValueError('Unknown mode: {}'.format(mode))
+    return mode == tf.estimator.ModeKeys.EVAL
+
+def is_predict_mode_py(mode, default=False):
+    """Returns a python boolean indicating whether the mode is PREDICT.
+
+    Args:
+        mode: A string taking value in
+            :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`.
+            Can be `None`.
+        default (bool): The return value when :attr:`mode` is `None`. Default
+            is `False`.
+
+    Returns:
+        A python boolean.
+    """
+    if mode is None:
+        return default
+    if mode not in context.valid_modes():
+        raise ValueError('Unknown mode: {}'.format(mode))
+    return mode == tf.estimator.ModeKeys.PREDICT
+
 def switch_dropout(dropout_keep_prob, mode=None):
     """Turns off dropout when not in training mode.
 
@@ -421,6 +534,11 @@ def transpose_batch_time(inputs):
     flat_input = [rnn._transpose_batch_time(input_) for input_ in flat_input]
     return nest.pack_sequence_as(structure=inputs, flat_sequence=flat_input)
 
+def get_batch_size(tensor):
+    """Returns a unit `Tensor` representing the batch size, i.e.,
+    the size of the 1st dimension of :attr:`tensor`.
+    """
+    return tf.shape(tensor)[0]
 
 def default_string(str_, default_str):
     """Returns :attr:`str_` if it is not `None` or empty, otherwise returns
@@ -459,16 +577,6 @@ def patch_dict(tgt_dict, src_dict):
         elif isinstance(value, dict) and isinstance(patched_dict[key], dict):
             patched_dict[key] = patch_dict(patched_dict[key], value)
     return patched_dict
-
-def is_str(x):
-    """Returns `True` if :attr:`x` is either a str or unicode. Returns `False`
-    otherwise.
-    """
-    return isinstance(x, six.string_types)
-    #if sys.version_info[0] < 3:
-    #    return isinstance(x, str) or isinstance(x, unicode)
-    #else:
-    #    return isinstance(x, str)
 
 def uniquify_str(str_, str_set):
     """Uniquifies :attr:`str_` if :attr:`str_` is included in :attr:`str_set`.
@@ -553,8 +661,3 @@ def ceildiv(a, b):
     """
     return -(-a // b)
 
-def get_batch_size(tensor):
-    """Returns a unit `Tensor` representing the batch size, i.e.,
-    the size of the 1st dimension of :attr:`tensor`.
-    """
-    return tf.shape(tensor)[0]

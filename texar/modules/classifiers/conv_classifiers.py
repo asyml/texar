@@ -34,7 +34,7 @@ class Conv1DClassifier(ClassifierBase):
             nclass = self._hparams.num_classes
             if nclass > 0:
                 if self._hparams.num_dense_layers <= 0:
-                    self._encoder.nn._append_layer({"type": "Flatten"})
+                    self._encoder._append_layer({"type": "Flatten"})
 
                 logit_kwargs = {}
                 if self._hparams.logit_layer_kwargs is not None:
@@ -45,7 +45,7 @@ class Conv1DClassifier(ClassifierBase):
                 logit_kwargs.update({"units": nclass})
                 if 'name' not in logit_kwargs:
                     logit_kwargs['name'] = "logit_layer"
-                self._encoder.nn._append_layer(
+                self._encoder._append_layer(
                     {"type": "Dense", "kwargs": logit_kwargs})
 
     @staticmethod
@@ -78,9 +78,9 @@ class Conv1DClassifier(ClassifierBase):
 
     @property
     def nn(self): # pylint: disable=invalid-name
-        """The neural network.
+        """The neural network feature extractor.
         """
-        return self._encoder.nn
+        return self._encoder
 
     def has_layer(self, layer_name):
         """Returns `True` if the network with the name exists. Returns `False`

@@ -5,17 +5,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from texar.agents.ac_agent import *
-
 # pylint: disable=invalid-name
 # pylint: disable=wildcard-import
-#
 
-import numpy as np
+#import numpy as np
+
 import gym
+#import tensorflow as tf
 
-import tensorflow as tf
-from texar.agents import *
+from texar.agents.pg_agent import PGAgent
+#from texar.agents.ac_agent import *
 
 env = gym.make('CartPole-v0')
 env = env.unwrapped
