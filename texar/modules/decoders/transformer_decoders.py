@@ -102,9 +102,15 @@ class TransformerDecoder(ModuleBase):
         return _impl
 
     def _build(self, targets, encoder_output, encoder_decoder_attention_bias):
-        # this shoudl correpsonde to def body in transformer.py
-        ###### transfomrer_prepare_decoder #############
-        # the targets begins with BOS so no need to shift right #
+        """
+            this function is called on training generally.
+            Args:
+                targets: [bath_size, target_length], begins with [bos] token
+                encoder_output: [batch_size, source_length, channels]
+            outputs:
+                logits: [batch_size, target_length, vocab_size]
+                preds: [batch_size, target_length]
+        """
         logits = None
         if targets is not None:
             decoder_self_attention_bias = (
@@ -124,6 +130,10 @@ class TransformerDecoder(ModuleBase):
         return logits, preds
 
     def dynamic_decode(self, encoder_output, encoder_decoder_attention_bias):
+        """
+            this function is called on in test mode, without the target input.
+            Based on beam_size, here performs greedy decoding or beam search decoding
+        """
         with tf.variable_scope(self.variable_scope, reuse=True):
             batch_size = tf.shape(encoder_decoder_attention_bias)[0]
             beam_width = self._hparams.beam_width
