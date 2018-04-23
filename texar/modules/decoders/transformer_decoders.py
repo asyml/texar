@@ -43,8 +43,6 @@ class TransformerDecoder(ModuleBase):
         if self._hparams.use_embedding:
             if embedding is None and vocab_size is None:
                 raise ValueError("If 'embedding' is not provided, 'vocab_size' must be specified.")
-            #print('type embedding:{}'.format(type(embedding)))
-            #<class 'tensorflow.python.framework.ops.Tensor'>
             if isinstance(embedding, tf.Tensor):
                 self._embedding = embedding
                 print('embedding shared between encoder and decoder')
@@ -76,7 +74,9 @@ class TransformerDecoder(ModuleBase):
             "maximum_decode_length":10,
             "beam_width":1,
             'alpha':0,
-            "dropout":0.1,
+            "embedding_dropout":0.1,
+            'attention_dropout':0.1,
+            'residual_dropout':0.1,
             "sinusoid":True,
             'poswise_feedforward':None,
             'num_units':512,
@@ -88,7 +88,8 @@ class TransformerDecoder(ModuleBase):
     def _symbols_to_logits_fn(self, embedding_fn):
         def _impl(ids, step, cache):
             inputs = embedding_fn(ids[:, -1:])
-            inputs *= self._embedding.shape.as_list()[-1]**0.5
+            if self._hparams.multiply_embedding_mode == 'sqrt_depth':
+                inputs *= self._embedding.shape.as_list()[-1]**0.5
             inputs = self.position_encoder.apply_one(inputs, step+1)
             outputs = self._self_attention_stack(
                 inputs,
@@ -182,7 +183,7 @@ class TransformerDecoder(ModuleBase):
                               decoder_self_attention_bias=None,
                               encoder_decoder_attention_bias=None,
                               cache=None):
-        inputs = tf.layers.dropout(inputs, rate=self._hparams.dropout,
+        inputs = tf.layers.dropout(inputs, rate=self._hparams.embedding_dropout,
             training=context.global_mode_train())
         if encoder_output is not None:
             if cache is not None:
@@ -200,7 +201,7 @@ class TransformerDecoder(ModuleBase):
                         bias=decoder_self_attention_bias,
                         num_units=self._hparams.num_units,
                         num_heads=self._hparams.num_heads,
-                        dropout_rate=self._hparams.dropout,
+                        dropout_rate=self._hparams.attention_dropout,
                         cache=layer_cache,
                         scope="self_attention",
                     )
@@ -208,7 +209,7 @@ class TransformerDecoder(ModuleBase):
                     # so causality can cover keys padding
                     x = x + tf.layers.dropout(
                         selfatt_output,
-                        rate=self._hparams.dropout,
+                        rate=self._hparams.residual_dropout,
                         training=context.global_mode_train()
                     )
                 with tf.variable_scope('encdec_attention'):
@@ -218,19 +219,19 @@ class TransformerDecoder(ModuleBase):
                         bias=encoder_decoder_attention_bias,
                         num_units=self._hparams.num_units,
                         num_heads=self._hparams.num_heads,
-                        dropout_rate=self._hparams.dropout,
+                        dropout_rate=self._hparams.attention_dropout,
                         causality=False,
                         scope="multihead_attention"
                     )
                     x = x + tf.layers.dropout(encdec_output, \
-                        rate=self._hparams.dropout,
+                        rate=self._hparams.residual_dropout,
                         training=context.global_mode_train()
                     )
                 poswise_network = FeedForwardNetwork(hparams=self._hparams['poswise_feedforward'])
                 with tf.variable_scope(poswise_network.variable_scope):
                     sub_output = tf.layers.dropout(
                         poswise_network(layers.layer_normalize(x)),
-                        rate=self._hparams.dropout,
+                        rate=self._hparams.residual_dropout,
                         training=context.global_mode_train()
                     )
                     x = x + sub_output

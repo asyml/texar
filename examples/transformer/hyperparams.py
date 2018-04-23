@@ -151,11 +151,13 @@ args.word_embedding_hparams={
 }
 encoder_hparams = {
     'multiply_embedding_mode': "sqrt_depth",
+    'embedding_dropout': 0.1,
+    'attention_dropout': 0.1,
+    'residual_dropout': 0.1,
     'sinusoid': True,
     'num_blocks': 6,
     'num_heads': 8,
     'initializer': {
-        #'type': 'uniform_unit_scaling',
         'type': 'variance_scaling_initializer',
         'kwargs': {
             'scale':1.0,
