@@ -54,8 +54,8 @@ class HParams(object):
     :attr:`"kwargs"` is typically ignored in usage.
 
     Args:
-        hparams (dict): Hyperparameters. If `None`, all hyperparameters are
-            set to default values.
+        hparams: A `dict` or an `HParams` instance containing hyperparameters.
+            If `None`, all hyperparameters are set to default values.
         default_hparams (dict): Hyperparameters with default values. If `None`,
             Hyperparameters are fully defined by :attr:`hparams`.
         allow_new_hparam (bool): If `False` (default), :attr:`hparams` cannot
@@ -167,6 +167,8 @@ class HParams(object):
                         # value
                         parsed_hparams[name] = HParams(
                             value, default_value, allow_new_hparam=True)
+                elif name in no_typecheck_names:
+                    parsed_hparams[name] = HParams(value, value)
                 else:
                     parsed_hparams[name] = HParams(
                         value, default_value, allow_new_hparam)

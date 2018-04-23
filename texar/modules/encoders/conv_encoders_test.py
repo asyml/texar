@@ -14,7 +14,6 @@ import texar as tx
 from texar.modules.encoders.conv_encoders import Conv1DEncoder
 
 
-
 class Conv1DEncoderTest(tf.test.TestCase):
     """Tests :class:`~texar.modules.Conv1DEncoder` class.
     """
