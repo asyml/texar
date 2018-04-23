@@ -259,21 +259,25 @@ def smoothing_cross_entropy(logits,
     confidence: Used to determine on and off values for label smoothing.
       If `gaussian` is true, `confidence` is the variance to the gaussian
       distribution.
+    undecoded_word_cnt: the count of the tokens that will never be generated \
+        or that weight 0 when calculating loss.
     gaussian: Uses a gaussian distribution for label smoothing
   Returns:
   """
   with tf.name_scope("smoothing_cross_entropy", values=[logits, labels]):
     # Low confidence is given to all non-true labels, uniformly.
-    low_confidence = (1.0 - confidence) / tf.to_float(vocab_size - 1)
+    low_confidence = (1.0 - confidence) / tf.to_float(vocab_size - 2)
+    # here we substract the vocab_size to achieve the same weight to t2t
+    # in view of that we use an additional bos token in the vocabulary
+
     # Normalizing constant is the best cross-entropy value with soft targets.
     # We subtract it just for readability, makes no difference on learning.
     normalizing = -(
-        confidence * tf.log(confidence) + tf.to_float(vocab_size - 1) *
+        confidence * tf.log(confidence) + tf.to_float(vocab_size - 2) *
         low_confidence * tf.log(low_confidence + 1e-20))
 
     if gaussian and confidence > 0.0:
       labels = tf.cast(labels, tf.float32)
-
       normal_dist = tf.distributions.Normal(loc=labels, scale=confidence)
       # Locations to evaluate the probability distributions.
       soft_targets = normal_dist.prob(

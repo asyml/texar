@@ -43,11 +43,8 @@ class TransformerDecoder(ModuleBase):
         if self._hparams.use_embedding:
             if embedding is None and vocab_size is None:
                 raise ValueError("If 'embedding' is not provided, 'vocab_size' must be specified.")
-            #print('type embedding:{}'.format(type(embedding)))
-            #<class 'tensorflow.python.framework.ops.Tensor'>
             if isinstance(embedding, tf.Tensor):
                 self._embedding = embedding
-                print('embedding shared between encoder and decoder')
             else:
                 self._embedding = embedder_utils.get_embedding(
                     self._hparams.embedding, embedding, vocab_size,
@@ -66,6 +63,7 @@ class TransformerDecoder(ModuleBase):
             'initializer':None,
             'multiply_embedding_mode': 'sqrt_depth',
             'share_embed_and_transform': True,
+            'transform_with_bias': True,
             "use_embedding": True,
             "name":"decoder",
             "num_heads":8,
@@ -75,7 +73,9 @@ class TransformerDecoder(ModuleBase):
             "maximum_decode_length":10,
             "beam_width":1,
             'alpha':0,
-            "dropout":0.1,
+            "embedding_dropout":0.1,
+            'attention_dropout':0.1,
+            'residual_dropout':0.1,
             "sinusoid":True,
             'poswise_feedforward':None,
             'num_units':512,
@@ -87,7 +87,8 @@ class TransformerDecoder(ModuleBase):
     def _symbols_to_logits_fn(self, embedding_fn):
         def _impl(ids, step, cache):
             inputs = embedding_fn(ids[:, -1:])
-            inputs *= self._embedding.shape.as_list()[-1]**0.5
+            if self._hparams.multiply_embedding_mode == 'sqrt_depth':
+                inputs *= self._embedding.shape.as_list()[-1]**0.5
             inputs = self.position_encoder.apply_one(inputs, step+1)
             outputs = self._self_attention_stack(
                 inputs,
@@ -181,7 +182,7 @@ class TransformerDecoder(ModuleBase):
                               decoder_self_attention_bias=None,
                               encoder_decoder_attention_bias=None,
                               cache=None):
-        inputs = tf.layers.dropout(inputs, rate=self._hparams.dropout,
+        inputs = tf.layers.dropout(inputs, rate=self._hparams.embedding_dropout,
             training=context.global_mode_train())
         if encoder_output is not None:
             if cache is not None:
@@ -191,7 +192,7 @@ class TransformerDecoder(ModuleBase):
         for i in range(self._hparams.num_blocks):
             layer_name = 'layer_{}'.format(i)
             layer_cache = cache[layer_name] if cache is not None else None
-            with tf.variable_scope('num_blocks_{}'.format(i)):
+            with tf.variable_scope(layer_name):
                 with tf.variable_scope("self_attention"):
                     selfatt_output = layers.multihead_attention(
                         queries=layers.layer_normalize(x),
@@ -199,7 +200,7 @@ class TransformerDecoder(ModuleBase):
                         bias=decoder_self_attention_bias,
                         num_units=self._hparams.num_units,
                         num_heads=self._hparams.num_heads,
-                        dropout_rate=self._hparams.dropout,
+                        dropout_rate=self._hparams.attention_dropout,
                         cache=layer_cache,
                         scope="self_attention",
                     )
@@ -207,7 +208,7 @@ class TransformerDecoder(ModuleBase):
                     # so causality can cover keys padding
                     x = x + tf.layers.dropout(
                         selfatt_output,
-                        rate=self._hparams.dropout,
+                        rate=self._hparams.residual_dropout,
                         training=context.global_mode_train()
                     )
                 with tf.variable_scope('encdec_attention'):
@@ -217,19 +218,19 @@ class TransformerDecoder(ModuleBase):
                         bias=encoder_decoder_attention_bias,
                         num_units=self._hparams.num_units,
                         num_heads=self._hparams.num_heads,
-                        dropout_rate=self._hparams.dropout,
+                        dropout_rate=self._hparams.attention_dropout,
                         causality=False,
                         scope="multihead_attention"
                     )
                     x = x + tf.layers.dropout(encdec_output, \
-                        rate=self._hparams.dropout,
+                        rate=self._hparams.residual_dropout,
                         training=context.global_mode_train()
                     )
                 poswise_network = FeedForwardNetwork(hparams=self._hparams['poswise_feedforward'])
                 with tf.variable_scope(poswise_network.variable_scope):
                     sub_output = tf.layers.dropout(
                         poswise_network(layers.layer_normalize(x)),
-                        rate=self._hparams.dropout,
+                        rate=self._hparams.residual_dropout,
                         training=context.global_mode_train()
                     )
                     x = x + sub_output
@@ -238,15 +239,22 @@ class TransformerDecoder(ModuleBase):
         # share the projection weight with word embedding
     def build_output_layer(self, num_units):
         if self._hparams.share_embed_and_transform:
+            with tf.variable_scope(self.variable_scope):
+                affine_bias = tf.get_variable('affine_bias',
+                    [self._vocab_size])
+            affine_bias = None
             def outputs_to_logits(outputs):
                 shape = layers.shape_list(outputs)
                 outputs = tf.reshape(outputs, [-1, num_units])
                 logits = tf.matmul(outputs, self._embedding, transpose_b=True)
+                if affine_bias:
+                    logits += affine_bias
                 logits = tf.reshape(logits, shape[:-1] + [self._vocab_size])
                 return logits
             return outputs_to_logits
         else:
-            layer = tf.layers.Dense(self._vocab_size, use_bias=True)
+            layer = tf.layers.Dense(self._vocab_size, \
+                use_bias=self._hparams.transform_with_bias)
             layer.build([None, num_units])
             return layer
 

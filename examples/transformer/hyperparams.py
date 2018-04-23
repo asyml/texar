@@ -20,6 +20,7 @@ argparser.add_argument('--src_language', type=str, default='en')
 argparser.add_argument('--tgt_language', type=str, default='de')
 argparser.add_argument('--filename_prefix',type=str, default='processed.')
 argparser.add_argument('--debug', type=int, default=0)
+argparser.add_argument('--draw_for_debug', type=int, default=0)
 argparser.add_argument('--average_model', type=int, default=0)
 argparser.add_argument('--model_dir', type=str, default='default')
 argparser.add_argument('--model_fullpath', type=str, default='default')
@@ -52,11 +53,10 @@ argparser.add_argument('--alpha', type=float, default=0.6,\
     help=' length_penalty=(5+len(decode)/6) ^ -\alpha')
 argparser.add_argument('--save_eval_output', default=1, \
     help='save the eval output to file')
-argparser.add_argument('--eval_interval', default=5)
-#argparser.add_argument('--batch_relax', type=int, default=True)
-argparser.parse_args(namespace=args)
+argparser.add_argument('--eval_interval_epoch', default=5)
+argparser.add_argument('--load_from_pytorch', type=str, default='')
 
-print('args.data_dir:{}'.format(args.data_dir))
+argparser.parse_args(namespace=args)
 args.data_dir = os.path.expanduser(args.data_dir)
 args.train_src = os.path.join(args.data_dir, args.filename_prefix + 'train.' + args.src_language + '.txt')
 args.train_tgt = os.path.join(args.data_dir, args.filename_prefix + 'train.' + args.tgt_language + '.txt')
@@ -86,7 +86,7 @@ batching_scheme['boundaries'] = [b + 1 for b in batching_scheme['boundaries']]
 print('train_src:{}'.format(args.train_src))
 print('dev src:{}'.format(args.dev_src))
 train_dataset_hparams = {
-    "num_epochs": args.num_epochs,
+    "num_epochs": args.eval_interval_epoch,
     #"num_epochs": args.max_train_epoch,
     "seed": args.random_seed,
     "shuffle": True,
@@ -151,11 +151,13 @@ args.word_embedding_hparams={
 }
 encoder_hparams = {
     'multiply_embedding_mode': "sqrt_depth",
+    'embedding_dropout': 0.1,
+    'attention_dropout': 0.1,
+    'residual_dropout': 0.1,
     'sinusoid': True,
     'num_blocks': 6,
     'num_heads': 8,
     'initializer': {
-        #'type': 'uniform_unit_scaling',
         'type': 'variance_scaling_initializer',
         'kwargs': {
             'scale':1.0,

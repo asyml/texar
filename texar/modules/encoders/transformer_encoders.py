@@ -67,6 +67,8 @@ class TransformerEncoder(EncoderBase):
                     [32, embed_dim])
                 self.target_symbol_embedding = tf.gather(space_embedding, \
                     self._hparams.target_space_id)
+            else:
+                self.target_symbol_embedding = None
             self.position_encoder = SinusoidalPositionEncoder()
 
     @staticmethod
@@ -113,11 +115,15 @@ class TransformerEncoder(EncoderBase):
             #Line678
             "max_seq_length":100000000,
             'sinusoid':True,
-            'dropout':0.1,
+            'embedding_dropout':0.1,
+            'attention_dropout':0.1,
+            'residual_dropout':0.1,
             'num_blocks':6,
             'num_heads':8,
             'poswise_feedforward':None,
-            'target_space_id': 1,
+            'target_space_id': None,
+            #changed from 1 to None, because we are not in multitask learning
+            #2018.4.22
             'num_units': 512,
         }
 
@@ -131,12 +137,14 @@ class TransformerEncoder(EncoderBase):
         ignore_padding = attentions.attention_bias_ignore_padding(encoder_padding)
         encoder_self_attention_bias = ignore_padding
         encoder_decoder_attention_bias = ignore_padding
-        emb_target_space = tf.reshape(self.target_symbol_embedding, [1,1,-1])
-        self.enc = self.enc + emb_target_space
+        if self.target_symbol_embedding:
+            emb_target_space = tf.reshape(self.target_symbol_embedding, [1,1,-1])
+            self.enc = self.enc + emb_target_space
 
         self.enc = self.position_encoder(self.enc, sequence_length=None)
-        self.enc = tf.layers.dropout(self.enc, \
-            rate=self._hparams.dropout, training=context.global_mode_train())
+        self.enc = tf.layers.dropout(self.enc,
+            rate=self._hparams.embedding_dropout,
+            training=context.global_mode_train())
         pad_remover = utils.padding_related.PadRemover(encoder_padding)
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("layer_{}".format(i)):
@@ -146,13 +154,13 @@ class TransformerEncoder(EncoderBase):
                         memory=None,
                         bias=encoder_self_attention_bias,
                         num_heads=self._hparams.num_heads,
-                        dropout_rate=self._hparams.dropout,
+                        dropout_rate=self._hparams.attention_dropout,
                         num_units=self._hparams.num_units,
                         scope='multihead_attention'
                     )
                     self.enc = self.enc + tf.layers.dropout(
                         selfatt_output,
-                        rate=self._hparams.dropout,
+                        rate=self._hparams.residual_dropout,
                         training=context.global_mode_train()
                     )
                 poswise_network = FeedForwardNetwork(hparams=self._hparams['poswise_feedforward'])
@@ -164,7 +172,7 @@ class TransformerEncoder(EncoderBase):
                     #[1, batch_size*seq_length, hidden_dim]
                     sub_output = tf.layers.dropout(
                         poswise_network(x),
-                        rate=self._hparams.dropout,
+                        rate=self._hparams.residual_dropout,
                         training=context.global_mode_train()
                     )
                     sub_output = tf.reshape(pad_remover.restore(tf.squeeze(\
