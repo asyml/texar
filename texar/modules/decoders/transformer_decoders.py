@@ -93,8 +93,6 @@ class TransformerDecoder(ModuleBase):
                 inputs,
                 encoder_output=cache['memory'],
                 cache=cache,
-                #no need to add encoder_decoder_attention_bias
-                #no need to add future bias, because there is cache
             )
             outputs = outputs[:, -1:, :]
             logits = self.output_layer(outputs)
@@ -142,7 +140,7 @@ class TransformerDecoder(ModuleBase):
             EOS = 2
             if beam_width <= 1:
                 sampled_ids, _ , sampled_length, log_probs = self.greedy_decode(
-                    self.prepare_tokens_to_embeds,# a callable function
+                    self.prepare_tokens_to_embeds,
                     start_tokens,
                     EOS,
                     maximum_iterations=maximum_decode_length,
@@ -215,8 +213,6 @@ class TransformerDecoder(ModuleBase):
                         cache=layer_cache,
                         scope="multihead_attention",
                     )
-                    # no padding is ever followed by nonpadding,
-                    # so causality can cover keys padding
                     x = x + tf.layers.dropout(
                         selfatt_output,
                         rate=self._hparams.residual_dropout,
@@ -247,7 +243,7 @@ class TransformerDecoder(ModuleBase):
                     x = x + sub_output
 
         return layers.layer_normalize(x)
-        # share the projection weight with word embedding
+
     def build_output_layer(self, num_units):
         if self._hparams.share_embed_and_transform:
             with tf.variable_scope(self.variable_scope):

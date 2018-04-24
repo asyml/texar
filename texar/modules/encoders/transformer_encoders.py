@@ -13,6 +13,7 @@ from texar import context
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.networks.networks import FeedForwardNetwork
 from texar import utils
+
 class TransformerEncoder(EncoderBase):
     """Base class for all encoder classes.
     Args:
@@ -108,9 +109,6 @@ class TransformerEncoder(EncoderBase):
             "name":"encoder",
             "zero_pad":True,
             "bos_pad":False,
-            #https://github.com/tensorflow/tensor2tensor/blob/master/tensor2tensor/layers/common_attention.py
-            #Line678
-            "max_seq_length":100000000,
             'sinusoid':True,
             'embedding_dropout':0.1,
             'attention_dropout':0.1,
@@ -119,8 +117,6 @@ class TransformerEncoder(EncoderBase):
             'num_heads':8,
             'poswise_feedforward':None,
             'target_space_id': None,
-            #changed from 1 to None, because we are not in multitask learning
-            #2018.4.22
             'num_units': 512,
         }
 
@@ -130,7 +126,6 @@ class TransformerEncoder(EncoderBase):
         if self._hparams.multiply_embedding_mode =='sqrt_depth':
             self.enc = self.enc * channels**0.5
 
-        #### transformer_prepare_encoder
         encoder_padding = utils.embedding_to_padding(self.enc)
         ignore_padding = attentions.attention_bias_ignore_padding(encoder_padding)
         encoder_self_attention_bias = ignore_padding
