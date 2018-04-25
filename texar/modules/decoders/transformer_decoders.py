@@ -17,7 +17,6 @@ from tensorflow.python.framework import tensor_shape, dtypes
 from texar.core import layers, attentions
 from texar import context
 from texar.module_base import ModuleBase
-from texar.modules.encoders.position_encoders import SinusoidalPositionEncoder
 from texar.modules.networks.networks import FeedForwardNetwork
 from texar.modules.embedders import embedder_utils
 from texar.utils import beam_search
@@ -35,7 +34,6 @@ class TransformerDecoder(ModuleBase):
         ModuleBase.__init__(self, hparams)
         self._vocab_size = vocab_size
         self._embedding = None
-        self.position_dec_embedding = None
         if self._hparams.initializer:
             with tf.variable_scope(self.variable_scope):
                 tf.get_variable_scope().set_initializer(
@@ -55,7 +53,6 @@ class TransformerDecoder(ModuleBase):
                         self._embedding[1:, :]), 0)
             if self._vocab_size is None:
                 self._vocab_size = self._embedding.get_shape().as_list()[0]
-            self.position_encoder = SinusoidalPositionEncoder()
         self.output_layer = self.build_output_layer(layers.shape_list(self._embedding)[-1])
     @staticmethod
     def default_hparams():
@@ -84,18 +81,18 @@ class TransformerDecoder(ModuleBase):
         token_emb = tf.nn.embedding_lookup(self._embedding, tokens)
         return token_emb
 
-    def _symbols_to_logits_fn(self, embedding_fn):
+    def _symbols_to_logits_fn(self, embedding_fn, max_length):
+        timing_signal = layers.get_timing_signal_1d(max_length,
+            self._embedding.shape.as_list()[-1])
         def _impl(ids, step, cache):
             inputs = embedding_fn(ids[:, -1:])
             if self._hparams.multiply_embedding_mode == 'sqrt_depth':
                 inputs *= self._embedding.shape.as_list()[-1]**0.5
-            inputs = self.position_encoder.apply_one(inputs, step+1)
+            inputs += timing_signal[:, step:step+1]
             outputs = self._self_attention_stack(
                 inputs,
                 encoder_output=cache['memory'],
                 cache=cache,
-                #no need to add encoder_decoder_attention_bias
-                #no need to add future bias, because there is cache
             )
             outputs = outputs[:, -1:, :]
             logits = self.output_layer(outputs)
@@ -103,15 +100,24 @@ class TransformerDecoder(ModuleBase):
         return _impl
 
     def _build(self, targets, encoder_output, encoder_decoder_attention_bias):
-        # this shoudl correpsonde to def body in transformer.py
-        ###### transfomrer_prepare_decoder #############
-        # the targets begins with BOS so no need to shift right #
+        """
+            this function is called on training generally.
+            Args:
+                targets: [bath_size, target_length], begins with [bos] token
+                encoder_output: [batch_size, source_length, channels]
+            outputs:
+                logits: [batch_size, target_length, vocab_size]
+                preds: [batch_size, target_length]
+        """
         logits = None
         if targets is not None:
             decoder_self_attention_bias = (
                 attentions.attention_bias_lower_triangle(
                     layers.shape_list(targets)[1]))
             target_inputs = tf.nn.embedding_lookup(self._embedding, targets)
+            if self._hparams.multiply_embedding_mode == 'sqrt_depth':
+                target_inputs = target_inputs * \
+                    (self._embedding.shape.as_list()[-1]**0.5)
             logits = self.decode(
                 target_inputs,
                 encoder_output,
@@ -122,6 +128,10 @@ class TransformerDecoder(ModuleBase):
         return logits, preds
 
     def dynamic_decode(self, encoder_output, encoder_decoder_attention_bias):
+        """
+            this function is called on in test mode, without the target input.
+            Based on beam_size, here performs greedy decoding or beam search decoding
+        """
         with tf.variable_scope(self.variable_scope, reuse=True):
             batch_size = tf.shape(encoder_decoder_attention_bias)[0]
             beam_width = self._hparams.beam_width
@@ -130,7 +140,7 @@ class TransformerDecoder(ModuleBase):
             EOS = 2
             if beam_width <= 1:
                 sampled_ids, _ , sampled_length, log_probs = self.greedy_decode(
-                    self.prepare_tokens_to_embeds,# a callable function
+                    self.prepare_tokens_to_embeds,
                     start_tokens,
                     EOS,
                     maximum_iterations=maximum_decode_length,
@@ -144,7 +154,7 @@ class TransformerDecoder(ModuleBase):
                     EOS,
                     beam_width=beam_width,
                     alpha=self._hparams.alpha,
-                    maximum_iterations=maximum_decode_length,
+                    decode_length=maximum_decode_length,
                     memory=encoder_output,
                     encoder_decoder_attention_bias=encoder_decoder_attention_bias,
                 )
@@ -162,8 +172,7 @@ class TransformerDecoder(ModuleBase):
                decoder_self_attention_bias,
                cache=None
         ):
-        inputs = inputs * (self._embedding.shape.as_list()[-1]**0.5)
-        inputs = self.position_encoder(inputs)
+        inputs =layers.add_timing_signal_1d(inputs)
         decoder_output = self._self_attention_stack(
             inputs,
             encoder_output,
@@ -202,10 +211,8 @@ class TransformerDecoder(ModuleBase):
                         num_heads=self._hparams.num_heads,
                         dropout_rate=self._hparams.attention_dropout,
                         cache=layer_cache,
-                        scope="self_attention",
+                        scope="multihead_attention",
                     )
-                    # no padding is ever followed by nonpadding,
-                    # so causality can cover keys padding
                     x = x + tf.layers.dropout(
                         selfatt_output,
                         rate=self._hparams.residual_dropout,
@@ -236,7 +243,7 @@ class TransformerDecoder(ModuleBase):
                     x = x + sub_output
 
         return layers.layer_normalize(x)
-        # share the projection weight with word embedding
+
     def build_output_layer(self, num_units):
         if self._hparams.share_embed_and_transform:
             with tf.variable_scope(self.variable_scope):
@@ -296,7 +303,7 @@ class TransformerDecoder(ModuleBase):
                       embedding_fn,
                       start_tokens,
                       EOS,
-                      maximum_iterations,
+                      decode_length,
                       memory,
                       encoder_decoder_attention_bias):
         batch_size = tf.shape(start_tokens)[0]
@@ -306,35 +313,32 @@ class TransformerDecoder(ModuleBase):
         lengths = tf.zeros([batch_size], dtype=tf.int32)
         log_probs = tf.zeros([batch_size])
         cache = self._init_cache(memory, encoder_decoder_attention_bias)
-        symbols_to_logits_fn = self._symbols_to_logits_fn(embedding_fn)
-        def _condition(unused_step, finished, unused_inputs, unused_lengths,
-                unused_log_probs, unused_cache):
-            return tf.logical_not(tf.reduce_all(finished))
+        symbols_to_logits_fn = self._symbols_to_logits_fn(embedding_fn,
+            maximum_length=decode_length+1)
         def _body(step, finished, inputs, lengths, log_probs, cache):
             inputs_lengths = tf.add(lengths, 1 - tf.cast(finished, lengths.dtype))
-            #self_decode_bias = decoder_self_attention_bias[:, :, step:step+1, :step+1]
             logits, cache = symbols_to_logits_fn(inputs, step, cache)
-            probs = tf.nn.log_softmax(logits)
-            sample_ids = tf.argmax(probs, axis=-1)
+            log_probs = tf.nn.log_softmax(logits)
+            sample_ids = tf.argmax(log_probs, axis=-1)
 
-            sample_probs = tf.reduce_max(probs, axis=-1)
-            masked_probs = tf.squeeze(sample_probs, -1) * (1.0 - tf.cast(finished, sample_probs.dtype))
+            sample_probs = tf.reduce_max(log_probs, axis=-1)
+            masked_probs = tf.squeeze(sample_probs, -1) * \
+                (1.0 - tf.cast(finished, sample_probs.dtype))
             log_probs = tf.add(log_probs, masked_probs)
 
             next_inputs = tf.concat([inputs, tf.cast(sample_ids, inputs.dtype)], -1)
             next_lengths = inputs_lengths
-            next_finished = tf.logical_or(
+            finished = tf.logical_or(
                 finished,
                 tf.equal(tf.squeeze(sample_ids, axis=[-1]), EOS)
             )
-            step=step+1
+            return step+1, finished, next_inputs, next_lengths, log_probs, cache
 
-            if maximum_iterations is not None:
-                next_finished = tf.logical_or(next_finished, step>=maximum_iterations)
+        def is_not_finished(i, finished, *_):
+            return (i < decode_length) & tf.logical_not(tf.reduce_all(finished))
 
-            return step, next_finished, next_inputs, next_lengths, log_probs, cache
         step, _, outputs, lengths, log_probs, _ = tf.while_loop(
-            _condition,
+            is_not_finished,
             _body,
             loop_vars=(step, finished, inputs, lengths, log_probs, cache),
             shape_invariants=(
@@ -362,15 +366,16 @@ class TransformerDecoder(ModuleBase):
                     memory=None,
                     encoder_decoder_attention_bias=None,
                     alpha=0.0,
-                    maximum_iterations=256,
+                    decode_length=256,
                     beam_width=5):
         cache = self._init_cache(memory, encoder_decoder_attention_bias)
-        symbols_to_logits_fn = self._symbols_to_logits_fn(embedding_fn)
+        symbols_to_logits_fn = self._symbols_to_logits_fn(embedding_fn,
+            max_length=decode_length+1)
         outputs, log_probs = beam_search.beam_search(
             symbols_to_logits_fn,
             start_tokens,
             beam_width,
-            maximum_iterations,
+            decode_length,
             self._vocab_size,
             alpha,
             states=cache,
@@ -378,6 +383,6 @@ class TransformerDecoder(ModuleBase):
 
         outputs = tf.slice(outputs, [0, 0, 1], [-1, -1, -1]) # Ignore <s>.
 
-        lengths = tf.reduce_sum( tf.cast( tf.not_equal(outputs, 0), tf.int32), axis=-1)
+        lengths = tf.reduce_sum(tf.cast(tf.not_equal(outputs, 0), tf.int32), axis=-1)
 
         return (outputs, None, lengths, log_probs)

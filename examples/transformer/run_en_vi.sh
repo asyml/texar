@@ -1,5 +1,6 @@
 mode=$1
-
+src_language=en
+tgt_language=vi
 
 MAX_TRAINING_STEPS=125000
 MAX_EPOCH=40
@@ -13,7 +14,7 @@ beam_size=5
 #beam_size=4
 # generally it will be about 70 epoches in en-vi dataset
 #DATA_DIR='/home/shr/others_repo/Attention_is_All_You_Need/data/en_vi/data'
-DATA_DIR=/home/hzt/shr/others_repo/Attention_is_All_You_Need/data/en_vi/data
+DATA_DIR=/home/hzt/shr/others_repo/Attention_is_All_You_Need/data/${src_language}_${tgt_language}/data
 #LOG_DISK_DIR='/home2/shr/transformer/'
 LOG_DISK_DIR=/space/shr/transformer_${ENCODER}/
 #beam_size=5
@@ -23,7 +24,8 @@ case $mode in
     echo 'training the model...'
     #export CUDA_VISIBLE_DEVICES=0
     python transformer_overall.py --running_mode=train_and_evaluate --max_train_epoch=${MAX_EPOCH} --max_training_steps=${MAX_TRAINING_STEPS}\
-        --data_dir=${DATA_DIR} --src_language=en --tgt_language=vi --batch_size=${BATCH_SIZE} --test_batch_size=32 \
+        --data_dir=${DATA_DIR} --src_language=${src_language} --tgt_language=${tgt_language} \
+        --batch_size=${BATCH_SIZE} --test_batch_size=32 \
         --beam_width=${beam_size} --alpha=0.6 --save_checkpoint_interval=2000 --log_disk_dir=${LOG_DISK_DIR} \
         --draw_for_debug=1 \
         --filename_prefix=processed.${ENCODER}. ;;
@@ -31,8 +33,8 @@ case $mode in
     echo 'test_given_path'
     export CUDA_VISIBLE_DEVICES=1
         python transformer_overall.py --running_mode=test --data_dir=${DATA_DIR} --batch_size=${BATCH_SIZE} \
-        --src_language=en --tgt_language=vi --test_batch_size=32 --beam_width=${beam_size} --alpha=0.6 \
-        --model_dir=/space/shr/transformer_${ENCODER}/log_dir/en_vi.bsize${BATCH_SIZE}.epoch${MAX_EPOCH}.lr_c2warm16000/ \
+        --src_language=${src_language} --tgt_language=vi --test_batch_size=32 --beam_width=${beam_size} --alpha=0.6 \
+        --model_dir=/space/shr/transformer_${ENCODER}/log_dir/${src_language}_${tgt_language}.bsize${BATCH_SIZE}.epoch${MAX_EPOCH}.lr_c2warm16000/ \
         --filename_prefix=processed.${ENCODER}. --log_disk_dir=${LOG_DISK_DIR} ;;
     3)
     echo 'test_given_fullpath'
@@ -40,9 +42,20 @@ case $mode in
         echo 'must given epoch idx if testing fiven fullpath'
     else
         export CUDA_VISLBLE_DEVICES=1
+        epoch=$2
         python transformer_overall.py --running_mode=test --data_dir=${DATA_DIR} \
-        --src_language=en --tgt_language=vi --test_batch_size=32 --beam_width=${beam_size} --alpha=0.6 \
-        --model_fullpath=/space/shr/transformer_wpm/log_dir/en_vi.bsize${BATCH_SIZE}.epoch40.lr_c2warm16000/my-model.epoch${epoch} \
+        --src_language=${src_language} --tgt_language=${tgt_language} --test_batch_size=32 --beam_width=${beam_size} --alpha=0.6 \
+        --model_dir=/space/shr/transformer_wpm/log_dir/${src_language}_${tgt_language}.bsize${BATCH_SIZE}.epoch40.lr_c2warm16000/my-model.epoch${epoch} \
         --filename_prefix=processed.${ENCODER}. --log_disk_dir=${LOG_DISK_DIR}
-    fi
+    fi ;;
+
+    4)
+    echo 'load from pytorch model'
+    export CUDA_VISIBLE_DEVICES=1
+    python transformer_overall.py --running_mode=test --data_dir=${DATA_DIR} --filename_prefix=processed.${ENCODER}. \
+        --src_language=${src_language} --tgt_language=${tgt_language} --test_batch_size=32 --beam_width=${beam_size} --alpha=0.6 \
+        --load_from_pytorch=1 \
+        --model_dir=/home/hzt/shr/transformer_pytorch/temp/run_en_vi/models/ \
+        --model_filename=ckpt_from_pytorch.p \
+        --log_disk_dir=${LOG_DISK_DIR} ;;
 esac

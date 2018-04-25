@@ -51,14 +51,16 @@ if __name__ == "__main__":
     ori_src_text = text_data_batch['source_text_ids']
     ori_tgt_text = text_data_batch['target_text_ids']
 
-    encoder_input = ori_src_text[:, 1:]
+    if args.load_from_pytorch:
+        encoder_input = ori_src_text
+    else:
+        encoder_input = ori_src_text[:, 1:]
     decoder_input = ori_tgt_text[:, :-1]
     labels = ori_tgt_text[:, 1:]
 
     enc_input_length = tf.reduce_sum(tf.to_float(tf.not_equal(encoder_input, 0)), axis=-1)
     dec_input_length = tf.reduce_sum(tf.to_float(tf.not_equal(decoder_input, 0)), axis=-1)
-    #enc_input_length = tf.Print(enc_input_length,
-    #    data=[tf.shape(ori_src_text), tf.shape(ori_tgt_text), enc_input_length, dec_input_length, labels_length])
+
     WordEmbedder = tx.modules.WordEmbedder(
         vocab_size=train_database.source_vocab.size,
         hparams=args.word_embedding_hparams,
@@ -307,13 +309,16 @@ if __name__ == "__main__":
                     break
         elif args.running_mode == 'test':
             if args.load_from_pytorch:
-                modelpath='/home/hzt/shr/transformer_pytorch/temp/run_en_vi_bk/models/ckpt_from_pytorch.p'
-                pytorch_params = pickle.load(modelpath,'rb')
-                params = tf.trainable_parameters()
+                modelpath=os.path.join(args.model_dir, args.model_filename)
+                pytorch_params = pickle.load(open(modelpath, 'rb'))
+                params = tf.trainable_variables()
+                mname = modelpath.split('/')[-1]
                 for param in params:
-                    sess.run(param.assign(pytorch_params[param]))
-                print('load model from pytorch {}'.format(modelpath))
-            if args.model_fullpath == 'default':
+                    param_key = param.name
+                    param_key = param_key.replace(':0', '')
+                    sess.run(param.assign(pytorch_params[param_key]))
+                print('loaded model from pytorch {}'.format(modelpath))
+            elif args.model_dir == 'default':
                 print('load model from {}'.format(args.model_dir))
                 eval_saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
                 mname = tf.train.latest_checkpoint(args.model_dir).split('/')[-1]
