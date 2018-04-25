@@ -35,8 +35,6 @@ class AgentBase(object):
         self._get_action_tmplt_fn = tf.make_template(
             "{}_get_action".format(self.name), self._get_action)
 
-        self._timestep = 0
-
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
