@@ -1,37 +1,40 @@
 mode=$1
+
+#modify here if you want to change dataset
 src_language=en
-tgt_language=vi
+tgt_language=nl
+
 
 MAX_TRAINING_STEPS=125000
-MAX_EPOCH=40
+MAX_EPOCH=15
 BATCH_SIZE=3072
 ENCODER=bpe
 beam_size=5
-
 #MAX_EPOCH=70
 #BATCH_SIZE=2048
-#ENCODER=wpm
-#beam_size=4
-# generally it will be about 70 epoches in en-vi dataset
-#DATA_DIR='/home/shr/others_repo/Attention_is_All_You_Need/data/en_vi/data'
-DATA_DIR=/home/hzt/shr/others_repo/Attention_is_All_You_Need/data/${src_language}_${tgt_language}/data
+encoder=wpm
+DATA_DIR="./temp/run_${src_language}_${tgt_language}_${encoder}/data/"
+
 #LOG_DISK_DIR='/home2/shr/transformer/'
 LOG_DISK_DIR=/space/shr/transformer_${ENCODER}/
-#beam_size=5
-mode=$1
-case $mode in
-    1)
-    echo 'training the model...'
-    #export CUDA_VISIBLE_DEVICES=0
-    python transformer_overall.py --running_mode=train_and_evaluate --max_train_epoch=${MAX_EPOCH} --max_training_steps=${MAX_TRAINING_STEPS}\
-        --data_dir=${DATA_DIR} --src_language=${src_language} --tgt_language=${tgt_language} \
-        --batch_size=${BATCH_SIZE} --test_batch_size=32 \
-        --beam_width=${beam_size} --alpha=0.6 --save_checkpoint_interval=2000 --log_disk_dir=${LOG_DISK_DIR} \
-        --draw_for_debug=1 \
-        --filename_prefix=processed.${ENCODER}. ;;
+hparams_set=$1
+running_mode=$2
+case ${hparams_set} in
+    100)
+    echo 'running the model according to tensor2tensor default hparams'
+    echo "mode ${running_mode} ${src_language}-${tgt_language} "
+    python transformer_overall.py --running_mode=${running_mode} --max_train_epoch=70 --max_training_steps=125000 \
+        --pre_encoding=${encoder} \
+        --data_dir=${DATA_DIR} \
+        --src_language=${src_language} --tgt_language=${tgt_language} \
+        --batch_size=2048 --test_batch_size=32 \
+        --beam_width=5 --alpha=0.6 --save_checkpoint_interval=2000 \
+        --log_disk_dir=/space/shr/transformer_wpm/ \
+        --draw_for_debug=0 --affine_bias=0 --eval_interval_epoch=1 \
+        --zero_pad=1 --bos_pad=1 \
+        --filename_prefix=processed. &> logging_100_${running_mode}.txt;;
     2)
     echo 'test_given_path'
-    export CUDA_VISIBLE_DEVICES=1
         python transformer_overall.py --running_mode=test --data_dir=${DATA_DIR} --batch_size=${BATCH_SIZE} \
         --src_language=${src_language} --tgt_language=vi --test_batch_size=32 --beam_width=${beam_size} --alpha=0.6 \
         --model_dir=/space/shr/transformer_${ENCODER}/log_dir/${src_language}_${tgt_language}.bsize${BATCH_SIZE}.epoch${MAX_EPOCH}.lr_c2warm16000/ \
@@ -51,11 +54,11 @@ case $mode in
 
     4)
     echo 'load from pytorch model'
-    export CUDA_VISIBLE_DEVICES=1
+    export CUDA_VISIBLE_DEVICES=0
     python transformer_overall.py --running_mode=test --data_dir=${DATA_DIR} --filename_prefix=processed.${ENCODER}. \
-        --src_language=${src_language} --tgt_language=${tgt_language} --test_batch_size=32 --beam_width=${beam_size} --alpha=0.6 \
+        --src_language=${src_language} --tgt_language=${tgt_language} --test_batch_size=2 --beam_width=${beam_size} --alpha=0.6 \
         --load_from_pytorch=1 \
         --model_dir=/home/hzt/shr/transformer_pytorch/temp/run_en_vi/models/ \
         --model_filename=ckpt_from_pytorch.p \
-        --log_disk_dir=${LOG_DISK_DIR} ;;
+        --log_disk_dir=${LOG_DISK_DIR} --debug=1 &> test_debug.txt;;
 esac

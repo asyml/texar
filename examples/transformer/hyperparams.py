@@ -2,6 +2,8 @@
 import argparse
 import copy
 import os
+from texar.data.vocabulary import SpecialTokens
+
 from texar.utils.data_reader import _batching_scheme
 
 class Hyperparams:
@@ -26,6 +28,8 @@ argparser.add_argument('--model_dir', type=str, default='default')
 argparser.add_argument('--model_filename', type=str, default='', \
     help='generally only used when loading from pytorch model')
 argparser.add_argument('--verbose', type=int, default=0)
+argparser.add_argument('--zero_pad', type=int, default=0)
+argparser.add_argument('--bos_pad', type=int, default=0)
 #argparser.add_argument('--train_src', type=str, default='train_ende_wmt_bpe32k_en.txt.filtered')
 #argparser.add_argument('--train_tgt', type=str, default='train_ende_wmt_bpe32k_de.txt.filtered')
 #argparser.add_argument('--source_test', type=str, default='/tmp/t2t_datagen/newstest2014.tok.bpe.32000.en')
@@ -48,31 +52,34 @@ argparser.add_argument('--lr_constant', type=float, default=2)
 argparser.add_argument('--max_train_epoch', type=int, default=40)
 argparser.add_argument('--num_epochs', type=int, default=1)
 argparser.add_argument('--random_seed', type=int, default=1234)
-argparser.add_argument('--log_disk_dir', type=str)
+argparser.add_argument('--log_disk_dir', type=str, default='/space/shr/')
 argparser.add_argument('--beam_width', type=int, default=2)
 argparser.add_argument('--alpha', type=float, default=0.6,\
     help=' length_penalty=(5+len(decode)/6) ^ -\alpha')
 argparser.add_argument('--save_eval_output', default=1, \
     help='save the eval output to file')
-argparser.add_argument('--eval_interval_epoch', default=5)
+argparser.add_argument('--eval_interval_epoch', type=int, default=5)
 argparser.add_argument('--load_from_pytorch', type=str, default='')
-
+argparser.add_argument('--affine_bias', type=int, default=0)
+argparser.add_argument('--eval_criteria', type=str, default='bleu')
+argparser.add_argument('--pre_encoding', type=str, default='wpm')
 argparser.parse_args(namespace=args)
-args.data_dir = os.path.expanduser(args.data_dir)
-args.train_src = os.path.join(args.data_dir, args.filename_prefix + 'train.' + args.src_language + '.txt')
-args.train_tgt = os.path.join(args.data_dir, args.filename_prefix + 'train.' + args.tgt_language + '.txt')
-args.dev_src = os.path.join(args.data_dir, args.filename_prefix + 'dev.' + args.src_language + '.txt')
-args.dev_tgt = os.path.join(args.data_dir, args.filename_prefix + 'dev.' + args.tgt_language + '.txt')
-args.test_src = os.path.join(args.data_dir, args.filename_prefix + 'test.' + args.src_language +'.txt')
-args.test_tgt = os.path.join(args.data_dir, args.filename_prefix + 'test.' + args.tgt_language + '.txt')
+args.data_dir = os.path.abspath(args.data_dir)
+args.filename_suffix = '.' + args.pre_encoding +'.txt'
+args.train_src = os.path.join(args.data_dir, args.filename_prefix + 'train.' + args.src_language + args.filename_suffix)
+args.train_tgt = os.path.join(args.data_dir, args.filename_prefix + 'train.' + args.tgt_language + args.filename_suffix)
+args.dev_src = os.path.join(args.data_dir, args.filename_prefix + 'dev.' + args.src_language + args.filename_suffix)
+args.dev_tgt = os.path.join(args.data_dir, args.filename_prefix + 'dev.'+ args.tgt_language + args.filename_suffix)
+args.test_src = os.path.join(args.data_dir, args.filename_prefix + 'test.' + args.src_language + args.filename_suffix)
+args.test_tgt = os.path.join(args.data_dir, args.filename_prefix + 'test.' + args.tgt_language + args.filename_suffix)
+if args.load_from_pytorch:
+    args.affine_bias=1
 
-args.vocab_file = os.path.join(args.data_dir, args.filename_prefix + 'vocab.text')
+args.vocab_file = os.path.join(args.data_dir, args.filename_prefix + args.pre_encoding + '.vocab.text')
 print('vocabulary{}'.format(args.vocab_file))
 
 log_params_dir = 'log_dir/{}_{}.bsize{}.epoch{}.lr_c{}warm{}/'.format(args.src_language, args.tgt_language, \
     args.batch_size, args.max_train_epoch, args.lr_constant, args.warmup_steps)
-if args.debug:
-    args.log_disk_dir += '/debug/'
 args.log_dir = os.path.join(args.log_disk_dir, log_params_dir)
 print('args.log_dir:{}'.format(args.log_dir))
 batching_scheme = _batching_scheme(
@@ -95,11 +102,13 @@ train_dataset_hparams = {
         "files": [args.train_src],
         "vocab_file": args.vocab_file,
         "max_seq_length": args.max_seq_length,
+        'bos_token': SpecialTokens.BOS,
         "length_filter_mode": "truncate",
     },
     "target_dataset": {
         "files": [args.train_tgt],
         "vocab_share":True,
+        "processing_share": True,
         "max_seq_length": args.max_seq_length,
         "length_filter_mode": "truncate",
     },
@@ -114,6 +123,7 @@ eval_dataset_hparams = {
     'source_dataset' : {
         'files': [args.dev_src],
         'vocab_file': args.vocab_file,
+        'bos_token': SpecialTokens.BOS,
     },
     'target_dataset': {
         'files': [args.dev_tgt],
@@ -129,6 +139,7 @@ test_dataset_hparams = {
     "source_dataset": {
         "files": [args.test_src],
         "vocab_file": args.vocab_file,
+        'bos_token': SpecialTokens.BOS
     },
     "target_dataset": {
         "files": [args.test_tgt],
@@ -158,6 +169,8 @@ encoder_hparams = {
     'sinusoid': True,
     'num_blocks': 6,
     'num_heads': 8,
+    'zero_pad': args.zero_pad,
+    'bos_pad': args.bos_pad,
     'initializer': {
         'type': 'variance_scaling_initializer',
         'kwargs': {
@@ -197,9 +210,9 @@ encoder_hparams = {
 }
 decoder_hparams = copy.deepcopy(encoder_hparams)
 decoder_hparams['share_embed_and_transform'] = True
+decoder_hparams['transform_with_bias'] = args.affine_bias
 decoder_hparams['maximum_decode_length'] = args.max_seq_length
 decoder_hparams['beam_width'] = args.beam_width
-
 loss_hparams = {
     'label_confidence': 0.9,
 }

@@ -107,7 +107,7 @@ class TransformerEncoder(EncoderBase):
             'multiply_embedding_mode': 'sqrt_depth',
             "use_embedding": True,
             "name":"encoder",
-            "zero_pad":True,
+            "zero_pad":False,
             "bos_pad":False,
             'sinusoid':True,
             'embedding_dropout':0.1,
@@ -121,6 +121,7 @@ class TransformerEncoder(EncoderBase):
         }
 
     def _build(self, inputs,  **kwargs):
+
         self.enc = tf.nn.embedding_lookup(self._embedding, inputs)
         batch_size, length, channels = layers.shape_list(self.enc)
         if self._hparams.multiply_embedding_mode =='sqrt_depth':
@@ -138,6 +139,11 @@ class TransformerEncoder(EncoderBase):
         self.enc = tf.layers.dropout(self.enc,
             rate=self._hparams.embedding_dropout,
             training=context.global_mode_train())
+
+        #self.enc = tf.Print(self.enc, [tf.shape(self.enc), self.enc], \
+        #     message='encoded encoder embedding input',
+        #     summarize=1536)
+
         pad_remover = utils.padding_related.PadRemover(encoder_padding)
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("layer_{}".format(i)):
@@ -172,7 +178,15 @@ class TransformerEncoder(EncoderBase):
                         sub_output, axis=0)), original_shape
                     )
                     self.enc = self.enc + sub_output
+                #self.enc = tf.Print(self.enc, [tf.shape(self.enc), self.enc],
+                #    message='encoder layer_{}'.format(i),
+                #    summarize=1536)
+
         self.enc = layers.layer_normalize(self.enc)
+        #self.enc = tf.Print(self.enc, [tf.shape(self.enc), self.enc],
+        #    message='normalized encoder output:',
+        #    summarize=1536)
+
         if not self._built:
             self._add_internal_trainable_variables()
             self._built = True

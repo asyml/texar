@@ -21,20 +21,22 @@ from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.losses import mle_losses
 #from texar.core import optimization as opt
 from texar import context
-from hyperparams import train_dataset_hparams, eval_dataset_hparams, test_dataset_hparams, \
+from hyperparams import train_dataset_hparams, eval_dataset_hparams, \
+    test_dataset_hparams, \
     encoder_hparams, decoder_hparams, \
     opt_hparams, loss_hparams, args
 import bleu_tool
 
-def config_logging(filepath):
-    logging.basicConfig(filename = os.path.join(filepath,'logging.txt'), \
-        format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',\
-        datefmt='%a, %d %b %Y %H:%M:%S',\
-        level=logging.INFO)
-
 if __name__ == "__main__":
-    ### Build data pipeline
-    config_logging(args.log_dir)
+    from importlib import reload
+    logging.shutdown()
+    reload(logging)
+    logging_file = os.path.join(args.log_dir, 'logging.txt')
+    print('logging file path:{}'.format(logging_file))
+    logging.basicConfig(filename=logging_file, \
+        format='%(asctime)s:%(levelname)s:%(message)s',\
+        level=logging.INFO)
+    logging.info('begin logging, new running')
     tf.set_random_seed(1234)
     np.random.seed(1234)
     random.seed(1234)
@@ -55,6 +57,7 @@ if __name__ == "__main__":
         encoder_input = ori_src_text
     else:
         encoder_input = ori_src_text[:, 1:]
+
     decoder_input = ori_tgt_text[:, :-1]
     labels = ori_tgt_text[:, 1:]
 
@@ -65,15 +68,17 @@ if __name__ == "__main__":
         vocab_size=train_database.source_vocab.size,
         hparams=args.word_embedding_hparams,
     )
+
     encoder = TransformerEncoder(
         embedding=WordEmbedder._embedding,
         vocab_size=train_database.source_vocab.size,\
         hparams=encoder_hparams)
-    encoder_output, encoder_decoder_attention_bias = encoder(encoder_input, inputs_length=enc_input_length)
+    encoder_output, encoder_decoder_attention_bias = encoder(
+        encoder_input, inputs_length=enc_input_length)
+
     decoder = TransformerDecoder(
         embedding = encoder._embedding,
         hparams=decoder_hparams)
-
     logits, preds = decoder(
         decoder_input,
         encoder_output,
@@ -84,14 +89,22 @@ if __name__ == "__main__":
         encoder_decoder_attention_bias,
     )
 
-    mle_loss = mle_losses.smoothing_cross_entropy(logits, labels, train_database.target_vocab.size,
+    mle_loss = mle_losses.smoothing_cross_entropy(
+        logits,
+        labels,
+        train_database.target_vocab.size,
         loss_hparams['label_confidence'],
     )
     istarget = tf.to_float(tf.not_equal(labels, 0))
     mle_loss = tf.reduce_sum(mle_loss * istarget) / tf.reduce_sum(istarget)
+    tf.summary.scalar('mle_loss', mle_loss)
 
-    acc = tf.reduce_sum(tf.to_float(tf.equal(tf.to_int64(preds), labels))*istarget) / tf.to_float((tf.reduce_sum(istarget)))
+    acc = tf.reduce_sum(
+        tf.to_float(tf.equal(tf.to_int64(preds), labels))*istarget) \
+        / tf.to_float((tf.reduce_sum(istarget)))
+
     tf.summary.scalar('acc', acc)
+
     global_step = tf.Variable(0, trainable=False)
     fstep = tf.to_float(global_step)
     if opt_hparams['learning_rate_schedule'] == 'static':
@@ -109,15 +122,14 @@ if __name__ == "__main__":
     )
     train_op = optimizer.minimize(mle_loss, global_step)
     tf.summary.scalar('lr', learning_rate)
-    tf.summary.scalar('mle_loss', mle_loss)
-
     merged = tf.summary.merge_all()
     eval_saver = tf.train.Saver(max_to_keep=5)
+
     config = tf.ConfigProto(
         allow_soft_placement=True)
     config.gpu_options.allow_growth=True
-    vocab = train_database.source_vocab
 
+    vocab = train_database.source_vocab
 
     #graph = tf.get_default_graph()
     #graph.finalize()
@@ -129,7 +141,7 @@ if __name__ == "__main__":
         while True:
             try:
                 fetches = {'source': encoder_input,
-                        'dec_in': decoder_input,
+                           'dec_in': decoder_input,
                            'target': labels,
                            'predict': preds,
                            'train_op': train_op,
@@ -181,14 +193,15 @@ if __name__ == "__main__":
                 feed = {context.global_mode(): tf.estimator.ModeKeys.EVAL}
                 _fetches = sess.run(fetches, feed_dict=feed)
                 sources, sampled_ids, targets = \
-                    _fetches['source'].tolist(), \
+                    _fetches['source'][:, 1:].tolist(), \
                     _fetches['predictions']['sampled_ids'][:, 0, :].tolist(), \
                     _fetches['target'][:, 1:].tolist()
                 eval_loss.append(_fetches['mle_loss'])
                 if args.verbose:
                     print('cur loss:{}'.format(_fetches['mle_loss']))
                 def _id2word_map(id_arrays):
-                    return [' '.join([vocab._id_to_token_map_py[i] for i in sent]) for sent in id_arrays]
+                    return [' '.join([vocab._id_to_token_map_py[i] for i in sent]) \
+                            for sent in id_arrays]
                 sources, targets, dwords = \
                     _id2word_map(sources), _id2word_map(targets), _id2word_map(sampled_ids)
                 for source, target, pred in zip(sources, targets, dwords):
@@ -238,18 +251,28 @@ if __name__ == "__main__":
                     'target': ori_tgt_text,
                     'step': global_step,
                     'mle_loss': mle_loss,
+                    'encoder_output': encoder_output,
+                    'decoder_input': decoder_input,
+                    'embedding': encoder._embedding,
+                    'encoder_decoder_attention_bias': encoder_decoder_attention_bias,
+                    'logits': logits,
                 }
                 feed = {context.global_mode(): tf.estimator.ModeKeys.PREDICT}
                 _fetches = sess.run(fetches, feed_dict=feed)
                 sources, sampled_ids, targets = \
-                    _fetches['source'].tolist(), \
+                    _fetches['source'][:, 1:].tolist(), \
                     _fetches['predictions']['sampled_ids'][:, 0, :].tolist(), \
                     _fetches['target'][:, 1:].tolist()
                 test_loss.append(_fetches['mle_loss'])
-                if args.verbose:
-                    print('cur loss:{}'.format(_fetches['mle_loss']))
                 def _id2word_map(id_arrays):
                     return [' '.join([vocab._id_to_token_map_py[i] for i in sent]) for sent in id_arrays]
+                if args.debug:
+                    print('source_ids:{}\ntargets_ids:{}\nsampled_ids:{}'.format(
+                        sources, targets, sampled_ids))
+                    print('encoder_output:{} {}'.format(_fetches['encoder_output'].shape,
+                        _fetches['encoder_output']))
+                    print('logits:{} {}'.format(_fetches['logits'].shape, _fetches['logits']))
+                    exit()
                 sources, targets, dwords = \
                     _id2word_map(sources), _id2word_map(targets), _id2word_map(sampled_ids)
                 for source, target, pred in zip(sources, targets, dwords):
@@ -290,22 +313,30 @@ if __name__ == "__main__":
                 logging.info('var:{} shape:{}'.format(var.name, var.shape, var.dtype))
         writer = tf.summary.FileWriter(args.log_dir, graph=sess.graph)
         eval_writer = tf.summary.FileWriter(os.path.join(args.log_dir, 'eval/'), graph=sess.graph)
-        lowest_loss, lowest_epoch = -1, -1
+        lowest_loss, highest_bleu, best_epoch = -1, -1, -1
         if args.running_mode == 'train_and_evaluate':
             for epoch in range(args.max_train_epoch):
                 if epoch % args.eval_interval_epoch != 0:
                     continue
                 status = _train_epochs(sess, epoch, writer)
-                eval_saver.save(sess, args.log_dir+'my-model.epoch{}'.format(epoch))
+                #eval_saver.save(sess, args.log_dir+'my-model.epoch{}'.format(epoch))
                 eval_result = _eval_epoch(sess, epoch, eval_writer)
-                #eval_loss, eval_score = eval_result['loss'], eval_result['bleu']
-                #if lowest_loss < 0 or eval_loss < lowest_loss:
-                #    logging.info('the {} epoch(0-idx) got lowest loss'.format(epoch))
-                #    eval_saver.save(sess, args.log_dir+'my-model-lowest_loss.epoch{}'.format(epoch))
-                #    lowest_loss = eval_loss
+                eval_loss, eval_score = eval_result['loss'], eval_result['bleu']
+                if args.eval_criteria == 'loss':
+                    if  lowest_loss < 0 or eval_loss < lowest_loss:
+                        logging.info('the {} epoch(0-idx) got lowest loss {}'.format(epoch, eval_loss))
+                        eval_saver.save(sess, args.log_dir+'my-model-lowest_loss.ckpt')
+                        lowest_loss = eval_loss
+                        best_epoch = epoch
+                elif args.eval_criteria == 'bleu':
+                    if highest_bleu <0 or eval_score > highest_bleu:
+                        logging.info('the {} epoch(0-idx) got highest bleu {} '.format(epoch, eval_score))
+                        eval_saver.save(sess, args.log_dir+'my-model-highest_bleu.ckpt')
+                        highest_bleu = eval_score
+                        best_epoch = epoch
+
                 if status == 'finished':
                     logging.info('saving model for max training steps')
-                    eval_saver.save(sess, args.log_dir+'my-model.max_step{}'.format(args.max_training_steps))
                     break
         elif args.running_mode == 'test':
             if args.load_from_pytorch:
@@ -313,12 +344,14 @@ if __name__ == "__main__":
                 pytorch_params = pickle.load(open(modelpath, 'rb'))
                 params = tf.trainable_variables()
                 mname = modelpath.split('/')[-1]
+                assert len(params) == len(pytorch_params)
                 for param in params:
                     param_key = param.name
                     param_key = param_key.replace(':0', '')
                     sess.run(param.assign(pytorch_params[param_key]))
                 print('loaded model from pytorch {}'.format(modelpath))
             elif args.model_dir == 'default':
+                args.model_dir = args.log_dir
                 print('load model from {}'.format(args.model_dir))
                 eval_saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
                 mname = tf.train.latest_checkpoint(args.model_dir).split('/')[-1]
