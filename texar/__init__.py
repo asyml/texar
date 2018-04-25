@@ -18,3 +18,5 @@ from texar import losses
 from texar import models
 from texar import data
 from texar import evals
+from texar import agents
+from texar import utils

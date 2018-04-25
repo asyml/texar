@@ -14,7 +14,9 @@ import tensorflow.contrib.rnn as rnn
 from texar import context
 from texar.hyperparams import HParams
 from texar.utils import utils
+from texar.utils.dtypes import is_str, is_callable
 import numpy as np
+
 # pylint: disable=not-context-manager, redefined-variable-type, invalid-name
 # pylint: disable=too-many-branches, too-many-arguments, too-many-lines
 # pylint: disable=protected-access
@@ -172,7 +174,7 @@ def get_rnn_cell(hparams=None, mode=None):
     for layer_i in range(num_layers):
         # Create the basic cell
         cell_type = hparams["type"]
-        if utils.is_str(cell_type):
+        if is_str(cell_type):
             cell_modules = ['tensorflow.contrib.rnn', 'texar.custom']
             cell = utils.get_instance(cell_type, cell_kwargs, cell_modules)
         else:
@@ -291,7 +293,7 @@ def get_regularizer(hparams=None):
 
     if isinstance(hparams, dict):
         hparams = HParams(hparams, default_regularizer_hparams())
-    if utils.is_str(hparams.type):
+    if is_str(hparams.type):
         rgl = utils.get_instance(
             hparams.type, hparams.kwargs.todict(),
             ["tensorflow.keras.regularizers", "texar.custom"])
@@ -317,7 +319,7 @@ def get_initializer(hparams=None):
     if hparams is None:
         return None
 
-    if utils.is_str(hparams["type"]):
+    if is_str(hparams["type"]):
         #print('hparams:{}'.format(hparams))
         kwargs = hparams["kwargs"]
         if isinstance(kwargs, HParams):
@@ -356,7 +358,7 @@ def get_activation_fn(fn_name="identity"):
     if fn_name is None:
         return None
 
-    if utils.is_callable(fn_name):
+    if is_callable(fn_name):
         return fn_name
 
     fn_modules = ['tensorflow', 'tensorflow.nn', 'texar.custom']
@@ -388,7 +390,7 @@ def get_constraint_fn(fn_name="NonNeg"):
     if fn_name is None:
         return None
 
-    if utils.is_callable(fn_name):
+    if is_callable(fn_name):
         return fn_name
 
     fn_modules = ['tensorflow.keras.constraints', 'tensorflow',
@@ -460,7 +462,7 @@ def get_layer(hparams):
         raise ValueError("`hparams` must not be `None`.")
 
     layer_type = hparams["type"]
-    if not utils.is_str(layer_type):
+    if not is_str(layer_type):
         layer = layer_type
     else:
         layer_modules = ["tensorflow.layers", "texar.core", "texar.costum"]

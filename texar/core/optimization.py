@@ -250,7 +250,7 @@ def get_train_op(loss, variables=None, learning_rate=None,
         global_step (optional): A scalar int Tensor. Step counter to update on
             each step unless :attr:`increment_global_step` is `False`.
             Learning rate decay requires requires :attr:`global_step`.
-        incremental_global_step (bool): Whether to increment
+        increment_global_step (bool): Whether to increment
             :attr:`global_step`. This is useful if the :attr:`global_step` is
             used in multiple training ops per training step (e.g. to optimize
             different parts of the model) to avoid incrementing

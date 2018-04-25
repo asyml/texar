@@ -26,7 +26,7 @@ class AgentBase(object):
 
         name = self._hparams.name
         self._variable_scope = utils.get_unique_named_variable_scope(name)
-        self._unique_name = self.variable_scope.name.split("/")[-1]
+        self._unique_name = self._variable_scope.name.split("/")[-1]
 
         self._reset_tmplt_fn = tf.make_template(
             "{}_reset".format(self.name), self._reset)
@@ -34,8 +34,6 @@ class AgentBase(object):
             "{}_observe".format(self.name), self._observe)
         self._get_action_tmplt_fn = tf.make_template(
             "{}_get_action".format(self.name), self._get_action)
-
-        self._timestep = 0
 
     @staticmethod
     def default_hparams():
@@ -55,37 +53,38 @@ class AgentBase(object):
     def _reset(self):
         raise NotImplementedError
 
-    def observe(self, reward, terminal, mode):
+    def observe(self, reward, terminal, train_policy=True, feed_dict=None):
         """Observes experience from environment.
 
         Args:
         """
-        return self._observe_tmplt_fn(reward, terminal, mode)
+        return self._observe_tmplt_fn(
+            reward, terminal, train_policy, feed_dict)
 
-    def _observe(self, reward, terminal, mode):
+    def _observe(self, reward, terminal, train_policy, feed_dict):
         raise NotImplementedError
 
-    def get_action(self, observ, mode, feed_dict=None):
+    def get_action(self, observ, feed_dict=None):
         """Gets action according to observation.
 
         Args:
 
         Returns:
         """
-        return self._get_action_tmplt_fn(observ, mode, feed_dict)
+        return self._get_action_tmplt_fn(observ, feed_dict)
 
-    def _get_action(self, observ, mode, feed_dict=None):
+    def _get_action(self, observ, feed_dict):
         raise NotImplementedError
 
     @property
     def variable_scope(self):
         """The variable scope of the agent.
         """
-        return self.variable_scope
+        return self._variable_scope
 
     @property
     def name(self):
-        """The uniquified name of the module.
+        """The name of the module (not uniquified).
         """
         return self._unique_name
 
