@@ -13,6 +13,7 @@ from texar.module_base import ModuleBase
 from texar.modules.networks.network_base import FeedForwardNetworkBase
 from texar.agents.agent_utils import Space
 from texar.utils import utils
+from texar.utils.dtypes import get_tf_dtype
 
 # pylint: disable=no-member
 
@@ -20,19 +21,6 @@ __all__ = [
     'PolicyNetBase',
     'CategoricalPolicyNet'
 ]
-
-def _build_network(network, kwargs, network_type, network_hparams):
-    if network is not None:
-        network = network
-    else:
-        kwargs = {'hparams': network_hparams}
-        kwargs.update(kwargs or {})
-        network = utils.check_or_get_instance(
-            network_type,
-            kwargs,
-            module_paths=['texar.modules', 'texar.custom'],
-            classtype=FeedForwardNetworkBase)
-    return network
 
 class PolicyNetBase(ModuleBase):
     """Policy model based on feed forward network.
@@ -44,9 +32,7 @@ class PolicyNetBase(ModuleBase):
         ModuleBase.__init__(self, hparams=hparams)
 
         with tf.variable_scope(self.variable_scope):
-            self._network = _build_network(
-                network, network_kwargs, self._hparams.network_type,
-                self._hparams.network_hparams.todict())
+            self._build_network(network, network_kwargs)
 
     @staticmethod
     def default_hparams():
@@ -69,15 +55,20 @@ class PolicyNetBase(ModuleBase):
             '@no_typecheck': ['network_type', 'network_hparams']
         }
 
+    def _build_network(self, network, kwargs):
+        if network is not None:
+            self._network = network
+        else:
+            kwargs = utils.get_instance_kwargs(
+                kwargs, self._hparams.network_hparams)
+            self._network = utils.check_or_get_instance(
+                self._hparams.network_type,
+                kwargs,
+                module_paths=['texar.modules', 'texar.custom'],
+                classtype=FeedForwardNetworkBase)
+
     def _build(self, inputs, mode=None): # pylint: disable=arguments-differ
         raise NotImplementedError
-        #output = self.network(inputs)
-        #if not self._built:
-        #    self._add_internal_trainable_variables()
-        #    self._add_trainable_variable(self._network.trainable_variables)
-        #    self._built = True
-
-        #return output
 
     @property
     def network(self):
@@ -99,7 +90,11 @@ class CategoricalPolicyNet(PolicyNetBase):
         PolicyNetBase.__init__(self, hparams=hparams)
 
         with tf.variable_scope(self.variable_scope):
-            self._append_output_layer(action_space)
+            if action_space is None:
+                action_space = Space(
+                    low=0, high=self._hparams.action_space, dtype=np.int32)
+            self._action_space = action_space
+            self._append_output_layer()
 
     @staticmethod
     def default_hparams():
@@ -119,17 +114,14 @@ class CategoricalPolicyNet(PolicyNetBase):
         })
         return hparams
 
-    def _append_output_layer(self, action_space):
+    def _append_output_layer(self):
         if not self._hparams.make_output_layer:
             return
 
-        if action_space is None:
-            action_space = Space(
-                low=0, high=self._hparams.action_space, dtype=np.int32)
-        if action_space.shape != ():
+        if self._action_space.shape != ():
             raise ValueError('Only scalar discrete action is supported.')
         else:
-            output_size = action_space.high - action_space.low
+            output_size = self._action_space.high - self._action_space.low
 
         layer_hparams = {
             'type': 'Dense',
@@ -141,15 +133,16 @@ class CategoricalPolicyNet(PolicyNetBase):
         logits = self._network(inputs, mode=mode)
 
         dkwargs = self._hparams.distribution_kwargs.todict()
-        dkwargs['dtype'] = utils.get_tf_dtype(dkwargs['dtype'])
-        dstr = tf.distributions.Categorical(logits=logits, **dkwargs)
+        dkwargs['dtype'] = get_tf_dtype(dkwargs['dtype'])
+        dist = tf.distributions.Categorical(logits=logits, **dkwargs)
 
-        action = dstr.sample()
-        log_prob = dstr.log_prob(action)
+        action = dist.sample()
+        action = tf.reshape(action, self._action_space.shape)
+
         outputs = dict(
+            logits=logits,
             action=action,
-            log_prob=log_prob,
-            distribution=dstr
+            dist=dist
         )
 
         if not self._built:
@@ -158,3 +151,10 @@ class CategoricalPolicyNet(PolicyNetBase):
             self._built = True
 
         return outputs
+
+    @property
+    def action_space(self):
+        """An instance of :class:`~texar.agents.Space` specifiying the
+        action space.
+        """
+        return self._action_space

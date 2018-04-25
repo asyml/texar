@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 import tensorflow as tf
 
 from texar.utils import utils
+from texar.utils.dtypes import is_callable
 from texar.data.data_utils import count_file_lines
 from texar.data.data import dataset_utils as dsutils
 from texar.data.data.text_data_base import TextDataBase
@@ -151,7 +152,7 @@ class MonoTextData(TextDataBase):
         """
         other_trans = []
         for tran in other_trans_hparams:
-            if not utils.is_callable(tran):
+            if not is_callable(tran):
                 tran = utils.get_function(tran, ["texar.custom"])
             other_trans.append(dsutils.make_partial(tran, data_spec))
         return other_trans
@@ -231,7 +232,7 @@ class MonoTextData(TextDataBase):
         length_fn = self._hparams.bucket_length_fn
         if not length_fn:
             length_fn = lambda x: x[self.length_name]
-        elif not utils.is_callable(length_fn):
+        elif not is_callable(length_fn):
             # pylint: disable=redefined-variable-type
             length_fn = utils.get_function(length_fn, ["texar.custom"])
         return length_fn

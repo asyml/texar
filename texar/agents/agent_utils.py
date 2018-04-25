@@ -17,6 +17,11 @@ try:
 except ImportError:
     pass
 
+__all__ = [
+    "Space",
+    "EnvConfig"
+]
+
 class Space(object):
     """Observation and action spaces. Similar to gym Space.
     """
@@ -79,7 +84,7 @@ class EnvConfig(object):
                  observ_space,
                  reward_range):
         if gym_utils:
-            action_space = gym_utils.convert_gym_space(gym_utils)
+            action_space = gym_utils.convert_gym_space(action_space)
             observ_space = gym_utils.convert_gym_space(observ_space)
 
         self.action_space = action_space

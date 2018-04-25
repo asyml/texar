@@ -10,7 +10,7 @@ from __future__ import division
 import copy
 import json
 
-from texar.utils.utils import is_callable
+from texar.utils.dtypes import is_callable
 
 __all__ = [
     "HParams"

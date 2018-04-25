@@ -14,6 +14,7 @@ import tensorflow as tf
 
 from texar.hyperparams import HParams
 from texar.utils import utils
+from texar.utils.dtypes import is_str, is_callable
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data.scalar_data import ScalarData
 from texar.data.data.mono_text_data import _default_mono_text_dataset_hparams
@@ -327,7 +328,7 @@ class MultiAlignedData(TextDataBase):
             if i < 0:
                 raise ValueError("Undefined `length_fn`.")
             length_fn = lambda x: x[self.length_name(i)]
-        elif not utils.is_callable(length_fn):
+        elif not is_callable(length_fn):
             # pylint: disable=redefined-variable-type
             length_fn = utils.get_function(length_fn, ["texar.custom"])
         return length_fn
@@ -388,7 +389,7 @@ class MultiAlignedData(TextDataBase):
         return self._dataset_size
 
     def _maybe_name_to_id(self, name_or_id):
-        if utils.is_str(name_or_id):
+        if is_str(name_or_id):
             if name_or_id not in self._name_to_id:
                 raise ValueError("Unknown data name: {}".format(name_or_id))
             return self._name_to_id[name_or_id]

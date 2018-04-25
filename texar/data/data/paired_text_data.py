@@ -13,6 +13,7 @@ import copy
 import tensorflow as tf
 
 from texar.utils import utils
+from texar.utils.dtypes import is_callable
 from texar.data.data.mono_text_data import _default_mono_text_dataset_hparams
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data.mono_text_data import MonoTextData
@@ -229,7 +230,7 @@ class PairedTextData(TextDataBase):
         if not length_fn:
             length_fn = lambda x: tf.maximum(
                 x[self.source_length_name], x[self.target_length_name])
-        elif not utils.is_callable(length_fn):
+        elif not is_callable(length_fn):
             # pylint: disable=redefined-variable-type
             length_fn = utils.get_function(length_fn, ["texar.custom"])
         return length_fn

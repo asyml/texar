@@ -1,6 +1,6 @@
 #
 """
-Utility functions
+Miscellaneous Utility functions.
 """
 
 from __future__ import absolute_import
@@ -13,7 +13,6 @@ from __future__ import division
 import inspect
 from pydoc import locate
 import copy
-import six
 import numpy as np
 
 import tensorflow as tf
@@ -22,6 +21,8 @@ from tensorflow.python.util import nest
 from tensorflow.python.ops import rnn
 
 from texar import context
+from texar.hyperparams import HParams
+from texar.utils.dtypes import is_str
 
 MAX_SEQ_LENGTH = np.iinfo(np.int32).max
 
@@ -41,11 +42,9 @@ __all__ = [
     "get_function",
     "call_function_with_redundant_kwargs",
     "get_default_arg_values",
+    "get_instance_kwargs",
     "add_variable",
     "get_unique_named_variable_scope",
-    "get_tf_dtype",
-    "is_callable",
-    "is_str",
     "maybe_gloabl_mode",
     "is_train_mode",
     "is_eval_mode",
@@ -327,6 +326,31 @@ def get_default_arg_values(fn):
     num_defaults = len(argspec.defaults)
     return dict(zip(argspec.args[-num_defaults:], argspec.defaults))
 
+def get_instance_kwargs(kwargs, hparams):
+    """Makes a dict of keyword arguments with the following structure:
+
+    `kwargs_ = {'hparams': dict(hparams), **kwargs}`.
+
+    This is typically used for constructing a module which takes a set of
+    arguments as well as a argument named `hparams`.
+
+    Args:
+        kwargs (dict): A dict of keyword arguments. Can be `None`.
+        hparams: A dict or an instance of :class:`~texar.HParams` Can be `None`.
+
+    Returns:
+        A `dict` that contains the keyword arguments in :attr:`kwargs`, and
+        an additional keyword argument named `hparams`.
+    """
+    if hparams is None or isinstance(hparams, dict):
+        kwargs_ = {'hparams': hparams}
+    elif isinstance(hparams, HParams):
+        kwargs_ = {'hparams': hparams.todict()}
+    else:
+        raise ValueError(
+            '`hparams` must be a dict, an instance of HParams, or a `None`.')
+    kwargs_.update(kwargs or {})
+    return kwargs_
 
 def add_variable(variable, var_list):
     """Adds variable to a given list.
@@ -351,58 +375,9 @@ def get_unique_named_variable_scope(base_name):
     Returns:
         An instance of :tf_main:`variable_scope <variable_scope>`.
     """
-    return tf.variable_scope(None, default_name=base_name)
+    with tf.variable_scope(None, default_name=base_name) as vs:
+        return vs
 
-def get_tf_dtype(dtype): # pylint: disable=too-many-return-statements
-    """Returns respective tf dtype.
-
-    Args:
-        dtype: A str, python numeric or string type, numpy data type, or
-            tf dtype.
-
-    Returns:
-        The respective tf dtype.
-    """
-    if dtype in {'float', 'float32', 'tf.float32', float,
-                 np.float32, tf.float32}:
-        return tf.float32
-    elif dtype in {'float64', 'tf.float64', np.float64, np.float_, tf.float64}:
-        return tf.float64
-    elif dtype in {'float16', 'tf.float16', np.float16, tf.float16}:
-        return tf.float16
-    elif dtype in {'int', 'int32', 'tf.int32', int, np.int32, tf.int32}:
-        return tf.int32
-    elif dtype in {'int64', 'tf.int64', np.int64, tf.int64}:
-        return tf.int64
-    elif dtype in {'int16', 'tf.int16', np.int16, tf.int16}:
-        return tf.int16
-    elif dtype in {'bool', 'tf.bool', bool, np.bool_, tf.bool}:
-        return tf.bool
-    elif dtype in {'string', 'str', 'tf.string', str, np.str, tf.string}:
-        return tf.string
-    try:
-        if dtype == {'unicode', unicode}:
-            return tf.string
-    except NameError:
-        pass
-
-    raise ValueError(
-        "Unsupported conversion from type {} to tf dtype".format(str(dtype)))
-
-def is_callable(x):
-    """Return `True` if :attr:`x` is callable.
-    """
-    try:
-        _is_callable = callable(x)
-    except: # pylint: disable=bare-except
-        _is_callable = hasattr(x, '__call__')
-    return _is_callable
-
-def is_str(x):
-    """Returns `True` if :attr:`x` is either a str or unicode. Returns `False`
-    otherwise.
-    """
-    return isinstance(x, six.string_types)
 
 def maybe_gloabl_mode(mode):
     """Returns :func:`texar.contex.global_mode` if :attr:`mode` is `None`,
