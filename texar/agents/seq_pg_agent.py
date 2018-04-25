@@ -1,5 +1,5 @@
 #
-"""Policy Gradient agent.
+"""Policy Gradient agent for sequence prediction.
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -16,22 +16,21 @@ from texar.utils import utils
 from texar.core import optimization as opt
 from texar.losses import pg_losses as losses
 
-
-class PGAgent(AgentBase):
-    """Policy Gradient Agent.
+# TODO(zhiting): Inherits from PGAgent ?
+class SeqPGAgent(AgentBase):
+    """Policy Gradient agent for sequence prediction.
 
     Args:
         TODO
     """
     def __init__(self,
-                 env_config,
                  sess=None,
                  policy=None,
                  policy_kwargs=None,
                  policy_caller_kwargs=None,
                  learning_rate=None,
                  hparams=None):
-        AgentBase.__init__(self, env_config, hparams)
+        AgentBase.__init__(self, None, hparams)
 
         self._sess = sess
         self._lr = learning_rate

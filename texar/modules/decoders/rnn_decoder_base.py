@@ -322,7 +322,6 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             # Add trainable variables of `self._beam_search_rnn_cell` which
             # may already be constructed and used.
             if self._beam_search_cell is not None:
-                print("here..............")
                 self._add_trainable_variable(
                     self._beam_search_cell.trainable_variables)
 

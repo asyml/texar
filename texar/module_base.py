@@ -29,7 +29,6 @@ class ModuleBase(object):
 
     def __init__(self, hparams=None):
         self._hparams = HParams(hparams, self.default_hparams())
-        print('self._hparams:{}'.format(self._hparams))
         self._template = tf.make_template(self._hparams.name, self._build,
                                           create_scope_now_=True)
         self._unique_name = self.variable_scope.name.split("/")[-1]

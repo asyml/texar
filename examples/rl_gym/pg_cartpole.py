@@ -51,7 +51,7 @@ def _main(_):
     sess.run(tf.tables_initializer())
     feed_dict = {tx.global_mode(): tf.estimator.ModeKeys.TRAIN}
 
-    for e in range(500):
+    for e in range(250):
         reward_sum = 0.
         observ = env.reset()
         agent.reset()
