@@ -1,9 +1,16 @@
 mode=$1
 
-#modify here if you want to change dataset
-src_language=en
-tgt_language=nl
+if [ -z $3 ]; then
+    src_language=en
+else
+    src_language=$3
+fi
 
+if [ -z $4 ]; then
+    tgt_language=vi
+else
+    tgt_language=$4
+fi
 
 MAX_TRAINING_STEPS=125000
 MAX_EPOCH=15
@@ -19,6 +26,7 @@ DATA_DIR="./temp/run_${src_language}_${tgt_language}_${encoder}/data/"
 LOG_DISK_DIR=/space/shr/transformer_${ENCODER}/
 hparams_set=$1
 running_mode=$2
+
 case ${hparams_set} in
     100)
     echo 'running the model according to tensor2tensor default hparams'
@@ -28,17 +36,26 @@ case ${hparams_set} in
         --data_dir=${DATA_DIR} \
         --src_language=${src_language} --tgt_language=${tgt_language} \
         --batch_size=2048 --test_batch_size=32 \
-        --beam_width=5 --alpha=0.6 --save_checkpoint_interval=2000 \
-        --log_disk_dir=/space/shr/transformer_wpm/ \
+        --beam_width=5 --alpha=0.6\
+        --log_disk_dir=/space/shr/transformer_${encoder}/ \
         --draw_for_debug=0 --affine_bias=0 --eval_interval_epoch=1 \
         --zero_pad=1 --bos_pad=1 \
         --filename_prefix=processed. &> logging_100_${running_mode}.txt;;
-    2)
-    echo 'test_given_path'
-        python transformer_overall.py --running_mode=test --data_dir=${DATA_DIR} --batch_size=${BATCH_SIZE} \
-        --src_language=${src_language} --tgt_language=vi --test_batch_size=32 --beam_width=${beam_size} --alpha=0.6 \
-        --model_dir=/space/shr/transformer_${ENCODER}/log_dir/${src_language}_${tgt_language}.bsize${BATCH_SIZE}.epoch${MAX_EPOCH}.lr_c2warm16000/ \
-        --filename_prefix=processed.${ENCODER}. --log_disk_dir=${LOG_DISK_DIR} ;;
+    200)
+        echo 'running the model with bigger batch_size and training steps'
+        echo 'only support en and de language for now'
+        src_language=en
+        tgt_language=de
+        echo "mode ${running_mode} ${src_language}-${tgt_language}"
+        python transformer_overall.py --running_mode=${running_mode} --max_train_epoch=70 --max_training_steps=125000 \
+            --pre_encoding=${encoder} --data_dir=${DATA_DIR} \
+            --src_language=${src_language} --tgt_language=${tgt_language} \
+            --batch_size=3072 --test_batch_size=32 --max_training_steps=500000\
+            --beam_width=5 --alpha=0.6 \
+            --log_disk_dir=/space/shr/transformer_${encoder}/ \
+            --draw_for_debug=0 --affine_bias=0 --eval_interval_epoch=1 \
+            --zero_pad=1 --bos_pad=1 \
+            --filename_prefix=processed. &> logging_200_${running_mode}.txt;;
     3)
     echo 'test_given_fullpath'
     if [ -z $2 ] ; then

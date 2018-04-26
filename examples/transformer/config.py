@@ -13,7 +13,6 @@ def get_preprocess_args():
                         help='Vocabulary size of target language')
     parser.add_argument('--tok', dest='tok', action='store_true',
                         help='tokenized and lowercased')
-    parser.add_argument('--max_seq_length', dest='max_seq_length', type=int, default=70)
     parser.set_defaults(tok=False)
     parser.add_argument('--pre_encoding', type=str, default='wpm')
     parser.add_argument('--src', type=str, default='en')

@@ -4,8 +4,17 @@ TF=$(pwd)
 
 export PATH=$PATH:$TF/../../tools/
 encoder=wpm
-src_language=en
-tgt_language=nl
+if [ -z $1 ]; then
+    src_language=en
+else
+    src_language=$1
+fi
+
+if  [ -z $2 ]; then
+    tgt_language=vi
+else
+    tgt_language=$2
+fi
 # update these variables
 data=${TF}"/data/${src_language}_${tgt_language}"
 name="run_${src_language}_${tgt_language}_${encoder}"
@@ -13,14 +22,13 @@ out="temp/${name}"
 
 train_src=$data/train.${src_language}
 train_tgt=$data/train.${tgt_language}
-test_src=$data/dev.${src_language}
-test_tgt=$data/dev.${tgt_language}
-dev_src=$data/test.${src_language}
-dev_tgt=$data/test.${tgt_language}
-
+dev_src=$data/dev.${src_language}
+dev_tgt=$data/dev.${tgt_language}
+test_src=$data/test.${src_language}
+test_tgt=$data/test.${tgt_language}
 vocab_size=32000
-#====== EXPERIMENT BEGIN ======
 
+#====== EXPERIMENT BEGIN ======
 echo "Output dir = $out"
 [ -d $out ] || mkdir -p $out
 [ -d $out/data ] || mkdir -p $out/data
@@ -37,7 +45,8 @@ case ${encoder} in
         spm_encode --model $out/data/wpm-codes.${vocab_size}.model --output_format=piece < $test_src > $out/data/test.${src_language}.wpm
         spm_encode --model $out/data/wpm-codes.${vocab_size}.model --output_format=piece <  $train_tgt > $out/data/train.${tgt_language}.wpm
         spm_encode --model $out/data/wpm-codes.${vocab_size}.model --output_format=piece <  $dev_tgt > $out/data/valid.${tgt_language}.wpm
-        cp ${test_tgt} ${out}/data/test.${tgt_language}.wpm ;;
+        spm_encode --model $out/data/wpm-codes.${vocab_size}.model --output_format=piece < ${test_tgt} > $out/data/test.${tgt_language}.wpm
+        cp ${test_tgt} ${out}/test/test.${tgt_language} ;;
     'bpe'):
         cat ${train_src} ${train_tgt} | learn_bpe -s ${vocab_size} > ${out}/data/bpe-codes.${vocab_size}
         apply_bpe -c ${out}/data/bpe-codes.${vocab_size} < ${train_src} > $out/data/train.${src_language}.bpe
@@ -45,7 +54,8 @@ case ${encoder} in
         apply_bpe -c ${out}/data/bpe-codes.${vocab_size} < ${test_src} > ${out}/data/test.${src_language}.bpe
         apply_bpe -c ${out}/data/bpe-codes.${vocab_size} < ${train_tgt} > $out/data/train.${tgt_language}.bpe
         apply_bpe -c ${out}/data/bpe-codes.${vocab_size} < ${valid_tgt} > ${out}/data/valid.${tgt_language}.bpe
-        cp ${test_tgt} ${out}/data/test.${tgt_language}.bpe;;
+        apply_bpe -c ${out}/data/bpe-codes.${vocab_size} < ${test_tgt} > ${out}/data/test.${tgt_language}.bpe
+        cp ${test_tgt} ${out}/test/test.${tgt_language} ;;
 esac
 
 python ${TF}/preprocess.py -i ${out}/data \

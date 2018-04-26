@@ -75,8 +75,7 @@ if __name__ == "__main__":
     target_data = make_dataset(target_path, w2id, args.tok)
     assert len(source_data) == len(target_data)
     train_data = [(s, t) for s, t in zip(source_data, target_data)
-                  if 0 < len(s) < args.max_seq_length
-                  and 0 < len(t) < args.max_seq_length]
+                  if 0 < len(s) and 0 < len(t)]
 
     # Display corpus statistics
     print("Vocab: {}".format(len(vocab)))

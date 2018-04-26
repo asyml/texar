@@ -32,7 +32,6 @@ if __name__ == "__main__":
     logging.shutdown()
     reload(logging)
     logging_file = os.path.join(args.log_dir, 'logging.txt')
-    print('logging file path:{}'.format(logging_file))
     logging.basicConfig(filename=logging_file, \
         format='%(asctime)s:%(levelname)s:%(message)s',\
         level=logging.INFO)
@@ -53,11 +52,7 @@ if __name__ == "__main__":
     ori_src_text = text_data_batch['source_text_ids']
     ori_tgt_text = text_data_batch['target_text_ids']
 
-    if args.load_from_pytorch:
-        encoder_input = ori_src_text
-    else:
-        encoder_input = ori_src_text[:, 1:]
-
+    encoder_input = ori_src_text
     decoder_input = ori_tgt_text[:, :-1]
     labels = ori_tgt_text[:, 1:]
 
@@ -154,13 +149,10 @@ if __name__ == "__main__":
                     _fetches['target'], _fetches['loss'], _fetches['mgd']
                 if args.draw_for_debug:
                     loss_lists.append(loss)
-                if step % 100 == 0:
+                if step % 3000 == 0:
                     logging.info('step:{} source:{} targets:{} loss:{}'.format(\
                         step, source.shape, target.shape, loss))
                 writer.add_summary(mgd, global_step=step)
-                if step % 3000 == 0:
-                    print('step:{} loss:{}'.format(step, loss))
-                    #normal_saver.save(sess, args.log_dir+'my-model', global_step=step)
                 if step == opt_hparams['max_training_steps']:
                     print('reach max training steps:{} loss:{}'.format(step, loss))
                     logging.info('reached max training steps')
@@ -193,7 +185,7 @@ if __name__ == "__main__":
                 feed = {context.global_mode(): tf.estimator.ModeKeys.EVAL}
                 _fetches = sess.run(fetches, feed_dict=feed)
                 sources, sampled_ids, targets = \
-                    _fetches['source'][:, 1:].tolist(), \
+                    _fetches['source'].tolist(), \
                     _fetches['predictions']['sampled_ids'][:, 0, :].tolist(), \
                     _fetches['target'][:, 1:].tolist()
                 eval_loss.append(_fetches['mle_loss'])
@@ -260,7 +252,7 @@ if __name__ == "__main__":
                 feed = {context.global_mode(): tf.estimator.ModeKeys.PREDICT}
                 _fetches = sess.run(fetches, feed_dict=feed)
                 sources, sampled_ids, targets = \
-                    _fetches['source'][:, 1:].tolist(), \
+                    _fetches['source'].tolist(), \
                     _fetches['predictions']['sampled_ids'][:, 0, :].tolist(), \
                     _fetches['target'][:, 1:].tolist()
                 test_loss.append(_fetches['mle_loss'])
@@ -334,9 +326,9 @@ if __name__ == "__main__":
                         eval_saver.save(sess, args.log_dir+'my-model-highest_bleu.ckpt')
                         highest_bleu = eval_score
                         best_epoch = epoch
-
                 if status == 'finished':
                     logging.info('saving model for max training steps')
+                    eval_saver.save(sess, args.log_dir+'/max/my-model-highest_bleu.ckpt')
                     break
         elif args.running_mode == 'test':
             if args.load_from_pytorch:
@@ -352,13 +344,18 @@ if __name__ == "__main__":
                 print('loaded model from pytorch {}'.format(modelpath))
             elif args.model_dir == 'default':
                 args.model_dir = args.log_dir
-                print('load model from {}'.format(args.model_dir))
                 eval_saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
+                mname = tf.train.latest_checkpoint(args.model_dir).split('/')[-1]
+            elif args.model_dir == 'max':
+                args.model_dir = args.log_dir + './max/'
+                eval_saver.restore(sess. tf.train.latest_checkpoint(args.model_dir))
                 mname = tf.train.latest_checkpoint(args.model_dir).split('/')[-1]
             else:
                 print('load model from {}'.format(args.model_fullpath))
                 mname = args.model_fullpaths.split('/')[-1]
                 eval_saver.restore(sess, args.model_fullpath)
+            logging.info('test data src:{}'.format(args.test_src))
+            logging.info('test data tgt:{}'.format(args.test_tgt))
             _test_epoch(sess, mname)
         else:
             raise NotImplementedError
