@@ -5,18 +5,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-# pylint: disable=too-many-instance-attributes, too-many-arguments
+# pylint: disable=too-many-instance-attributes, too-many-arguments, no-member
 
 import numpy as np
 
 import tensorflow as tf
 
 from texar.agents.agent_base import AgentBase
-from texar.utils import utils
 from texar.core import optimization as opt
 from texar.losses import pg_losses as losses
 
-# TODO(zhiting): Inherits from PGAgent ?
 class SeqPGAgent(AgentBase):
     """Policy Gradient agent for sequence prediction.
 
@@ -26,6 +24,7 @@ class SeqPGAgent(AgentBase):
     def __init__(self,
                  samples,
                  logits,
+                 sequence_length,
                  trainable_variables=None,
                  learning_rate=None,
                  sess=None,
@@ -37,35 +36,44 @@ class SeqPGAgent(AgentBase):
 
         self._samples = samples
         self._logits = logits
+        self._sequence_length = sequence_length
         self._trainable_variables = trainable_variables
 
-        self._rewards = []
-
-        self._train_outputs = None
+        self._samples_py = None
+        self._rewards = None
 
         self._build_graph()
 
     def _build_graph(self):
         with tf.variable_scope(self.variable_scope):
-
-            #self._qvalue_inputs = tf.placeholder(
-            #    dtype=tf.float32,
-            #    shape=[None, ],
-            #    name='qvalue_inputs')
+            self._qvalue_inputs = tf.placeholder(
+                dtype=tf.float32,
+                shape=[None, None],
+                name='qvalue_inputs')
 
             self._pg_loss = self._get_pg_loss()
 
             self._train_op = self._get_train_op()
 
     def _get_pg_loss(self):
-        pg_loss = losses.pg_loss_with_log_probs(
-            log_probs=log_probs, advantages=self._qvalue_inputs)
+        loss_hparams = self._hparams.loss
+        pg_loss = losses.pg_loss_with_logits(
+            actions=self._samples,
+            logits=self._logits,
+            sequence_length=self._sequence_length,
+            advantages=self._qvalue_inputs,
+            batched=True,
+            average_across_batch=loss_hparams.average_across_batch,
+            average_across_timesteps=loss_hparams.average_across_timesteps,
+            sum_over_batch=loss_hparams.sum_over_batch,
+            sum_over_timesteps=loss_hparams.sum_over_timesteps,
+            time_major=loss_hparams.time_major)
         return pg_loss
 
     def _get_train_op(self):
         train_op = opt.get_train_op(
             loss=self._pg_loss,
-            variables=self._policy.trainable_variables,
+            variables=self._trainable_variables,
             learning_rate=self._lr,
             hparams=self._hparams.optimization.todict())
         return train_op
@@ -76,34 +84,48 @@ class SeqPGAgent(AgentBase):
             'discount_factor': 0.95,
             'policy_type': 'CategoricalPolicyNet',
             'policy_hparams': None,
+            'loss': {
+                'average_across_batch': True,
+                'average_across_timesteps': False,
+                'sum_over_batch': False,
+                'sum_over_timesteps': True,
+                'time_major': False
+            },
             'optimization': opt.default_optimization_hparams(),
             'name': 'pg_agent',
         }
 
-    def _reset(self):
-        self._observs = []
-        self._actions = []
-        self._rewards = []
+    def get_samples(self, feed_dict):
+        """TODO
+        """
+        if self._sess is None:
+            raise ValueError('`sess` must be specified before sampling.')
 
-    def _get_action(self, observ, feed_dict):
-        fetches = dict(action=self._outputs['action'])
-
-        feed_dict_ = {self._observ_inputs: [observ, ]}
-        feed_dict_.update(feed_dict or {})
+        fetches = dict(samples=self._samples)
+        feed_dict_ = feed_dict
 
         vals = self._sess.run(fetches, feed_dict=feed_dict_)
-        action = vals['action']
+        samples = vals['samples']
 
-        self._observs.append(observ)
-        self._actions.append(action)
+        self._samples_py = samples
 
-        return action
+        return samples
 
-    def _observe(self, reward, terminal, train_policy, feed_dict):
-        self._rewards.append(reward)
+    #TODO(zhiting): Allow local rewards
+    def observe(self, reward, train_policy, feed_dict):
+        """
 
-        if terminal and train_policy:
+        Args:
+            reward: A Python array of shape `[batch_size]`.
+            TODO
+        """
+        self._rewards = reward
+
+        if train_policy:
             self._train_policy(feed_dict=feed_dict)
+        else:
+            pass
+            #TODO(zhiting): return policy loss
 
     def _train_policy(self, feed_dict=None):
         """Updates the policy.
@@ -112,9 +134,16 @@ class SeqPGAgent(AgentBase):
             TODO
         """
         discount_factor = self._hparams.discount_factor
-        qvalues = list(self._rewards)
-        for i in range(len(qvalues) - 2, -1, -1):
-            qvalues[i] += discount_factor * qvalues[i + 1]
+
+        qvalues = np.array(self._rewards)
+        qvalues = np.expand_dims(qvalues, -1)
+        max_seq_length = self._samples_py.shape[1]
+        if max_seq_length > 1:
+            prefix = np.zeros(
+                [qvalues.shape[0], max_seq_length-1], dtype=qvalues.dtype)
+            qvalues = np.concatenate([prefix, qvalues])
+            for i in range(max_seq_length - 2, -1, -1):
+                qvalues[:, i] += discount_factor * qvalues[:, i + 1]
 
         q_mean = np.mean(qvalues)
         q_std = np.std(qvalues)
@@ -122,13 +151,13 @@ class SeqPGAgent(AgentBase):
 
         fetches = dict(loss=self._train_op)
         feed_dict_ = {
-            self._observ_inputs: self._observs,
-            self._action_inputs: self._actions,
             self._qvalue_inputs: qvalues
         }
         feed_dict_.update(feed_dict or {})
 
-        self._train_outputs = self._sess.run(fetches, feed_dict=feed_dict_)
+        vals = self._sess.run(fetches, feed_dict=feed_dict_)
+
+        return vals['loss']
 
     @property
     def sess(self):
