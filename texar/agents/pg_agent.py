@@ -84,7 +84,10 @@ class PGAgent(AgentBase):
     def _get_pg_loss(self):
         log_probs = self._outputs['dist'].log_prob(self._action_inputs)
         pg_loss = losses.pg_loss_with_log_probs(
-            log_probs=log_probs, advantages=self._qvalue_inputs)
+            log_probs=log_probs,
+            advantages=self._qvalue_inputs,
+            average_across_timesteps=True,
+            sum_over_timesteps=False)
         return pg_loss
 
     def _get_train_op(self):
@@ -164,3 +167,9 @@ class PGAgent(AgentBase):
     @sess.setter
     def sess(self, session):
         self._sess = session
+
+    @property
+    def policy(self):
+        """The policy model.
+        """
+        return self._policy

@@ -24,30 +24,21 @@ class SeqPGAgent(AgentBase):
         TODO
     """
     def __init__(self,
-                 sess=None,
-                 policy=None,
-                 policy_kwargs=None,
-                 policy_caller_kwargs=None,
+                 samples,
+                 logits,
+                 trainable_variables=None,
                  learning_rate=None,
+                 sess=None,
                  hparams=None):
         AgentBase.__init__(self, None, hparams)
 
         self._sess = sess
         self._lr = learning_rate
 
-        with tf.variable_scope(self.variable_scope):
-            if policy is None:
-                kwargs = utils.get_instance_kwargs(
-                    policy_kwargs, self._hparams.policy_hparams)
-                policy = utils.check_or_get_instance(
-                    self._hparams.policy_type,
-                    kwargs,
-                    module_paths=['texar.modules', 'texar.custom'])
-            self._policy = policy
-            self._policy_caller_kwargs = policy_caller_kwargs or {}
+        self._samples = samples
+        self._logits = logits
+        self._trainable_variables = trainable_variables
 
-        self._observs = []
-        self._actions = []
         self._rewards = []
 
         self._train_outputs = None
@@ -56,32 +47,17 @@ class SeqPGAgent(AgentBase):
 
     def _build_graph(self):
         with tf.variable_scope(self.variable_scope):
-            self._observ_inputs = tf.placeholder(
-                dtype=self._env_config.observ_dtype,
-                shape=[None, ] + list(self._env_config.observ_shape),
-                name='observ_inputs')
-            self._action_inputs = tf.placeholder(
-                dtype=self._env_config.action_dtype,
-                shape=[None, ] + list(self._env_config.action_shape),
-                name='action_inputs')
-            self._qvalue_inputs = tf.placeholder(
-                dtype=tf.float32,
-                shape=[None, ],
-                name='qvalue_inputs')
 
-            self._outputs = self._get_policy_outputs()
+            #self._qvalue_inputs = tf.placeholder(
+            #    dtype=tf.float32,
+            #    shape=[None, ],
+            #    name='qvalue_inputs')
 
             self._pg_loss = self._get_pg_loss()
 
             self._train_op = self._get_train_op()
 
-    def _get_policy_outputs(self):
-        outputs = self._policy(
-            inputs=self._observ_inputs, **self._policy_caller_kwargs)
-        return outputs
-
     def _get_pg_loss(self):
-        log_probs = self._outputs['dist'].log_prob(self._action_inputs)
         pg_loss = losses.pg_loss_with_log_probs(
             log_probs=log_probs, advantages=self._qvalue_inputs)
         return pg_loss
