@@ -11,11 +11,11 @@ import numpy as np
 
 import tensorflow as tf
 
-from texar.agents.agent_base import AgentBase
+from texar.agents.seq_agent_base import SeqAgentBase
 from texar.core import optimization as opt
 from texar.losses import pg_losses as losses
 
-class SeqPGAgent(AgentBase):
+class SeqPGAgent(SeqAgentBase):
     """Policy Gradient agent for sequence prediction.
 
     Args:
@@ -29,7 +29,7 @@ class SeqPGAgent(AgentBase):
                  learning_rate=None,
                  sess=None,
                  hparams=None):
-        AgentBase.__init__(self, None, hparams)
+        SeqAgentBase.__init__(self, hparams)
 
         self._sess = sess
         self._lr = learning_rate
