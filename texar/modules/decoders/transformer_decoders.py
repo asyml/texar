@@ -41,9 +41,10 @@ class TransformerDecoder(ModuleBase):
         if self._hparams.use_embedding:
             if embedding is None and vocab_size is None:
                 raise ValueError("If 'embedding' is not provided, 'vocab_size' must be specified.")
-            if isinstance(embedding, tf.Tensor):
+            if isinstance(embedding, tf.Tensor) or isinstance(embedding, tf.Variable):
                 self._embedding = embedding
             else:
+                raise NotImplementedError
                 self._embedding = embedder_utils.get_embedding(
                     self._hparams.embedding, embedding, vocab_size,
                     variable_scope=self.variable_scope)
@@ -65,7 +66,8 @@ class TransformerDecoder(ModuleBase):
             "name":"decoder",
             "num_heads":8,
             "num_blocks":6,
-            "zero_pad": True,
+            "zero_pad": False,
+            "bos_pad": False,
             "max_seq_length":10,
             "maximum_decode_length":10,
             "beam_width":1,
@@ -173,6 +175,7 @@ class TransformerDecoder(ModuleBase):
                cache=None
         ):
         inputs =layers.add_timing_signal_1d(inputs)
+
         decoder_output = self._self_attention_stack(
             inputs,
             encoder_output,
@@ -246,15 +249,17 @@ class TransformerDecoder(ModuleBase):
 
     def build_output_layer(self, num_units):
         if self._hparams.share_embed_and_transform:
-            with tf.variable_scope(self.variable_scope):
-                affine_bias = tf.get_variable('affine_bias',
-                    [self._vocab_size])
-            affine_bias = None
+            if self._hparams.transform_with_bias:
+                with tf.variable_scope(self.variable_scope):
+                    affine_bias = tf.get_variable('affine_bias',
+                        [self._vocab_size])
+            else:
+                affine_bias = None
             def outputs_to_logits(outputs):
                 shape = layers.shape_list(outputs)
                 outputs = tf.reshape(outputs, [-1, num_units])
                 logits = tf.matmul(outputs, self._embedding, transpose_b=True)
-                if affine_bias:
+                if affine_bias is not None:
                     logits += affine_bias
                 logits = tf.reshape(logits, shape[:-1] + [self._vocab_size])
                 return logits
