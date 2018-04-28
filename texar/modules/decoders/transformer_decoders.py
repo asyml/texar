@@ -116,6 +116,10 @@ class TransformerDecoder(ModuleBase):
             decoder_self_attention_bias = (
                 attentions.attention_bias_lower_triangle(
                     layers.shape_list(targets)[1]))
+            decoder_self_attention_bias = tf.Print(decoder_self_attention_bias,
+                [tf.shape(decoder_self_attention_bias), decoder_self_attention_bias],
+                message='decoder self attention bias',
+                summarize=2048)
             target_inputs = tf.nn.embedding_lookup(self._embedding, targets)
             if self._hparams.multiply_embedding_mode == 'sqrt_depth':
                 target_inputs = target_inputs * \

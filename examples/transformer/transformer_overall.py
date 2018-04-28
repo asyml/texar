@@ -39,7 +39,6 @@ if __name__ == "__main__":
     tf.set_random_seed(1234)
     np.random.seed(1234)
     random.seed(1234)
-    hidden_dim = 512
     # Construct the database
     train_database = tx.data.PairedTextData(train_dataset_hparams)
     eval_database = tx.data.PairedTextData(eval_dataset_hparams)
@@ -328,6 +327,7 @@ if __name__ == "__main__":
                         best_epoch = epoch
                 if status == 'finished':
                     logging.info('saving model for max training steps')
+                    os.makedirs(args.log_dir+'/max/')
                     eval_saver.save(sess, args.log_dir+'/max/my-model-highest_bleu.ckpt')
                     break
         elif args.running_mode == 'test':
@@ -344,14 +344,16 @@ if __name__ == "__main__":
                 print('loaded model from pytorch {}'.format(modelpath))
             elif args.model_dir == 'default':
                 args.model_dir = args.log_dir
+                logging.info('test model from:{}'.format(args.model_dir))
                 eval_saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
                 mname = tf.train.latest_checkpoint(args.model_dir).split('/')[-1]
             elif args.model_dir == 'max':
-                args.model_dir = args.log_dir + './max/'
-                eval_saver.restore(sess. tf.train.latest_checkpoint(args.model_dir))
+                args.model_dir = args.log_dir + '/max/'
+                logging.info('test model from:{}'.format(args.model_dir))
+                eval_saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
                 mname = tf.train.latest_checkpoint(args.model_dir).split('/')[-1]
             else:
-                print('load model from {}'.format(args.model_fullpath))
+                logging.info('test model from {}'.format(args.model_fullpath))
                 mname = args.model_fullpaths.split('/')[-1]
                 eval_saver.restore(sess, args.model_fullpath)
             logging.info('test data src:{}'.format(args.test_src))

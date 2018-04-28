@@ -39,7 +39,6 @@ class TransformerEncoder(EncoderBase):
                  vocab_size=None,
                  hparams=None):
         EncoderBase.__init__(self, hparams)
-
         self._vocab_size = vocab_size
         self._embedding = None
         self.enc = None
@@ -47,6 +46,7 @@ class TransformerEncoder(EncoderBase):
             if self._hparams.initializer:
                 tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
+
         if self._hparams.use_embedding:
             if isinstance(embedding, tf.Variable):
                 self._embedding = embedding
@@ -121,11 +121,13 @@ class TransformerEncoder(EncoderBase):
         }
 
     def _build(self, inputs,  **kwargs):
-
         self.enc = tf.nn.embedding_lookup(self._embedding, inputs)
         batch_size, length, channels = layers.shape_list(self.enc)
         if self._hparams.multiply_embedding_mode =='sqrt_depth':
             self.enc = self.enc * channels**0.5
+
+        self.enc = tf.Print(self.enc, [tf.shape(self.enc), self.enc],
+            summarize=2048, message='encoder input embedding')
 
         encoder_padding = utils.embedding_to_padding(self.enc)
         ignore_padding = attentions.attention_bias_ignore_padding(encoder_padding)

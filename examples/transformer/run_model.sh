@@ -1,5 +1,3 @@
-mode=$1
-
 if [ -z $3 ]; then
     src_language=en
 else
@@ -11,6 +9,7 @@ if [ -z $4 ]; then
 else
     tgt_language=$4
 fi
+
 
 MAX_TRAINING_STEPS=125000
 MAX_EPOCH=15
@@ -26,17 +25,25 @@ DATA_DIR="./temp/run_${src_language}_${tgt_language}_${encoder}/data/"
 LOG_DISK_DIR=/space/shr/transformer_${ENCODER}/
 hparams_set=$1
 running_mode=$2
+echo "mode:${running_mode}"
+if [ ${running_mode}x = "test"x ] ; then
+    if [ ${5}x = "max"x ]; then
+        model_dir="max"
+    else
+        model_dir="default"
+    fi
+fi
 
 case ${hparams_set} in
     100)
-    echo 'running the model according to tensor2tensor default hparams'
+    echo 'running the model according to tensor2tensor hparams on small dataset'
     echo "mode ${running_mode} ${src_language}-${tgt_language} "
     python transformer_overall.py --running_mode=${running_mode} --max_train_epoch=70 --max_training_steps=125000 \
         --pre_encoding=${encoder} \
-        --data_dir=${DATA_DIR} \
+        --data_dir=${DATA_DIR}  --model_dir=${model_dir}\
         --src_language=${src_language} --tgt_language=${tgt_language} \
         --batch_size=2048 --test_batch_size=32 \
-        --beam_width=5 --alpha=0.6\
+        --beam_width=5 --alpha=0.6 --max_seq_length=70 --max_decode_len=70 \
         --log_disk_dir=/space/shr/transformer_${encoder}/ \
         --draw_for_debug=0 --affine_bias=0 --eval_interval_epoch=1 \
         --zero_pad=1 --bos_pad=1 \
