@@ -52,5 +52,6 @@ case ${encoder} in
 esac
 echo "reference ${test_tgt}"
 echo "translation ${model_dir}/test.out"
-t2t-bleu --reference=${test_tgt} --translation=${model_dir}/test.out
+cmd="python bleu_tool.py --reference=${test_tgt} --translation=${model_dir}/test.out"
+eval $cmd
 

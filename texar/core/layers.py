@@ -1195,9 +1195,9 @@ def multihead_attention(queries,
             K = tf.layers.dense(queries, num_units, use_bias=False, name='k')
             V = tf.layers.dense(queries, num_units, use_bias=False, name='v')
             if cache is not None:
-                # 'decoder self attention'
-                K = cache['self_keys'] = tf.concat([cache['self_keys'], K], axis=1)
-                V = cache['self_values'] = tf.concat([cache['self_values'], V], axis=1)
+                # 'decoder self attention when dynamic decoding'
+                K = tf.concat([cache['self_keys'], K], axis=1)
+                V = tf.concat([cache['self_values'], V], axis=1)
                 cache['self_keys'] = K
                 cache['self_values'] = V
         else:
@@ -1212,10 +1212,11 @@ def multihead_attention(queries,
             else:
                 K, V = [tf.layers.dense(memory, num_units, use_bias=False, name='k'),
                         tf.layers.dense(memory, num_units, use_bias=False, name='v')]
+
         Q_ = split_heads(Q, num_heads)
-        #[batch_size, num_heads, seq_length, memory_depth]
         K_ = split_heads(K, num_heads)
         V_ = split_heads(V, num_heads)
+        #[batch_size, num_heads, seq_length, memory_depth]
         key_depth_per_head = num_units // num_heads
         Q_ *= key_depth_per_head**-0.5
 
@@ -1225,7 +1226,6 @@ def multihead_attention(queries,
         weights = tf.nn.softmax(logits, name="attention_weights")
         weights = tf.layers.dropout(
             weights, rate=dropout_rate, training=context.global_mode_train())
-
         outputs = tf.matmul(weights, V_)
 
         outputs = combine_heads(outputs)
@@ -1234,7 +1234,6 @@ def multihead_attention(queries,
     return outputs
 
 def layer_normalize(inputs,
-              #epsilon=1e-6, it seems in t2t, it's 1e-6
               epsilon=1e-8,
               scope='ln',
               reuse=None):
@@ -1268,6 +1267,7 @@ def split_heads(x, num_heads):
     splitted_x = tf.reshape(x, [tf.shape(x)[0], tf.shape(x)[1], \
         num_heads, depth // num_heads])
     return tf.transpose(splitted_x, [0, 2, 1, 3])
+
 def combine_heads(x):
     """
     input: [batch, num_heads, seq_len, dim]
@@ -1276,6 +1276,7 @@ def combine_heads(x):
     t = tf.transpose(x, [0, 2, 1, 3]) #[batch, seq_len, num_heads, dim]
     num_heads, dim = t.get_shape()[-2:]
     return tf.reshape(t, [tf.shape(t)[0], tf.shape(t)[1], num_heads*dim])
+
 
 def shape_list(x):
     """Return list of dims, statically where possible."""
@@ -1294,32 +1295,31 @@ def shape_list(x):
     return ret
 
 def ones_matrix_band_part(rows, cols, num_lower, num_upper, out_shape=None):
-  """Matrix band part of ones."""
-  if all([isinstance(el, int) for el in [rows, cols, num_lower, num_upper]]):
+    """Matrix band part of ones."""
+    if all([isinstance(el, int) for el in [rows, cols, num_lower, num_upper]]):
     # Needed info is constant, so we construct in numpy
-    if num_lower < 0:
-      num_lower = rows - 1
-    if num_upper < 0:
-      num_upper = cols - 1
-    lower_mask = np.tri(cols, rows, num_lower).T
-    upper_mask = np.tri(rows, cols, num_upper)
-    band = np.ones((rows, cols)) * lower_mask * upper_mask
-    if out_shape:
-      band = band.reshape(out_shape)
-    band = tf.constant(band, tf.float32)
-  else:
-    band = tf.matrix_band_part(tf.ones([rows, cols]),
+        if num_lower < 0:
+            num_lower = rows - 1
+        if num_upper < 0:
+            num_upper = cols - 1
+        lower_mask = np.tri(cols, rows, num_lower).T
+        upper_mask = np.tri(rows, cols, num_upper)
+        band = np.ones((rows, cols)) * lower_mask * upper_mask
+        if out_shape:
+            band = band.reshape(out_shape)
+        band = tf.constant(band, tf.float32)
+    else:
+        band = tf.matrix_band_part(tf.ones([rows, cols]),
                                tf.cast(num_lower, tf.int64),
                                tf.cast(num_upper, tf.int64))
-    if out_shape:
-      band = tf.reshape(band, out_shape)
-
-  return band
+        if out_shape:
+            band = tf.reshape(band, out_shape)
+    return band
 
 def get_timing_signal_1d(length,
-                                                 channels,
-                                                 min_timescale=1.0,
-                                                 max_timescale=1.0e4):
+                         channels,
+                         min_timescale=1.0,
+                         max_timescale=1.0e4):
     """Gets a bunch of sinusoids of different frequencies.
     Each channel of the input Tensor is incremented by a sinusoid of a different
     frequency and phase.

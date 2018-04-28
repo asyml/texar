@@ -47,7 +47,6 @@ def count_words(path, max_vocab_size=40000, tok=False):
 
 
 def make_dataset(path, w2id, tok=False):
-    # w2id = {word: index for index, word in enumerate(vocab)}
     dataset = []
     for words in read_file(path, tok):
         dataset.append(words)
@@ -75,7 +74,8 @@ if __name__ == "__main__":
     target_data = make_dataset(target_path, w2id, args.tok)
     assert len(source_data) == len(target_data)
     train_data = [(s, t) for s, t in zip(source_data, target_data)
-                  if 0 < len(s) and 0 < len(t)]
+                  if 0 < len(s) < args.max_seq_length
+                  and 0 < len(t) < args.max_seq_length]
 
     # Display corpus statistics
     print("Vocab: {}".format(len(vocab)))
@@ -86,7 +86,6 @@ if __name__ == "__main__":
     source_path = os.path.join(args.input_dir, args.source_valid)
     source_data = make_dataset(source_path, w2id, args.tok)
     target_path = os.path.join(args.input_dir, args.target_valid)
-
     target_data = make_dataset(target_path, w2id, args.tok)
     assert len(source_data) == len(target_data)
     valid_data = [(s, t) for s, t in zip(source_data, target_data)

@@ -43,9 +43,14 @@ if __name__ == "__main__":
     train_database = tx.data.PairedTextData(train_dataset_hparams)
     eval_database = tx.data.PairedTextData(eval_dataset_hparams)
     test_database = tx.data.PairedTextData(test_dataset_hparams)
-    iterator = tx.data.TrainTestDataIterator(train=train_database,\
-            val=eval_database,
-            test=test_database)
+
+    logging.info('train_database hparams:{}'.format(train_database._hparams))
+    logging.info('eval_database hparams:{}'.format(eval_database._hparams))
+    logging.info('test_database hparams:{}'.format(test_database._hparams))
+
+    iterator = tx.data.TrainTestDataIterator(train=train_database,
+                                             val=eval_database,
+                                             test=test_database)
     text_data_batch = iterator.get_next()
 
     ori_src_text = text_data_batch['source_text_ids']
@@ -62,17 +67,18 @@ if __name__ == "__main__":
         vocab_size=train_database.source_vocab.size,
         hparams=args.word_embedding_hparams,
     )
-
+    logging.info('WordEmbedder hparams:{}'.format(WordEmbedder._hparams))
     encoder = TransformerEncoder(
         embedding=WordEmbedder._embedding,
         vocab_size=train_database.source_vocab.size,\
         hparams=encoder_hparams)
-    encoder_output, encoder_decoder_attention_bias = encoder(
-        encoder_input, inputs_length=enc_input_length)
+    logging.info('encoder hparams:{}'.format(encoder._hparams))
+    encoder_output, encoder_decoder_attention_bias = encoder(encoder_input)
 
     decoder = TransformerDecoder(
-        embedding = encoder._embedding,
+        embedding=encoder._embedding,
         hparams=decoder_hparams)
+    logging.info('decode hparams:{}'.format(decoder._hparams))
     logits, preds = decoder(
         decoder_input,
         encoder_output,
@@ -118,13 +124,11 @@ if __name__ == "__main__":
     tf.summary.scalar('lr', learning_rate)
     merged = tf.summary.merge_all()
     eval_saver = tf.train.Saver(max_to_keep=5)
-
     config = tf.ConfigProto(
         allow_soft_placement=True)
-    config.gpu_options.allow_growth=True
+    config.gpu_options.allow_growth = True
 
     vocab = train_database.source_vocab
-
     #graph = tf.get_default_graph()
     #graph.finalize()
 
@@ -212,17 +216,24 @@ if __name__ == "__main__":
             for hyp, tgt in zip(hypothesis_list, targets_list):
                 tmpfile.write(' '.join(hyp) + '\n')
                 tmpreffile.write(' '.join(tgt) + '\n')
-        eval_bleu = float(100 * bleu_tool.bleu_wrapper(refer_tmp_filename,
-            outputs_tmp_filename, case_sensitive=True))
+        eval_bleu = float(100 * bleu_tool.bleu_wrapper(\
+            refer_tmp_filename,outputs_tmp_filename, case_sensitive=True))
         eval_loss = float(np.sum(np.array(eval_loss)))
-        print('epoch:{} eval_blue:{} eval_loss:{}'.format(epoch, \
+        print('epoch:{} eval_bleu:{} eval_loss:{}'.format(epoch, \
             eval_bleu, eval_loss))
         logging.info('epoch:{} eval_bleu:{} eval_loss:{}'.format(epoch, \
             eval_bleu, eval_loss))
         if args.save_eval_output:
-            with codecs.open(args.log_dir + 'my_model_epoch{}.beam{}alpha{}.outputs.bleu{:.3f}'.format(epoch, args.beam_width, args.alpha, eval_bleu), 'w+', 'utf-8') as outputfile, \
-                    codecs.open(args.log_dir + 'my_model_epoch{}.beam{}alpha{}.results.bleu{:.3f}'.format(epoch, args.beam_width, args.alpha, eval_bleu), 'w+', 'utf-8') as resultfile:
-                for src, tgt, hyp in zip(sources_list, targets_list, hypothesis_list):
+            with codecs.open(args.log_dir + \
+                'my_model_epoch{}.beam{}alpha{}.outputs.bleu{:.3f}'.format(\
+                epoch, args.beam_width, args.alpha, eval_bleu), 'w+', 'utf-8')\
+                as outputfile, \
+                codecs.open(args.log_dir + \
+                'my_model_epoch{}.beam{}alpha{}.results.bleu{:.3f}'.format(\
+                epoch, args.beam_width, args.alpha, eval_bleu),
+                'w+', 'utf-8') as resultfile:
+                for src, tgt, hyp in zip(sources_list, targets_list, \
+                    hypothesis_list):
                     outputfile.write(' '.join(hyp) + '\n')
                     resultfile.write("- source: " + ' '.join(src) + '\n')
                     resultfile.write("- expected: " + ' '.join(tgt) + '\n')
@@ -286,9 +297,9 @@ if __name__ == "__main__":
         test_bleu = float(100 * bleu_tool.bleu_wrapper(refer_tmp_filename,
             outputs_tmp_filename, case_sensitive=True))
         test_loss = float(np.sum(np.array(test_loss)))
-        print('epoch:{} test_blue:{} test_loss:{}'.format(epoch, \
+        print('epoch:{} test_bleu:{} test_loss:{}'.format(epoch, \
             test_bleu, test_loss))
-        logging.info('epoch:{} test_blue:{} test_loss:{}'.format(epoch, \
+        logging.info('epoch:{} test_bleu:{} test_loss:{}'.format(epoch, \
             test_bleu, test_loss))
         return {'loss': test_loss,
                 'bleu': test_bleu}

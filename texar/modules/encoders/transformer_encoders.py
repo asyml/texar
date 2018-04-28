@@ -122,29 +122,24 @@ class TransformerEncoder(EncoderBase):
 
     def _build(self, inputs,  **kwargs):
         self.enc = tf.nn.embedding_lookup(self._embedding, inputs)
-        batch_size, length, channels = layers.shape_list(self.enc)
+        _, _, channels = layers.shape_list(self.enc)
         if self._hparams.multiply_embedding_mode =='sqrt_depth':
             self.enc = self.enc * channels**0.5
-
-        self.enc = tf.Print(self.enc, [tf.shape(self.enc), self.enc],
-            summarize=2048, message='encoder input embedding')
 
         encoder_padding = utils.embedding_to_padding(self.enc)
         ignore_padding = attentions.attention_bias_ignore_padding(encoder_padding)
         encoder_self_attention_bias = ignore_padding
         encoder_decoder_attention_bias = ignore_padding
+
         if self.target_symbol_embedding:
             emb_target_space = tf.reshape(self.target_symbol_embedding, [1,1,-1])
             self.enc = self.enc + emb_target_space
 
         self.enc = layers.add_timing_signal_1d(self.enc)
+
         self.enc = tf.layers.dropout(self.enc,
             rate=self._hparams.embedding_dropout,
             training=context.global_mode_train())
-
-        #self.enc = tf.Print(self.enc, [tf.shape(self.enc), self.enc], \
-        #     message='encoded encoder embedding input',
-        #     summarize=1536)
 
         pad_remover = utils.padding_related.PadRemover(encoder_padding)
         for i in range(self._hparams.num_blocks):
@@ -164,11 +159,12 @@ class TransformerEncoder(EncoderBase):
                         rate=self._hparams.residual_dropout,
                         training=context.global_mode_train()
                     )
-                poswise_network = FeedForwardNetwork(hparams=self._hparams['poswise_feedforward'])
+                poswise_network = FeedForwardNetwork(
+                    hparams=self._hparams['poswise_feedforward'])
                 with tf.variable_scope(poswise_network.variable_scope):
                     x = layers.layer_normalize(self.enc)
                     original_shape = layers.shape_list(x)
-                    x = tf.reshape(x, tf.concat([[-1], original_shape[2:]], axis=0))
+                    x = tf.reshape(x, [-1, self._hparams.num_units])
                     x = tf.expand_dims(pad_remover.remove(x), axis=0)
                     #[1, batch_size*seq_length, hidden_dim]
                     sub_output = tf.layers.dropout(
@@ -180,14 +176,7 @@ class TransformerEncoder(EncoderBase):
                         sub_output, axis=0)), original_shape
                     )
                     self.enc = self.enc + sub_output
-                #self.enc = tf.Print(self.enc, [tf.shape(self.enc), self.enc],
-                #    message='encoder layer_{}'.format(i),
-                #    summarize=1536)
-
         self.enc = layers.layer_normalize(self.enc)
-        #self.enc = tf.Print(self.enc, [tf.shape(self.enc), self.enc],
-        #    message='normalized encoder output:',
-        #    summarize=1536)
 
         if not self._built:
             self._add_internal_trainable_variables()

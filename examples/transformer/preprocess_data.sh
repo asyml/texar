@@ -61,4 +61,5 @@ esac
 python ${TF}/preprocess.py -i ${out}/data \
     --src ${src_language}.${encoder} \
     --tgt ${tgt_language}.${encoder} \
-    --save_data processed.
+    --save_data processed. \
+    --max_seq_length=70
