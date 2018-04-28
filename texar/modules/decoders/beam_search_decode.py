@@ -8,8 +8,9 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from tensorflow.contrib.seq2seq import dynamic_decode
-from tensorflow.contrib.seq2seq import BeamSearchDecoder
+from tensorflow.contrib.seq2seq import \
+    dynamic_decode, AttentionWrapperState, AttentionWrapper, \
+    BeamSearchDecoder, tile_batch
 
 from texar.modules.decoders.rnn_decoder_base import RNNDecoderBase
 
@@ -19,12 +20,39 @@ __all__ = [
     "beam_search_decode"
 ]
 
+def _get_initial_state(initial_state,
+                       tiled_initial_state,
+                       cell,
+                       batch_size,
+                       beam_width,
+                       dtype):
+    if tiled_initial_state is None:
+        if isinstance(initial_state, AttentionWrapperState):
+            raise ValueError(
+                '`initial_state` must not be an AttentionWrapperState. Use '
+                'a plain cell state instead, which will be wrapped into an '
+                'AttentionWrapperState automatically.')
+        if initial_state is None:
+            tiled_initial_state = cell.zero_state(batch_size * beam_width,
+                                                  dtype)
+        else:
+            tiled_initial_state = tile_batch(initial_state,
+                                             multiplier=beam_width)
+
+    if isinstance(cell, AttentionWrapper) and \
+            not isinstance(tiled_initial_state, AttentionWrapperState):
+        zero_state = cell.zero_state(batch_size * beam_width, dtype)
+        tiled_initial_state = zero_state.clone(cell_state=tiled_initial_state)
+
+    return tiled_initial_state
+
 def beam_search_decode(decoder_or_cell,
                        embedding,
                        start_tokens,
                        end_token,
                        beam_width,
                        initial_state=None,
+                       tiled_initial_state=None,
                        output_layer=None,
                        length_penalty_weight=0.0,
                        max_decoding_length=None,
@@ -42,8 +70,27 @@ def beam_search_decode(decoder_or_cell,
         start_tokens: `int32` vector shaped `[batch_size]`, the start tokens.
         end_token: `int32` scalar, the token that marks end of decoding.
         beam_width: Python integer, the number of beams.
-        initial_state (optional): Initial state of decoding.
-            If `None` (default), zero state is used.
+        initial_state (optional): Initial state of decoding. The state must NOT
+            be tiled with :tf_main:`tile_batch <contrib/seq2seq/tile_batch>`.
+            If you have an already-tiled initial state, use
+            :attr:`tiled_initial_state` instead.
+
+            In the case of attention RNN decoder,:attr:`initial_state` must
+            NOT be an :tf_main:`AttentionWrapperState
+            <contrib/seq2seq/AttentionWrapperState>`. Instead, it must be a
+            state of the wrapped `RNNCell`, and the state will be wrapped into
+            `AttentionWrapperState` automatically.
+
+            If `None` (default), zero state is used. Ignored if
+            :attr:`tiled_initial_state` is given.
+        tiled_initial_state (optional): Initial state that has been tiled
+            (typicaly with :tf_main:`tile_batch <contrib/seq2seq/tile_batch>`)
+            so that the batch dimension has size `batch_size * beam_width`.
+
+            In the case of attention RNN decoder, this can be either a state
+            of the wrapped `RNNCell`, or an `AttentionWrapperState`.
+
+            If not given, :attr:`initial_state` is used.
         output_layer: (optional) An instance of `tf.layers.Layer` to apply
             to the RNN output prior to storing the result or sampling. If
             `None` and :attr:`decoder_or_cell` is a decoder, the decoder's
@@ -80,8 +127,10 @@ def beam_search_decode(decoder_or_cell,
         raise ValueError("`start_tokens` must be a vector")
     batch_size = tf.size(start_tokens)
 
-    if initial_state is None:
-        initial_state = cell.zero_state(batch_size * beam_width, tf.float32)
+    initial_state = _get_initial_state(
+        initial_state, tiled_initial_state, cell,
+        batch_size, beam_width, tf.float32)
+
     if output_layer is None and isinstance(decoder_or_cell, RNNDecoderBase):
         output_layer = decoder_or_cell.output_layer
 
