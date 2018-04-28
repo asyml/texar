@@ -11,14 +11,14 @@ import numpy as np
 
 import tensorflow as tf
 
-from texar.agents.agent_base import AgentBase
+from texar.agents.episodic_agent_base import EpisodicAgentBase
 from texar.utils import utils
 from texar.core import optimization as opt
 from texar.losses import pg_losses as losses
 
 
-class PGAgent(AgentBase):
-    """Policy Gradient Agent.
+class PGAgent(EpisodicAgentBase):
+    """Policy gradient agent for episodic setting.
 
     Args:
         TODO
@@ -31,7 +31,7 @@ class PGAgent(AgentBase):
                  policy_caller_kwargs=None,
                  learning_rate=None,
                  hparams=None):
-        AgentBase.__init__(self, env_config, hparams)
+        EpisodicAgentBase.__init__(self, env_config, hparams)
 
         self._sess = sess
         self._lr = learning_rate
@@ -84,7 +84,10 @@ class PGAgent(AgentBase):
     def _get_pg_loss(self):
         log_probs = self._outputs['dist'].log_prob(self._action_inputs)
         pg_loss = losses.pg_loss_with_log_probs(
-            log_probs=log_probs, advantages=self._qvalue_inputs)
+            log_probs=log_probs,
+            advantages=self._qvalue_inputs,
+            average_across_timesteps=True,
+            sum_over_timesteps=False)
         return pg_loss
 
     def _get_train_op(self):
@@ -138,8 +141,10 @@ class PGAgent(AgentBase):
         """
         discount_factor = self._hparams.discount_factor
         qvalues = list(self._rewards)
-        for i in range(len(qvalues) - 2, -1, -1):
-            qvalues[i] += discount_factor * qvalues[i + 1]
+        max_seq_length = len(qvalues)
+        if max_seq_length >= 2:
+            for i in range(max_seq_length - 2, -1, -1):
+                qvalues[i] += discount_factor * qvalues[i + 1]
 
         q_mean = np.mean(qvalues)
         q_std = np.std(qvalues)
@@ -164,3 +169,9 @@ class PGAgent(AgentBase):
     @sess.setter
     def sess(self, session):
         self._sess = session
+
+    @property
+    def policy(self):
+        """The policy model.
+        """
+        return self._policy
