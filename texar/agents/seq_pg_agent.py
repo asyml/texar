@@ -148,9 +148,9 @@ class SeqPGAgent(SeqAgentBase):
             for i in range(max_seq_length - 2, -1, -1):
                 qvalues[:, i] += discount_factor * qvalues[:, i + 1]
 
-        q_mean = np.mean(qvalues)
-        q_std = np.std(qvalues)
-        qvalues = [(q - q_mean) / q_std for q in qvalues]
+        #q_mean = np.mean(qvalues)
+        #q_std = np.std(qvalues)
+        #qvalues = [(q - q_mean) / q_std for q in qvalues]
 
         return qvalues
 
@@ -194,3 +194,27 @@ class SeqPGAgent(SeqAgentBase):
     @sess.setter
     def sess(self, session):
         self._sess = session
+
+    @property
+    def pg_loss(self):
+        """The scalar tensor of policy gradient loss.
+        """
+        return self._pg_loss
+
+    @property
+    def sequence_length(self):
+        """The tensor of sample sequence length, of shape `[batch_size]`.
+        """
+        return self._sequence_length
+
+    @property
+    def samples(self):
+        """The tensor of sequence samples.
+        """
+        return self._samples
+
+    @property
+    def logits(self):
+        """The tensor of sequence logits.
+        """
+        return self._logits
