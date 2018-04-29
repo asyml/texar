@@ -15,6 +15,10 @@ from texar.agents.seq_agent_base import SeqAgentBase
 from texar.core import optimization as opt
 from texar.losses import pg_losses as losses
 
+__all__ = [
+    "SeqPGAgent"
+]
+
 class SeqPGAgent(SeqAgentBase):
     """Policy Gradient agent for sequence prediction.
 
@@ -101,7 +105,9 @@ class SeqPGAgent(SeqAgentBase):
         if self._sess is None:
             raise ValueError('`sess` must be specified before sampling.')
 
-        fetches = dict(samples=self._samples)
+        fetches = dict(
+            samples=self._samples,
+            sequence_length=self._sequence_length)
         feed_dict_ = feed_dict
 
         vals = self._sess.run(fetches, feed_dict=feed_dict_)
@@ -109,10 +115,11 @@ class SeqPGAgent(SeqAgentBase):
 
         self._samples_py = samples
 
-        return samples
+        return vals['samples'], vals['sequence_length']
 
     #TODO(zhiting): Allow local rewards
-    def observe(self, reward, train_policy, feed_dict):
+    def observe(self, reward, train_policy=True,
+                return_loss=True, feed_dict=None):
         """
 
         Args:
@@ -122,17 +129,13 @@ class SeqPGAgent(SeqAgentBase):
         self._rewards = reward
 
         if train_policy:
-            self._train_policy(feed_dict=feed_dict)
+            return self._train_policy(feed_dict=feed_dict)
+        elif return_loss:
+            return self._evaluate_pg_loss(feed_dict=feed_dict)
         else:
-            pass
-            #TODO(zhiting): return policy loss
+            return None
 
-    def _train_policy(self, feed_dict=None):
-        """Updates the policy.
-
-        Args:
-            TODO
-        """
+    def _get_qvalues(self):
         discount_factor = self._hparams.discount_factor
 
         qvalues = np.array(self._rewards)
@@ -141,13 +144,36 @@ class SeqPGAgent(SeqAgentBase):
         if max_seq_length > 1:
             prefix = np.zeros(
                 [qvalues.shape[0], max_seq_length-1], dtype=qvalues.dtype)
-            qvalues = np.concatenate([prefix, qvalues])
+            qvalues = np.concatenate([prefix, qvalues], axis=1)
             for i in range(max_seq_length - 2, -1, -1):
                 qvalues[:, i] += discount_factor * qvalues[:, i + 1]
 
         q_mean = np.mean(qvalues)
         q_std = np.std(qvalues)
         qvalues = [(q - q_mean) / q_std for q in qvalues]
+
+        return qvalues
+
+    def _evaluate_pg_loss(self, feed_dict=None):
+        qvalues = self._get_qvalues()
+
+        fetches = dict(loss=self._pg_loss)
+        feed_dict_ = {
+            self._qvalue_inputs: qvalues
+        }
+        feed_dict_.update(feed_dict or {})
+
+        vals = self._sess.run(fetches, feed_dict=feed_dict_)
+
+        return vals['loss']
+
+    def _train_policy(self, feed_dict=None):
+        """Updates the policy.
+
+        Args:
+            TODO
+        """
+        qvalues = self._get_qvalues()
 
         fetches = dict(loss=self._train_op)
         feed_dict_ = {
