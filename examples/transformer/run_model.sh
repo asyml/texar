@@ -10,7 +10,7 @@ else
     tgt_language=$4
 fi
 
-encoder=wpm
+encoder=spm
 DATA_DIR="./temp/run_${src_language}_${tgt_language}_${encoder}/data/"
 hparams_set=$1
 #LOG_DISK_DIR='/home2/shr/transformeLOG_DISK_DIR=/space/shr/transformer_${ENCODER}/
@@ -38,7 +38,7 @@ case ${hparams_set} in
         --beam_width=5 --alpha=0.6 \
         --log_disk_dir=/space/shr/transformer_${encoder}/ \
         --draw_for_debug=0 --affine_bias=0 --eval_interval_epoch=1 \
-        --zero_pad=1 --bos_pad=1 \
+        --zero_pad=1 --bos_pad=0 \
         --filename_prefix=processed. &> logging_100_${running_mode}.txt;;
     200)
         echo 'running the model with bigger batch_size and training steps'
@@ -64,13 +64,15 @@ case ${hparams_set} in
         epoch=$2
         python transformer_overall.py --running_mode=test --data_dir=${DATA_DIR} \
         --src_language=${src_language} --tgt_language=${tgt_language} --test_batch_size=32 --beam_width=${beam_size} --alpha=0.6 \
-        --model_dir=/space/shr/transformer_wpm/log_dir/${src_language}_${tgt_language}.bsize${BATCH_SIZE}.epoch40.lr_c2warm16000/my-model.epoch${epoch} \
+        --model_dir=/space/shr/transformer_spm/log_dir/${src_language}_${tgt_language}.bsize${BATCH_SIZE}.epoch40.lr_c2warm16000/my-model.epoch${epoch} \
         --filename_prefix=processed.${ENCODER}. --log_disk_dir=${LOG_DISK_DIR}
     fi ;;
 
     4)
     echo 'load from pytorch model'
-    export CUDA_VISIBLE_DEVICES=0
+    src_language=en
+    tgt_language=vi
+    encoder=bpe
     python transformer_overall.py --running_mode=test --data_dir=${DATA_DIR} --filename_prefix=processed.${ENCODER}. \
         --src_language=${src_language} --tgt_language=${tgt_language} --test_batch_size=2 --beam_width=${beam_size} --alpha=0.6 \
         --load_from_pytorch=1 \

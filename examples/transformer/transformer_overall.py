@@ -6,26 +6,26 @@ from __future__ import division
 from __future__ import print_function
 
 # pylint: disable=invalid-name, no-name-in-module
+from texar.modules import TransformerEncoder, TransformerDecoder
+from texar.losses import mle_losses
+#from texar.core import optimization as opt
+from texar import context
+
 import pickle
 import random
 import numpy as np
 import tensorflow as tf
 import logging
 import texar as tx
-from matplotlib import pyplot as plt
-plt.switch_backend('agg')
-
 import codecs
 import os
-from texar.modules import TransformerEncoder, TransformerDecoder
-from texar.losses import mle_losses
-#from texar.core import optimization as opt
-from texar import context
 from hyperparams import train_dataset_hparams, eval_dataset_hparams, \
     test_dataset_hparams, \
     encoder_hparams, decoder_hparams, \
     opt_hparams, loss_hparams, args
 import bleu_tool
+from matplotlib import pyplot as plt
+plt.switch_backend('agg')
 
 if __name__ == "__main__":
     from importlib import reload
@@ -60,8 +60,9 @@ if __name__ == "__main__":
     decoder_input = ori_tgt_text[:, :-1]
     labels = ori_tgt_text[:, 1:]
 
-    enc_input_length = tf.reduce_sum(tf.to_float(tf.not_equal(encoder_input, 0)), axis=-1)
-    dec_input_length = tf.reduce_sum(tf.to_float(tf.not_equal(decoder_input, 0)), axis=-1)
+    enc_padding = tf.to_float(tf.equal(encoder_input, 0))
+    dec_padding = tf.to_float(tf.equal(decoder_input, 0))
+    istarget = tf.to_float(tf.not_equal(labels, 0))
 
     WordEmbedder = tx.modules.WordEmbedder(
         vocab_size=train_database.source_vocab.size,
@@ -73,7 +74,8 @@ if __name__ == "__main__":
         vocab_size=train_database.source_vocab.size,\
         hparams=encoder_hparams)
     logging.info('encoder hparams:{}'.format(encoder._hparams))
-    encoder_output, encoder_decoder_attention_bias = encoder(encoder_input)
+    encoder_output, encoder_decoder_attention_bias = encoder(encoder_input,
+        enc_padding)
 
     decoder = TransformerDecoder(
         embedding=encoder._embedding,
@@ -95,7 +97,6 @@ if __name__ == "__main__":
         train_database.target_vocab.size,
         loss_hparams['label_confidence'],
     )
-    istarget = tf.to_float(tf.not_equal(labels, 0))
     mle_loss = tf.reduce_sum(mle_loss * istarget) / tf.reduce_sum(istarget)
     tf.summary.scalar('mle_loss', mle_loss)
 
@@ -217,7 +218,7 @@ if __name__ == "__main__":
                 tmpfile.write(' '.join(hyp) + '\n')
                 tmpreffile.write(' '.join(tgt) + '\n')
         eval_bleu = float(100 * bleu_tool.bleu_wrapper(\
-            refer_tmp_filename,outputs_tmp_filename, case_sensitive=True))
+            refer_tmp_filename, outputs_tmp_filename, case_sensitive=True))
         eval_loss = float(np.sum(np.array(eval_loss)))
         print('epoch:{} eval_bleu:{} eval_loss:{}'.format(epoch, \
             eval_bleu, eval_loss))
@@ -240,11 +241,33 @@ if __name__ == "__main__":
                     resultfile.write('- got: ' + ' '.join(hyp)+ '\n\n')
         return {'loss': eval_loss,
                 'bleu': eval_bleu
-                }
+               }
     def _test_epoch(sess, mname, epoch=None, eval_writer=None):
         iterator.switch_to_test_data(sess)
         sources_list, targets_list, hypothesis_list = [], [], []
         test_loss, test_bleu = [], 0
+        if args.debug:
+            fetches = {
+                'source': ori_src_text,
+                'target': ori_tgt_text,
+                'encoder_padding': enc_padding,
+                'encoder_embedding': encoder._embedding,
+                'encoder_output': encoder_output,
+                'decoder_embedding': decoder._embedding,
+                'predictions': predictions,
+            }
+            feed = {context.global_mode(): tf.estimator.ModeKeys.PREDICT}
+            _fetches = sess.run(fetches, feed_dict=feed)
+            print('encoder_padding:{}'.format(_fetches['encoder_padding']))
+            print('encoder_embedding:{}'.format(_fetches['encoder_embedding']))
+            print('encoder_output:{}'.format(_fetches['encoder_output']))
+
+            sources, sampled_ids, targets = \
+                _fetches['source'].tolist(), \
+                _fetches['predictions']['sampled_ids'][:, 0, :].tolist(), \
+                _fetches['target'][:, 1:].tolist()
+
+
         while True:
             try:
                 fetches = {
@@ -267,11 +290,12 @@ if __name__ == "__main__":
                     _fetches['target'][:, 1:].tolist()
                 test_loss.append(_fetches['mle_loss'])
                 def _id2word_map(id_arrays):
-                    return [' '.join([vocab._id_to_token_map_py[i] for i in sent]) for sent in id_arrays]
+                    return [' '.join([vocab._id_to_token_map_py[i] \
+                            for i in sent]) for sent in id_arrays]
                 if args.debug:
                     print('source_ids:{}\ntargets_ids:{}\nsampled_ids:{}'.format(
                         sources, targets, sampled_ids))
-                    print('encoder_output:{} {}'.format(_fetches['encoder_output'].shape,
+                    print('encoder_output:{} {}'.format(_fetches['encoder_output'].shape, \
                         _fetches['encoder_output']))
                     print('logits:{} {}'.format(_fetches['logits'].shape, _fetches['logits']))
                     exit()
@@ -325,14 +349,14 @@ if __name__ == "__main__":
                 eval_result = _eval_epoch(sess, epoch, eval_writer)
                 eval_loss, eval_score = eval_result['loss'], eval_result['bleu']
                 if args.eval_criteria == 'loss':
-                    if  lowest_loss < 0 or eval_loss < lowest_loss:
+                    if lowest_loss < 0 or eval_loss < lowest_loss:
                         logging.info('the {} epoch(0-idx) got lowest loss {}'.format(epoch, eval_loss))
                         eval_saver.save(sess, args.log_dir+'my-model-lowest_loss.ckpt')
                         lowest_loss = eval_loss
                         best_epoch = epoch
                 elif args.eval_criteria == 'bleu':
-                    if highest_bleu <0 or eval_score > highest_bleu:
-                        logging.info('the {} epoch(0-idx) got highest bleu {} '.format(epoch, eval_score))
+                    if highest_bleu < 0 or eval_score > highest_bleu:
+                        logging.info('the {} epoch, highest bleu {} '.format(epoch, eval_score))
                         eval_saver.save(sess, args.log_dir+'my-model-highest_bleu.ckpt')
                         highest_bleu = eval_score
                         best_epoch = epoch
@@ -343,7 +367,7 @@ if __name__ == "__main__":
                     break
         elif args.running_mode == 'test':
             if args.load_from_pytorch:
-                modelpath=os.path.join(args.model_dir, args.model_filename)
+                modelpath = os.path.join(args.model_dir, args.model_filename)
                 pytorch_params = pickle.load(open(modelpath, 'rb'))
                 params = tf.trainable_variables()
                 mname = modelpath.split('/')[-1]

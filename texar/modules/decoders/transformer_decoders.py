@@ -13,6 +13,7 @@ import collections
 
 import tensorflow as tf
 from tensorflow.python.framework import tensor_shape, dtypes
+from tensorflow.python.util import nest
 
 from texar.core import layers, attentions
 from texar import context
@@ -78,6 +79,8 @@ class TransformerDecoder(ModuleBase):
             "sinusoid":True,
             'poswise_feedforward':None,
             'num_units':512,
+            'eos_idx': 2,
+            'bos_idx': 1,
         }
     def prepare_tokens_to_embeds(self, tokens):
         token_emb = tf.nn.embedding_lookup(self._embedding, tokens)
@@ -105,8 +108,10 @@ class TransformerDecoder(ModuleBase):
                 encoder_output=cache['memory'],
                 cache=cache,
             )
-            outputs = outputs[:, -1:, :]
+            #outputs = outputs[:, -1:, :]
             logits = self.output_layer(outputs)
+            logits = tf.squeeze(logits, axis= [1])
+
             return logits, cache
 
         return _impl
@@ -134,8 +139,8 @@ class TransformerDecoder(ModuleBase):
         decoder_output = self._self_attention_stack(
             inputs,
             encoder_output,
-            decoder_self_attention_bias,
-            encoder_decoder_attention_bias,
+            decoder_self_attention_bias=decoder_self_attention_bias,
+            encoder_decoder_attention_bias=encoder_decoder_attention_bias,
             cache=None,
         )
 
@@ -153,13 +158,12 @@ class TransformerDecoder(ModuleBase):
             beam_width = self._hparams.beam_width
             maximum_decode_length = self.hparams.maximum_decode_length
             start_tokens = tf.fill([batch_size], 1)
-            EOS = 2
             if beam_width <= 1:
                 sampled_ids, log_probs = self.greedy_decode(
                     self.prepare_tokens_to_embeds,
                     start_tokens,
-                    EOS,
-                    maximum_iterations=maximum_decode_length,
+                    self._hparams.eos_idx,
+                    decode_length=maximum_decode_length,
                     memory=encoder_output,
                     encoder_decoder_attention_bias=encoder_decoder_attention_bias
                 )
@@ -167,7 +171,7 @@ class TransformerDecoder(ModuleBase):
                 sampled_ids, log_probs = self.beam_decode(
                     self.prepare_tokens_to_embeds,
                     start_tokens,
-                    EOS,
+                    self._hparams.eos_idx,
                     beam_width=beam_width,
                     decode_length=maximum_decode_length,
                     memory=encoder_output,
@@ -206,7 +210,7 @@ class TransformerDecoder(ModuleBase):
                     selfatt_output = layers.multihead_attention(
                         queries=layers.layer_normalize(x),
                         memory=None,
-                        bias=decoder_self_attention_bias,
+                        memory_attention_bias=decoder_self_attention_bias,
                         num_units=self._hparams.num_units,
                         num_heads=self._hparams.num_heads,
                         dropout_rate=self._hparams.attention_dropout,
@@ -222,11 +226,10 @@ class TransformerDecoder(ModuleBase):
                     encdec_output = layers.multihead_attention(
                         queries=layers.layer_normalize(x),
                         memory=encoder_output,
-                        bias=encoder_decoder_attention_bias,
+                        memory_attention_bias=encoder_decoder_attention_bias,
                         num_units=self._hparams.num_units,
                         num_heads=self._hparams.num_heads,
                         dropout_rate=self._hparams.attention_dropout,
-                        causality=False,
                         scope="multihead_attention"
                     )
                     x = x + tf.layers.dropout(encdec_output, \
@@ -310,25 +313,30 @@ class TransformerDecoder(ModuleBase):
                       memory,
                       encoder_decoder_attention_bias):
         batch_size = tf.shape(start_tokens)[0]
-        finished = tf.tile([False], [batch_size])
+        finished = tf.fill([batch_size], False)
         step = tf.constant(0)
-        decoded_ids = tf.zeros([batch_size, 0], dtype=tf.int64)
+        decoded_ids = tf.zeros([batch_size, 0], dtype=tf.int32)
         next_id = tf.expand_dims(start_tokens, 1)
+        print('next id:{}'.format(next_id.shape))
+        log_prob = tf.zeros([batch_size], dtype=tf.float32)
 
-        log_prob = tf.zeros([batch_size])
         cache = self._init_cache(memory, encoder_decoder_attention_bias)
         symbols_to_logits_fn = self._symbols_to_logits_fn(embedding_fn,
-            maximum_length=decode_length+1)
+            max_length=decode_length+1)
 
         def _body(step, finished, next_id, decoded_ids, cache, log_prob):
 
             logits, cache = symbols_to_logits_fn(next_id, step, cache)
             log_probs = logits - \
                 tf.reduce_logsumexp(logits, axis=-1, keep_dims=True)
-            next_id = tf.argmax(logits, -1)
+
+            #TODO: by default, the output_type is tf.int64.
+            # Can we adjust the default int type of texar to tf.int64?
+
+            next_id = tf.argmax(logits, -1, output_type=tf.int32)
             finished |= tf.equal(next_id, EOS)
             log_prob_indices = tf.stack(
-                [tf.range(tf.to_int64(batch_size)), next_id], axis=1)
+                [tf.range(tf.to_int32(batch_size)), next_id], axis=1)
             log_prob += tf.gather_nd(log_probs, log_prob_indices)
 
             next_id = tf.expand_dims(next_id, axis=1)
@@ -346,10 +354,10 @@ class TransformerDecoder(ModuleBase):
             loop_vars=(step, finished, next_id, decoded_ids, cache, log_prob),
             shape_invariants=(
                 tf.TensorShape([]),
-                finished.get_shape(),
+                tf.TensorShape([None]),
                 tf.TensorShape([None, None]),
                 tf.TensorShape([None, None]),
-                tf.contrib.framework.nest.map_structure(beam_search.get_state_shape_invariants, cache),
+                nest.map_structure(beam_search.get_state_shape_invariants, cache),
                 tf.TensorShape([None]),
             ))
 

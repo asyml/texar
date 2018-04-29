@@ -4,12 +4,15 @@ import io
 import re
 import json
 import os
+import numpy as np
+from collections import namedtuple
+
 from config import get_preprocess_args
 
-
 split_pattern = re.compile(r'([.,!?"\':;)(])')
-
 digit_pattern = re.compile(r'\d')
+Special_Seq = namedtuple('Special_Seq', ['PAD', 'BOS', 'EOS', 'UNK'])
+Vocab_Pad = Special_Seq(PAD=0, BOS=1, EOS=2, UNK=3)
 
 def split_sentence(s, tok=False):
     if tok:
@@ -45,12 +48,24 @@ def count_words(path, max_vocab_size=40000, tok=False):
     vocab = [word for (word, _) in counts.most_common(max_vocab_size)]
     return vocab
 
+def make_array(word_id, words):
+    ids = [word_id.get(word, Vocab_Pad.UNK) for word in words]
+    return np.array(ids, 'i')
 
 def make_dataset(path, w2id, tok=False):
-    dataset = []
+    dataset, npy_dataset = [], []
+    token_count, unknown_count = 0, 0
     for words in read_file(path, tok):
+        array = make_array(w2id, words)
+        npy_dataset.append(array)
         dataset.append(words)
-    return dataset
+        token_count += array.size
+        unknown_count += (array == Vocab_Pad.UNK).sum()
+    print('# of tokens:{}'.format(token_count))
+    print('# of unknown {} {:.2}'.format(unknown_count,
+                                         100. * unknown_count / token_count))
+    return dataset, npy_dataset
+
 
 if __name__ == "__main__":
     args = get_preprocess_args()
@@ -65,39 +80,50 @@ if __name__ == "__main__":
     trg_cntr = count_words(target_path, args.target_vocab, args.tok)
     all_words = sorted(list(set(src_cntr + trg_cntr)))
 
-    vocab = all_words
+    vocab = ['<pad>', '<bos>', '<eos>', '<unk>'] + all_words
 
     w2id = {word: index for index, word in enumerate(vocab)}
 
     # Train Dataset
-    source_data = make_dataset(source_path, w2id, args.tok)
-    target_data = make_dataset(target_path, w2id, args.tok)
+    source_data, source_npy = make_dataset(source_path, w2id, args.tok)
+    target_data, target_npy = make_dataset(target_path, w2id, args.tok)
     assert len(source_data) == len(target_data)
+
     train_data = [(s, t) for s, t in zip(source_data, target_data)
                   if 0 < len(s) < args.max_seq_length
                   and 0 < len(t) < args.max_seq_length]
+    train_npy = [(s, t) for s, t in zip(source_npy, target_npy)
+                 if 0 < len(s) < args.max_seq_length
+                 and 0 < len(t) < args.max_seq_length]
+    assert len(train_data) == len(train_npy)
 
     # Display corpus statistics
-    print("Vocab: {}".format(len(vocab)))
+    print("Vocab: {} with special tokens".format(len(vocab)))
     print('Original training data size: %d' % len(source_data))
     print('Filtered training data size: %d' % len(train_data))
 
     # Valid Dataset
     source_path = os.path.join(args.input_dir, args.source_valid)
-    source_data = make_dataset(source_path, w2id, args.tok)
+    source_data, source_npy = make_dataset(source_path, w2id, args.tok)
     target_path = os.path.join(args.input_dir, args.target_valid)
-    target_data = make_dataset(target_path, w2id, args.tok)
+    target_data, target_npy = make_dataset(target_path, w2id, args.tok)
     assert len(source_data) == len(target_data)
+
     valid_data = [(s, t) for s, t in zip(source_data, target_data)
                   if 0 < len(s) and 0 < len(t)]
+    valid_npy = [(s, t) for s, t in zip(source_npy, target_npy)
+                 if 0 < len(s) and 0 < len(t)]
+    assert len(valid_data) == len(valid_npy)
 
     # Test Dataset
     source_path = os.path.join(args.input_dir, args.source_test)
-    source_data = make_dataset(source_path, w2id, args.tok)
+    source_data, source_npy = make_dataset(source_path, w2id, args.tok)
     target_path = os.path.realpath(os.path.join(args.input_dir, args.target_test))
-    target_data = make_dataset(target_path, w2id, args.tok)
+    target_data, target_npy = make_dataset(target_path, w2id, args.tok)
     assert len(source_data) == len(target_data)
     test_data = [(s, t) for s, t in zip(source_data, target_data)
+                 if 0 < len(s) and 0 < len(t)]
+    test_npy =  [(s, t) for s, t in zip(source_npy, target_npy)
                  if 0 < len(s) and 0 < len(t)]
 
     id2w = {i: w for w, i in w2id.items()}
@@ -108,6 +134,13 @@ if __name__ == "__main__":
     dev_tgt_output = os.path.join(args.input_dir, args.save_data + 'dev.' + args.tgt+ '.txt')
     test_src_output = os.path.join(args.input_dir, args.save_data + 'test.' + args.src+ '.txt')
     test_tgt_output = os.path.join(args.input_dir, args.save_data + 'test.' + args.tgt + '.txt')
+
+    np.save(os.path.join(args.input, args.save_data + 'train.npy'),
+            train_npy)
+    np.save(os.path.join(args.input, args.save_data + 'valid.npy'),
+            valid_npy)
+    np.save(os.path.join(args.input, args.save_data + 'test.npy'),
+            test_npy)
 
     with open(train_src_output, 'w+') as fsrc, open(train_tgt_output, 'w+') as ftgt:
         for words in train_data:
@@ -124,5 +157,5 @@ if __name__ == "__main__":
     with open(os.path.join(args.input_dir,
             args.save_data + args.pre_encoding + '.vocab.text'.format(args.src, args.tgt)), 'w+') as f:
         max_size = len(id2w)
-        for idx in range(max_size):
+        for idx in range(4, max_size):
             f.write('{}\n'.format(id2w[idx]))

@@ -166,14 +166,6 @@ def sequence_sparse_softmax_cross_entropy(labels,
 
         return losses
 
-#TODO(zhiting): add docs
-def label_smoothing(labels, total_class, smooth_rate, name=None):
-    """TODO
-    """
-    with tf.name_scope(name, 'label_smoothing'):
-        one_hot_labels = tf.one_hot(labels, depth=total_class)
-        return  (1-smooth_rate)*one_hot_labels + (smooth_rate)/total_class
-
 def smoothing_cross_entropy(logits,
                             labels,
                             vocab_size,
@@ -194,14 +186,16 @@ def smoothing_cross_entropy(logits,
   """
   with tf.name_scope("smoothing_cross_entropy", values=[logits, labels]):
     # Low confidence is given to all non-true labels, uniformly.
-    low_confidence = (1.0 - confidence) / tf.to_float(vocab_size - 2)
+    low_confidence = (1.0 - confidence) / tf.to_float(vocab_size - 1)
     # here we substract the vocab_size to achieve the same weight to t2t
     # in view of that we use an additional bos token in the vocabulary
+    # however, if we subtract 2, the soft_targets won't be a valid distribution
+    # which will cause error according to sce_with_logits function doc.
 
     # Normalizing constant is the best cross-entropy value with soft targets.
     # We subtract it just for readability, makes no difference on learning.
     normalizing = -(
-        confidence * tf.log(confidence) + tf.to_float(vocab_size - 2) *
+        confidence * tf.log(confidence) + tf.to_float(vocab_size - 1) *
         low_confidence * tf.log(low_confidence + 1e-20))
 
     if gaussian and confidence > 0.0:

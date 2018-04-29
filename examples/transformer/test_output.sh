@@ -4,7 +4,7 @@ TF=$(pwd)
 
 export PATH=$PATH:$TF/../../tools/
 
-encoder=wpm
+encoder=spm
 if [ -z $1 ]; then
     src_language=en
 else
@@ -45,8 +45,8 @@ test_tgt=$data/test.${tgt_language}
 
 vocab_size=32000
 case ${encoder} in
-    'wpm')
-        spm_decode --model ${out}/data/wpm-codes.${vocab_size}.model --input_format=piece < ${decodes_file_fullpath} > $model_dir/test.out;;
+    'spm')
+        spm_decode --model ${out}/data/spm-codes.${vocab_size}.model --input_format=piece < ${decodes_file_fullpath} > $model_dir/test.out;;
     'bpe')
         cat  ${decodes_file_fullpath} | sed -E 's/@@ //g' > ${model_dir}/test.out;;
 esac

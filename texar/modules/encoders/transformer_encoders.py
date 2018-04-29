@@ -120,13 +120,12 @@ class TransformerEncoder(EncoderBase):
             'num_units': 512,
         }
 
-    def _build(self, inputs,  **kwargs):
+    def _build(self, inputs, encoder_padding, **kwargs):
         self.enc = tf.nn.embedding_lookup(self._embedding, inputs)
         _, _, channels = layers.shape_list(self.enc)
         if self._hparams.multiply_embedding_mode =='sqrt_depth':
             self.enc = self.enc * channels**0.5
 
-        encoder_padding = utils.embedding_to_padding(self.enc)
         ignore_padding = attentions.attention_bias_ignore_padding(encoder_padding)
         encoder_self_attention_bias = ignore_padding
         encoder_decoder_attention_bias = ignore_padding
@@ -135,9 +134,9 @@ class TransformerEncoder(EncoderBase):
             emb_target_space = tf.reshape(self.target_symbol_embedding, [1,1,-1])
             self.enc = self.enc + emb_target_space
 
-        self.enc = layers.add_timing_signal_1d(self.enc)
+        self.input_embedding = layers.add_timing_signal_1d(self.enc)
 
-        self.enc = tf.layers.dropout(self.enc,
+        x = tf.layers.dropout(self.input_embedding,
             rate=self._hparams.embedding_dropout,
             training=context.global_mode_train())
 
@@ -146,15 +145,15 @@ class TransformerEncoder(EncoderBase):
             with tf.variable_scope("layer_{}".format(i)):
                 with tf.variable_scope('self_attention'):
                     selfatt_output = layers.multihead_attention(
-                        queries=layers.layer_normalize(self.enc),
+                        queries=layers.layer_normalize(x),
                         memory=None,
-                        bias=encoder_self_attention_bias,
+                        memory_attention_bias=encoder_self_attention_bias,
                         num_heads=self._hparams.num_heads,
                         dropout_rate=self._hparams.attention_dropout,
                         num_units=self._hparams.num_units,
                         scope='multihead_attention'
                     )
-                    self.enc = self.enc + tf.layers.dropout(
+                    x = x + tf.layers.dropout(
                         selfatt_output,
                         rate=self._hparams.residual_dropout,
                         training=context.global_mode_train()
@@ -162,24 +161,24 @@ class TransformerEncoder(EncoderBase):
                 poswise_network = FeedForwardNetwork(
                     hparams=self._hparams['poswise_feedforward'])
                 with tf.variable_scope(poswise_network.variable_scope):
-                    x = layers.layer_normalize(self.enc)
-                    original_shape = layers.shape_list(x)
-                    x = tf.reshape(x, [-1, self._hparams.num_units])
-                    x = tf.expand_dims(pad_remover.remove(x), axis=0)
+                    y = layers.layer_normalize(x)
+                    original_shape = layers.shape_list(y)
+                    y = tf.reshape(y, [-1, self._hparams.num_units])
+                    y = tf.expand_dims(pad_remover.remove(y), axis=0)
                     #[1, batch_size*seq_length, hidden_dim]
                     sub_output = tf.layers.dropout(
-                        poswise_network(x),
+                        poswise_network(y),
                         rate=self._hparams.residual_dropout,
                         training=context.global_mode_train()
                     )
                     sub_output = tf.reshape(pad_remover.restore(tf.squeeze(\
                         sub_output, axis=0)), original_shape
                     )
-                    self.enc = self.enc + sub_output
-        self.enc = layers.layer_normalize(self.enc)
+                    x = x + sub_output
+        encoder_output = layers.layer_normalize(x)
 
         if not self._built:
             self._add_internal_trainable_variables()
             self._built = True
 
-        return self.enc, encoder_decoder_attention_bias
+        return encoder_output, encoder_decoder_attention_bias

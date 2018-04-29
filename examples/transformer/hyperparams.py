@@ -16,7 +16,8 @@ argparser.add_argument('--running_mode', type=str, default='train_and_evaluate',
 argparser.add_argument('--src_language', type=str, default='en')
 argparser.add_argument('--tgt_language', type=str, default='de')
 argparser.add_argument('--filename_prefix',type=str, default='processed.')
-argparser.add_argument('--debug', type=int, default=0)
+argparser.add_argument('--debug', type=int, default=0,
+    help='generally used in test epoch, to print verbose arrays')
 argparser.add_argument('--draw_for_debug', type=int, default=0)
 argparser.add_argument('--average_model', type=int, default=0,
     help='currently not supported')
@@ -62,8 +63,9 @@ args.dev_tgt = os.path.join(args.data_dir, args.filename_prefix + 'dev.'+ args.t
 args.test_src = os.path.join(args.data_dir, args.filename_prefix + 'test.' + args.src_language + args.filename_suffix)
 args.test_tgt = os.path.join(args.data_dir, args.filename_prefix + 'test.' + args.tgt_language + args.filename_suffix)
 if args.load_from_pytorch:
-    args.affine_bias=1
-
+    args.affine_bias = 1
+    args.bos_pad = False
+    args.zero_pad = False
 args.vocab_file = os.path.join(args.data_dir, args.filename_prefix + args.pre_encoding + '.vocab.text')
 log_params_dir = 'log_dir/{}_{}.bsize{}.epoch{}.lr_c{}warm{}/'.format(args.src_language, args.tgt_language, \
     args.batch_size, args.max_train_epoch, args.lr_constant, args.warmup_steps)

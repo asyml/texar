@@ -3,7 +3,7 @@
 TF=$(pwd)
 
 export PATH=$PATH:$TF/../../tools/
-encoder=wpm
+encoder=bpe
 if [ -z $1 ]; then
     src_language=en
 else
@@ -22,8 +22,8 @@ out="temp/${name}"
 
 train_src=$data/train.${src_language}
 train_tgt=$data/train.${tgt_language}
-dev_src=$data/dev.${src_language}
-dev_tgt=$data/dev.${tgt_language}
+valid_src=$data/dev.${src_language}
+valid_tgt=$data/dev.${tgt_language}
 test_src=$data/test.${src_language}
 test_tgt=$data/test.${tgt_language}
 vocab_size=32000
@@ -38,14 +38,14 @@ echo "Step 1a: Preprocess inputs"
 
 echo "Learning Word Piece  or Byte Pairwise on source and target combined"
 case ${encoder} in
-    'wpm')
-        spm_train --input=${train_src},${train_tgt} --vocab_size ${vocab_size} --model_prefix=$out/data/wpm-codes.${vocab_size}
-        spm_encode --model $out/data/wpm-codes.${vocab_size}.model --output_format=piece < $train_src > $out/data/train.${src_language}.wpm
-        spm_encode --model $out/data/wpm-codes.${vocab_size}.model --output_format=piece < $dev_src > $out/data/valid.${src_language}.wpm
-        spm_encode --model $out/data/wpm-codes.${vocab_size}.model --output_format=piece < $test_src > $out/data/test.${src_language}.wpm
-        spm_encode --model $out/data/wpm-codes.${vocab_size}.model --output_format=piece <  $train_tgt > $out/data/train.${tgt_language}.wpm
-        spm_encode --model $out/data/wpm-codes.${vocab_size}.model --output_format=piece <  $dev_tgt > $out/data/valid.${tgt_language}.wpm
-        spm_encode --model $out/data/wpm-codes.${vocab_size}.model --output_format=piece < ${test_tgt} > $out/data/test.${tgt_language}.wpm
+    'spm')
+        spm_train --input=${train_src},${train_tgt} --vocab_size ${vocab_size} --model_prefix=$out/data/spm-codes.${vocab_size}
+        spm_encode --model $out/data/spm-codes.${vocab_size}.model --output_format=piece < $train_src > $out/data/train.${src_language}.spm
+        spm_encode --model $out/data/spm-codes.${vocab_size}.model --output_format=piece < $valid_src > $out/data/valid.${src_language}.spm
+        spm_encode --model $out/data/spm-codes.${vocab_size}.model --output_format=piece < $test_src > $out/data/test.${src_language}.spm
+        spm_encode --model $out/data/spm-codes.${vocab_size}.model --output_format=piece <  $train_tgt > $out/data/train.${tgt_language}.spm
+        spm_encode --model $out/data/spm-codes.${vocab_size}.model --output_format=piece <  $valid_tgt > $out/data/valid.${tgt_language}.spm
+        spm_encode --model $out/data/spm-codes.${vocab_size}.model --output_format=piece < ${test_tgt} > $out/data/test.${tgt_language}.spm
         cp ${test_tgt} ${out}/test/test.${tgt_language} ;;
     'bpe'):
         cat ${train_src} ${train_tgt} | learn_bpe -s ${vocab_size} > ${out}/data/bpe-codes.${vocab_size}
@@ -62,4 +62,5 @@ python ${TF}/preprocess.py -i ${out}/data \
     --src ${src_language}.${encoder} \
     --tgt ${tgt_language}.${encoder} \
     --save_data processed. \
-    --max_seq_length=70
+    --max_seq_length=70 \
+    --pre_encoding=${encoder}

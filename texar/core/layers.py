@@ -1159,9 +1159,8 @@ def sinusoid_positional_encoding(inputs,
         return signal
 
 def multihead_attention(queries,
-                        bias=None,
+                        memory_attention_bias=None,
                         memory=None,
-                        causality=False,
                         num_heads=8,
                         num_units=None,
                         dropout_rate=0,
@@ -1174,7 +1173,6 @@ def multihead_attention(queries,
       keys: A 3d tensor with shape of [batch, length_key, depth_key].
       num_units: A scalar indicating the attention size, equals to depth_query if not given.
       dropout_rate: A floating point number.
-      causality: Boolean. If true, units that reference the future are masked.
       num_heads: An int. Number of heads with calculating attention.
       scope: Optional scope for `variable_scope`.
       reuse: Boolean, whether to reuse the weights of a previous layer
@@ -1221,8 +1219,8 @@ def multihead_attention(queries,
         Q_ *= key_depth_per_head**-0.5
 
         logits = tf.matmul(Q_, K_, transpose_b=True)
-        if bias is not None:
-            logits += bias
+        if memory_attention_bias is not None:
+            logits += memory_attention_bias
         weights = tf.nn.softmax(logits, name="attention_weights")
         weights = tf.layers.dropout(
             weights, rate=dropout_rate, training=context.global_mode_train())

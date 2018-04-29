@@ -15,7 +15,7 @@ def get_preprocess_args():
                         help='tokenized and lowercased')
     parser.set_defaults(tok=False)
     parser.add_argument('--max_seq_length', type=int, default=70)
-    parser.add_argument('--pre_encoding', type=str, default='wpm')
+    parser.add_argument('--pre_encoding', type=str, default='spm')
     parser.add_argument('--src', type=str, default='en')
     parser.add_argument('--tgt', type=str, default='vi')
     parser.add_argument('--input_dir', '-i', type=str, default='./data/en_vi/data/',
