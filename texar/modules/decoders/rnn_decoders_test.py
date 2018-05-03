@@ -322,7 +322,7 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
                              (self._batch_size, cell_dim))
 
     def test_beam_search_cell(self):
-        """Tests :meth:`texar.modules.AttentionRNNDecoder.get_beam_search_cell`.
+        """Tests :meth:`texar.modules.AttentionRNNDecoder._get_beam_search_cell`
         """
         seq_length = np.random.randint(
             self._max_time, size=[self._batch_size]) + 1
