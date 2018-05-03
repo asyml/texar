@@ -34,12 +34,13 @@ case ${hparams_set} in
         --pre_encoding=${encoder} \
         --data_dir=${DATA_DIR}  --model_dir=${model_dir}\
         --src_language=${src_language} --tgt_language=${tgt_language} \
-        --batch_size=2048 --test_batch_size=32 \
+        --batch_size=3072 --test_batch_size=64 \
         --beam_width=5 --alpha=0.6 \
         --log_disk_dir=/space/shr/transformer_${encoder}/ \
         --draw_for_debug=0 --affine_bias=0 --eval_interval_epoch=1 \
         --zero_pad=1 --bos_pad=0 \
-        --filename_prefix=processed. &> logging_100_${running_mode}.txt;;
+        --filename_prefix=processed. &> logging_100_${src_language}_${tgt_language}_${running_mode}.txt;;
+
     200)
         echo 'running the model with bigger batch_size and training steps'
         echo 'only support en and de language for now'
@@ -67,16 +68,17 @@ case ${hparams_set} in
         --model_dir=/space/shr/transformer_spm/log_dir/${src_language}_${tgt_language}.bsize${BATCH_SIZE}.epoch40.lr_c2warm16000/my-model.epoch${epoch} \
         --filename_prefix=processed.${ENCODER}. --log_disk_dir=${LOG_DISK_DIR}
     fi ;;
-
     4)
     echo 'load from pytorch model'
     src_language=en
     tgt_language=vi
     encoder=bpe
-    python transformer_overall.py --running_mode=test --data_dir=${DATA_DIR} --filename_prefix=processed.${ENCODER}. \
-        --src_language=${src_language} --tgt_language=${tgt_language} --test_batch_size=2 --beam_width=${beam_size} --alpha=0.6 \
+    DATA_DIR="./temp/run_${src_language}_${tgt_language}_${encoder}/data/"
+    python transformer_overall.py --running_mode=test --data_dir=${DATA_DIR} --filename_prefix=processed. \
+        --pre_encoding=${encoder} \
+        --src_language=${src_language} --tgt_language=${tgt_language} --test_batch_size=2 --beam_width=5 --alpha=0.6 \
         --load_from_pytorch=1 \
         --model_dir=/home/hzt/shr/transformer_pytorch/temp/run_en_vi/models/ \
         --model_filename=ckpt_from_pytorch.p \
-        --log_disk_dir=${LOG_DISK_DIR} --debug=1 &> test_debug.txt;;
+        --log_disk_dir=${LOG_DISK_DIR} --debug=1 &> test_debug.txt ;;
 esac

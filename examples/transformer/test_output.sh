@@ -23,7 +23,7 @@ out="temp/run_${src_language}_${tgt_language}_${encoder}"
 if [ ${src_language} == en ] && [ ${tgt_language} == de ] ; then
     batch_size=3072
 else
-    batch_size=2048
+    batch_size=3072
 fi
 
 max_epoch=70

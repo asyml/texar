@@ -31,6 +31,7 @@ class DataBase(object):
     @staticmethod
     def default_hparams():
         """Returns a dictionary of default hyperparameters.
+              max_records: int, number of records to truncate to.
         """
         return {
             "name": "data",
@@ -42,6 +43,7 @@ class DataBase(object):
             "shard_and_shuffle": False,
             "num_parallel_calls": 1,
             "prefetch_buffer_size": 0,
+            "max_records": -1,
             "seed": None
         }
 

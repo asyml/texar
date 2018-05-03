@@ -56,7 +56,7 @@ if __name__ == "__main__":
     ori_src_text = text_data_batch['source_text_ids']
     ori_tgt_text = text_data_batch['target_text_ids']
 
-    encoder_input = ori_src_text
+    encoder_input = ori_src_text[:, 1:]
     decoder_input = ori_tgt_text[:, :-1]
     labels = ori_tgt_text[:, 1:]
 
@@ -182,7 +182,7 @@ if __name__ == "__main__":
                 fetches = {
                     'predictions': predictions,
                     'source': ori_src_text,
-                    'target': ori_tgt_text,
+                    'target': labels,
                     'step': global_step,
                     'mle_loss': mle_loss,
                 }
@@ -191,7 +191,7 @@ if __name__ == "__main__":
                 sources, sampled_ids, targets = \
                     _fetches['source'].tolist(), \
                     _fetches['predictions']['sampled_ids'][:, 0, :].tolist(), \
-                    _fetches['target'][:, 1:].tolist()
+                    _fetches['target'].tolist()
                 eval_loss.append(_fetches['mle_loss'])
                 if args.verbose:
                     print('cur loss:{}'.format(_fetches['mle_loss']))
@@ -219,7 +219,7 @@ if __name__ == "__main__":
                 tmpreffile.write(' '.join(tgt) + '\n')
         eval_bleu = float(100 * bleu_tool.bleu_wrapper(\
             refer_tmp_filename, outputs_tmp_filename, case_sensitive=True))
-        eval_loss = float(np.sum(np.array(eval_loss)))
+        eval_loss = float(np.average(np.array(eval_loss)))
         print('epoch:{} eval_bleu:{} eval_loss:{}'.format(epoch, \
             eval_bleu, eval_loss))
         logging.info('epoch:{} eval_bleu:{} eval_loss:{}'.format(epoch, \
@@ -249,31 +249,37 @@ if __name__ == "__main__":
         if args.debug:
             fetches = {
                 'source': ori_src_text,
-                'target': ori_tgt_text,
+                'target': labels,
                 'encoder_padding': enc_padding,
                 'encoder_embedding': encoder._embedding,
+                'encoder_stack_output': encoder.stack_output,
                 'encoder_output': encoder_output,
                 'decoder_embedding': decoder._embedding,
                 'predictions': predictions,
             }
             feed = {context.global_mode(): tf.estimator.ModeKeys.PREDICT}
             _fetches = sess.run(fetches, feed_dict=feed)
+            print('source:{}'.format(_fetches['source']))
+            print('target:{}'.format(_fetches['target']))
             print('encoder_padding:{}'.format(_fetches['encoder_padding']))
             print('encoder_embedding:{}'.format(_fetches['encoder_embedding']))
+            print('encoder stack output:{}'.format(_fetches['encoder_stack_output']))
             print('encoder_output:{}'.format(_fetches['encoder_output']))
+            print('decoder_embedding:{}'.format(_fetches['decoder_embedding']))
+            print('predictions:{}'.format(_fetches['predictions']))
 
             sources, sampled_ids, targets = \
                 _fetches['source'].tolist(), \
                 _fetches['predictions']['sampled_ids'][:, 0, :].tolist(), \
-                _fetches['target'][:, 1:].tolist()
-
+                _fetches['target'].tolist()
+            exit()
 
         while True:
             try:
                 fetches = {
                     'predictions': predictions,
                     'source': ori_src_text,
-                    'target': ori_tgt_text,
+                    'target': labels,
                     'step': global_step,
                     'mle_loss': mle_loss,
                     'encoder_output': encoder_output,
@@ -287,7 +293,7 @@ if __name__ == "__main__":
                 sources, sampled_ids, targets = \
                     _fetches['source'].tolist(), \
                     _fetches['predictions']['sampled_ids'][:, 0, :].tolist(), \
-                    _fetches['target'][:, 1:].tolist()
+                    _fetches['target'].tolist()
                 test_loss.append(_fetches['mle_loss'])
                 def _id2word_map(id_arrays):
                     return [' '.join([vocab._id_to_token_map_py[i] \

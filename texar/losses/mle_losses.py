@@ -187,17 +187,6 @@ def smoothing_cross_entropy(logits,
   with tf.name_scope("smoothing_cross_entropy", values=[logits, labels]):
     # Low confidence is given to all non-true labels, uniformly.
     low_confidence = (1.0 - confidence) / tf.to_float(vocab_size - 1)
-    # here we substract the vocab_size to achieve the same weight to t2t
-    # in view of that we use an additional bos token in the vocabulary
-    # however, if we subtract 2, the soft_targets won't be a valid distribution
-    # which will cause error according to sce_with_logits function doc.
-
-    # Normalizing constant is the best cross-entropy value with soft targets.
-    # We subtract it just for readability, makes no difference on learning.
-    normalizing = -(
-        confidence * tf.log(confidence) + tf.to_float(vocab_size - 1) *
-        low_confidence * tf.log(low_confidence + 1e-20))
-
     if gaussian and confidence > 0.0:
       labels = tf.cast(labels, tf.float32)
       normal_dist = tf.distributions.Normal(loc=labels, scale=confidence)
@@ -212,8 +201,11 @@ def smoothing_cross_entropy(logits,
           tf.cast(labels, tf.int32),
           depth=vocab_size,
           on_value=confidence,
-          off_value=low_confidence)
-    xentropy = tf.nn.softmax_cross_entropy_with_logits(
+          off_value=low_confidence,
+          dtype=logits.dtype)
+    if hasattr(tf.nn, "softmax_cross_entropy_with_logits_v2"):
+        cross_entropy_fn = tf.nn.softmax_cross_entropy_with_logits_v2
+    else:
+        cross_entropy_fn = tf.nn.softmax_cross_entropy_with_logits
+    return cross_entropy_fn(
         logits=logits, labels=soft_targets)
-    return xentropy - normalizing
-

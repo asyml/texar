@@ -175,6 +175,8 @@ class TransformerEncoder(EncoderBase):
                         sub_output, axis=0)), original_shape
                     )
                     x = x + sub_output
+
+        self.stack_output = x
         encoder_output = layers.layer_normalize(x)
 
         if not self._built:

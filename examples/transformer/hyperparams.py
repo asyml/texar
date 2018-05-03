@@ -4,6 +4,7 @@ import copy
 import os
 
 from texar.utils.data_reader import _batching_scheme
+from texar.data import SpecialTokens
 
 class Hyperparams:
     pass
@@ -40,17 +41,17 @@ argparser.add_argument('--warmup_steps', type=int, default=16000)
 argparser.add_argument('--lr_constant', type=float, default=2)
 argparser.add_argument('--max_train_epoch', type=int, default=70)
 argparser.add_argument('--random_seed', type=int, default=1234)
-argparser.add_argument('--log_disk_dir', type=str, default='/space/shr/')
+argparser.add_argument('--log_disk_dir', type=str)
 argparser.add_argument('--beam_width', type=int, default=5)
 argparser.add_argument('--alpha', type=float, default=0.6,\
     help=' length_penalty=(5+len(decode)/6) ^ -\alpha')
 argparser.add_argument('--save_eval_output', default=1, \
     help='save the eval output to file')
-argparser.add_argument('--eval_interval_epoch', type=int, default=5)
+argparser.add_argument('--eval_interval_epoch', type=int, default=1)
 argparser.add_argument('--load_from_pytorch', type=str, default='')
 argparser.add_argument('--affine_bias', type=int, default=0)
 argparser.add_argument('--eval_criteria', type=str, default='bleu')
-argparser.add_argument('--pre_encoding', type=str, default='wpm')
+argparser.add_argument('--pre_encoding', type=str, default='spm')
 argparser.add_argument('--max_decode_len', type=int, default=256)
 argparser.parse_args(namespace=args)
 
@@ -77,6 +78,7 @@ batching_scheme = _batching_scheme(
     args.length_bucket_step,
     drop_long_sequences=True,
 )
+batching_scheme['boundaries'] = [i + 1 for i in batching_scheme['boundaries'] ]
 print('train_src:{}'.format(args.train_src))
 print('dev src:{}'.format(args.dev_src))
 train_dataset_hparams = {
@@ -88,13 +90,17 @@ train_dataset_hparams = {
         "files": [args.train_src],
         "vocab_file": args.vocab_file,
         "max_seq_length": args.max_seq_length,
+        "bos_token": SpecialTokens.BOS,
+        "eos_token": SpecialTokens.EOS,
         "length_filter_mode": "truncate",
     },
     "target_dataset": {
         "files": [args.train_tgt],
-        "vocab_share":True,
+        "vocab_share": True,
         "processing_share": True,
         "max_seq_length": args.max_seq_length,
+        "bos_token": SpecialTokens.BOS,
+        "eos_token": SpecialTokens.EOS,
         "length_filter_mode": "truncate",
     },
     'bucket_boundaries': batching_scheme['boundaries'],
@@ -108,10 +114,14 @@ eval_dataset_hparams = {
     'source_dataset' : {
         'files': [args.dev_src],
         'vocab_file': args.vocab_file,
+        "bos_token": SpecialTokens.BOS,
+        "eos_token": SpecialTokens.EOS,
     },
     'target_dataset': {
         'files': [args.dev_tgt],
         'vocab_share': True,
+        "bos_token": SpecialTokens.BOS,
+        "eos_token": SpecialTokens.EOS,
     },
     'batch_size': args.test_batch_size,
     'allow_smaller_final_batch': True,
@@ -123,10 +133,14 @@ test_dataset_hparams = {
     "source_dataset": {
         "files": [args.test_src],
         "vocab_file": args.vocab_file,
+        "bos_token": SpecialTokens.BOS,
+        "eos_token": SpecialTokens.EOS,
     },
     "target_dataset": {
         "files": [args.test_tgt],
         "vocab_share":True,
+        "bos_token": SpecialTokens.BOS,
+        "eos_token": SpecialTokens.EOS,
     },
     'batch_size': args.test_batch_size,
     'allow_smaller_final_batch': True,
