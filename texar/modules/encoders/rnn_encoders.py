@@ -275,6 +275,7 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
         hparams["name"] = "bidirectional_rnn_encoder"
         return hparams
 
+    #TODO(zhiting): add docs of 'Returns'
     def _build(self, inputs, sequence_length=None,
                initial_state_fw=None, initial_state_bw=None, **kwargs):
         """Encodes the inputs.
@@ -295,7 +296,6 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
         Returns:
             Outputs and final state of the encoder.
         """
-        #TODO(zhiting): add docs of 'Returns'
         no_initial_state = initial_state_fw is None and initial_state_bw is None
         if ('dtype' not in kwargs) and no_initial_state:
             outputs, output_states = tf.nn.bidirectional_dynamic_rnn(

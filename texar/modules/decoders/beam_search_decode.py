@@ -15,6 +15,7 @@ from tensorflow.contrib.seq2seq import \
 from texar.modules.decoders.rnn_decoder_base import RNNDecoderBase
 
 # pylint: disable=too-many-arguments, protected-access, too-many-locals
+# pylint: disable=invalid-name
 
 __all__ = [
     "beam_search_decode"
@@ -134,23 +135,31 @@ def beam_search_decode(decoder_or_cell,
     if output_layer is None and isinstance(decoder_or_cell, RNNDecoderBase):
         output_layer = decoder_or_cell.output_layer
 
-    beam_docoder = BeamSearchDecoder(
-        cell=cell,
-        embedding=embedding,
-        start_tokens=start_tokens,
-        end_token=end_token,
-        initial_state=initial_state,
-        beam_width=beam_width,
-        output_layer=output_layer,
-        length_penalty_weight=length_penalty_weight)
+    def _decode():
+        beam_docoder = BeamSearchDecoder(
+            cell=cell,
+            embedding=embedding,
+            start_tokens=start_tokens,
+            end_token=end_token,
+            initial_state=initial_state,
+            beam_width=beam_width,
+            output_layer=output_layer,
+            length_penalty_weight=length_penalty_weight)
 
-    if 'maximum_iterations' in kwargs:
-        raise ValueError('Use `max_decoding_length` to set the maximum '
-                         'allowed number of decoding steps.')
-    outputs, final_state, _ = dynamic_decode(
-        decoder=beam_docoder,
-        output_time_major=output_time_major,
-        maximum_iterations=max_decoding_length,
-        **kwargs)
+        if 'maximum_iterations' in kwargs:
+            raise ValueError('Use `max_decoding_length` to set the maximum '
+                             'allowed number of decoding steps.')
+        outputs, final_state, _ = dynamic_decode(
+            decoder=beam_docoder,
+            output_time_major=output_time_major,
+            maximum_iterations=max_decoding_length,
+            **kwargs)
 
-    return outputs, final_state
+        return outputs, final_state
+
+    if isinstance(decoder_or_cell, RNNDecoderBase):
+        vs = decoder_or_cell.variable_scope
+        with tf.variable_scope(vs, reuse=tf.AUTO_REUSE):
+            return _decode()
+    else:
+        return _decode()

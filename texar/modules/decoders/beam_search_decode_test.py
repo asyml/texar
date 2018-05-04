@@ -59,6 +59,15 @@ class BeamSearchDecodeTest(tf.test.TestCase):
         self.assertIsInstance(
             final_state, tf.contrib.seq2seq.BeamSearchDecoderState)
 
+        num_trainable_variables = len(tf.trainable_variables())
+        _ = decoder(
+            decoding_strategy='infer_greedy',
+            embedding=self._embedding,
+            start_tokens=[1]*self._batch_size,
+            end_token=2,
+            max_decoding_length=20)
+        self.assertEqual(num_trainable_variables, len(tf.trainable_variables()))
+
         if tf_initial_state is None:
             tf_initial_state = decoder.cell.zero_state(
                 self._batch_size * beam_width_1, tf.float32)
@@ -94,6 +103,7 @@ class BeamSearchDecodeTest(tf.test.TestCase):
             tiled_initial_state=tiled_initial_state,
             max_decoding_length=21,
             output_time_major=True)
+
 
         with self.test_session() as sess:
             if not initiated:
