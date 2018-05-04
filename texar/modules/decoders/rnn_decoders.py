@@ -91,6 +91,11 @@ class BasicRNNDecoder(RNNDecoderBase):
             (default), a cell is created as specified in
             :attr:`hparams["rnn_cell"]` (see
             :meth:`~texar.modules.BasicRNNDecoder.default_hparams`).
+        cell_dropout_mode (optional): A Tensor taking value of
+            :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, which
+            toggles dropout in the RNN cell (e.g., activates dropout in the
+            TRAIN mode). If `None`, :func:`~texar.context.global_mode` is used.
+            Ignored if :attr:`cell` is given.
         vocab_size (int, optional): Vocabulary size. Required if
             :attr:`output_layer:` is `None`.
         output_layer (optional): An instance of
@@ -100,11 +105,6 @@ class BasicRNNDecoder(RNNDecoderBase):
             is used with output dimension set to :attr:`vocab_size`.
             Set `output_layer=tf.identity` if you do not want to have an
             output layer after the RNN cell outputs.
-        cell_dropout_mode (optional): A Tensor taking value of
-            :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, which
-            toggles dropout in the RNN cell (e.g., activates dropout in the
-            TRAIN mode). If `None`, :func:`~texar.context.global_mode` is used.
-            Ignored if :attr:`cell` is given.
         hparams (dict, optional): Hyperparameters. If not specified, the default
             hyperparameter setting is used. See
             :meth:`~texar.modules.BasicRNNDecoder.default_hparams` for the
@@ -113,9 +113,9 @@ class BasicRNNDecoder(RNNDecoderBase):
 
     def __init__(self,
                  cell=None,
+                 cell_dropout_mode=None,
                  vocab_size=None,
                  output_layer=None,
-                 cell_dropout_mode=None,
                  hparams=None):
         RNNDecoderBase.__init__(
             self, cell, vocab_size, output_layer, cell_dropout_mode, hparams)
@@ -245,6 +245,11 @@ class AttentionRNNDecoder(RNNDecoderBase):
             (default), a cell is created as specified in
             :attr:`hparams["rnn_cell"]` (see
             :meth:`~texar.modules.AttentionRNNDecoder.default_hparams`).
+        cell_dropout_mode (optional): A Tensor taking value of
+            :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, which
+            toggles dropout in the RNN cell (e.g., activates dropout in the
+            TRAIN mode). If `None`, :func:`~texar.context.global_mode` is used.
+            Ignored if :attr:`cell` is given.
         vocab_size (int, optional): Vocabulary size. Required if
             :attr:`output_layer:` is `None`.
         output_layer (optional): An instance of
@@ -265,9 +270,9 @@ class AttentionRNNDecoder(RNNDecoderBase):
                  memory_sequence_length=None,
                  cell_input_fn=None,
                  cell=None,
+                 cell_dropout_mode=None,
                  vocab_size=None,
                  output_layer=None,
-                 cell_dropout_mode=None,
                  hparams=None):
         RNNDecoderBase.__init__(
             self, cell, vocab_size, output_layer, cell_dropout_mode, hparams)

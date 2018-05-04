@@ -36,6 +36,8 @@ class GetRNNCellTest(tf.test.TestCase):
         cell = layers.get_rnn_cell(hparams)
         self.assertTrue(isinstance(cell, rnn.BasicLSTMCell))
 
+        keep_prob_x = tf.placeholder(
+            name='keep_prob', shape=[], dtype=tf.float32)
         hparams = {
             "type": "tensorflow.contrib.rnn.GRUCell",
             "kwargs": {
@@ -44,6 +46,7 @@ class GetRNNCellTest(tf.test.TestCase):
             "num_layers": 2,
             "dropout": {
                 "input_keep_prob": 0.8,
+                "state_keep_prob": keep_prob_x,
                 "variational_recurrent": True,
                 "input_size": [emb_dim, num_units]
             },
@@ -60,9 +63,13 @@ class GetRNNCellTest(tf.test.TestCase):
                              cell.zero_state(batch_size, dtype=tf.float32))
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
-            output_, state_ = sess.run(
-                [output, state],
-                feed_dict={context.global_mode(): tf.estimator.ModeKeys.TRAIN})
+
+            feed_dict = {
+                keep_prob_x: 1.0,
+                context.global_mode(): tf.estimator.ModeKeys.TRAIN
+            }
+            output_, state_ = sess.run([output, state], feed_dict=feed_dict)
+
             self.assertEqual(output_.shape[0], batch_size)
             if isinstance(state_, (list, tuple)):
                 self.assertEqual(state_[0].shape[0], batch_size)

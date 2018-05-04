@@ -124,7 +124,10 @@ def default_rnn_cell_hparams():
             "output_keep_prob": 1.0,
             "state_keep_prob": 1.0,
             "variational_recurrent": False,
-            "input_size": []
+            "input_size": [],
+            "@no_typecheck": [
+                "input_keep_prob", "output_keep_prob", "state_keep_prob"
+            ]
         },
         "residual": False,
         "highway": False,
