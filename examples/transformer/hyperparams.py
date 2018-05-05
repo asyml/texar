@@ -34,7 +34,7 @@ argparser.add_argument('--data_dir', type=str, default='/home/shr/t2t_data/')
 argparser.add_argument('--batch_size', type=int, default=4096,
     help='training batch size, count by tokens')
 argparser.add_argument('--test_batch_size', type=int, default=10)
-argparser.add_argument('--min_length_bucket', type=int, default=8)
+argparser.add_argument('--min_length_bucket', type=int, default=9)
 argparser.add_argument('--length_bucket_step', type=float, default=1.1)
 argparser.add_argument('--max_training_steps', type=int, default=250000)
 argparser.add_argument('--warmup_steps', type=int, default=16000)
@@ -78,7 +78,6 @@ batching_scheme = _batching_scheme(
     args.length_bucket_step,
     drop_long_sequences=True,
 )
-batching_scheme['boundaries'] = [i + 1 for i in batching_scheme['boundaries'] ]
 print('train_src:{}'.format(args.train_src))
 print('dev src:{}'.format(args.dev_src))
 train_dataset_hparams = {

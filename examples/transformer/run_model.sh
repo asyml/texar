@@ -34,7 +34,7 @@ case ${hparams_set} in
         --pre_encoding=${encoder} \
         --data_dir=${DATA_DIR}  --model_dir=${model_dir}\
         --src_language=${src_language} --tgt_language=${tgt_language} \
-        --batch_size=3072 --test_batch_size=64 \
+        --batch_size=2048 --test_batch_size=64 \
         --beam_width=5 --alpha=0.6 \
         --log_disk_dir=/space/shr/transformer_${encoder}/ \
         --draw_for_debug=0 --affine_bias=0 --eval_interval_epoch=1 \
