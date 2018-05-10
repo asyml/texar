@@ -1,3 +1,7 @@
+"""
+preprocessing text data. Generally it's to generate plain text vocab file,
+truncate sequence by length, generate the preprocessed dataset.
+"""
 from __future__ import unicode_literals
 import collections
 import io
@@ -5,16 +9,18 @@ import re
 import json
 import os
 import numpy as np
-from collections import namedtuple
+
+#pylint:disable=invalid-name
 
 from config import get_preprocess_args
-
 split_pattern = re.compile(r'([.,!?"\':;)(])')
 digit_pattern = re.compile(r'\d')
-Special_Seq = namedtuple('Special_Seq', ['PAD', 'BOS', 'EOS', 'UNK'])
+Special_Seq = collections.namedtuple('Special_Seq', \
+    ['PAD', 'BOS', 'EOS', 'UNK'])
 Vocab_Pad = Special_Seq(PAD=0, BOS=1, EOS=2, UNK=3)
 
 def split_sentence(s, tok=False):
+    """split sentence with some segmentation rules."""
     if tok:
         s = s.lower()
         s = s.replace('\u2019', "'")
@@ -30,9 +36,11 @@ def split_sentence(s, tok=False):
 
 
 def open_file(path):
+    """more robust open function"""
     return io.open(path, encoding='utf-8', errors='ignore')
 
 def read_file(path, tok=False):
+    """a generator to generate each line of file."""
     with open_file(path) as f:
         for line in f.readlines():
             words = split_sentence(line.strip(), tok)
@@ -40,6 +48,7 @@ def read_file(path, tok=False):
 
 
 def count_words(path, max_vocab_size=40000, tok=False):
+    """count all words in the corpus and output a counter"""
     counts = collections.Counter()
     for words in read_file(path, tok):
         for word in words:
@@ -49,10 +58,12 @@ def count_words(path, max_vocab_size=40000, tok=False):
     return vocab
 
 def make_array(word_id, words):
+    """generate id numpy array from plain text words."""
     ids = [word_id.get(word, Vocab_Pad.UNK) for word in words]
     return np.array(ids, 'i')
 
 def make_dataset(path, w2id, tok=False):
+    """generate dataset."""
     dataset, npy_dataset = [], []
     token_count, unknown_count = 0, 0
     for words in read_file(path, tok):
@@ -72,6 +83,7 @@ if __name__ == "__main__":
 
     print(json.dumps(args.__dict__, indent=4))
 
+    #pylint:disable=no-member
     # Vocab Construction
     source_path = os.path.join(args.input_dir, args.source_train)
     target_path = os.path.join(args.input_dir, args.target_train)
@@ -90,11 +102,11 @@ if __name__ == "__main__":
     assert len(source_data) == len(target_data)
 
     train_data = [(s, t) for s, t in zip(source_data, target_data)
-                  if 0 < len(s) < args.max_seq_length
-                  and 0 < len(t) < args.max_seq_length]
+                  if s and len(s) < args.max_seq_length
+                  and t and len(t) < args.max_seq_length]
     train_npy = [(s, t) for s, t in zip(source_npy, target_npy)
-                 if 0 < len(s) < args.max_seq_length
-                 and 0 < len(t) < args.max_seq_length]
+                 if s and len(s) < args.max_seq_length
+                 and t and len(t) < args.max_seq_length]
     assert len(train_data) == len(train_npy)
 
     # Display corpus statistics
@@ -110,30 +122,37 @@ if __name__ == "__main__":
     assert len(source_data) == len(target_data)
 
     valid_data = [(s, t) for s, t in zip(source_data, target_data)
-                  if 0 < len(s) and 0 < len(t)]
+                  if s and t]
     valid_npy = [(s, t) for s, t in zip(source_npy, target_npy)
-                 if 0 < len(s) and 0 < len(t)]
+                 if s and t]
     assert len(valid_data) == len(valid_npy)
 
     # Test Dataset
     source_path = os.path.join(args.input_dir, args.source_test)
     source_data, source_npy = make_dataset(source_path, w2id, args.tok)
-    target_path = os.path.realpath(os.path.join(args.input_dir, args.target_test))
+    target_path = os.path.realpath(
+        os.path.join(args.input_dir, args.target_test))
     target_data, target_npy = make_dataset(target_path, w2id, args.tok)
     assert len(source_data) == len(target_data)
     test_data = [(s, t) for s, t in zip(source_data, target_data)
-                 if 0 < len(s) and 0 < len(t)]
-    test_npy =  [(s, t) for s, t in zip(source_npy, target_npy)
-                 if 0 < len(s) and 0 < len(t)]
+                 if s and t]
+    test_npy = [(s, t) for s, t in zip(source_npy, target_npy)
+                if s and t]
 
     id2w = {i: w for w, i in w2id.items()}
     # Save the dataset to numpy files
-    train_src_output = os.path.join(args.input_dir, args.save_data + 'train.' + args.src+ '.txt')
-    train_tgt_output = os.path.join(args.input_dir, args.save_data + 'train.' + args.tgt + '.txt')
-    dev_src_output = os.path.join(args.input_dir, args.save_data + 'dev.' + args.src+ '.txt')
-    dev_tgt_output = os.path.join(args.input_dir, args.save_data + 'dev.' + args.tgt+ '.txt')
-    test_src_output = os.path.join(args.input_dir, args.save_data + 'test.' + args.src+ '.txt')
-    test_tgt_output = os.path.join(args.input_dir, args.save_data + 'test.' + args.tgt + '.txt')
+    train_src_output = os.path.join(args.input_dir, \
+        args.save_data + 'train.' + args.src+ '.txt')
+    train_tgt_output = os.path.join(args.input_dir, \
+        args.save_data + 'train.' + args.tgt + '.txt')
+    dev_src_output = os.path.join(args.input_dir, \
+        args.save_data + 'dev.' + args.src+ '.txt')
+    dev_tgt_output = os.path.join(args.input_dir, \
+        args.save_data + 'dev.' + args.tgt+ '.txt')
+    test_src_output = os.path.join(args.input_dir, \
+        args.save_data + 'test.' + args.src+ '.txt')
+    test_tgt_output = os.path.join(args.input_dir, \
+        args.save_data + 'test.' + args.tgt + '.txt')
 
     np.save(os.path.join(args.input, args.save_data + 'train.npy'),
             train_npy)
@@ -142,20 +161,23 @@ if __name__ == "__main__":
     np.save(os.path.join(args.input, args.save_data + 'test.npy'),
             test_npy)
 
-    with open(train_src_output, 'w+') as fsrc, open(train_tgt_output, 'w+') as ftgt:
+    with open(train_src_output, 'w+') as fsrc, \
+        open(train_tgt_output, 'w+') as ftgt:
         for words in train_data:
             fsrc.write('{}\n'.format(' '.join(words[0])))
             ftgt.write('{}\n'.format(' '.join(words[1])))
-    with open(dev_src_output, 'w+') as fsrc, open(dev_tgt_output, 'w+') as ftgt:
+    with open(dev_src_output, 'w+') as fsrc, \
+        open(dev_tgt_output, 'w+') as ftgt:
         for words in valid_data:
             fsrc.write('{}\n'.format(' '.join(words[0])))
             ftgt.write('{}\n'.format(' '.join(words[1])))
-    with open(test_src_output, 'w+') as fsrc, open(test_tgt_output, 'w+') as ftgt:
+    with open(test_src_output, 'w+') as fsrc, \
+        open(test_tgt_output, 'w+') as ftgt:
         for words in test_data:
             fsrc.write('{}\n'.format(' '.join(words[0])))
             ftgt.write('{}\n'.format(' '.join(words[1])))
-    with open(os.path.join(args.input_dir,
-            args.save_data + args.pre_encoding + '.vocab.text'.format(args.src, args.tgt)), 'w+') as f:
+    with open(os.path.join(args.input_dir, \
+            args.save_data + args.pre_encoding + '.vocab.text'), 'w+') as f:
         max_size = len(id2w)
         for idx in range(4, max_size):
             f.write('{}\n'.format(id2w[idx]))

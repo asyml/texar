@@ -3,7 +3,7 @@
 TF=$(pwd)
 
 export PATH=$PATH:$TF/../../tools/
-encoder=wpm
+encoder=spm
 if [ -z $1 ]; then
     src_language=en
 else

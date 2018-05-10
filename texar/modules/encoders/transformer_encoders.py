@@ -53,22 +53,24 @@ class TransformerEncoder(EncoderBase):
             embed_dim = self._embedding.get_shape().as_list()[-1]
             if self._hparams.zero_pad: # TODO(zhiting): vocab has zero pad
                 if not self._hparams.bos_pad:
-                    self._embedding = tf.concat((tf.zeros(shape=[1, embed_dim]),
-                        self._embedding[1:, :]), 0)
+                    self._embedding = tf.concat(\
+                        (tf.zeros(shape=[1, embed_dim]),
+                         self._embedding[1:, :]), 0)
                 else:
-                    self._embedding = tf.concat((tf.zeros(shape=[2, embed_dim]),
-                        self._embedding[2:, :]), 0)
+                    self._embedding = tf.concat(\
+                        (tf.zeros(shape=[2, embed_dim]),
+                         self._embedding[2:, :]), 0)
             if self._vocab_size is None:
                 self._vocab_size = self._embedding.get_shape().as_list()[0]
         with tf.variable_scope(self.variable_scope):
             if self._hparams.target_space_id is not None:
-                space_embedding = tf.get_variable('target_space_embedding',
+                space_embedding = tf.get_variable('target_space_embedding', \
                     [32, embed_dim])
                 self.target_symbol_embedding = tf.gather(space_embedding, \
                     self._hparams.target_space_id)
             else:
                 self.target_symbol_embedding = None
-
+            self.stack_output = None
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
@@ -119,27 +121,29 @@ class TransformerEncoder(EncoderBase):
             'target_space_id': None,
             'num_units': 512,
         }
-
+    #pylint:disable=arguments-differ
     def _build(self, inputs, encoder_padding, **kwargs):
+        #pylint:disable=too-many-locals
         self.enc = tf.nn.embedding_lookup(self._embedding, inputs)
         _, _, channels = layers.shape_list(self.enc)
-        if self._hparams.multiply_embedding_mode =='sqrt_depth':
+        if self._hparams.multiply_embedding_mode == 'sqrt_depth':
             self.enc = self.enc * channels**0.5
 
-        ignore_padding = attentions.attention_bias_ignore_padding(encoder_padding)
+        ignore_padding = attentions.attention_bias_ignore_padding(
+            encoder_padding)
         encoder_self_attention_bias = ignore_padding
         encoder_decoder_attention_bias = ignore_padding
 
         if self.target_symbol_embedding:
-            emb_target_space = tf.reshape(self.target_symbol_embedding, [1,1,-1])
+            emb_target_space = tf.reshape(
+                self.target_symbol_embedding, [1, 1, -1])
             self.enc = self.enc + emb_target_space
 
-        self.input_embedding = layers.add_timing_signal_1d(self.enc)
+        input_embedding = layers.add_timing_signal_1d(self.enc)
 
-        x = tf.layers.dropout(self.input_embedding,
-            rate=self._hparams.embedding_dropout,
-            training=context.global_mode_train())
-
+        x = tf.layers.dropout(input_embedding,
+                              rate=self._hparams.embedding_dropout,
+                              training=context.global_mode_train())
         pad_remover = utils.padding_related.PadRemover(encoder_padding)
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("layer_{}".format(i)):
@@ -172,7 +176,7 @@ class TransformerEncoder(EncoderBase):
                         training=context.global_mode_train()
                     )
                     sub_output = tf.reshape(pad_remover.restore(tf.squeeze(\
-                        sub_output, axis=0)), original_shape
+                        sub_output, axis=0)), original_shape \
                     )
                     x = x + sub_output
 

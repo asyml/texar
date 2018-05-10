@@ -14,7 +14,7 @@ encoder=spm
 DATA_DIR="./temp/run_${src_language}_${tgt_language}_${encoder}/data/"
 hparams_set=$1
 #LOG_DISK_DIR='/home2/shr/transformeLOG_DISK_DIR=/space/shr/transformer_${ENCODER}/
-LOG_DISK_DIR=/space/shr/transformer_${encoder}/
+LOG_DISK_DIR=/space/hzt/shr/transformer_${encoder}/
 running_mode=$2
 echo "mode:${running_mode}"
 
@@ -36,7 +36,7 @@ case ${hparams_set} in
         --src_language=${src_language} --tgt_language=${tgt_language} \
         --batch_size=2048 --test_batch_size=64 \
         --beam_width=5 --alpha=0.6 \
-        --log_disk_dir=/space/shr/transformer_${encoder}/ \
+        --log_disk_dir=/space/hzt/shr/transformer_${encoder}/ \
         --draw_for_debug=0 --affine_bias=0 --eval_interval_epoch=1 \
         --zero_pad=1 --bos_pad=0 \
         --filename_prefix=processed. &> logging_100_${src_language}_${tgt_language}_${running_mode}.txt;;

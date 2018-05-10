@@ -73,19 +73,19 @@ def compute_bleu(reference_corpus,
                  translation_corpus,
                  max_order=4,
                  use_bp=True):
-    """Computes BLEU score of translated segments against one or more references.
+    """Computes BLEU score of translated segments against references.
 
-  Args:
-    reference_corpus: list of references for each translation. Each
-        reference should be tokenized into a list of tokens.
-    translation_corpus: list of translations to score. Each translation
-        should be tokenized into a list of tokens.
-    max_order: Maximum n-gram order to use when computing BLEU score.
-    use_bp: boolean, whether to apply brevity penalty.
+    Args:
+        reference_corpus: list of references for each translation. Each
+            reference should be tokenized into a list of tokens.
+        translation_corpus: list of translations to score. Each translation
+            should be tokenized into a list of tokens.
+        max_order: Maximum n-gram order to use when computing BLEU score.
+        use_bp: boolean, whether to apply brevity penalty.
+    Returns:
+        BLEU score.
+    """
 
-  Returns:
-    BLEU score.
-  """
     reference_length = 0
     translation_length = 0
     bp = 1.0
@@ -108,14 +108,16 @@ def compute_bleu(reference_corpus,
         for ngram in overlap:
             matches_by_order[len(ngram) - 1] += overlap[ngram]
         for ngram in translation_ngram_counts:
-            possible_matches_by_order[len(ngram) - 1] += translation_ngram_counts[ngram]
+            possible_matches_by_order[len(ngram) - 1] += \
+                translation_ngram_counts[ngram]
     precisions = [0] * max_order
     smooth = 1.0
     for i in xrange(0, max_order):
         if possible_matches_by_order[i] > 0:
             precisions[i] = matches_by_order[i] / possible_matches_by_order[i]
             if matches_by_order[i] > 0:
-                precisions[i] = matches_by_order[i] / possible_matches_by_order[i]
+                precisions[i] = matches_by_order[i] / \
+                    possible_matches_by_order[i]
             else:
                 smooth *= 2
                 precisions[i] = 1.0 / (smooth * possible_matches_by_order[i])
@@ -135,7 +137,7 @@ def compute_bleu(reference_corpus,
 
 class UnicodeRegex(object):
     """Ad-hoc hack to recognize all punctuation and symbols."""
-
+    # pylint:disable=too-few-public-methods
     def __init__(self):
         punctuation = self.property_chars("P")
         self.nondigit_punct_re = re.compile(r"([^\d])([" + punctuation + r"])")
@@ -143,8 +145,9 @@ class UnicodeRegex(object):
         self.symbol_re = re.compile("([" + self.property_chars("S") + "])")
 
     def property_chars(self, prefix):
-        return "".join(six.unichr(x) for x in range(sys.maxunicode)
-                       if unicodedata.category(six.unichr(x)).startswith(prefix))
+        #pylint:disable=no-self-use
+        return "".join(six.unichr(x) for x in range(sys.maxunicode) \
+            if unicodedata.category(six.unichr(x)).startswith(prefix))
 
 
 uregex = UnicodeRegex()
@@ -194,8 +197,8 @@ def bleu_wrapper(ref_filename, hyp_filename, case_sensitive=False):
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser(description='Compute BLEU score as reported in papers. \
-  Usage: t2t-bleu --translation=my-wmt13.de --reference=wmt13_deen.de')
+    parser = ArgumentParser(description='Compute BLEU score. \
+        Usage: t2t-bleu --translation=my-wmt13.de --reference=wmt13_deen.de')
 
     parser.add_argument('--translation', type=str)
     parser.add_argument('--reference', type=str)

@@ -69,12 +69,16 @@ seq_lengths = tf.placeholder(tf.int64, [None])
 
 embedder = tx.modules.WordEmbedder(vocab_size=vocab_size, init_value=word_vecs)
 emb_inputs = embedder(inputs)
-
-encoder = tx.modules.BidirectionalRNNEncoder(hparams={"rnn_cell_fw": config.cell, "rnn_cell_bw": config.cell})
-
-outputs, _ = encoder(emb_inputs, sequence_length=seq_lengths)
-
-outputs = tf.concat(outputs, axis=2)
+if config.encoder=='transformer':
+    encoder = tx.modules.TransformerEncoder(\
+        embedding=embedder._embedding,
+        hparams=config.encoder_hparams)
+    enc_padding = tf.to_float(tf.equal(inputs, 0))
+    outputs, _ = encoder(inputs, enc_padding=enc_padding)
+else:
+    encoder = tx.modules.BidirectionalRNNEncoder(hparams={"rnn_cell_fw": config.cell, "rnn_cell_bw": config.cell})
+    outputs, _ = encoder(emb_inputs, sequence_length=seq_lengths)
+    outputs = tf.concat(outputs, axis=2)
 
 rnn_shape = tf.shape(outputs)
 

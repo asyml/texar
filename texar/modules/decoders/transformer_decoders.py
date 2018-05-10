@@ -37,27 +37,31 @@ class TransformerDecoder(ModuleBase):
         self._embedding = None
         if self._hparams.initializer:
             with tf.variable_scope(self.variable_scope):
-                tf.get_variable_scope().set_initializer(
-                        layers.get_initializer(self._hparams.initializer))
+                tf.get_variable_scope().set_initializer( \
+                    layers.get_initializer(self._hparams.initializer))
+
         if self._hparams.use_embedding:
             if embedding is None and vocab_size is None:
-                raise ValueError("If 'embedding' is not provided, 'vocab_size' must be specified.")
-            if isinstance(embedding, tf.Tensor) or isinstance(embedding, tf.Variable):
+                raise ValueError("""If 'embedding' is not provided,
+                    'vocab_size' must be specified.""")
+            if isinstance(embedding, (tf.Tensor, tf.Variable)):
                 self._embedding = embedding
             else:
-                raise NotImplementedError
                 self._embedding = embedder_utils.get_embedding(
                     self._hparams.embedding, embedding, vocab_size,
                     variable_scope=self.variable_scope)
                 self._embed_dim = layers.shape_list(self._embedding)[-1]
                 if self._hparams.zero_pad:
-                    self._embedding = tf.concat((tf.zeros(shape=[1, self._embed_dim]),\
+                    self._embedding = tf.concat( \
+                        (tf.zeros(shape=[1, self._embed_dim]),\
                         self._embedding[1:, :]), 0)
             if self._vocab_size is None:
                 self._vocab_size = self._embedding.get_shape().as_list()[0]
-        self.output_layer = self.build_output_layer(layers.shape_list(self._embedding)[-1])
+        self.output_layer = \
+            self.build_output_layer(layers.shape_list(self._embedding)[-1])
     @staticmethod
     def default_hparams():
+        """default hyperrams for transformer deocder."""
         return {
             'initializer':None,
             'multiply_embedding_mode': 'sqrt_depth',
@@ -82,12 +86,14 @@ class TransformerDecoder(ModuleBase):
             'eos_idx': 2,
             'bos_idx': 1,
         }
+
     def prepare_tokens_to_embeds(self, tokens):
+        """ a callable function to transform tokens into embeddings."""
         token_emb = tf.nn.embedding_lookup(self._embedding, tokens)
         return token_emb
 
     def _symbols_to_logits_fn(self, embedding_fn, max_length):
-        timing_signal = layers.get_timing_signal_1d(max_length,
+        timing_signal = layers.get_timing_signal_1d(max_length, \
             self._embedding.shape.as_list()[-1])
 
         """ the function is normally called in dynamic decoding mode.
@@ -110,12 +116,12 @@ class TransformerDecoder(ModuleBase):
             )
             #outputs = outputs[:, -1:, :]
             logits = self.output_layer(outputs)
-            logits = tf.squeeze(logits, axis= [1])
+            logits = tf.squeeze(logits, axis=[1])
 
             return logits, cache
 
         return _impl
-
+    #pylint:disable=arguments-differ
     def _build(self, targets, encoder_output, encoder_decoder_attention_bias):
         """
             this function is called on training generally.
@@ -134,7 +140,7 @@ class TransformerDecoder(ModuleBase):
         if self._hparams.multiply_embedding_mode == 'sqrt_depth':
             target_inputs = target_inputs * \
                 (self._embedding.shape.as_list()[-1]**0.5)
-        inputs =layers.add_timing_signal_1d(target_inputs)
+        inputs = layers.add_timing_signal_1d(target_inputs)
 
         decoder_output = self._self_attention_stack(
             inputs,
@@ -151,7 +157,6 @@ class TransformerDecoder(ModuleBase):
     def dynamic_decode(self, encoder_output, encoder_decoder_attention_bias):
         """
             this function is called on in test mode, without the target input.
-            Based on beam_size, here performs greedy decoding or beam search decoding
         """
         with tf.variable_scope(self.variable_scope, reuse=True):
             batch_size = tf.shape(encoder_decoder_attention_bias)[0]
@@ -165,7 +170,8 @@ class TransformerDecoder(ModuleBase):
                     self._hparams.eos_idx,
                     decode_length=maximum_decode_length,
                     memory=encoder_output,
-                    encoder_decoder_attention_bias=encoder_decoder_attention_bias
+                    encoder_decoder_attention_bias=\
+                        encoder_decoder_attention_bias
                 )
             else:
                 sampled_ids, log_probs = self.beam_decode(
@@ -175,7 +181,8 @@ class TransformerDecoder(ModuleBase):
                     beam_width=beam_width,
                     decode_length=maximum_decode_length,
                     memory=encoder_output,
-                    encoder_decoder_attention_bias=encoder_decoder_attention_bias,
+                    encoder_decoder_attention_bias=\
+                        encoder_decoder_attention_bias,
                 )
             predictions = {
                 'sampled_ids':sampled_ids,
@@ -196,7 +203,8 @@ class TransformerDecoder(ModuleBase):
                                    rate=self._hparams.embedding_dropout,
                                    training=context.global_mode_train())
         if cache is not None:
-            encoder_decoder_attention_bias = cache['encoder_decoder_attention_bias']
+            encoder_decoder_attention_bias = \
+                cache['encoder_decoder_attention_bias']
         else:
             assert decoder_self_attention_bias is not None
         assert encoder_decoder_attention_bias is not None
@@ -233,10 +241,11 @@ class TransformerDecoder(ModuleBase):
                         scope="multihead_attention"
                     )
                     x = x + tf.layers.dropout(encdec_output, \
-                        rate=self._hparams.residual_dropout,
+                        rate=self._hparams.residual_dropout, \
                         training=context.global_mode_train()
                     )
-                poswise_network = FeedForwardNetwork(hparams=self._hparams['poswise_feedforward'])
+                poswise_network = FeedForwardNetwork( \
+                    hparams=self._hparams['poswise_feedforward'])
                 with tf.variable_scope(poswise_network.variable_scope):
                     sub_output = tf.layers.dropout(
                         poswise_network(layers.layer_normalize(x)),
