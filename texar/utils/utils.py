@@ -57,6 +57,7 @@ __all__ = [
     "get_batch_size",
     "default_string",
     "patch_dict",
+    "fetch_subdict",
     "uniquify_str",
     "_bucket_boundaries",
     "soft_sequence_embedding",
@@ -553,6 +554,31 @@ def patch_dict(tgt_dict, src_dict):
         elif isinstance(value, dict) and isinstance(patched_dict[key], dict):
             patched_dict[key] = patch_dict(patched_dict[key], value)
     return patched_dict
+
+def fetch_subdict(src_dict, tgt_dict_or_keys):
+    """Fetches a sub dict of :attr:`src_dict` with the keys in
+    :attr:`tgt_dict_or_keys`.
+
+    Args:
+        src_dict: A dict or instance of :class:`texar.HParams`.
+            The source dict to fetch values from.
+        tgt_dict_or_keys: A dict, instance of :class:`texar.HParams`,
+            or a list (or a dict_keys) of keys to be included in the output
+            dict.
+
+    Returns:
+        A new dict that is a subdict of :attr:`src_dict`.
+    """
+    if isinstance(tgt_dict_or_keys, HParams):
+        tgt_dict_or_keys = tgt_dict_or_keys.todict()
+    if isinstance(tgt_dict_or_keys, dict):
+        tgt_dict_or_keys = tgt_dict_or_keys.keys()
+    keys = list(tgt_dict_or_keys)
+
+    if isinstance(src_dict, HParams):
+        src_dict = src_dict.todict()
+
+    return {k: src_dict[k] for k in keys if k in src_dict}
 
 def uniquify_str(str_, str_set):
     """Uniquifies :attr:`str_` if :attr:`str_` is included in :attr:`str_set`.
