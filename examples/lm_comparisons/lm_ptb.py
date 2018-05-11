@@ -134,7 +134,7 @@ def _main(_):
                       file=training_log)
                 training_log.flush()
 
-            if mode_string == 'train' and rets['global_step'] % 5 == 0:
+            if mode_string == 'train' and rets['global_step'] % 100 == 0:
                 valid_data_iter = ptb_iterator(
                     data["valid_text_id"], config.valid_batch_size, num_steps)
                 valid_ppl = \
