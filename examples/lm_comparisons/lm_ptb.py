@@ -47,7 +47,7 @@ config = importlib.import_module(FLAGS.config)
 
 def _main(_):
     # Data
-    batch_size = config.batch_size
+    batch_size = tf.placeholder(dtype=tf.int32, shape=())
     num_steps = config.num_steps
     data = prepare_data(FLAGS.data_path)
     vocab_size = data["vocab_size"]
@@ -58,18 +58,18 @@ def _main(_):
         'steps_not_improved': 0
     }
 
-    inputs = tf.placeholder(tf.int32, [batch_size, num_steps])
-    targets = tf.placeholder(tf.int32, [batch_size, num_steps])
+    inputs = tf.placeholder(tf.int32, [None, num_steps])
+    targets = tf.placeholder(tf.int32, [None, num_steps])
 
     model = EmbeddingTiedLanguageModel(vocab_size=vocab_size)
     initial_state, logits, final_state = \
-        model(text_ids=inputs, num_steps=[num_steps] * batch_size)
+        model(text_ids=inputs, num_steps=config.num_steps * tf.ones((batch_size, ), dtype=tf.int32))
 
     # Losses & train ops
     mle_loss = tx.losses.sequence_sparse_softmax_cross_entropy(
         labels=targets,
         logits=logits,
-        sequence_length=[num_steps] * batch_size)
+        sequence_length=num_steps * tf.ones((batch_size, )))
 
     l2_loss = sum([tf.nn.l2_loss(t) for t in tf.trainable_variables()])
 
@@ -85,25 +85,34 @@ def _main(_):
     train_op = optimizer.minimize(
         mle_loss + config.l2_decay * l2_loss, global_step=global_step)
 
-    def _run_epoch(sess, data_iter, is_train=False):
+    def _run_epoch(sess, data_iter, mode_string):
+        if mode_string == 'train':
+            cur_batch_size = config.training_batch_size
+        elif mode_string == 'valid':
+            cur_batch_size = config.valid_batch_size
+        elif mode_string == 'test':
+            cur_batch_size = config.test_batch_size
+
         start_time = time.time()
         loss = 0.
         iters = 0
-        state = sess.run(initial_state)
+        state = sess.run(initial_state, feed_dict={
+            inputs: np.ones((cur_batch_size, config.num_steps))})
 
         fetches = {
             "mle_loss": mle_loss,
             "final_state": final_state,
             'global_step': global_step
         }
-        if is_train:
+        if mode_string == 'train':
             fetches["train_op"] = train_op
 
-        mode = (tf.estimator.ModeKeys.TRAIN if is_train
+        mode = (tf.estimator.ModeKeys.TRAIN if mode_string=='train'
                 else tf.estimator.ModeKeys.EVAL)
         epoch_size = (len(data) // batch_size - 1) // num_steps
         for step, (x, y) in enumerate(data_iter):
             feed_dict = {
+                batch_size: cur_batch_size,
                 inputs: x, targets: y,
                 learning_rate: opt_vars['learning_rate'],
                 tx.global_mode(): mode,
@@ -119,19 +128,20 @@ def _main(_):
 
             ppl = np.exp(loss / iters)
 
-            if is_train:
+            if mode_string == 'train':
                 print('global step:', rets['global_step'], ' ' * 4,
                       'training ppl:', ppl,
                       file=training_log)
                 training_log.flush()
 
-            if is_train and rets['global_step'] % 100 == 0:
+            if mode_string == 'train' and rets['global_step'] % 5 == 0:
                 valid_data_iter = ptb_iterator(
-                    data["valid_text_id"], config.batch_size, num_steps)
-                valid_ppl = _run_epoch(sess, valid_data_iter)
+                    data["valid_text_id"], config.valid_batch_size, num_steps)
+                valid_ppl = \
+                    _run_epoch(sess, valid_data_iter, mode_string='valid')
                 test_data_iter = ptb_iterator(
-                    data["test_text_id"], batch_size, num_steps)
-                test_ppl = _run_epoch(sess, test_data_iter)
+                    data["test_text_id"], config.test_batch_size, num_steps)
+                test_ppl = _run_epoch(sess, test_data_iter, mode_string='test')
                 print('global step:', rets['global_step'], ' ' * 4,
                       'learning rate:', opt_vars['learning_rate'], ' ' * 4,
                       'valid ppl:', valid_ppl, ' ' * 4,
@@ -160,18 +170,18 @@ def _main(_):
         for epoch in range(config.num_epochs):
             # Train
             train_data_iter = ptb_iterator(
-                data["train_text_id"], config.batch_size, num_steps)
-            train_ppl = _run_epoch(sess, train_data_iter, is_train=True)
+                data["train_text_id"], config.training_batch_size, num_steps)
+            train_ppl = _run_epoch(sess, train_data_iter, mode_string='train')
             print("Epoch: %d Train Perplexity: %.3f" % (epoch, train_ppl))
             # Valid
             valid_data_iter = ptb_iterator(
-                data["valid_text_id"], config.batch_size, num_steps)
-            valid_ppl = _run_epoch(sess, valid_data_iter)
+                data["valid_text_id"], config.valid_batch_size, num_steps)
+            valid_ppl = _run_epoch(sess, valid_data_iter, mode_string='valid')
             print("Epoch: %d Valid Perplexity: %.3f" % (epoch, valid_ppl))
             # Test
             test_data_iter = ptb_iterator(
-                data["test_text_id"], batch_size, num_steps)
-            test_ppl = _run_epoch(sess, test_data_iter)
+                data["test_text_id"], config.test_batch_size, num_steps)
+            test_ppl = _run_epoch(sess, test_data_iter, mode_string='test')
             print("Test Perplexity: %.3f" % (test_ppl))
 
 

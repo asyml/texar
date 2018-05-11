@@ -1,6 +1,8 @@
 num_epochs = 1000
 
-batch_size = 64
+training_batch_size = 64
+valid_batch_size = 1
+test_batch_size = 1
 num_steps = 35
 
 init_lr = 0.003

@@ -79,7 +79,7 @@ class EmbeddingTiedLanguageModel(tx.modules.ModuleBase):
             tx.utils.switch_dropout(1. - self.embedding_dropout))
 
         initial_state = self.decoder.zero_state(
-            batch_size=text_ids.shape[0], dtype=tf.float32)
+            batch_size=tf.shape(text_ids)[0], dtype=tf.float32)
         outputs, final_state, sequence_length = self.decoder(
             inputs=tf.nn.embedding_lookup(embedding_matrix, text_ids),
             initial_state=initial_state,
@@ -102,11 +102,15 @@ if __name__ == '__main__':
 
     a, b, c = lm(text_ids, num_steps)
 
-    text_ids = tf.ones((16, 25), dtype=tf.int64)
-    num_steps = [15] * 16
-
-    a, b, c = lm(text_ids, num_steps)
-
+    inputs = tf.placeholder(dtype=tf.float32, shape=[None, None, 50])
+    length = tf.placeholder(dtype=tf.int32, shape=[None])
+    #
+    # decoder = tx.modules.BasicRNNDecoder(vocab_size=200)
+    # decoder(inputs=inputs,
+    #         initial_state=decoder.zero_state(batch_size=)
+    #         impute_finished=True,
+    #         decoding_strategy="train_greedy",
+    #         sequence_length=num_steps)
 
     print(a)
     print(b)
