@@ -122,11 +122,11 @@ class TransformerDecoder(ModuleBase):
 
         return _impl
     #pylint:disable=arguments-differ
-    def _build(self, targets, encoder_output, encoder_decoder_attention_bias):
+    def _build(self, decoder_input, encoder_output, encoder_decoder_attention_bias):
         """
             this function is called on training generally.
             Args:
-                targets: [bath_size, target_length], begins with [bos] token
+                targets: [bath_size, target_length], generally begins with [bos] token
                 encoder_output: [batch_size, source_length, channels]
             outputs:
                 logits: [batch_size, target_length, vocab_size]
@@ -135,8 +135,8 @@ class TransformerDecoder(ModuleBase):
         logits = None
         decoder_self_attention_bias = (
             attentions.attention_bias_lower_triangle(
-                layers.shape_list(targets)[1]))
-        target_inputs = tf.nn.embedding_lookup(self._embedding, targets)
+                layers.shape_list(decoder_input)[1]))
+        target_inputs = tf.nn.embedding_lookup(self._embedding, decoder_input)
         if self._hparams.multiply_embedding_mode == 'sqrt_depth':
             target_inputs = target_inputs * \
                 (self._embedding.shape.as_list()[-1]**0.5)
@@ -207,7 +207,6 @@ class TransformerDecoder(ModuleBase):
                 cache['encoder_decoder_attention_bias']
         else:
             assert decoder_self_attention_bias is not None
-        assert encoder_decoder_attention_bias is not None
 
         x = inputs
         for i in range(self._hparams.num_blocks):
@@ -230,20 +229,21 @@ class TransformerDecoder(ModuleBase):
                         rate=self._hparams.residual_dropout,
                         training=context.global_mode_train()
                     )
-                with tf.variable_scope('encdec_attention'):
-                    encdec_output = layers.multihead_attention(
-                        queries=layers.layer_normalize(x),
-                        memory=encoder_output,
-                        memory_attention_bias=encoder_decoder_attention_bias,
-                        num_units=self._hparams.num_units,
-                        num_heads=self._hparams.num_heads,
-                        dropout_rate=self._hparams.attention_dropout,
-                        scope="multihead_attention"
-                    )
-                    x = x + tf.layers.dropout(encdec_output, \
-                        rate=self._hparams.residual_dropout, \
-                        training=context.global_mode_train()
-                    )
+                if encoder_output is not None:
+                    with tf.variable_scope('encdec_attention'):
+                        encdec_output = layers.multihead_attention(
+                            queries=layers.layer_normalize(x),
+                            memory=encoder_output,
+                            memory_attention_bias=encoder_decoder_attention_bias,
+                            num_units=self._hparams.num_units,
+                            num_heads=self._hparams.num_heads,
+                            dropout_rate=self._hparams.attention_dropout,
+                            scope="multihead_attention"
+                        )
+                        x = x + tf.layers.dropout(encdec_output, \
+                            rate=self._hparams.residual_dropout, \
+                            training=context.global_mode_train()
+                        )
                 poswise_network = FeedForwardNetwork( \
                     hparams=self._hparams['poswise_feedforward'])
                 with tf.variable_scope(poswise_network.variable_scope):
@@ -383,7 +383,7 @@ class TransformerDecoder(ModuleBase):
                     decode_length=256,
                     beam_width=5):
         cache = self._init_cache(memory, encoder_decoder_attention_bias)
-        symbols_to_logits_fn = self._symbols_to_logits_fn(embedding_fn,
+        symbols_to_logits_fn = self._symbols_to_logits_fn(embedding_fn, \
             max_length=decode_length+1)
         outputs, log_probs = beam_search.beam_search(
             symbols_to_logits_fn,

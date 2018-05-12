@@ -70,7 +70,7 @@ class TransformerEncoder(EncoderBase):
                     self._hparams.target_space_id)
             else:
                 self.target_symbol_embedding = None
-            self.stack_output = None
+        self.stack_output = None
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.

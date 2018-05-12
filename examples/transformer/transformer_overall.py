@@ -74,7 +74,6 @@ if __name__ == "__main__":
     # TODO(haoran): a better interface to share embedding
     encoder = TransformerEncoder(
         embedding=WordEmbedder._embedding,
-        vocab_size=train_database.source_vocab.size,\
         hparams=encoder_hparams)
     #logging.info('encoder hparams: %s', encoder._hparams)
     encoder_output, encoder_decoder_attention_bias = \

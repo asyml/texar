@@ -22,7 +22,6 @@ from __future__ import print_function
 # pylint: disable=invalid-name, no-member, too-many-locals
 
 import os
-import time
 import importlib
 import numpy as np
 import tensorflow as tf
@@ -86,7 +85,6 @@ def _main(_):
         mle_loss + config.l2_decay * l2_loss, global_step=global_step)
 
     def _run_epoch(sess, data_iter, is_train=False):
-        start_time = time.time()
         loss = 0.
         iters = 0
         state = sess.run(initial_state)
@@ -101,16 +99,21 @@ def _main(_):
 
         mode = (tf.estimator.ModeKeys.TRAIN if is_train
                 else tf.estimator.ModeKeys.EVAL)
-        epoch_size = (len(data) // batch_size - 1) // num_steps
+
         for step, (x, y) in enumerate(data_iter):
             feed_dict = {
                 inputs: x, targets: y,
                 learning_rate: opt_vars['learning_rate'],
                 tx.global_mode(): mode,
             }
+            print('intial_state:{}'.format(initial_state))
+            print('state:{}'.format(state))
             for i, (c, h) in enumerate(initial_state):
+                print('c:{}'.format(c))
+                print('h:{}'.format(h))
                 feed_dict[c] = state[i].c
                 feed_dict[h] = state[i].h
+            print('x.shape:{} y.shape:{}'.format(x.shape, y.shape))
 
             rets = sess.run(fetches, feed_dict)
             loss += rets["mle_loss"]
@@ -124,6 +127,9 @@ def _main(_):
                       'training ppl:', ppl,
                       file=training_log)
                 training_log.flush()
+
+            if is_train and rets['global_step'] % 3 == 0:
+                return
 
             if is_train and rets['global_step'] % 100 == 0:
                 valid_data_iter = ptb_iterator(
