@@ -17,30 +17,7 @@ class Hyperparams:
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-few-public-methods
     def __init__(self):
-        self.data_dir = None
-        self.filename_prefix = None
-        self.filename_suffix = None
-        self.pre_encoding = None
-        self.src_language, self.tgt_language = None, None
-        self.train_src, self.dev_src, self.test_src = None, None, None
-        self.train_tgt, self.dev_tgt, self.test_tgt = None, None, None
-        self.load_from_pytorch = None
-        self.affine_bias = None
-        self.bos_pad, self.zero_pad = None, None
-        self.vocab_file = None
-        self.max_train_epoch = None
-        self.max_train_epoch = None
-        self.lr_constant, self.warmup_steps = None, None
-        self.log_disk_dir, self.log_dir = None, None
-        self.batch_size, self.max_seq_length = None, None
-        self.min_length_bucket, self.length_bucket_step = None, None
-        self.eval_interval_epoch = None
-        self.test_batch_size = None
-        self.random_seed = None
-        self.hidden_dim = None
-        self.word_embedding_hparams = None
-        self.max_training_steps = None
-        self.max_decode_len, self.beam_width = None, None
+        self.help = "the hyperparams dictionary to use"
 
 def length_bucket_stephparams():
     """
@@ -91,7 +68,9 @@ def length_bucket_stephparams():
     argparser.add_argument('--max_decode_len', type=int, default=256)
     argparser.parse_args(namespace=args)
 
+    # pylint: disable=attribute-defined-outside-init
     args.data_dir = os.path.abspath(args.data_dir)
+    # pylint: disable=no-member
     args.filename_suffix = '.' + args.pre_encoding +'.txt'
     args.train_src = os.path.join(args.data_dir, \
         '{}train.{}{}'.format(args.filename_prefix,
@@ -214,6 +193,7 @@ def length_bucket_stephparams():
         'sinusoid': True,
         'num_blocks': 6,
         'num_heads': 8,
+        'num_units': args.hidden_dim,
         'zero_pad': args.zero_pad,
         'bos_pad': args.bos_pad,
         'initializer': {
@@ -239,6 +219,7 @@ def length_bucket_stephparams():
                 {
                     'type':'Dropout',
                     'kwargs': {
+                        #TODO(haoran): this dropout may be tuned
                         'rate': 0.1,
                     }
                 },

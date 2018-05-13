@@ -22,11 +22,11 @@ from __future__ import print_function
 # pylint: disable=invalid-name, no-member, too-many-locals
 
 import os
+import time
 import importlib
 import numpy as np
 import tensorflow as tf
 import texar as tx
-import time
 
 from ptb_reader import prepare_data, ptb_iterator
 from embedding_tied_language_model import EmbeddingTiedLanguageModel
@@ -53,7 +53,7 @@ def _main(_):
     vocab_size = data["vocab_size"]
 
     opt_vars = {
-        'learning_rate': config.init_lr,
+        'learning_rate': 0.003,
         'best_valid_ppl': 1e100,
         'steps_not_improved': 0
     }
@@ -71,15 +71,9 @@ def _main(_):
         logits=logits,
         sequence_length=num_steps * tf.ones((batch_size, )))
 
-    params_sizes = []
-    for v in tf.trainable_variables():
-        size = np.prod(v.get_shape().as_list())
-        params_sizes.append(size)
-
-    print('overall param size:{}'.format(sum(params_sizes)), flush=True)
-
     l2_loss = sum([tf.nn.l2_loss(t) for t in tf.trainable_variables()])
 
+    # Use global_step to pass epoch, for lr decay
     global_step = tf.Variable(0, dtype=tf.int32)
     learning_rate = \
         tf.placeholder(dtype=tf.float32, shape=(), name='learning_rate')
@@ -99,6 +93,7 @@ def _main(_):
         elif mode_string == 'test':
             cur_batch_size = config.test_batch_size
 
+        start_time = time.time()
         loss = 0.
         iters = 0
         state = sess.run(initial_state, feed_dict={
@@ -106,7 +101,6 @@ def _main(_):
 
         fetches = {
             "mle_loss": mle_loss,
-            'initial_state': initial_state,
             "final_state": final_state,
             'global_step': global_step
         }
@@ -115,7 +109,7 @@ def _main(_):
 
         mode = (tf.estimator.ModeKeys.TRAIN if mode_string=='train'
                 else tf.estimator.ModeKeys.EVAL)
-
+        epoch_size = (len(data) // batch_size - 1) // num_steps
         for step, (x, y) in enumerate(data_iter):
             feed_dict = {
                 batch_size: cur_batch_size,
@@ -124,7 +118,6 @@ def _main(_):
                 tx.global_mode(): mode,
             }
             for i, (c, h) in enumerate(initial_state):
-                # here is is the layer number
                 feed_dict[c] = state[i].c
                 feed_dict[h] = state[i].h
 
@@ -179,20 +172,17 @@ def _main(_):
             train_data_iter = ptb_iterator(
                 data["train_text_id"], config.training_batch_size, num_steps)
             train_ppl = _run_epoch(sess, train_data_iter, mode_string='train')
-            print("Epoch: %d Train Perplexity: %.3f" % (epoch, train_ppl),
-                file=training_log)
+            print("Epoch: %d Train Perplexity: %.3f" % (epoch, train_ppl))
             # Valid
             valid_data_iter = ptb_iterator(
                 data["valid_text_id"], config.valid_batch_size, num_steps)
             valid_ppl = _run_epoch(sess, valid_data_iter, mode_string='valid')
-            print("Epoch: %d Valid Perplexity: %.3f" % (epoch, valid_ppl),
-                file=training_log)
+            print("Epoch: %d Valid Perplexity: %.3f" % (epoch, valid_ppl))
             # Test
             test_data_iter = ptb_iterator(
                 data["test_text_id"], config.test_batch_size, num_steps)
             test_ppl = _run_epoch(sess, test_data_iter, mode_string='test')
-            print("Test Perplexity: %.3f" % (test_ppl),
-                file=training_log)
+            print("Test Perplexity: %.3f" % (test_ppl))
 
 
 if __name__ == '__main__':
