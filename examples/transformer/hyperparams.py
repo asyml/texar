@@ -193,6 +193,7 @@ def length_bucket_stephparams():
         'sinusoid': True,
         'num_blocks': 6,
         'num_heads': 8,
+        'num_units': args.hidden_dim,
         'zero_pad': args.zero_pad,
         'bos_pad': args.bos_pad,
         'initializer': {

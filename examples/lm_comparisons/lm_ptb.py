@@ -52,7 +52,7 @@ def _main(_):
     vocab_size = data["vocab_size"]
 
     opt_vars = {
-        'learning_rate': 0.003,
+        'learning_rate': config.init_lr,
         'best_valid_ppl': 1e100,
         'steps_not_improved': 0
     }
@@ -84,36 +84,42 @@ def _main(_):
     train_op = optimizer.minimize(
         mle_loss + config.l2_decay * l2_loss, global_step=global_step)
 
-    def _run_epoch(sess, data_iter, is_train=False):
+    def _run_epoch(sess, data_iter, mode_string):
+        if mode_string == 'train':
+            cur_batch_size = config.training_batch_size
+        elif mode_string == 'valid':
+            cur_batch_size = config.valid_batch_size
+        elif mode_string == 'test':
+            cur_batch_size = config.test_batch_size
+
         loss = 0.
         iters = 0
-        state = sess.run(initial_state)
+        state = sess.run(initial_state, feed_dict={
+            inputs: np.ones((cur_batch_size, config.num_steps))})
 
         fetches = {
             "mle_loss": mle_loss,
+            'initial_state': initial_state,
             "final_state": final_state,
             'global_step': global_step
         }
-        if is_train:
+        if mode_string == 'train':
             fetches["train_op"] = train_op
 
-        mode = (tf.estimator.ModeKeys.TRAIN if is_train
+        mode = (tf.estimator.ModeKeys.TRAIN if mode_string=='train'
                 else tf.estimator.ModeKeys.EVAL)
 
         for step, (x, y) in enumerate(data_iter):
             feed_dict = {
+                batch_size: cur_batch_size,
                 inputs: x, targets: y,
                 learning_rate: opt_vars['learning_rate'],
                 tx.global_mode(): mode,
             }
-            print('intial_state:{}'.format(initial_state))
-            print('state:{}'.format(state))
             for i, (c, h) in enumerate(initial_state):
-                print('c:{}'.format(c))
-                print('h:{}'.format(h))
+                # here is is the layer number
                 feed_dict[c] = state[i].c
                 feed_dict[h] = state[i].h
-            print('x.shape:{} y.shape:{}'.format(x.shape, y.shape))
 
             rets = sess.run(fetches, feed_dict)
             loss += rets["mle_loss"]
@@ -122,22 +128,19 @@ def _main(_):
 
             ppl = np.exp(loss / iters)
 
-            if is_train:
+            if mode_string=='train':
                 print('global step:', rets['global_step'], ' ' * 4,
                       'training ppl:', ppl,
                       file=training_log)
                 training_log.flush()
 
-            if is_train and rets['global_step'] % 3 == 0:
-                return
-
-            if is_train and rets['global_step'] % 100 == 0:
+            if mode_string=='train' and rets['global_step'] % 100 == 0:
                 valid_data_iter = ptb_iterator(
-                    data["valid_text_id"], config.batch_size, num_steps)
-                valid_ppl = _run_epoch(sess, valid_data_iter)
+                    data["valid_text_id"], config.valid_batch_size, num_steps)
+                valid_ppl = _run_epoch(sess, valid_data_iter, mode_string='valid')
                 test_data_iter = ptb_iterator(
-                    data["test_text_id"], batch_size, num_steps)
-                test_ppl = _run_epoch(sess, test_data_iter)
+                    data["test_text_id"], config.test_batch_size, num_steps)
+                test_ppl = _run_epoch(sess, test_data_iter, mode_string='test')
                 print('global step:', rets['global_step'], ' ' * 4,
                       'learning rate:', opt_vars['learning_rate'], ' ' * 4,
                       'valid ppl:', valid_ppl, ' ' * 4,

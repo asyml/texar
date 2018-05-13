@@ -19,6 +19,7 @@ decoder_hparams = {
     'sinusoid': True,
     'num_blocks': 6,
     'num_heads': 8,
+    'num_units': hidden_size,
     'zero_pad': False,
     'bos_pad': False,
     'initializer': {
@@ -62,21 +63,8 @@ emb = {
     "dim": hidden_size
 }
 opt = {
-    "optimizer": {
-        "type": "GradientDescentOptimizer",
-        "kwargs": {"learning_rate": 1.0}
-    },
-    "gradient_clip": {
-        "type": "clip_by_global_norm",
-        "kwargs": {"clip_norm": 10.}
-    },
-    "learning_rate_decay": {
-        "type": "exponential_decay",
-        "kwargs": {
-            "decay_steps": 1,
-            "decay_rate": 1. / 1.15,
-            "staircase": True
-        },
-        "start_decay_step": 14
-    }
+    'init_lr': 1e-3,
+    'Adam_beta1': 0,
+    'Adam_beta2': 0.999,
+    'epsilon': 1e-9,
 }
