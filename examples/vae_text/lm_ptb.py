@@ -22,6 +22,7 @@ from __future__ import print_function
 # pylint: disable=invalid-name, no-member, too-many-locals
 
 import os
+import time
 import importlib
 import numpy as np
 import tensorflow as tf
@@ -52,7 +53,7 @@ def _main(_):
     vocab_size = data["vocab_size"]
 
     opt_vars = {
-        'learning_rate': config.init_lr,
+        'learning_rate': 0.003,
         'best_valid_ppl': 1e100,
         'steps_not_improved': 0
     }
@@ -92,6 +93,7 @@ def _main(_):
         elif mode_string == 'test':
             cur_batch_size = config.test_batch_size
 
+        start_time = time.time()
         loss = 0.
         iters = 0
         state = sess.run(initial_state, feed_dict={
@@ -99,7 +101,6 @@ def _main(_):
 
         fetches = {
             "mle_loss": mle_loss,
-            'initial_state': initial_state,
             "final_state": final_state,
             'global_step': global_step
         }
@@ -108,7 +109,7 @@ def _main(_):
 
         mode = (tf.estimator.ModeKeys.TRAIN if mode_string=='train'
                 else tf.estimator.ModeKeys.EVAL)
-
+        epoch_size = (len(data) // batch_size - 1) // num_steps
         for step, (x, y) in enumerate(data_iter):
             feed_dict = {
                 batch_size: cur_batch_size,
@@ -117,7 +118,6 @@ def _main(_):
                 tx.global_mode(): mode,
             }
             for i, (c, h) in enumerate(initial_state):
-                # here is is the layer number
                 feed_dict[c] = state[i].c
                 feed_dict[h] = state[i].h
 

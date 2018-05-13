@@ -72,7 +72,7 @@ class EmbeddingTiedLanguageModel(tx.modules.ModuleBase):
             'variational_recurrent': True,
         }
 
-    def _build(self, text_ids, num_steps):
+    def _build(self, text_ids, num_steps, initial_state):
         embedding_matrix = tf.transpose(self.output_layer.weights[0])
         embedding_matrix = embedding_drop(
             embedding_matrix,
