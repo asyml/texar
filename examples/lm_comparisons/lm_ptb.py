@@ -26,6 +26,7 @@ import importlib
 import numpy as np
 import tensorflow as tf
 import texar as tx
+import time
 
 from ptb_reader import prepare_data, ptb_iterator
 from embedding_tied_language_model import EmbeddingTiedLanguageModel
@@ -70,9 +71,15 @@ def _main(_):
         logits=logits,
         sequence_length=num_steps * tf.ones((batch_size, )))
 
+    params_sizes = []
+    for v in tf.trainable_variables():
+        size = np.prod(v.get_shape().as_list())
+        params_sizes.append(size)
+
+    print('overall param size:{}'.format(sum(params_sizes)), flush=True)
+
     l2_loss = sum([tf.nn.l2_loss(t) for t in tf.trainable_variables()])
 
-    # Use global_step to pass epoch, for lr decay
     global_step = tf.Variable(0, dtype=tf.int32)
     learning_rate = \
         tf.placeholder(dtype=tf.float32, shape=(), name='learning_rate')
@@ -172,17 +179,20 @@ def _main(_):
             train_data_iter = ptb_iterator(
                 data["train_text_id"], config.training_batch_size, num_steps)
             train_ppl = _run_epoch(sess, train_data_iter, mode_string='train')
-            print("Epoch: %d Train Perplexity: %.3f" % (epoch, train_ppl))
+            print("Epoch: %d Train Perplexity: %.3f" % (epoch, train_ppl),
+                file=training_log)
             # Valid
             valid_data_iter = ptb_iterator(
                 data["valid_text_id"], config.valid_batch_size, num_steps)
             valid_ppl = _run_epoch(sess, valid_data_iter, mode_string='valid')
-            print("Epoch: %d Valid Perplexity: %.3f" % (epoch, valid_ppl))
+            print("Epoch: %d Valid Perplexity: %.3f" % (epoch, valid_ppl),
+                file=training_log)
             # Test
             test_data_iter = ptb_iterator(
                 data["test_text_id"], config.test_batch_size, num_steps)
             test_ppl = _run_epoch(sess, test_data_iter, mode_string='test')
-            print("Test Perplexity: %.3f" % (test_ppl))
+            print("Test Perplexity: %.3f" % (test_ppl),
+                file=training_log)
 
 
 if __name__ == '__main__':

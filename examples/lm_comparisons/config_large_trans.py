@@ -1,23 +1,29 @@
 # pylint: disable=invalid-name, too-few-public-methods, missing-docstring
-init_lr = 0.003
-init_scale = 0.04
 num_epochs = 1000
-hidden_size = 256
-batch_size = 64
+embed_dim = 512
+hidden_size = 512
+train_batch_size = 64
+valid_batch_size = 32
+test_batch_size = 32
+
 num_steps = 35
 l2_decay = 1e-5
 lr_decay = 0.1
-
+relu_dropout = 0.2
+embedding_dropout = 0.2
+attention_dropout = 0.2
+residual_dropout = 0.2
+# due to the residual connection, the embed_dim should be equal to hidden_size
 decoder_hparams = {
     'share_embed_and_transform': True,
     'transform_with_bias': False,
     'beam_width': 1,
     'multiply_embedding_mode': 'sqrt_depth',
-    'embedding_dropout': 0.1,
-    'attention_dropout': 0.1,
-    'residual_dropout': 0.1,
+    'embedding_dropout': embedding_dropout,
+    'attention_dropout': attention_dropout,
+    'residual_dropout': residual_dropout,
     'sinusoid': True,
-    'num_blocks': 6,
+    'num_blocks': 2,
     'num_heads': 8,
     'num_units': hidden_size,
     'zero_pad': False,
@@ -45,7 +51,7 @@ decoder_hparams = {
             {
                 'type':'Dropout',
                 'kwargs': {
-                    'rate': 0.1,
+                    'rate': relu_dropout,
                 }
             },
             {
@@ -60,11 +66,20 @@ decoder_hparams = {
     }
 }
 emb = {
-    "dim": hidden_size
+    'name': 'lookup_table',
+    "dim": embed_dim,
+    'initializer' : {
+        'type': 'random_normal_initializer',
+        'kwargs': {
+            'mean': 0.0,
+            'stddev': embed_dim**-0.5,
+        },
+    }
 }
+
 opt = {
-    'init_lr': 1e-3,
-    'Adam_beta1': 0,
+    'init_lr': 0.003,
+    'Adam_beta1': 0.9,
     'Adam_beta2': 0.999,
     'epsilon': 1e-9,
 }

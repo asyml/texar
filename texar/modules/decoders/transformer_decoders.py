@@ -142,7 +142,7 @@ class TransformerDecoder(ModuleBase):
                 (self._embedding.shape.as_list()[-1]**0.5)
         inputs = layers.add_timing_signal_1d(target_inputs)
 
-        decoder_output = self._self_attention_stack(
+        self.decoder_output = self._self_attention_stack(
             inputs,
             encoder_output,
             decoder_self_attention_bias=decoder_self_attention_bias,
@@ -150,7 +150,7 @@ class TransformerDecoder(ModuleBase):
             cache=None,
         )
 
-        logits = self.output_layer(decoder_output)
+        logits = self.output_layer(self.decoder_output)
         preds = tf.to_int32(tf.argmax(logits, axis=-1))
         return logits, preds
 

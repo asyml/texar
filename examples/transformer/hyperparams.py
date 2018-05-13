@@ -219,6 +219,7 @@ def length_bucket_stephparams():
                 {
                     'type':'Dropout',
                     'kwargs': {
+                        #TODO(haoran): this dropout may be tuned
                         'rate': 0.1,
                     }
                 },
