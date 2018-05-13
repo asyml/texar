@@ -1,7 +1,7 @@
 # pylint: disable=invalid-name, too-few-public-methods, missing-docstring
 num_epochs = 1000
-embed_dim = 512
-hidden_size = 512
+embed_dim = 256
+hidden_size = 256
 train_batch_size = 64
 valid_batch_size = 32
 test_batch_size = 32
@@ -9,10 +9,11 @@ test_batch_size = 32
 num_steps = 35
 l2_decay = 1e-5
 lr_decay = 0.1
-relu_dropout = 0.2
-embedding_dropout = 0.2
-attention_dropout = 0.2
-residual_dropout = 0.2
+relu_dropout = 0.3
+embedding_dropout = 0.3
+attention_dropout = 0.3
+residual_dropout = 0.3
+num_blocks = 3
 # due to the residual connection, the embed_dim should be equal to hidden_size
 decoder_hparams = {
     'share_embed_and_transform': True,
@@ -23,7 +24,6 @@ decoder_hparams = {
     'attention_dropout': attention_dropout,
     'residual_dropout': residual_dropout,
     'sinusoid': True,
-    'num_blocks': 2,
     'num_heads': 8,
     'num_units': hidden_size,
     'zero_pad': False,

@@ -152,6 +152,11 @@ class TransformerDecoder(ModuleBase):
 
         logits = self.output_layer(self.decoder_output)
         preds = tf.to_int32(tf.argmax(logits, axis=-1))
+
+        if not self._built:
+            self.add_internal_trainable_variables()
+            self._built = True
+
         return logits, preds
 
     def dynamic_decode(self, encoder_output, encoder_decoder_attention_bias):
