@@ -121,7 +121,8 @@ class HierarchicalRNNEncoder(EncoderBase):
         hparams["name"] = "hierarchical_rnn_encoder"
         return hparams
 
-    def _build(self, inputs, order='btu', **kwargs):
+    def _build(self, inputs, order='btu', 
+               medium=None, medium_after_depack=None, **kwargs):
         """Encodes the inputs.
 
         Args:
@@ -177,7 +178,12 @@ class HierarchicalRNNEncoder(EncoderBase):
         outputs_minor, states_minor = self._encoder_minor(inputs,
                                                           **kwargs_minor)
 
-        states_minor = self._depack_lstmtuple(states_minor)
+        if medium is None:
+            states_minor = self._depack_lstmtuple(states_minor)
+            if medium_after_depack is not None:
+                states_minor = medium_after_depack(states_minor)
+        else:
+            states_minor = medium(states_minor)
 
         states_minor = tf.reshape(
             states_minor, tf.concat([expand, tf.shape(states_minor)[1:]], 0))
