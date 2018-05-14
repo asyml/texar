@@ -21,7 +21,7 @@ hidden_size = 256
 tag_space = 128
 keep_prob = 0.5
 batch_size = 16
-encoder = 'transformer'
+encoder = None
 encoder_hparams = {
     'multiply_embedding_mode': "sqrt_depth",
     'embedding_dropout': 0.1,

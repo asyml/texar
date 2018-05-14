@@ -17,6 +17,10 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import sys
+
+sys.path.append(".")
+
 import time
 import importlib
 import numpy as np
@@ -24,6 +28,8 @@ import tensorflow as tf
 import texar as tx
 
 from conll_reader import create_vocabs, read_data, iterate_batch
+from conll_writer import CoNLLWriter
+from scores import scores
 
 flags = tf.flags
 
@@ -70,7 +76,7 @@ seq_lengths = tf.placeholder(tf.int64, [None])
 embedder = tx.modules.WordEmbedder(vocab_size=vocab_size, init_value=word_vecs)
 emb_inputs = embedder(inputs)
 if config.encoder=='transformer':
-    encoder = tx.modules.TransformerEncoder(\
+    encoder = tx.modules.TransformerEncoder(
         embedding=embedder._embedding,
         hparams=config.encoder_hparams)
     enc_padding = tf.to_float(tf.equal(inputs, 0))
@@ -137,13 +143,62 @@ def _train_epoch(sess, epoch):
         print("train: %d (%d/%d) loss: %.4f, acc: %.2f%%" % (epoch, num_inst, len(data_train), loss / num_tokens, corr / num_tokens * 100))
     print("train: %d loss: %.4f, acc: %.2f%%, time: %.2fs" % (epoch, loss / num_tokens, corr / num_tokens * 100, time.time() - start_time))
 
+
+def _eval(sess, epoch, data_tag):
+    fetches = {
+        "predicts": predicts,
+    }
+    mode = tf.estimator.ModeKeys.EVAL
+    file_name = 'tmp/ner%d' % epoch
+    writer = CoNLLWriter(i2w, i2n)
+    writer.start(file_name)
+    data = data_dev if data_tag == 'dev' else data_test
+    for batch in iterate_batch(data, config.batch_size, shuffle=False):
+        word, char, ner, mask, length = batch
+        feed_dict = {
+            inputs: word, targets: ner, masks: mask, seq_lengths: length,
+            global_step: epoch, tx.global_mode(): mode,
+        }
+        rets = sess.run(fetches, feed_dict)
+        predictions = rets['predicts']
+        writer.write(word, predictions, ner, length)
+    writer.close()
+    acc, precision, recall, f1 = scores(file_name)
+    print('%s acc: %.2f%%, precision: %.2f%%, recall: %.2f%%, F1: %.2f%%' % (data_tag, acc, precision, recall, f1))
+    return acc, precision, recall, f1
+
+
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     sess.run(tf.local_variables_initializer())
     sess.run(tf.tables_initializer())
 
+    dev_f1 = 0.0
+    dev_acc = 0.0
+    dev_precision = 0.0
+    dev_recall = 0.0
+    best_epoch = 0
+
+    test_f1 = 0.0
+    test_acc = 0.0
+    test_prec= 0.0
+    test_recall = 0.0
+
     for epoch in range(config.num_epochs):
         _train_epoch(sess, epoch)
+        acc, precision, recall, f1 = _eval(sess, epoch, 'dev')
+        if dev_f1 < f1:
+            dev_f1 = f1
+            dev_acc = acc
+            dev_precision = precision
+            dev_recall = recall
+            best_epoch = epoch
+            test_acc, test_prec, test_recall, test_f1 = _eval(sess, epoch, 'test')
+        print('best acc: %.2f%%, precision: %.2f%%, recall: %.2f%%, F1: %.2f%%, epoch: %d' % (acc, precision, recall, f1, best_epoch))
+        print('test acc: %.2f%%, precision: %.2f%%, recall: %.2f%%, F1: %.2f%%, epoch: %d' % (test_acc, test_prec, test_recall, test_f1, best_epoch))
+        print('---------------------------------------------------')
+
+
 
 
 
