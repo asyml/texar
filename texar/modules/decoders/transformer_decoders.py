@@ -154,7 +154,7 @@ class TransformerDecoder(ModuleBase):
         preds = tf.to_int32(tf.argmax(logits, axis=-1))
 
         if not self._built:
-            self.add_internal_trainable_variables()
+            self._add_internal_trainable_variables()
             self._built = True
 
         return logits, preds

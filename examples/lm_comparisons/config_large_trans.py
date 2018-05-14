@@ -9,10 +9,10 @@ test_batch_size = 32
 num_steps = 35
 l2_decay = 1e-5
 lr_decay = 0.1
-relu_dropout = 0.3
-embedding_dropout = 0.3
-attention_dropout = 0.3
-residual_dropout = 0.3
+relu_dropout = 0.2
+embedding_dropout = 0.2
+attention_dropout = 0.2
+residual_dropout = 0.2
 num_blocks = 3
 # due to the residual connection, the embed_dim should be equal to hidden_size
 decoder_hparams = {
