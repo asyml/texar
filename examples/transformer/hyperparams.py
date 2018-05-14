@@ -19,7 +19,7 @@ class Hyperparams:
     def __init__(self):
         self.help = "the hyperparams dictionary to use"
 
-def length_bucket_stephparams():
+def load_hyperparams():
     """
         main function to define hyperparams
     """
@@ -239,6 +239,7 @@ def length_bucket_stephparams():
     decoder_hparams['transform_with_bias'] = args.affine_bias
     decoder_hparams['maximum_decode_length'] = args.max_decode_len
     decoder_hparams['beam_width'] = args.beam_width
+    decoder_hparams['sampling_method'] = 'argmax'
     loss_hparams = {
         'label_confidence': 0.9,
     }
@@ -260,6 +261,9 @@ def length_bucket_stephparams():
         'train_dataset_hparams': train_dataset_hparams,
         'eval_dataset_hparams': eval_dataset_hparams,
         'test_dataset_hparams': test_dataset_hparams,
+        'encoder_hparams': encoder_hparams,
+        'decoder_hparams': decoder_hparams,
         'loss_hparams': loss_hparams,
         'opt_hparams': opt_hparams,
+        'args': args,
         }

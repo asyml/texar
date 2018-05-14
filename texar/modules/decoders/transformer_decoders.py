@@ -61,9 +61,12 @@ class TransformerDecoder(ModuleBase):
             self.build_output_layer(layers.shape_list(self._embedding)[-1])
     @staticmethod
     def default_hparams():
-        """default hyperrams for transformer deocder."""
+        """default hyperrams for transformer deocder.
+            sampling_method: argmax or sample. To choose the function transforming the logits to the sampled id in the next position when inferencing.
+        """
         return {
-            'initializer':None,
+            'sampling_method': 'argmax',
+            'initializer': None,
             'multiply_embedding_mode': 'sqrt_depth',
             'share_embed_and_transform': True,
             'transform_with_bias': True,
@@ -152,6 +155,11 @@ class TransformerDecoder(ModuleBase):
 
         logits = self.output_layer(self.decoder_output)
         preds = tf.to_int32(tf.argmax(logits, axis=-1))
+
+        if not self._built:
+            self._add_internal_trainable_variables()
+            self._built = True
+
         return logits, preds
 
     def dynamic_decode(self, encoder_output, encoder_decoder_attention_bias):
@@ -341,8 +349,10 @@ class TransformerDecoder(ModuleBase):
 
             #TODO: by default, the output_type is tf.int64.
             # Can we adjust the default int type of texar to tf.int64?
-
-            next_id = tf.argmax(logits, -1, output_type=tf.int32)
+            if self.sampling_method == 'argmax':
+                next_id = tf.argmax(logits, -1, output_type=tf.int32)
+            elif self.sampling_method == 'sample':
+                next_id = tf.multinomial(logits, 1).squeeze(axis=1)
             finished |= tf.equal(next_id, EOS)
             log_prob_indices = tf.stack(
                 [tf.range(tf.to_int32(batch_size)), next_id], axis=1)
