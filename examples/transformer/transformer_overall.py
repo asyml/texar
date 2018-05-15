@@ -22,14 +22,21 @@ import texar as tx
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.losses import mle_losses
 from texar import context
-
-from hyperparams import train_dataset_hparams, eval_dataset_hparams, \
-    test_dataset_hparams, \
-    encoder_hparams, decoder_hparams, \
-    opt_hparams, loss_hparams, args
+import hyperparams
 import bleu_tool
 
 if __name__ == "__main__":
+    tf.set_random_seed(1234)
+    np.random.seed(1234)
+    random.seed(1234)
+    hparams = hyperparams.load_hyperparams()
+    train_dataset_hparams, eval_dataset_hparams, test_dataset_hparams, \
+    encoder_hparams, decoder_hparams, opt_hparams, loss_hparams, args = \
+        hparams['train_dataset_hparams'], hparams['eval_dataset_hparams'], \
+        hparams['test_dataset_hparams'], \
+        hparams['encoder_hparams'], hparams['decoder_hparams'], \
+        hparams['opt_hparams'], hparams['loss_hparams'], hparams['args']
+
     logging.shutdown()
     reload(logging)
     logging_file = os.path.join(args.log_dir, 'logging.txt')
@@ -37,9 +44,6 @@ if __name__ == "__main__":
         format='%(asctime)s:%(levelname)s:%(message)s',\
         level=logging.INFO)
     logging.info('begin logging, new running')
-    tf.set_random_seed(1234)
-    np.random.seed(1234)
-    random.seed(1234)
     # Construct the database
     train_database = tx.data.PairedTextData(train_dataset_hparams)
     eval_database = tx.data.PairedTextData(eval_dataset_hparams)
