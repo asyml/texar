@@ -43,9 +43,11 @@ class WordEmbedder(ModuleBase):
         hparams (dict, optional): Embedder hyperparameters. If it is not
             specified, the default hyperparameter setting is used. See
             :attr:`default_hparams` for the sturcture and default values.
+        mode (optional): Similar to :meth:`~texar.core.layers.get_rnn_cell`.
     """
 
-    def __init__(self, init_value=None, vocab_size=None, hparams=None):
+    def __init__(self, init_value=None, vocab_size=None, hparams=None,
+                 mode=None):
         ModuleBase.__init__(self, hparams)
 
         if init_value is None and vocab_size is None:
@@ -55,7 +57,7 @@ class WordEmbedder(ModuleBase):
         self._vocab_size = vocab_size
         self._embedding = embedder_utils.get_embedding(
             self._hparams, init_value, self._vocab_size,
-            self.variable_scope)
+            self.variable_scope, mode)
         if self._hparams.trainable:
             self._add_trainable_variable(self._embedding)
 
@@ -94,7 +96,10 @@ class WordEmbedder(ModuleBase):
                             "l1": 0.,
                             "l2": 0.
                         }
-                    }
+                    },
+                    "dropout": {
+                        "keep_prob": 1.0,
+                    },
                     "trainable": True,
                 }
 

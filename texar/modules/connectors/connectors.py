@@ -435,25 +435,25 @@ class ReparameterizedStochasticConnector(ConnectorBase):
                 "Distribution is not reparameterized: %s" % dstr.name)
 
         if num_samples:
-            output = dstr.sample(num_samples)
+            latent_z = dstr.sample(num_samples)
         else:
-            output = dstr.sample()
+            latent_z = dstr.sample()
 
         if dstr.event_shape == []:
-            output = tf.reshape(output,
-                                output.shape.concatenate(tf.TensorShape(1)))
+            latent_z = tf.reshape(latent_z,
+                                  latent_z.shape.concatenate(tf.TensorShape(1)))
 
-        output = tf.cast(output, tf.float32)
+        latent_z = tf.cast(latent_z, tf.float32)
         if transform:
             fn_modules = ['texar.custom', 'tensorflow', 'tensorflow.nn']
             activation_fn = get_function(self.hparams.activation_fn, fn_modules)
-            output = _mlp_transform(output, self._output_size, activation_fn)
+            output = _mlp_transform(latent_z, self._output_size, activation_fn)
         _assert_same_size(output, self._output_size)
 
         self._add_internal_trainable_variables()
         self._built = True
 
-        return output
+        return output, latent_z
 
 
 class StochasticConnector(ConnectorBase):
