@@ -53,14 +53,15 @@ train_path = os.path.join(FLAGS.data_path, FLAGS.train)
 dev_path = os.path.join(FLAGS.data_path, FLAGS.dev)
 test_path = os.path.join(FLAGS.data_path, FLAGS.test)
 embedding_path = os.path.join(FLAGS.data_path, FLAGS.embedding)
-EMBEDD_DIM = 100
+EMBEDD_DIM = config.embed_dim
 
 (word_vocab, char_vocab, ner_vocab), (i2w, i2n) = create_vocabs(train_path)
 
 scale = np.sqrt(3.0 / EMBEDD_DIM)
 word_vecs = np.random.uniform(-scale, scale, [len(word_vocab), EMBEDD_DIM]).astype(np.float32)
 
-word_vecs = tx.data.load_glove(embedding_path, word_vocab, word_vecs)
+if config.load_glove:
+    word_vecs = tx.data.load_glove(embedding_path, word_vocab, word_vecs)
 
 data_train = read_data(train_path, word_vocab, char_vocab, ner_vocab)
 data_dev = read_data(dev_path, word_vocab, char_vocab, ner_vocab)
@@ -76,12 +77,23 @@ seq_lengths = tf.placeholder(tf.int64, [None])
 embedder = tx.modules.WordEmbedder(vocab_size=vocab_size, init_value=word_vecs)
 emb_inputs = embedder(inputs)
 if config.encoder=='transformer':
+    print('here we use transformer encoder')
     encoder = tx.modules.TransformerEncoder(
         embedding=embedder._embedding,
         hparams=config.encoder_hparams)
-    enc_padding = tf.to_float(tf.equal(inputs, 0))
-    outputs, _ = encoder(inputs, enc_padding=enc_padding)
+    print('the encoder has been initialized')
+    # 1 is pad idx
+    #_inputs = tf.Print(inputs, [inputs],
+    #    message='inputs', summarize=1024)
+    #_masks = tf.Print(masks, [masks],
+    #    message='mask', summarize=1024)
+    #enc_padding = tf.to_float(tf.equal(inputs, 1))
+    enc_padding = 1 - masks
+    outputs, _ = encoder(inputs, encoder_padding=enc_padding)
+elif config.encoder:
+    raise NotImplementedError
 else:
+    print('here we use BLSTM encoder')
     encoder = tx.modules.BidirectionalRNNEncoder(hparams={"rnn_cell_fw": config.cell, "rnn_cell_bw": config.cell})
     outputs, _ = encoder(emb_inputs, sequence_length=seq_lengths)
     outputs = tf.concat(outputs, axis=2)
@@ -197,8 +209,4 @@ with tf.Session() as sess:
         print('best acc: %.2f%%, precision: %.2f%%, recall: %.2f%%, F1: %.2f%%, epoch: %d' % (acc, precision, recall, f1, best_epoch))
         print('test acc: %.2f%%, precision: %.2f%%, recall: %.2f%%, F1: %.2f%%, epoch: %d' % (test_acc, test_prec, test_recall, test_f1, best_epoch))
         print('---------------------------------------------------')
-
-
-
-
 

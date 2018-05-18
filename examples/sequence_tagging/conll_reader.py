@@ -18,14 +18,10 @@ from __future__ import division
 from __future__ import print_function
 
 # pylint: disable=invalid-name, too-many-locals
-
-import os
+import sys
 from collections import defaultdict
 import numpy as np
 
-import tensorflow as tf
-
-import texar as tx
 
 import re
 MAX_CHAR_LENGTH = 45
@@ -56,7 +52,8 @@ def create_vocabs(train_path, normalize_digits=True):
 
     with open(train_path, 'r') as file:
         for line in file:
-            line = line.decode('utf-8')
+            if sys.version[0] =='2':
+                line = line.decode('utf-8')
             line = line.strip()
             if len(line) == 0:
                 continue

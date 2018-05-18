@@ -8,7 +8,7 @@ class CoNLLWriter(object):
         self.__i2n = i2n
 
     def start(self, file_path):
-        self.__source_file = open(file_path, 'w')
+        self.__source_file = open(file_path, 'w+')
 
     def close(self):
         self.__source_file.close()

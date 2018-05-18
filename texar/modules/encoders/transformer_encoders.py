@@ -122,7 +122,7 @@ class TransformerEncoder(EncoderBase):
             'num_units': 512,
         }
     #pylint:disable=arguments-differ
-    def _build(self, inputs, encoder_padding, **kwargs):
+    def _build(self, inputs, encoder_padding):
         #pylint:disable=too-many-locals
         self.enc = tf.nn.embedding_lookup(self._embedding, inputs)
         _, _, channels = layers.shape_list(self.enc)
