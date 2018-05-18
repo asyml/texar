@@ -47,43 +47,49 @@ class HierarchicalRNNEncoder(EncoderBase):
                                  in hparams.
        encoder_minor (optional): ditto.
        hparams (optional): the hyperparameters.
+       encoder_major_hparams (optional): The hparams to update hparams['encoder_major_hparams']
+       encoder_minor_hparams (optional): The hparams to update hparams['encoder_minor_hparams']
 
     See :class:`~texar.modules.encoders.rnn_encoders.RNNEncoderBase` for the
     arguments, and :meth:`default_hparams` for the default hyperparameters.
     """
 
-    def __init__(self,
-                 encoder_major=None,
-                 encoder_minor=None,
-                 hparams=None):
+    def __init__(self, encoder_major=None, encoder_minor=None,
+                 hparams=None,
+                 encoder_major_hparams=None,
+                 encoder_minor_hparams=None):
         EncoderBase.__init__(self, hparams)
+
+        encoder_major_hparams = utils.get_instance_kwargs(
+            encoder_major_hparams, self._hparams.encoder_major_hparams)
+        encoder_minor_hparams = utils.get_instance_kwargs(
+            encoder_minor_hparams, self._hparams.encoder_minor_hparams)
 
         if isinstance(encoder_major, EncoderBase):
             self._encoder_major = encoder_major
         else:
-            cls = utils.get_class(self._hparams.encoder_major.class_name,
-                                  ['texar.modules.encoders', 'texar.custom'])
             with tf.variable_scope(self.variable_scope.name):
-                with tf.variable_scope('major'):
-                    self._encoder_major = cls(
-                        hparams=self._hparams.encoder_major.hparams)
-
+                with tf.variable_scope('encoder_major'):
+                    self._encoder_major = utils.check_or_get_instance(
+                        self._hparams.encoder_major_type,
+                        encoder_major_hparams,
+                        ['texar.modules.encoders', 'texar.custom'])
         if isinstance(encoder_minor, EncoderBase):
             self._encoder_minor = encoder_minor
-        elif self._hparams.encoder_minor.share_config:
-            cls = utils.get_class(self._hparams.encoder_major.class_name,
-                                  ['texar.modules.encoders', 'texar.custom'])
+        elif self._hparams.config_share:
             with tf.variable_scope(self.variable_scope.name):
-                with tf.variable_scope('minor'):
-                    self._encoder_minor = cls(
-                        hparams=self._hparams.encoder_major.hparams)
+                with tf.variable_scope('encoder_minor'):
+                    self._encoder_minor = utils.check_or_get_instance(
+                        self._hparams.encoder_major_type,
+                        encoder_major_hparams,
+                        ['texar.modules.encoders', 'texar.custom'])
         else:
-            cls = utils.get_class(self._hparams.encoder_minor.class_name,
-                                  ['texar.modules.encoders', 'texar.custom'])
             with tf.variable_scope(self.variable_scope.name):
-                with tf.variable_scope('minor'):
-                    self._encoder_minor = cls(
-                        hparams=self._hparams.encoder_minor.hparams)
+                with tf.variable_scope('encoder_minor'):
+                    self._encoder_minor = utils.check_or_get_instance(
+                        self._hparams.encoder_minor_type,
+                        encoder_minor_hparams,
+                        ['texar.modules.encoders', 'texar.custom'])
 
     #TODO(zhiting): docs for hparams `minor_type` and `minor_cell`.
     #TODO(xingjiang):
@@ -93,7 +99,6 @@ class HierarchicalRNNEncoder(EncoderBase):
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
-
         The dictionary has the following structure and default values.
 
         (TODO)
@@ -101,27 +106,35 @@ class HierarchicalRNNEncoder(EncoderBase):
         Returns:
             dict: Adictionary with following structure and values:
             .. code-block:: python
-
                 {
+                    "encoder_major_type": "UnidirectionalRNNEncoder",
+                    "encoder_major_hparams": texar.modules.encoders.UnidirectionalRNNEncoder.default_params(),
+                    "encoder_minor_type": "UnidirectionalRNNEncoder",
+                    "encoder_minor_hparams": ~.default_hparams(),
+
+                    # If "config_share" is True then MINOR is constructed using
+                    # major's hparams.
+                    "config_share": False, 
+                    # Name of the encoder
                     "name": "hierarchical_encoder_wrapper"
                 }
         """
         hparams = {
-            "encoder_major": {
-                "class_name": "UnidirectionalRNNEncoder",
-                "hparams": UnidirectionalRNNEncoder.default_hparams(),
-            },
-            "encoder_minor": {
-                "class_name": "UnidirectionalRNNEncoder",
-                "hparams": UnidirectionalRNNEncoder.default_hparams(),
-                "share_config": False,
-            }
+            "name": "hierarchical_encoder",
+            "encoder_major_type": "UnidirectionalRNNEncoder",
+            "encoder_major_hparams": UnidirectionalRNNEncoder.default_hparams(),
+            "encoder_minor_type": "UnidirectionalRNNEncoder",
+            "encoder_minor_hparams": UnidirectionalRNNEncoder.default_hparams(),
+            "config_share": False, 
+            "@no_typecheck": [
+                'encoder_major_hparams', 
+                'encoder_minor_hparams']    
         }
         hparams.update(EncoderBase.default_hparams())
-        hparams["name"] = "hierarchical_rnn_encoder"
         return hparams
 
-    def _build(self, inputs, order='btu', **kwargs):
+    def _build(self, inputs, order='btu', 
+               medium=None, medium_after_depack=None, **kwargs):
         """Encodes the inputs.
 
         Args:
@@ -135,6 +148,10 @@ class HierarchicalRNNEncoder(EncoderBase):
                               'utb': time_major=True for both.
                               'tbu': time_major=True for MAJOR only.
                               'ubt': time_major=True for MINOR only.
+            medium (optional): A callable function that process the final states
+                               of MINOR to be the feasible input for MAJOR.
+            medium_after_depack: Similar to `medium` but before that LSTMTuple
+                                 will be depacked. 
 
             **kwargs: Optional keyword arguments of `tensorflow.nn.dynamic_rnn`,
                 such as `sequence_length`, `initial_state`, etc.
@@ -177,7 +194,12 @@ class HierarchicalRNNEncoder(EncoderBase):
         outputs_minor, states_minor = self._encoder_minor(inputs,
                                                           **kwargs_minor)
 
-        states_minor = self._depack_lstmtuple(states_minor)
+        if medium is None:
+            states_minor = self._depack_lstmtuple(states_minor)
+            if medium_after_depack is not None:
+                states_minor = medium_after_depack(states_minor)
+        else:
+            states_minor = medium(states_minor)
 
         states_minor = tf.reshape(
             states_minor, tf.concat([expand, tf.shape(states_minor)[1:]], 0))

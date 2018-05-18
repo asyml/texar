@@ -44,6 +44,25 @@ def ptb_iterator(data, batch_size, num_steps):
         y = data[:, i * num_steps + 1 : (i+1) * num_steps + 1]
         yield (x, y)
 
+def ptb_iterator_memnet(data, batch_size, memory_size):
+    """Iterates through the ptb data.
+    """
+    data_length = len(data)
+    length = data_length - memory_size
+    order = list(range(length))
+    np.random.shuffle(order)
+
+    data = np.asarray(data)
+
+    for i in range(0, length, batch_size):
+        x, y = [], []
+        for j in range(i, min(i + batch_size, length)):
+            idx = order[j]
+            x.append(data[idx : idx + memory_size])
+            y.append(data[idx + memory_size])
+        x, y = np.asarray(x), np.asarray(y)
+        yield (x, y)
+
 def prepare_data(data_path):
     """Preprocess PTB data.
     """

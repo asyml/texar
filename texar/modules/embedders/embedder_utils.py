@@ -10,6 +10,7 @@ import tensorflow as tf
 
 from texar.hyperparams import HParams
 from texar.core import layers
+from texar.utils import utils
 
 __all__ = [
     "default_embedding_hparams",
@@ -35,7 +36,10 @@ def default_embedding_hparams():
                         "l1": 0.,
                         "l2": 0.
                     }
-                }
+                },
+                "dropout": {
+                    "keep_prob": 1.0,
+                },
                 "trainable": True,
             }
 
@@ -118,6 +122,13 @@ def default_embedding_hparams():
             The default value corresponds to
             :tf_main:`L1L2 <keras/regularizers/L1L2>` with `(l1=0, l2=0)`,
             which disables regularization.
+        
+        "dropout" : dict
+            Hyperparameters of dropout.
+
+            "keep_prob" : float
+                Dropout keep probability. If None or 1.0, no dropout is
+                applied.
 
         "trainable" : bool
             Whether the embedding is trainable.
@@ -127,6 +138,9 @@ def default_embedding_hparams():
         "dim": 100,
         "initializer": None,
         "regularizer": layers.default_regularizer_hparams(),
+        "dropout": {
+            "keep_prob": 1.0,
+        },
         "trainable": True
     }
 
@@ -134,7 +148,8 @@ def default_embedding_hparams():
 def get_embedding(hparams=None,
                   init_value=None,
                   vocab_size=None,
-                  variable_scope='Embedding'):
+                  variable_scope='Embedding',
+                  mode=None):
     """Creates embedding variable if not exists.
 
     Args:
@@ -152,10 +167,12 @@ def get_embedding(hparams=None,
             :attr:`init_value` is not provided.
         variable_scope (string or VariableScope, optional): Variable scope of
             the embedding variable.
+        mode (optional): Similar to :meth:`~texar.core.layers.get_rnn_cell`.
 
     Returns:
-        Variable: A 2D `Variable` of the same shape with :attr:`init_value`
-        or of the shape :attr:`[vocab_size, hparams["dim"]]`.
+        Variable or Tensor: A 2D `Variable` or `Tensor` of the same shape with
+        :attr:`init_value` or of the shape
+        :attr:`[vocab_size, hparams["dim"]]`.
     """
     with tf.variable_scope(variable_scope):
         if hparams is None or isinstance(hparams, dict):
@@ -163,14 +180,20 @@ def get_embedding(hparams=None,
         regularizer = layers.get_regularizer(hparams["regularizer"])
         if init_value is None:
             initializer = layers.get_initializer(hparams["initializer"])
-            return tf.get_variable(name=hparams["name"],
-                                   shape=[vocab_size, hparams["dim"]],
-                                   initializer=initializer,
-                                   regularizer=regularizer,
-                                   trainable=hparams["trainable"])
+            embedding = tf.get_variable(name=hparams["name"],
+                                        shape=[vocab_size, hparams["dim"]],
+                                        initializer=initializer,
+                                        regularizer=regularizer,
+                                        trainable=hparams["trainable"])
         else:
-            return tf.get_variable(name=hparams["name"],
-                                   initializer=tf.to_float(init_value),
-                                   regularizer=regularizer,
-                                   trainable=hparams["trainable"])
-
+            embedding = tf.get_variable(name=hparams["name"],
+                                        initializer=tf.to_float(init_value),
+                                        regularizer=regularizer,
+                                        trainable=hparams["trainable"])
+        if hparams["dropout"]["keep_prob"] != 1.0:
+            keep_prob = utils.switch_dropout(
+                hparams["dropout"]["keep_prob"], mode)
+            embedding = tf.nn.dropout(embedding, keep_prob=keep_prob)
+            # TODO: Return value type changed and may not be compatible with
+            # previous semantic.
+        return embedding
