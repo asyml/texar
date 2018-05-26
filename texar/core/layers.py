@@ -343,8 +343,9 @@ def get_activation_fn(fn_name="identity"):
     """Returns an activation function based on its name or full path.
 
     Args:
-        fn_name (str or callable): The name or full path to the activation
-            function.
+        fn_name (str or callable): The name or full path to an activation
+            function, or the function itself.
+
             The function can be:
 
             - Built-in function defined in :mod:`tf` or \
@@ -361,19 +362,18 @@ def get_activation_fn(fn_name="identity"):
     if fn_name is None:
         return None
 
-    if is_callable(fn_name):
-        return fn_name
-
     fn_modules = ['tensorflow', 'tensorflow.nn', 'texar.custom']
     activation_fn = utils.get_function(fn_name, fn_modules)
     return activation_fn
+
 
 def get_constraint_fn(fn_name="NonNeg"):
     """Returns a constraint function based on its name or full path.
 
     Args:
-        fn_name (str or callable): The name or full path to the
-            constraint function.
+        fn_name (str or callable): The name or full path to a
+            constraint function, or the function itself.
+
             The function can be:
 
             - Built-in constraint functions defined in \
@@ -392,9 +392,6 @@ def get_constraint_fn(fn_name="NonNeg"):
     """
     if fn_name is None:
         return None
-
-    if is_callable(fn_name):
-        return fn_name
 
     fn_modules = ['tensorflow.keras.constraints', 'tensorflow',
                   'tensorflow.nn', 'texar.custom']
