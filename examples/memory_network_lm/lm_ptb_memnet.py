@@ -51,7 +51,7 @@ from ptb_reader import prepare_data
 from ptb_reader import ptb_iterator_memnet as ptb_iterator
 import texar.core
 from texar import global_mode
-from texar.modules.memnet import *
+from texar.modules.memory.memory_network import *
 
 flags = tf.flags
 

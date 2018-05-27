@@ -43,7 +43,7 @@ class WordEmbedder(ModuleBase):
         hparams (dict, optional): Embedder hyperparameters. If it is not
             specified, the default hyperparameter setting is used. See
             :attr:`default_hparams` for the sturcture and default values.
-        mode (optional): Similar to :meth:`~texar.core.layers.get_rnn_cell`.
+        mode (optional): Similar to :func:`~texar.core.layers.get_rnn_cell`.
     """
 
     def __init__(self, init_value=None, vocab_size=None, hparams=None,
