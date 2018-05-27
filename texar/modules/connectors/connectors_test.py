@@ -99,12 +99,13 @@ class TestConnectors(tf.test.TestCase):
         gauss_connector = ReparameterizedStochasticConnector(state_size)
         gauss_connector_ts = ReparameterizedStochasticConnector(state_size_ts)
 
-        sample1 = gauss_connector(gauss_ds)
-        sample2 = gauss_connector(distribution_type="MultivariateNormalDiag", distribution_kwargs={"loc":mu, "scale_diag":var})
-        sample_ts = gauss_connector_ts(gauss_ds)
+        sample1, latent1 = gauss_connector(gauss_ds)
+        sample2, latent2 = gauss_connector(distribution_type="MultivariateNormalDiag", distribution_kwargs={"loc":mu, "scale_diag":var})
+        # sample3, latent3 = gauss_connector(gauss_ds, num_samples=sample_num)
+        sample_ts, latent_ts = gauss_connector_ts(gauss_ds)
 
         # specify sample num
-        sample_test_num = gauss_connector(gauss_ds_vec, num_samples=sample_num)
+        sample_test_num, latent_test_num = gauss_connector(gauss_ds_vec, num_samples=sample_num)
 
         # test when :attr:`transform` is False
         # sample_test_no_transform = gauss_connector(gauss_ds, transform=False)
@@ -117,10 +118,12 @@ class TestConnectors(tf.test.TestCase):
             out_list = sess.run(test_list)
             out1 = out_list[0]
             out2 = out_list[1]
+            # out3 = out_list[2]
             out_ts = out_list[2]
             out_test_num = out_list[3]
 
             # check the same size
+            # print(out3.shape)
             self.assertEqual(out_test_num[0].shape, tf.TensorShape([sample_num, state_size[0]]))
             self.assertEqual(out1[0].shape, tf.TensorShape([self._batch_size, state_size[0]]))
             self.assertEqual(out2[0].shape, tf.TensorShape([self._batch_size, state_size[0]]))
