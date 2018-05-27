@@ -53,9 +53,12 @@ __all__ = [
     "default_average_pooling1d_kwargs",
     "default_average_pooling2d_kwargs",
     "default_average_pooling3d_kwargs",
-    "sinusoid_positional_encoding",
+    #TODO(haoran): the reorganizing of following functions
     "multihead_attention",
-    "layer_normalize"
+    "layer_normalize",
+    "get_timing_signal_1d",
+    "add_timing_signal_1d",
+    "add_timing_signal_1d_given_position",
 ]
 
 def default_rnn_cell_hparams():
@@ -1132,34 +1135,6 @@ _layer_class_to_default_kwargs_map = {
     tf.layers.AveragePooling2D: default_average_pooling2d_kwargs(),
     tf.layers.AveragePooling3D: default_average_pooling3d_kwargs(),
 }
-
-
-
-def sinusoid_positional_encoding(inputs,
-                                 reuse=None,
-                                 min_timescale=1.0,
-                                 max_timescale=1.0e4,
-                                 variable_scope='sinuoid_positional_embedding'):
-    """obtain a positional encoding of inputs
-    Args:
-        inputs: [Tensor] A Tensor of shape `[batch_size, max_time, hidden_dim]`
-        variable_scope: [String], Optional scope for 'variable_scope'
-    """
-    length = tf.shape(inputs)[1]
-    channels = tf.shape(inputs)[2]
-    with tf.variable_scope(variable_scope, reuse=reuse):
-        position = tf.to_float(tf.range(length))
-        num_timescales = channels // 2
-        log_timescale_increment = (
-            math.log(float(max_timescale) / float(min_timescale)) /
-            (tf.to_float(num_timescales) - 1))
-        inv_timescales = min_timescale * tf.exp(
-            tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
-        scaled_time = tf.expand_dims(position, 1) * tf.expand_dims(inv_timescales, 0)
-        signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=1)
-        signal = tf.pad(signal, [[0, 0], [0, tf.mod(channels, 2)]])
-        signal = tf.reshape(signal, [1, length, channels])
-        return signal
 
 def multihead_attention(queries,
                         memory_attention_bias=None,
