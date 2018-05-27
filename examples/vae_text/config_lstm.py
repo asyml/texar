@@ -19,8 +19,11 @@
 
 num_epochs = 50
 hidden_size = 256
+dec_keep_prob_in = 0.5
+dec_keep_prob_out = 0.5
 enc_keep_prob_in = 1.0
 enc_keep_prob_out = 1.0
+word_keep_prob = 0.5
 batch_size = 32
 embed_dim = 256
 
@@ -28,19 +31,13 @@ latent_dims = 32
 
 lr_decay_hparams = {
     "init_lr": 0.001,
-    "threshold": 1,
-    "rate": 0.1
+    "threshold": 5,
+    "rate": 0.5
 }
 
 
-relu_dropout = 0.2
-embedding_dropout = 0.2
-attention_dropout = 0.2
-residual_dropout = 0.5
-num_blocks = 3
-
 decoder_hparams = {
-    "type": "transformer"
+    "type": "lstm"
 }
 
 enc_cell_hparams = {
@@ -50,6 +47,16 @@ enc_cell_hparams = {
         "forget_bias": 0.
     },
     "dropout": {"output_keep_prob": enc_keep_prob_out},
+    "num_layers": 1
+}
+
+dec_cell_hparams = {
+    "type": "LSTMBlockCell",
+    "kwargs": {
+        "num_units": hidden_size,
+        "forget_bias": 0.
+    },
+    "dropout": {"output_keep_prob": dec_keep_prob_out},
     "num_layers": 1
 }
 
@@ -65,63 +72,11 @@ emb_hparams = {
     }
 }
 
-# due to the residual connection, the embed_dim should be equal to hidden_size
-trans_hparams = {
-    'share_embed_and_transform': True,
-    'transform_with_bias': False,
-    'beam_width': 1,
-    'multiply_embedding_mode': 'sqrt_depth',
-    'embedding_dropout': embedding_dropout,
-    'attention_dropout': attention_dropout,
-    'residual_dropout': residual_dropout,
-    'sinusoid': True,
-    'num_heads': 8,
-    'num_blocks': num_blocks,
-    'num_units': hidden_size,
-    'zero_pad': False,
-    'bos_pad': False,
-    'initializer': {
-        'type': 'variance_scaling_initializer',
-        'kwargs': {
-            'scale': 1.0,
-            'mode':'fan_avg',
-            'distribution':'uniform',
-        },
-    },
-    'poswise_feedforward': {
-        'name':'fnn',
-        'layers':[
-            {
-                'type':'Dense',
-                'kwargs': {
-                    'name':'conv1',
-                    'units':hidden_size*4,
-                    'activation':'relu',
-                    'use_bias':True,
-                },
-            },
-            {
-                'type':'Dropout',
-                'kwargs': {
-                    'rate': relu_dropout,
-                }
-            },
-            {
-                'type':'Dense',
-                'kwargs': {
-                    'name':'conv2',
-                    'units':hidden_size,
-                    'use_bias':True,
-                    }
-            }
-        ],
-    }
-}
 
 # KL annealing
 kl_anneal_hparams={
     "warm_up": 10,
-    "start": 0.1
+    "start": 0.01
 }
 
 train_data_hparams = {
@@ -152,3 +107,23 @@ test_data_hparams = {
         "vocab_file": 'data/vocab.txt'
     }
 }
+
+# opt_hparams = {
+#     "optimizer": {
+#         "type": "GradientDescentOptimizer",
+#         "kwargs": {"learning_rate": 1.0}
+#     },
+#     "gradient_clip": {
+#         "type": "clip_by_global_norm",
+#         "kwargs": {"clip_norm": 5.}
+#     },
+#     "learning_rate_decay": {
+#         "type": "exponential_decay",
+#         "kwargs": {
+#             "decay_steps": 1,
+#             "decay_rate": 0.5,
+#             "staircase": True
+#         },
+#         "start_decay_step": 3
+#     }
+# }

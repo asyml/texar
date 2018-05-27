@@ -15,15 +15,11 @@
 
 This is an impmentation of Variational Autoencoder for text generation
 
-Model is described in:
-(Bowman, et. al.) Generating Sentences from a Continuous Space
- https://arxiv.org/abs/1511.06349
-
 To run:
 
-$ python train.py
+$ python vae_train.py
 
-Hyperparameters and data path may be specified in config.py
+Hyperparameters and data path may be specified in config_trans.py
 
 """
 from __future__ import absolute_import
