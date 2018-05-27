@@ -22,7 +22,7 @@ from tensorflow.python.ops import rnn
 
 from texar import context
 from texar.hyperparams import HParams
-from texar.utils.dtypes import is_str
+from texar.utils.dtypes import is_str, is_callable
 
 MAX_SEQ_LENGTH = np.iinfo(np.int32).max
 
@@ -253,24 +253,28 @@ def get_instance_with_redundant_kwargs(
     return class_(**selected_kwargs)
 
 
-def get_function(fn_name, module_paths=None):
+def get_function(fn_or_name, module_paths=None):
     """Returns the function of specified name and module.
 
     Args:
-        fn_name (str): Name of the function.
-        module_paths (list of str): A list of paths to candidate modules to
-            search for the function. This is used when the function cannot be
-            located solely based on `fn_name`. The first module in the list
-            that contains the function is used.
+        fn_or_name (str or callable): Name or full path to a function, or the
+            function itself.
+        module_paths (list, optional): A list of paths to candidate modules to
+            search for the function. This is used only when the function
+            cannot be located solely based on :attr:`fn_or_name`. The first
+            module in the list that contains the function is used.
 
     Returns:
         A function.
     """
-    fn = locate(fn_name)
+    if is_callable(fn_or_name):
+        return fn_or_name
+
+    fn = locate(fn_or_name)
     if (fn is None) and (module_paths is not None):
         for module_path in module_paths:
             #if module_path in _unimportable_modules:
-            fn = locate('.'.join([module_path, fn_name]))
+            fn = locate('.'.join([module_path, fn_or_name]))
             if fn is not None:
                 break
             #module = importlib.import_module(module_path)
@@ -280,7 +284,7 @@ def get_function(fn_name, module_paths=None):
 
     if fn is None:
         raise ValueError(
-            "Method not found in {}: {}".format(module_paths, fn_name))
+            "Method not found in {}: {}".format(module_paths, fn_or_name))
 
     return fn
 

@@ -17,7 +17,8 @@ from texar.modules.connectors.connector_base import ConnectorBase
 from texar.core import layers
 from texar.utils.utils import get_function, get_instance
 
-# pylint: disable=too-many-locals, arguments-differ, too-many-arguments
+# pylint: disable=too-many-locals, arguments-differ
+# pylint: disable=too-many-arguments, invalid-name
 
 __all__ = [
     "ConstantConnector", "ForwardConnector", "MLPTransformConnector",
@@ -519,10 +520,10 @@ class StochasticConnector(ConnectorBase):
                distribution_kwargs=None,
                transform=False,
                num_samples=None):
-
         """Samples from a distribution and optionally performs transformation.
 
         Gradients would not propagate through the random samples.
+
         Args:
             distribution (optional): An instance of
                 :class:`~tensorflow.contrib.distributions.Distribution`. If
@@ -584,7 +585,7 @@ class StochasticConnector(ConnectorBase):
 
 
 class ConcatConnector(ConnectorBase):
-    """ Concatenate multiple connectors into one connector. Used in, e.g.,
+    """Concatenates multiple connectors into one connector. Used in, e.g.,
     semi-supervised variational autoencoders, disentangled representation
     learning, and other models.
 

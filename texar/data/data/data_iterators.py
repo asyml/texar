@@ -96,7 +96,6 @@ class DataIterator(object):
         """
         return list(self._datasets.keys())
 
-
 class TrainTestDataIterator(DataIterator):
     """Data iterator that alternatives between train, val, and test datasets.
 
