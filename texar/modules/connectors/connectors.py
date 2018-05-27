@@ -90,8 +90,7 @@ def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
     if isinstance(flat_output_size[0], tf.TensorShape):
         size_list = [0] * len(flat_output_size)
         for (i, shape) in enumerate(flat_output_size):
-            size_list[i] = reduce(lambda x, y: x*y,
-                                  [dim.value for dim in shape])
+            size_list[i] = np.prod([dim.value for dim in shape])
     else:
         size_list = flat_output_size
     sum_output_size = sum(size_list)
