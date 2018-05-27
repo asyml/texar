@@ -90,8 +90,7 @@ def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
     if isinstance(flat_output_size[0], tf.TensorShape):
         size_list = [0] * len(flat_output_size)
         for (i, shape) in enumerate(flat_output_size):
-            size_list[i] = reduce(lambda x, y: x*y,
-                                  [dim.value for dim in shape])
+            size_list[i] = np.prod([dim.value for dim in shape])
     else:
         size_list = flat_output_size
     sum_output_size = sum(size_list)
@@ -415,10 +414,11 @@ class ReparameterizedStochasticConnector(ConnectorBase):
                 to generate. `None` is required in training stage.
 
         Returns:
-            If `num_samples`==None, returns a Tensor of shape `[batch_size x
-            output_size]`, else returns a Tensor of shape `[num_samples x
-            output_size]`. `num_samples` should be specified if not in
-            training stage.
+            output: If `num_samples`==None, returns a Tensor of shape 
+                `[batch_size x output_size]`, else returns a Tensor of shape 
+                `[num_samples x output_size]`. `num_samples` should be specified 
+                if not in training stage.
+            latent_z: The latent sampled z
 
         Raises:
             ValueError: If distribution cannot be reparametrized.
@@ -440,11 +440,11 @@ class ReparameterizedStochasticConnector(ConnectorBase):
         else:
             latent_z = dstr.sample()
 
-        if dstr.event_shape == []:
-            latent_z = tf.reshape(latent_z,
-                                  latent_z.shape.concatenate(tf.TensorShape(1)))
+        # if dstr.event_shape == []:
+        #     latent_z = tf.reshape(latent_z,
+        #                           latent_z.shape.concatenate(tf.TensorShape(1)))
 
-        latent_z = tf.cast(latent_z, tf.float32)
+        # latent_z = tf.cast(latent_z, tf.float32)
         if transform:
             fn_modules = ['texar.custom', 'tensorflow', 'tensorflow.nn']
             activation_fn = get_function(self.hparams.activation_fn, fn_modules)
@@ -616,7 +616,7 @@ class ConcatConnector(ConnectorBase):
 
             Here:
 
-            "activation_fn" : str
+            "activation_fn" : (str or callable)
                 The name or full path to the activation function applied to
                 the outputs of the MLP layer. The activation functions can be:
 
@@ -644,6 +644,8 @@ class ConcatConnector(ConnectorBase):
 
         Args:
             connector_inputs: a list of connector states
+            transform: If ``True``, then the output are automatically 
+                transformed to match :attr:`output_size`.
 
         Returns:
             A Tensor or a (nested) tuple of Tensors of the same structure of

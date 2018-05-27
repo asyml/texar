@@ -53,9 +53,12 @@ __all__ = [
     "default_average_pooling1d_kwargs",
     "default_average_pooling2d_kwargs",
     "default_average_pooling3d_kwargs",
-    "sinusoid_positional_encoding",
+    #TODO(haoran): the reorganizing of following functions
     "multihead_attention",
-    "layer_normalize"
+    "layer_normalize",
+    "get_timing_signal_1d",
+    "add_timing_signal_1d",
+    "add_timing_signal_1d_given_position",
 ]
 
 def default_rnn_cell_hparams():
@@ -1077,6 +1080,8 @@ def default_dropout_kwargs():
     return {}
     #raise NotImplementedError
 def default_flatten_kwargs():
+    """TODO
+    """
     return {}
 def default_max_pooling1d_kwargs():
     """TODO
@@ -1118,7 +1123,6 @@ def default_average_pooling3d_kwargs():
     """
     return {}
     #raise NotImplementedError
-
 _layer_class_to_default_kwargs_map = {
     tf.layers.Conv1D: default_conv1d_kwargs(),
     tf.layers.Conv2D: default_conv2d_kwargs(),
@@ -1138,34 +1142,6 @@ _layer_class_to_default_kwargs_map = {
     tf.layers.AveragePooling3D: default_average_pooling3d_kwargs(),
 }
 
-
-
-def sinusoid_positional_encoding(inputs,
-                                 reuse=None,
-                                 min_timescale=1.0,
-                                 max_timescale=1.0e4,
-                                 variable_scope='sinuoid_positional_embedding'):
-    """obtain a positional encoding of inputs
-    Args:
-        inputs: [Tensor] A Tensor of shape `[batch_size, max_time, hidden_dim]`
-        variable_scope: [String], Optional scope for 'variable_scope'
-    """
-    length = tf.shape(inputs)[1]
-    channels = tf.shape(inputs)[2]
-    with tf.variable_scope(variable_scope, reuse=reuse):
-        position = tf.to_float(tf.range(length))
-        num_timescales = channels // 2
-        log_timescale_increment = (
-            math.log(float(max_timescale) / float(min_timescale)) /
-            (tf.to_float(num_timescales) - 1))
-        inv_timescales = min_timescale * tf.exp(
-            tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
-        scaled_time = tf.expand_dims(position, 1) * tf.expand_dims(inv_timescales, 0)
-        signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=1)
-        signal = tf.pad(signal, [[0, 0], [0, tf.mod(channels, 2)]])
-        signal = tf.reshape(signal, [1, length, channels])
-        return signal
-
 def multihead_attention(queries,
                         memory_attention_bias=None,
                         memory=None,
@@ -1179,7 +1155,8 @@ def multihead_attention(queries,
     Args:
       queries: A 3d tensor with shape of [batch, length_query, depth_query].
       keys: A 3d tensor with shape of [batch, length_key, depth_key].
-      num_units: A scalar indicating the attention size, equals to depth_query if not given.
+      num_units: A scalar indicating the attention size,
+        equals to depth_query if not given.
       dropout_rate: A floating point number.
       num_heads: An int. Number of heads with calculating attention.
       scope: Optional scope for `variable_scope`.
@@ -1188,6 +1165,7 @@ def multihead_attention(queries,
     Returns
       A 3d tensor with shape of (batch, length_query, num_units)
     '''
+    #pylint: disable=too-many-locals
     with tf.variable_scope(scope):
         if num_units is None:
             num_units = queries.get_shape().as_list()[-1]
@@ -1212,12 +1190,18 @@ def multihead_attention(queries,
             if cache is not None:
                 K, V = tf.cond(
                     tf.equal(tf.shape(cache["memory_keys"])[1], 0),
-                    true_fn=lambda: [tf.layers.dense(memory, num_units, use_bias=False, name='k'),
-                        tf.layers.dense(memory, num_units, use_bias=False, name='v')],
-                    false_fn=lambda: [cache["memory_keys"], cache["memory_values"]])
+                    true_fn=lambda: \
+                        [tf.layers.dense(memory, num_units, \
+                            use_bias=False, name='k'), \
+                        tf.layers.dense(memory, num_units, \
+                            use_bias=False, name='v')],
+                    false_fn=lambda: \
+                        [cache["memory_keys"], cache["memory_values"]])
             else:
-                K, V = [tf.layers.dense(memory, num_units, use_bias=False, name='k'),
-                        tf.layers.dense(memory, num_units, use_bias=False, name='v')]
+                K, V = [tf.layers.dense(memory, num_units, \
+                            use_bias=False, name='k'),
+                        tf.layers.dense(memory, num_units, \
+                            use_bias=False, name='v')]
 
         Q_ = split_heads(Q, num_heads)
         K_ = split_heads(K, num_heads)
@@ -1230,36 +1214,39 @@ def multihead_attention(queries,
         if memory_attention_bias is not None:
             logits += memory_attention_bias
         weights = tf.nn.softmax(logits, name="attention_weights")
-        weights = tf.layers.dropout(
-            weights, rate=dropout_rate, training=context.global_mode_train())
+        weights = tf.layers.dropout(weights, \
+            rate=dropout_rate, training=context.global_mode_train())
         outputs = tf.matmul(weights, V_)
 
         outputs = combine_heads(outputs)
-        outputs = tf.layers.dense(outputs, num_units, use_bias=False, name='output_transform')
+        outputs = tf.layers.dense(outputs, num_units,\
+            use_bias=False, name='output_transform')
         #(batch_size, length_query, attention_depth)
     return outputs
 
 def layer_normalize(inputs,
-              epsilon=1e-8,
-              scope='ln',
-              reuse=None):
+                    epsilon=1e-8,
+                    scope='ln',
+                    reuse=None):
     '''Applies layer normalization. averaging over the last dimension
     Args:
-      inputs: A tensor with 2 or more dimensions, where the first dimension has
-        `batch_size`.
-      epsilon: A floating number. A very small number for preventing ZeroDivision Error.
-      scope: Optional scope for `variable_scope`.
-      reuse: Boolean, whether to reuse the weights of a previous layer
-        by the same name.
-
+        inputs: A tensor with 2 or more dimensions, where the first
+            dimension has `batch_size`.
+        epsilon: A floating number. A very small number for preventing
+            ZeroDivision Error.
+        scope: Optional scope for `variable_scope`.
+        reuse: Boolean, whether to reuse the weights of a previous layer
+            by the same name.
     Returns:
-      A tensor with the same shape and data dtype as `inputs`.
+        A tensor with the same shape and data dtype as `inputs`.
     '''
     with tf.variable_scope(scope, reuse=reuse):
         filters = inputs.get_shape()[-1]
         mean, variance = tf.nn.moments(inputs, [-1], keep_dims=True)
-        scale = tf.get_variable('layer_norm_scale', [filters], initializer=tf.ones_initializer())
-        bias = tf.get_variable('layer_norm_bias', [filters], initializer=tf.zeros_initializer())
+        scale = tf.get_variable('layer_norm_scale',\
+            [filters], initializer=tf.ones_initializer())
+        bias = tf.get_variable('layer_norm_bias',\
+            [filters], initializer=tf.zeros_initializer())
         norm_x = (inputs - mean) * tf.rsqrt(variance + epsilon)
         outputs = norm_x * scale + bias
     return outputs
@@ -1316,8 +1303,8 @@ def ones_matrix_band_part(rows, cols, num_lower, num_upper, out_shape=None):
         band = tf.constant(band, tf.float32)
     else:
         band = tf.matrix_band_part(tf.ones([rows, cols]),
-                               tf.cast(num_lower, tf.int64),
-                               tf.cast(num_upper, tf.int64))
+                                   tf.cast(num_lower, tf.int64),
+                                   tf.cast(num_upper, tf.int64))
         if out_shape:
             band = tf.reshape(band, out_shape)
     return band
@@ -1327,13 +1314,13 @@ def get_timing_signal_1d(length,
                          min_timescale=1.0,
                          max_timescale=1.0e4):
     """Gets a bunch of sinusoids of different frequencies.
-    Each channel of the input Tensor is incremented by a sinusoid of a different
-    frequency and phase.
+    Each channel of the input Tensor is incremented by a sinusoid of
+    a different frequency and phase.
     This allows attention to learn to use absolute and relative positions.
-    Timing signals should be added to some precursors of both the query and the
-    memory inputs to attention.
-    The use of relative position is possible because sin(x+y) and cos(x+y) can be
-    expressed in terms of y, sin(x) and cos(x).
+    Timing signals should be added to some precursors of both the query and
+    the memory inputs to attention.
+    The use of relative position is possible because sin(x+y) and cos(x+y) can
+    be expressed in terms of y, sin(x) and cos(x).
     In particular, we use a geometric sequence of timescales starting with
     min_timescale and ending with max_timescale.    The number of different
     timescales is equal to channels / 2. For each timescale, we
@@ -1352,11 +1339,12 @@ def get_timing_signal_1d(length,
     position = tf.to_float(tf.range(length))
     num_timescales = channels // 2
     log_timescale_increment = (
-            math.log(float(max_timescale) / float(min_timescale)) /
-            (tf.to_float(num_timescales) - 1))
+        math.log(float(max_timescale) / float(min_timescale)) /
+        (tf.to_float(num_timescales) - 1))
     inv_timescales = min_timescale * tf.exp(
-            tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
-    scaled_time = tf.expand_dims(position, 1) * tf.expand_dims(inv_timescales, 0)
+        tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
+    scaled_time = tf.expand_dims(position, 1) \
+        * tf.expand_dims(inv_timescales, 0)
     signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=1)
     signal = tf.pad(signal, [[0, 0], [0, tf.mod(channels, 2)]])
     signal = tf.reshape(signal, [1, length, channels])
@@ -1364,13 +1352,13 @@ def get_timing_signal_1d(length,
 
 def add_timing_signal_1d(x, min_timescale=1.0, max_timescale=1.0e4):
     """Adds a bunch of sinusoids of different frequencies to a Tensor.
-    Each channel of the input Tensor is incremented by a sinusoid of a different
-    frequency and phase.
+    Each channel of the input Tensor is incremented by a sinusoid of a
+    different frequency and phase.
     This allows attention to learn to use absolute and relative positions.
-    Timing signals should be added to some precursors of both the query and the
-    memory inputs to attention.
-    The use of relative position is possible because sin(x+y) and cos(x+y) can be
-    experessed in terms of y, sin(x) and cos(x).
+    Timing signals should be added to some precursors of both the query
+    and the memory inputs to attention.
+    The use of relative position is possible because sin(x+y) and
+    cos(x+y) can be experessed in terms of y, sin(x) and cos(x).
     In particular, we use a geometric sequence of timescales starting with
     min_timescale and ending with max_timescale.    The number of different
     timescales is equal to channels / 2. For each timescale, we
@@ -1386,7 +1374,8 @@ def add_timing_signal_1d(x, min_timescale=1.0, max_timescale=1.0e4):
     """
     length = shape_list(x)[1]
     channels = shape_list(x)[2]
-    signal = get_timing_signal_1d(length, channels, min_timescale, max_timescale)
+    signal = get_timing_signal_1d(
+        length, channels, min_timescale, max_timescale)
     return x + signal
 
 
@@ -1394,7 +1383,8 @@ def add_timing_signal_1d_given_position(x,
                                         position,
                                         min_timescale=1.0,
                                         max_timescale=1.0e4):
-    """Adds sinusoids of diff frequencies to a Tensor, with timing position given.
+    """Adds sinusoids of diff frequencies to a Tensor,
+        with timing position given.
     Args:
         x: a Tensor with shape [batch, length, channels]
         position: a Tensor with shape [batch, length]
@@ -1406,13 +1396,13 @@ def add_timing_signal_1d_given_position(x,
     channels = shape_list(x)[2]
     num_timescales = channels // 2
     log_timescale_increment = (
-            math.log(float(max_timescale) / float(min_timescale)) /
-            (tf.to_float(num_timescales) - 1))
+        math.log(float(max_timescale) / float(min_timescale)) /
+        (tf.to_float(num_timescales) - 1))
     inv_timescales = min_timescale * tf.exp(
-            tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
+        tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
     scaled_time = (
-            tf.expand_dims(tf.to_float(position), 2) * tf.expand_dims(
-                    tf.expand_dims(inv_timescales, 0), 0))
+        tf.expand_dims(tf.to_float(position), 2) * tf.expand_dims(
+            tf.expand_dims(inv_timescales, 0), 0))
     signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=2)
     signal = tf.pad(signal, [[0, 0], [0, 0], [0, tf.mod(channels, 2)]])
     signal = tf.cast(signal, x.dtype)

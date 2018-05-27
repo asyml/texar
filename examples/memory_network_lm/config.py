@@ -51,7 +51,7 @@ memnet = {
     "dim": dim,
     "reludim": reludim,
     "memory_size": memory_size,
-    "need_transformer": True,
+    "need_H": True,
     "final_matrix": {
         "dim": dim,
     },
