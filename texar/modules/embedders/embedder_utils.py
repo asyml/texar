@@ -155,8 +155,8 @@ def get_embedding(hparams=None,
     Args:
         hparams (dict or HParams, optional): Embedding hyperparameters. Missing
             hyperparameters are set to default values. See
-            :func:`~texar.core.layers.default_embedding_hparams` for all
-            hyperparameters and default values.
+            :func:`~texar.modules.embedders.embedder_utils.default_embedding_hparams`
+            for all hyperparameters and default values.
 
             If :attr:`init_value` is given, :attr:`hparams["initializer"]`,
             and :attr:`hparams["dim"]` are ignored.
@@ -167,7 +167,7 @@ def get_embedding(hparams=None,
             :attr:`init_value` is not provided.
         variable_scope (string or VariableScope, optional): Variable scope of
             the embedding variable.
-        mode (optional): Similar to :meth:`~texar.core.layers.get_rnn_cell`.
+        mode (optional): Similar to `mode` in :func:`~texar.core.layers.get_rnn_cell`.
 
     Returns:
         Variable or Tensor: A 2D `Variable` or `Tensor` of the same shape with

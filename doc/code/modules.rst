@@ -129,3 +129,43 @@ Connectors
 
 .. autoclass:: texar.modules.ConcatConnector
     :members:
+
+Embedders
+=========
+
+:hidden:`WordEmbedder`
+--------------------------------------
+
+.. autoclass:: texar.modules.embedders.WordEmbedder
+    :members:
+
+.. autofunction:: texar.modules.embedders.embedder_utils.get_embedding
+
+.. autofunction:: texar.modules.embedders.embedder_utils.default_embedding_hparams
+
+Memory
+======
+
+:hidden:`MemNetSingleLayer`
+--------------------------------------
+
+.. autoclass:: texar.modules.memory.MemNetSingleLayer
+    :members:
+
+:hidden:`MemNetBase`
+--------------------------------------
+
+.. autoclass:: texar.modules.memory.MemNetBase
+    :members:
+
+:hidden:`MemNetRNNLike`
+--------------------------------------
+
+.. autoclass:: texar.modules.memory.MemNetRNNLike
+    :members:
+
+:hidden:`default_embedder_fn`
+--------------------------------------
+
+.. autofunction:: texar.modules.memory.default_embedder_fn
+

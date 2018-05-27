@@ -17,10 +17,23 @@ import copy
 
 __all__ = [
     'MemNetSingleLayer',
-    'MemNetRNNLike'
+    'MemNetBase',
+    'MemNetRNNLike',
+    'default_embedder_fn',
 ]
 
 def default_embedder_fn(memory, vocab_size, hparams):
+    """Default embedder function for A, C or B operation.
+
+    Args:
+        memory: Memory elements used for embedding lookup.
+        vocab_size(int): Size of vocabulary used for embedding.
+        hparams(HParams or dict): Hyperparameters of this function.
+
+    Returns:
+        Result of the memory operation.
+        In this case, :attr:`embedded_memory + temporal_embedding`.
+    """
     memory_size = hparams["memory_size"]
     #word_embedder = WordEmbedder(vocab_size=vocab_size,
     #    hparams=hparams["word_embedder"])
@@ -40,20 +53,33 @@ class MemNetSingleLayer(ModuleBase):
     """An A-C layer for memory network.
 
     Args:
-        transformer (optional): The matrix H applied to o at the end.
+        H (optional): The matrix :attr:`H` multiplied to :attr:`o` at the end.
+        hparams (HParams or dict, optional): Memory network single layer
+            hyperparameters. If it is not specified, the default hyperparameter
+            setting is used. See :attr:`default_hparams` for the structure and
+            default values.
     """
 
-    def __init__(self, transformer=None, hparams=None):
+    def __init__(self, H=None, hparams=None):
         ModuleBase.__init__(self, hparams)
 
-        self._transformer = transformer
+        self._H = H
 
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
         Returns:
-            A dictionary with the following structure and values.
+            .. code-block:: python
+
+                {
+                    "name": "memnet_single_layer"
+                }
+
+            Here:
+
+            "name": str
+                Name of the memory network single layer.
         """
         return {
             "name": "memnet_single_layer"
@@ -64,11 +90,11 @@ class MemNetSingleLayer(ModuleBase):
 
         Args:
             query (Tensor): A `Tensor`.
-            Aout (Tensor): output of A operation. [None, memory_size, dim]
-            Cout (Tensor): output of C operation. [None, memory_size, dim]
+            Aout (Tensor): Output of A operation. Should be in shape `[None, memory_size, dim]`.
+            Cout (Tensor): Output of C operation. Should be in shape `[None, memory_size, dim]`.
 
         Returns:
-            A `Tensor` of shape same as the output of output_embedder.
+            A `Tensor` of shape same as :attr:`query`.
         """
         u = query
         with tf.variable_scope(self.variable_scope):
@@ -80,20 +106,33 @@ class MemNetSingleLayer(ModuleBase):
             p = tf.nn.softmax(p)
             o = tf.matmul(p, c)
             o = tf.squeeze(o, axis=[1])
-            if self._transformer:
-                query = tf.matmul(query, self._transformer)
+            if self._H:
+                query = tf.matmul(query, self._H)
             u_ = tf.add(o, query)
 
         if not self._built:
             self._add_internal_trainable_variables()
-            if self._transformer:
-                self._add_trainable_variable(self._transformer)
+            if self._H:
+                self._add_trainable_variable(self._H)
             self._built = True
 
         return u_
 
 class MemNetBase(ModuleBase):
-    """Base class of memory network
+    """Base class inherited by memory networks.
+
+    Args:
+        vocab_size (int): Vocabulary size of all :attr:`embedder_fn`s and final embedding matrix.
+        input_embedder_fn (function): Function implements A-operation.
+            Differs from different kinds of memory network.
+        output_embedder_fn (function): Function implements C-operation.
+            Similar to :attr:`input_embedder_fn`.
+        query_embedder_fn (function): Function implements B-operation (for input query).
+            Similar to :attr:`input_embedder_fn`.
+        hparams (HParams or dict, optional): Memory network base class
+            hyperparameters. If it is not specified, the default hyperparameter
+            setting is used. See :attr:`default_hparams` for the structure and
+            default values.
     """
 
     def __init__(self, vocab_size, input_embedder_fn, output_embedder_fn,
@@ -108,7 +147,7 @@ class MemNetBase(ModuleBase):
         self._output_embedder_fn = output_embedder_fn
         self._query_embedder_fn = query_embedder_fn
         with tf.variable_scope(self.variable_scope):
-            if self.hparams.need_transformer:
+            if self.hparams.need_H:
                 self.H = tf.get_variable(
                     name="H", shape=[self._dim, self._dim])
             else:
@@ -121,13 +160,64 @@ class MemNetBase(ModuleBase):
 
     @staticmethod
     def default_hparams():
+        """
+        Returns:
+            .. code-block:: python
+
+                {
+                    "name": "memnet_base",
+                    "n_hops": 1,
+                    "dim": 100,
+                    "reludim": 50,
+                    "memory_size": 100,
+                    "need_H": False,
+                    "final_matrix": {
+                        "name": "final_matrix",
+                        "dim": 100,
+                        "dropout": {
+                            "keep_prob": 1.0
+                        }
+                    },
+                    "dropout": {
+                        "keep_prob": 1.0
+                    },
+                    "variational": False,
+                }
+
+            Here:
+
+            "n_hops": int
+                Number of hops.
+
+            "dim": int
+                Dimension of all the vectors.
+
+            "reludim": int
+                Number of elements in dim that have relu at the end of each hop.
+                Should be not less than 0 and not more than :attr`"dim"`.
+
+            "memory_size": int
+                Size of elements used in the memory.
+
+            "need_H": bool
+                Whether needs to perform transform with :attr:`H` matrix at the end of A-C layer.
+
+            "final_matrix": dict
+                Hyperparameters of the final matrix.
+
+            "dropout": dict
+                Hyperparameters of dropout after each hop.
+
+            "variational": bool
+                Whether to share dropout masks after each hop like variational RNNs.
+        """
         return {
             "name": "memnet_base",
             "n_hops": 1,
             "dim": 100,
             "reludim": 50,
             "memory_size": 100,
-            "need_transformer": False,
+            "need_H": False,
             "final_matrix": {
                 "name": "final_matrix",
                 "dim": 100,
@@ -146,7 +236,24 @@ class MemNetBase(ModuleBase):
 
 class MemNetRNNLike(MemNetBase):
     """An implementation of multi-layer end-to-end memory network
-        with RNN-like weight tying described in the paper.
+    with RNN-like weight tying described in the paper.
+        
+    If you want to customize the embedder functions,
+    look at :func:`~texar.modules.memory.default_embedder_fn` for implemention details.
+
+    Args:
+        vocab_size (int): Vocabulary size of all :attr:`embedder_fn`s and final embedding matrix.
+        input_embedder_fn (function): Function implements A-operation.
+            Default is :func:`~texar.modules.memory.default_embedder_fn`.
+            See default function for details.
+        output_embedder_fn (function): Function implements C-operation.
+            Similar to :attr:`input_embedder_fn`.
+        query_embedder_fn (function): Function implements B-operation (for input query).
+            Similar to :attr:`input_embedder_fn`.
+        hparams (HParams or dict, optional): RNN-like memory network
+            hyperparameters. If it is not specified, the default hyperparameter
+            setting is used. See :attr:`default_hparams` for the structure and
+            default values.
     """
 
     def __init__(self, vocab_size,
@@ -185,84 +292,85 @@ class MemNetRNNLike(MemNetBase):
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
-        .. code-block:: python
-        
-            {
-                "name": "memnet_rnnlike",
-                "n_hops": 1,
-                "dim": 100,
-                "reludim": 50,
-                "memory_size": 100,
-                "need_transformer": True,
-                "final_matrix": {
-                    "name": "final_matrix",
+        Returns:
+            .. code-block:: python
+            
+                {
+                    "name": "memnet_rnnlike",
+                    "n_hops": 1,
                     "dim": 100,
-                    "dropout": {
+                    "reludim": 50,
+                    "memory_size": 100,
+                    "need_H": True,
+                    "final_matrix": {
+                        "name": "final_matrix",
+                        "dim": 100,
+                        "dropout": {
+                            "keep_prob": 1.0,
+                        },
+                    }
+                    "A": {
+                        "memory_size": 100,
+                        "word_embedder": {
+                            "name": "word_embedder",
+                            "dim": 100,
+                            "initializer": None, # use default initializer
+                            "dropout": {
+                                "keep_prob": 1.0,
+                            },
+                        }
+                        "temporal_embedding": {
+                            "name": "temporal_embedding",
+                            "dim": 100,
+                            "dropout": {
+                                "keep_prob": 1.0,
+                            },
+                        }
+                    }
+                    "C": {
+                        "memory_size": 100,
+                        "word_embedder": {
+                            "name": "word_embedder",
+                            "dim": 100,
+                            "initializer": None, # use default initializer
+                            "dropout": {
+                                "keep_prob": 1.0,
+                            },
+                        }
+                        "temporal_embedding": {
+                            "name": "temporal_embedding",
+                            "dim": 100,
+                            "dropout": {
+                                "keep_prob": 1.0,
+                            },
+                        }
+                    }
+                    "B": {
+                        "memory_size": 100,
+                        "word_embedder": {
+                            "name": "word_embedder",
+                            "dim": 100,
+                            "initializer": None, # use default initializer
+                            "dropout": {
+                                "keep_prob": 1.0,
+                            },
+                        }
+                        "temporal_embedding": {
+                            "name": "temporal_embedding",
+                            "dim": 100,
+                            "dropout": {
+                                "keep_prob": 1.0,
+                            },
+                        }
+                    }
+                    "dropout": { # dropout after each hop
                         "keep_prob": 1.0,
-                    },
-                }
-                "A": {
-                    "memory_size": 100,
-                    "word_embedder": {
-                        "name": "word_embedder",
-                        "dim": 100,
-                        "initializer": None, # use default initializer
-                        "dropout": {
-                            "keep_prob": 1.0,
-                        },
-                    }
-                    "temporal_embedding": {
-                        "name": "temporal_embedding",
-                        "dim": 100,
-                        "dropout": {
-                            "keep_prob": 1.0,
-                        },
                     }
                 }
-                "C": {
-                    "memory_size": 100,
-                    "word_embedder": {
-                        "name": "word_embedder",
-                        "dim": 100,
-                        "initializer": None, # use default initializer
-                        "dropout": {
-                            "keep_prob": 1.0,
-                        },
-                    }
-                    "temporal_embedding": {
-                        "name": "temporal_embedding",
-                        "dim": 100,
-                        "dropout": {
-                            "keep_prob": 1.0,
-                        },
-                    }
-                }
-                "B": {
-                    "memory_size": 100,
-                    "word_embedder": {
-                        "name": "word_embedder",
-                        "dim": 100,
-                        "initializer": None, # use default initializer
-                        "dropout": {
-                            "keep_prob": 1.0,
-                        },
-                    }
-                    "temporal_embedding": {
-                        "name": "temporal_embedding",
-                        "dim": 100,
-                        "dropout": {
-                            "keep_prob": 1.0,
-                        },
-                    }
-                }
-                "dropout": { # dropout after each hop
-                    "keep_prob": 1.0,
-                }
-            }
         """
         hparams = MemNetBase.default_hparams()
         hparams["name"] = "memnet_rnnlike"
-        hparams["need_transformer"] = True
+        hparams["need_H"] = True
         default_embedder_hparams = {
             "memory_size": 100,
             "word_embedding": {
@@ -285,6 +393,9 @@ class MemNetRNNLike(MemNetBase):
         return hparams
 
     def _build(self, memory, query, **kwargs):
+        """Pass the :attr:`memory` and :attr:`query` through the memory network
+        and return the :attr:`logits` after the final matrix.
+        """
         with tf.variable_scope(self.variable_scope):
             if self._query_embedder_fn:
                 query = self.B(query)
