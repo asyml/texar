@@ -10,7 +10,9 @@ from __future__ import print_function
 import tensorflow as tf
 
 from texar.modules.encoders.encoder_base import EncoderBase
+from texar.modules.networks.conv_networks import _to_list
 from texar.core import layers
+from texar.hyperparams import HParams
 
 # pylint: disable=not-context-manager, too-many-arguments
 
@@ -77,6 +79,9 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
             toggles dropout in the RNN cell (e.g., activates dropout in the
             TRAIN mode). If `None`, :func:`~texar.context.global_mode` is used.
             Ignored if :attr:`cell` is given.
+        output_layer (optional): An instance of
+            :tf_main:`tf.layers.Layer <layers/Layer>`. Apply to the RNN cell
+            output. If `None` (default), no output layer is applied.
         hparams (dict, optional): Encoder hyperparameters. If it is not
             specified, the default hyperparameter setting is used. See
             :attr:`default_hparams` for the sturcture and default values.
@@ -85,6 +90,7 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
     def __init__(self,
                  cell=None,
                  cell_dropout_mode=None,
+                 output_layer=None,
                  hparams=None):
         RNNEncoderBase.__init__(self, hparams)
 
@@ -96,6 +102,12 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                 self._cell = layers.get_rnn_cell(
                     self._hparams.rnn_cell, cell_dropout_mode)
 
+        # Make output layer
+        self._output_layer = output_layer
+        if output_layer is None:
+            with tf.variable_scope(self.variable_scope):
+                pass
+
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
@@ -105,6 +117,7 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
 
                 {
                     "rnn_cell": default_rnn_cell_hparams(),
+                    "output_layer": None,
                     "name": "unidirectional_rnn_encoder"
                 }
 
@@ -115,15 +128,83 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                 :attr:`cell` is given when constructing the encoder.
 
                 The default value is defined in
-                :meth:`~texar.core.layers.default_rnn_cell_hparams`.
+                :func:`~texar.core.layers.default_rnn_cell_hparams`.
+
+            "output_layer" : int or list or None
+                Dense Output layer(s) applied to the RNN cell output.
+
+                - If `int`, a :tf_main:`Dense <layers/Dense>` layer of the \
+                  layer size is added to the RNN cell output.
+                - If `list` of `int`, a series of Dense layers of the layer \
+                  sizes are stacked and added to the RNN cell output.
+                - If `None`, no output layer is added.
+
+                Ignored if :attr:`output_layer` is given in the constructor.
+
+            "output_layer_dropout_rate" : float
+                The dropout rate to apply to the output of each of the
+                output layers except the final layer. (Do not include the RNN
+                cell output). The dropout mode (training or not) is controlled
+                by the :attr:`mode` argument when calling the encoder.
+
+                This is used only when there are more than one output
+                layers, i.e., :attr:`"output_layer"` is a list of length > 1.
+
+                The default is `1.0`, which disables dropout.
+                Ignored if :attr:`output_layer` is given in the constructor.
 
             "name" : str
                 Name of the encoder
         """
         hparams = RNNEncoderBase.default_hparams()
-        hparams["rnn_cell"] = layers.default_rnn_cell_hparams()
-        hparams["name"] = "unidirectional_rnn_encoder"
+        hparams.update({
+            "rnn_cell": layers.default_rnn_cell_hparams(),
+            "output_layer": {
+                "num_layers": 0,
+                "layer_size": 128,
+                "activation": "identity",
+                "final_layer_activation": None,
+                "other_dense_kwargs": None,
+                "dropout_layer_ids": [],
+                "dropout_rate": 0.75,
+            },
+            "name": "unidirectional_rnn_encoder"
+        })
         return hparams
+
+    @staticmethod
+    def _build_output_layer(hparams):
+        nlayers = hparams.num_layers
+
+        if nlayers <= 0:
+            return None
+
+        layer_size = _to_list(
+            hparams.layer_size, 'output_layer.layer_size', nlayers)
+
+        other_kwargs = hparams.other_dense_kwargs or {}
+        if isinstance(other_kwargs, HParams):
+            other_kwargs = other_kwargs.todict()
+        if not isinstance(other_kwargs, dict):
+            raise ValueError(
+                "hparams 'output_layer.other_dense_kwargs' must be a dict.")
+
+        layer_hparams = []
+        for i in range(nlayers):
+
+
+            activation = hparams.activation
+            if i == nlayers - 1 and not hparams.final_layer_activation:
+                activation = hparams.final_layer_activation
+
+            kwargs_i = {"units": layer_size[i],
+                        "activation": activation,
+                        "name": "dense_%d" % (i+1)}
+            kwargs_i.update(other_kwargs)
+
+            layer_hparams.append({"type": "Dense", "kwargs": kwargs_i})
+
+
 
     def _build(self, inputs, sequence_length=None, initial_state=None,
                **kwargs):

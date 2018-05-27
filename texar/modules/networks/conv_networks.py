@@ -18,11 +18,13 @@ from texar.hyperparams import HParams
 # pylint: disable=not-context-manager, too-many-arguments, too-many-locals
 
 __all__ = [
+    "_to_list",
     "Conv1DNetwork"
 ]
 
 def _to_list(value, name=None, list_length=None):
     """Converts hparam value into a list.
+
     If :attr:`list_length` is given,
     then the canonicalized :attr:`value` must be of
     length :attr:`list_length`.
@@ -34,7 +36,7 @@ def _to_list(value, name=None, list_length=None):
             value = [value]
     if list_length is not None and len(value) != list_length:
         name = '' if name is None else name
-        raise ValueError("hparams['%s'] must be a list of length %d"
+        raise ValueError("hparams '%s' must be a list of length %d"
                          % (name, list_length))
     return value
 
@@ -72,9 +74,10 @@ class Conv1DNetwork(FeedForwardNetworkBase):
             "num_dense_layers": 1,
             "dense_size": 128,
             "dense_activation": "identity",
+            "final_dense_activation": None,
             "other_dense_kwargs": None,
             # Dropout
-            "dropout_conv": 1,
+            "dropout_conv": [1],
             "dropout_dense": [],
             "dropout_rate": 0.75,
             # Others
@@ -180,10 +183,15 @@ class Conv1DNetwork(FeedForwardNetworkBase):
 
         dense_hparams = []
         for i in range(ndense):
+            activation = self._hparams.dense_activation
+            if i == ndense - 1 and not self._hparams.final_dense_activation:
+                activation = self._hparams.final_dense_activation
+
             kwargs_i = {"units": dense_size[i],
-                        "activation": self._hparams.dense_activation,
+                        "activation": activation,
                         "name": "dense_%d" % (i+1)}
             kwargs_i.update(other_kwargs)
+
             dense_hparams.append({"type": "Dense", "kwargs": kwargs_i})
 
         return dense_hparams

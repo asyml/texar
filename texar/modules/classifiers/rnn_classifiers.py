@@ -58,11 +58,13 @@ class UnidirectionalRNNClassifier(ClassifierBase):
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
+
+        TODO
         """
         hparams = UnidirectionalRNNEncoder.default_hparams()
         hparams.update({
             "num_classes": 2,
-            "sequence_classification": False,
+            "sequential_output": False,
             "name": "unidirectional_rnn_classifier"
         })
         return hparams

@@ -14,7 +14,7 @@ import tensorflow.contrib.rnn as rnn
 from texar import context
 from texar.hyperparams import HParams
 from texar.utils import utils
-from texar.utils.dtypes import is_str, is_callable
+from texar.utils.dtypes import is_str
 import numpy as np
 
 # pylint: disable=not-context-manager, redefined-variable-type, invalid-name
@@ -832,10 +832,18 @@ class SequentialLayer(tf.layers.Layer):
             utils.add_variable(
                 layer._non_trainable_weights, self._non_trainable_weights)
 
-    def call(self, inputs):
+    def call(self, inputs, mode=None): # pylint: disable=arguments-differ
+        """TODO
+        """
+        training = utils.is_train_mode(mode)
+
         outputs = inputs
         for layer in self._layers:
-            outputs = layer(inputs)
+            if isinstance(layer, tf.layers.Dropout) or \
+                    isinstance(layer, tf.layers.BatchNormalization):
+                outputs = layer(outputs, training=training)
+            else:
+                outputs = layer(inputs)
             inputs = outputs
 
         if not self.built:
