@@ -1,6 +1,6 @@
 # Variational Autoencoder for Text Generation
 
-This is implementation of [Generating Sentences from a Continuous Space](https://arxiv.org/abs/1511.06349) by Bowman et al. 2015, with LSTM as encoder and LSTM or Transformer as decoder.
+This is implementation of VAE for text generation, with LSTM as encoder and LSTM or Transformer as decoder.
 
 
 
@@ -8,7 +8,7 @@ This is implementation of [Generating Sentences from a Continuous Space](https:/
 
 Training can be performed with the following command:
 
-```python
+```shell
 python vae_train.py --config config_trans
 ```
 
@@ -18,7 +18,7 @@ python vae_train.py --config config_trans
 
 |Dataset    |Metrics   | VAE-LSTM |VAE-Transformer |
 |---------------|-------------|----------------|------------------------|
-|PTB | Test PPL<br>Test NLL | 68.31<br>337.36 |61.26<br>328.67|
-|Yahoo | Test PPL<br>Test NLL | 105.27<br>102.06 | 102.46<br>101.46 |
+|Yahoo | Test PPL<br>Test NLL | 68.31<br>337.36 |61.26<br>328.67|
+|PTB | Test PPL<br>Test NLL | 105.27<br>102.06 | 102.46<br>101.46 |
 
 Yahoo dataset is from [(Yang, et. al.) Improved Variational Autoencoders for Text Modeling using Dilated Convolutions](https://arxiv.org/abs/1702.08139).
