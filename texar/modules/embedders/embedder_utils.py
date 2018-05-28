@@ -37,6 +37,7 @@ def default_embedding_hparams():
                     }
                 },
                 "dropout_rate": 0,
+                "dropout_strategy": 'element',
                 "trainable": True,
             }
 
@@ -45,8 +46,9 @@ def default_embedding_hparams():
         "name" : str
             Name of the embedding variable.
 
-        "dim" : int
-            Embedding dimension.
+        "dim" : int or list
+            Embedding dimension. Can be a list of integers to yield embeddings
+            with dimensionality > 1.
 
         "initializer" : dict or None
             Hyperparameters of the initializer for the embedding values. An
@@ -124,6 +126,19 @@ def default_embedding_hparams():
             The dropout rate between 0 and 1. E.g., `dropout_rate=0.1` would
             drop out 10% of the embedding.
 
+        "dropout_strategy" : str
+            The dropout strategy. Can be one of the following
+
+            - 'element': The regular strategy that drops individual elements \
+              in the embedding vectors.
+            - 'item': Drops individual items (e.g., words) entirely. E.g., for \
+              the word sequence 'the simpler the better', the strategy can \
+              yield '_ simpler the better', where the first `the` is dropped.
+            - 'item_type': Drops item types (e.g., word types). E.g., for the \
+              above sequence, the strategy can yield '_ simpler _ better', \
+              where the word type 'the' is dropped. The dropout will never \
+              yield '_ simpler the better' as in the 'item' strategy.
+
         "trainable" : bool
             Whether the embedding is trainable.
     """
@@ -133,13 +148,15 @@ def default_embedding_hparams():
         "initializer": None,
         "regularizer": layers.default_regularizer_hparams(),
         "dropout_rate": 0,
-        "trainable": True
+        "dropout_strategy": 'element',
+        "trainable": True,
+        "@no_typecheck": ["dim"]
     }
 
 
 def get_embedding(hparams=None,
                   init_value=None,
-                  vocab_size=None,
+                  num_embeds=None,
                   variable_scope='Embedding'):
     """Creates embedding variable if not exists.
 
@@ -154,15 +171,16 @@ def get_embedding(hparams=None,
         init_value (Tensor or numpy array, optional): Initial values of the
             embedding variable. If not given, embedding is initialized as
             specified in :attr:`hparams["initializer"]`.
-        vocab_size (int, optional): The vocabulary size. Required if
-            :attr:`init_value` is not provided.
+        num_embeds (int, optional): The number of embedding items
+            (e.g., vocabulary size). Required if :attr:`init_value` is
+            not provided.
         variable_scope (str or VariableScope, optional): Variable scope of
             the embedding variable.
 
     Returns:
         Variable or Tensor: A 2D `Variable` or `Tensor` of the same shape with
         :attr:`init_value` or of the shape
-        :attr:`[vocab_size, hparams["dim"]]`.
+        :attr:`[num_embeds, hparams["dim"]]`.
     """
     with tf.variable_scope(variable_scope):
         if hparams is None or isinstance(hparams, dict):
@@ -170,8 +188,11 @@ def get_embedding(hparams=None,
         regularizer = layers.get_regularizer(hparams["regularizer"])
         if init_value is None:
             initializer = layers.get_initializer(hparams["initializer"])
+            dim = hparams["dim"]
+            if not isinstance(hparams["dim"], (list, tuple)):
+                dim = [dim]
             embedding = tf.get_variable(name=hparams["name"],
-                                        shape=[vocab_size, hparams["dim"]],
+                                        shape=[num_embeds] + dim,
                                         initializer=initializer,
                                         regularizer=regularizer,
                                         trainable=hparams["trainable"])
@@ -181,10 +202,4 @@ def get_embedding(hparams=None,
                                         regularizer=regularizer,
                                         trainable=hparams["trainable"])
 
-        #if hparams["dropout_rate"] > 0.:
-        #    keep_prob = utils.switch_dropout(
-        #        hparams["dropout"]["keep_prob"], mode)
-        #    embedding = tf.nn.dropout(embedding, keep_prob=keep_prob)
-        #    # TODO: Return value type changed and may not be compatible with
-        #    # previous semantic.
         return embedding

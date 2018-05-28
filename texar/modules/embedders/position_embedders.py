@@ -123,14 +123,8 @@ class PositionEmbedder(EmbedderBase):
         Returns:
             A `Tensor` of shape `shape(inputs) + embedding dimension`.
         """
-        embedding = self._embedding
-        if self._dropout_layer is not None:
-            is_training = utils.is_train_mode(mode)
-            embedding = self._dropout_layer.apply(
-                inputs=embedding, training=is_training)
-
         inputs = positions
-        if inputs is None:
+        if positions is None:
             if sequence_length is None:
                 raise ValueError(
                     'Either `positions` or `sequence_length` is required.')
@@ -139,10 +133,23 @@ class PositionEmbedder(EmbedderBase):
             inputs = tf.tile(tf.expand_dims(single_inputs, 0),
                              [utils.get_batch_size(sequence_length), 1])
 
+        embedding = self._embedding
+        dropout_layer = self._get_dropout_layer(self._hparams, inputs)
+        if dropout_layer:
+            is_training = utils.is_train_mode(mode)
+            if self._hparams.dropout_strategy == 'item_type':
+                embedding = dropout_layer.apply(
+                    inputs=embedding, training=is_training)
+
         outputs = tf.nn.embedding_lookup(embedding, inputs, **kwargs)
 
-        if inputs is None:
-            outputs = utils.mask_sequences(outputs, sequence_length, rank=3)
+        if dropout_layer and self._hparams.dropout_strategy != 'item_type':
+            outputs = dropout_layer.apply(
+                inputs=outputs, training=is_training)
+
+        if positions is None:
+            outputs = utils.mask_sequences(
+                outputs, sequence_length, rank=2+self._dim_rank)
 
         return outputs
 

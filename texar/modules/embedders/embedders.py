@@ -17,7 +17,7 @@ __all__ = [
     "WordEmbedder"
 ]
 
-#TODO(zhiting): add soft-embedder, position-embedder, embedder combiner
+#TODO(zhiting): add soft-embedder, embedder combiner
 
 
 class WordEmbedder(EmbedderBase):
@@ -29,7 +29,8 @@ class WordEmbedder(EmbedderBase):
     Args:
         init_value (optional): A `Tensor` or numpy array that contains the
             initial value of embeddings. It is typically of shape
-            `[vocab_size, embedding dim]`
+            `[vocab_size] + embedding dim`. Embedding can have dimensionality
+            > 1.
 
             If `None`, embedding is initialized as specified in
             :attr:`hparams["initializer"]`. Otherwise, the
@@ -90,6 +91,7 @@ class WordEmbedder(EmbedderBase):
                         }
                     },
                     "dropout_rate": 0,
+                    "dropout_strategy": 'element',
                     "trainable": True,
                 }
 
@@ -117,11 +119,19 @@ class WordEmbedder(EmbedderBase):
             A `Tensor` of shape `shape(inputs) + embedding dimension`.
         """
         embedding = self._embedding
-        if self._dropout_layer is not None:
+        dropout_layer = self._get_dropout_layer(self._hparams, inputs)
+        if dropout_layer:
             is_training = utils.is_train_mode(mode)
-            embedding = self._dropout_layer.apply(
-                inputs=embedding, training=is_training)
+            if self._hparams.dropout_strategy == 'item_type':
+                embedding = dropout_layer.apply(
+                    inputs=embedding, training=is_training)
+
         outputs = tf.nn.embedding_lookup(embedding, inputs, **kwargs)
+
+        if dropout_layer and self._hparams.dropout_strategy != 'item_type':
+            outputs = dropout_layer.apply(
+                inputs=outputs, training=is_training)
+
         return outputs
 
     @property

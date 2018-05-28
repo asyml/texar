@@ -12,6 +12,8 @@ import tensorflow as tf
 from texar.module_base import ModuleBase
 from texar.modules.embedders import embedder_utils
 
+# pylint: disable=invalid-name
+
 __all__ = [
     "EmbedderBase"
 ]
@@ -32,18 +34,35 @@ class EmbedderBase(ModuleBase):
         if hparams.trainable:
             self._add_trainable_variable(self._embedding)
 
-        self._dropout_layer = None
-        if hparams.dropout_rate > 0.:
-            with tf.variable_scope(tf.variable_scope):
-                self._dropout_layer = tf.layers.Dropout(
-                    rate=hparams.dropout_rate)
-
         self._num_embeds = self._embedding.get_shape().as_list()[0]
 
         self._dim = self._embedding.get_shape().as_list()[1:]
-        if len(self._dim) == 1:
+        self._dim_rank = len(self._dim)
+        if self._dim_rank == 1:
             self._dim = self._dim[0]
 
+    def _get_dropout_layer(self, hparams, inputs):
+        """Creates dropout layer according to dropout strategy.
+
+        Called in :meth:`_build()`.
+        """
+        dropout_layer = None
+        if hparams.dropout_rate > 0.:
+            st = hparams.dropout_strategy
+            if st == 'element':
+                noise_shape = None
+            elif st == 'item':
+                index_rank = len(inputs.shape.dims) - 1
+                noise_shape = [None] * index_rank + [1] * self._dim_rank
+            elif st == 'item_type':
+                noise_shape = [None] + [1] * self._dim_rank
+            else:
+                raise ValueError('Unknown dropout strategy: {}'.format(st))
+
+            dropout_layer = tf.layers.Dropout(
+                rate=hparams.dropout_rate, noise_shape=noise_shape)
+
+        return dropout_layer
 
     @staticmethod
     def default_hparams():
