@@ -7,7 +7,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
-# pylint: disable=invalid-name, no-member, no-name-in-module
+# pylint: disable=invalid-name, no-member, no-name-in-module, protected-access
 
 #import importlib
 import inspect
@@ -55,6 +55,7 @@ __all__ = [
     "switch_dropout",
     "transpose_batch_time",
     "get_batch_size",
+    "mask_sequences",
     "default_string",
     "patch_dict",
     "fetch_subdict",
@@ -520,6 +521,56 @@ def get_batch_size(tensor):
     the size of the 1st dimension of :attr:`tensor`.
     """
     return tf.shape(tensor)[0]
+
+def mask_sequences(sequence,
+                   sequence_length,
+                   rank=2,
+                   dtype=None,
+                   time_major=False):
+    """Masks out sequence entries that are beyond the respective sequence
+    lengths. Masks along the time dimension.
+
+    Args:
+        sequence: A Tensor of sequence values.
+
+            If `time_major=False` (default), this must be a Tensor of shape:
+                `[batch_size, max_time, d_2, ..., d_rank]`, where the rank of
+                the Tensor is specified with :attr:`rank`.
+
+            If `time_major=True`, this must be a Tensor of shape:
+                `[max_time, batch_size, d_2, ..., d_rank].`
+        sequence_length: A Tensor of shape `[batch_size]`. Time steps beyond
+            the respective sequence lengths will be made zero.
+        rank (int): The rank of :attr:`sequence`. Default is 2, i.e.,
+            :attr:`sequence` is a 2D Tensor consisting of batch and time
+            dimensions.
+        dtype (dtype): Type of :attr:`sequence`. If `None`, infer from
+            :attr:`sequence` automatically.
+        time_major (bool): The shape format of the inputs. If `True`,
+            :attr:`sequence` must have shape
+            `[max_time, batch_size, d_2, ..., d_rank]`.
+            If `False` (default), :attr:`sequence` must have
+            shape `[batch_size, max_time, d_2, ..., d_rank]`.
+
+    Returns:
+        The masked sequence, i.e., a Tensor of the same shape as
+        :attr:`sequence` but with masked-out entries (set to zero).
+    """
+    if rank < 2:
+        raise ValueError("rank must be > 2. Got rank = {}".format(rank))
+    if time_major:
+        sequence = rnn._transpose_batch_time(sequence)
+    max_time = tf.to_int32(tf.shape(sequence)[1])
+    if dtype is None:
+        dtype = sequence.dtype
+    mask = tf.sequence_mask(
+        tf.to_int32(sequence_length), max_time, dtype=dtype)
+    for _ in range(2, rank):
+        mask = tf.expand_dims(mask, axis=-1)
+    sequence = sequence * mask
+    if time_major:
+        sequence = rnn._transpose_batch_time(sequence)
+    return sequence
 
 def default_string(str_, default_str):
     """Returns :attr:`str_` if it is not `None` or empty, otherwise returns

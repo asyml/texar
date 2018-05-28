@@ -1,6 +1,6 @@
 #
 """
-Various embedders.
+Various position embedders.
 """
 
 from __future__ import absolute_import
@@ -14,51 +14,50 @@ from texar.modules.embedders import embedder_utils
 from texar.utils import utils
 
 __all__ = [
-    "WordEmbedder"
+    "PositionEmbedder"
 ]
 
-#TODO(zhiting): add soft-embedder, position-embedder, embedder combiner
+class PositionEmbedder(EmbedderBase):
+    """Simple position embedder that maps position indexes into embeddings
+    via lookup.
 
-
-class WordEmbedder(EmbedderBase):
-    """Simple word embedder that maps indexes into embeddings via lookup.
-
-    Either :attr:`init_value` or :attr:`vocab_size` is required. If both are
-    given, :attr:`init_value.shape[0]` must equal :attr:`vocab_size`.
+    Either :attr:`init_value` or :attr:`position_size` is required. If both are
+    given, :attr:`init_value.shape[0]` must equal :attr:`position_size`.
 
     Args:
         init_value (optional): A `Tensor` or numpy array that contains the
             initial value of embeddings. It is typically of shape
-            `[vocab_size, embedding dim]`
+            `[position_size, embedding dim]`
 
             If `None`, embedding is initialized as specified in
             :attr:`hparams["initializer"]`. Otherwise, the
             :attr:`"initializer"` and :attr:`"dim"`
             hyperparameters in :attr:`hparams` are ignored.
-        vocab_size (int, optional): The vocabulary size. Required if
-            :attr:`init_value` is not given.
+        position_size (int, optional): The number of possible positions, e.g.,
+            the maximum sequence length. Required if :attr:`init_value` is
+            not given.
         hparams (dict, optional): Embedder hyperparameters. If it is not
             specified, the default hyperparameter setting is used. See
             :attr:`default_hparams` for the sturcture and default values.
     """
 
-    def __init__(self, init_value=None, vocab_size=None, hparams=None):
+    def __init__(self, init_value=None, position_size=None, hparams=None):
         EmbedderBase.__init__(self, hparams=hparams)
 
-        if init_value is None and vocab_size is None:
+        if init_value is None and position_size is None:
             raise ValueError(
-                "Either `init_value` or `vocab_size` is required.")
+                "Either `init_value` or `position_size` is required.")
 
-        self._init_parameterized_embedding(init_value, vocab_size,
+        self._init_parameterized_embedding(init_value, position_size,
                                            self._hparams)
 
-        self._vocab_size = vocab_size
-        if vocab_size is None:
-            self._vocab_size = self._num_embeds
-        if self._vocab_size != self._num_embeds:
+        self._position_size = position_size
+        if position_size is None:
+            self._position_size = self._num_embeds
+        if self._position_size != self._num_embeds:
             raise ValueError(
-                'vocab_size must equal to init_value.shape[0].'
-                'Got %d and %d' % (self._vocab_size, self._num_embeds))
+                'position_size must equal to init_value.shape[0].'
+                'Got %d and %d' % (self._position_size, self._num_embeds))
 
         self._built = True
 
@@ -72,7 +71,7 @@ class WordEmbedder(EmbedderBase):
             .. code-block:: python
 
                 {
-                    "name": "word_embedder",
+                    "name": "position_embedder",
                     "dim": 100,
                     "initializer": {
                         "type": "random_uniform_initializer",
@@ -97,14 +96,22 @@ class WordEmbedder(EmbedderBase):
             details.
         """
         hparams = embedder_utils.default_embedding_hparams()
-        hparams["name"] = "word_embedder"
+        hparams["name"] = "position_embedder"
         return hparams
 
-    def _build(self, inputs, mode=None, **kwargs):
-        """Embeds inputs with look-up.
+    def _build(self, positions=None, sequence_length=None, mode=None, **kwargs):
+        """Embeds with look-up.
+
+        Either :attr:`position` or :attr:`sequence_length` is required. If both
+        are given, :attr:`sequence_length` is ignored.
 
         Args:
-            inputs: An integer tensor containing the ids to be looked up.
+            positions (optional): An integer tensor containing the position
+                ids to be looked up.
+            sequence_length (optional): An integer tensor of shape
+                `[batch_size]`. Time steps beyond
+                the respective sequence lengths will have zero-valued
+                embeddings.
             mode (optional): A tensor taking value in
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
                 `TRAIN`, `EVAL`, and `PREDICT`. If `None`, dropout will be
@@ -121,7 +128,22 @@ class WordEmbedder(EmbedderBase):
             is_training = utils.is_train_mode(mode)
             embedding = self._dropout_layer.apply(
                 inputs=embedding, training=is_training)
+
+        inputs = positions
+        if inputs is None:
+            if sequence_length is None:
+                raise ValueError(
+                    'Either `positions` or `sequence_length` is required.')
+            max_length = tf.reduce_max(sequence_length)
+            single_inputs = tf.range(start=0, limit=max_length, dtype=tf.int32)
+            inputs = tf.tile(tf.expand_dims(single_inputs, 0),
+                             [utils.get_batch_size(sequence_length), 1])
+
         outputs = tf.nn.embedding_lookup(embedding, inputs, **kwargs)
+
+        if inputs is None:
+            outputs = utils.mask_sequences(outputs, sequence_length, rank=3)
+
         return outputs
 
     @property
@@ -137,8 +159,12 @@ class WordEmbedder(EmbedderBase):
         return self._dim
 
     @property
-    def vocab_size(self):
-        """The vocabulary size.
+    def position_size(self):
+        """The position size, i.e., maximum number of positions.
         """
-        return self._vocab_size
+        return self._position_size
+
+
+class SinusoidsPositionEmbedder(EmbedderBase):
+    pass
 
