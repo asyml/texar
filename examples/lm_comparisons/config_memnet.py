@@ -38,17 +38,13 @@ opt = {
 
 embedder = {
     "memory_size": memory_size,
-    "word_embedding": {
+    "word_embedder": {
         "dim": dim,
-        "dropout": {
-            "keep_prob": 0.8
-        }
+        "dropout_rate": 0.2
     },
     "temporal_embedding": {
         "dim": dim,
-        "dropout": {
-            "keep_prob": 0.8
-        }
+        "dropout_rate": 0.2
     }
 }
 
@@ -60,14 +56,10 @@ memnet = {
     "need_H": True,
     "final_matrix": {
         "dim": dim,
-        "dropout": {
-            "keep_prob": 0.8
-        }
+        "dropout_rate": 0.2
     },
     "A": embedder,
     "C": embedder,
-    "dropout": {
-        "keep_prob": 0.8
-    },
+    "dropout_rate": 0.2,
     "variational": True
 }
