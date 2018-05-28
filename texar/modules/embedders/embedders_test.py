@@ -20,7 +20,9 @@ class WordEmbedderTest(tf.test.TestCase):
     def test_word_embedder(self):
         """Tests :class:`texar.modules.WordEmbedder`.
         """
-        embedder = WordEmbedder(vocab_size=100, hparams={"dim": 1024})
+        embedder = WordEmbedder(
+            vocab_size=100,
+            hparams={"dim": 1024, "dropout_rate": 0.3})
         inputs = tf.ones([64, 16], dtype=tf.int32)
         outputs = embedder(inputs)
         self.assertEqual(outputs.shape, [64, 16, 1024])

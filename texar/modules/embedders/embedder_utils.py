@@ -10,7 +10,6 @@ import tensorflow as tf
 
 from texar.hyperparams import HParams
 from texar.core import layers
-from texar.utils import utils
 
 __all__ = [
     "default_embedding_hparams",
@@ -37,9 +36,7 @@ def default_embedding_hparams():
                         "l2": 0.
                     }
                 },
-                "dropout": {
-                    "keep_prob": 1.0,
-                },
+                "dropout_rate": 0,
                 "trainable": True,
             }
 
@@ -122,13 +119,10 @@ def default_embedding_hparams():
             The default value corresponds to
             :tf_main:`L1L2 <keras/regularizers/L1L2>` with `(l1=0, l2=0)`,
             which disables regularization.
-        
-        "dropout" : dict
-            Hyperparameters of dropout.
 
-            "keep_prob" : float
-                Dropout keep probability. If None or 1.0, no dropout is
-                applied.
+        "dropout_rate" : float
+            The dropout rate between 0 and 1. E.g., `dropout_rate=0.1` would
+            drop out 10% of the embedding.
 
         "trainable" : bool
             Whether the embedding is trainable.
@@ -138,9 +132,7 @@ def default_embedding_hparams():
         "dim": 100,
         "initializer": None,
         "regularizer": layers.default_regularizer_hparams(),
-        "dropout": {
-            "keep_prob": 1.0,
-        },
+        "dropout_rate": 0,
         "trainable": True
     }
 
@@ -148,14 +140,13 @@ def default_embedding_hparams():
 def get_embedding(hparams=None,
                   init_value=None,
                   vocab_size=None,
-                  variable_scope='Embedding',
-                  mode=None):
+                  variable_scope='Embedding'):
     """Creates embedding variable if not exists.
 
     Args:
         hparams (dict or HParams, optional): Embedding hyperparameters. Missing
             hyperparameters are set to default values. See
-            :func:`~texar.modules.embedders.embedder_utils.default_embedding_hparams`
+            :func:`~texar.modules.default_embedding_hparams`
             for all hyperparameters and default values.
 
             If :attr:`init_value` is given, :attr:`hparams["initializer"]`,
@@ -165,9 +156,8 @@ def get_embedding(hparams=None,
             specified in :attr:`hparams["initializer"]`.
         vocab_size (int, optional): The vocabulary size. Required if
             :attr:`init_value` is not provided.
-        variable_scope (string or VariableScope, optional): Variable scope of
+        variable_scope (str or VariableScope, optional): Variable scope of
             the embedding variable.
-        mode (optional): Similar to `mode` in :func:`~texar.core.layers.get_rnn_cell`.
 
     Returns:
         Variable or Tensor: A 2D `Variable` or `Tensor` of the same shape with
@@ -190,10 +180,11 @@ def get_embedding(hparams=None,
                                         initializer=tf.to_float(init_value),
                                         regularizer=regularizer,
                                         trainable=hparams["trainable"])
-        if hparams["dropout"]["keep_prob"] != 1.0:
-            keep_prob = utils.switch_dropout(
-                hparams["dropout"]["keep_prob"], mode)
-            embedding = tf.nn.dropout(embedding, keep_prob=keep_prob)
-            # TODO: Return value type changed and may not be compatible with
-            # previous semantic.
+
+        #if hparams["dropout_rate"] > 0.:
+        #    keep_prob = utils.switch_dropout(
+        #        hparams["dropout"]["keep_prob"], mode)
+        #    embedding = tf.nn.dropout(embedding, keep_prob=keep_prob)
+        #    # TODO: Return value type changed and may not be compatible with
+        #    # previous semantic.
         return embedding

@@ -11,6 +11,7 @@ import tensorflow as tf
 
 from texar.module_base import ModuleBase
 from texar.modules.embedders import embedder_utils
+from texar.utils import utils
 
 __all__ = [
     #"EmbedderBase",
@@ -46,8 +47,7 @@ class WordEmbedder(ModuleBase):
         mode (optional): Similar to :func:`~texar.core.layers.get_rnn_cell`.
     """
 
-    def __init__(self, init_value=None, vocab_size=None, hparams=None,
-                 mode=None):
+    def __init__(self, init_value=None, vocab_size=None, hparams=None):
         ModuleBase.__init__(self, hparams)
 
         if init_value is None and vocab_size is None:
@@ -55,9 +55,16 @@ class WordEmbedder(ModuleBase):
                 "Either `init_value` or `vocab_size` is required.")
 
         self._vocab_size = vocab_size
+
         self._embedding = embedder_utils.get_embedding(
-            self._hparams, init_value, self._vocab_size,
-            self.variable_scope, mode)
+            self._hparams, init_value, self._vocab_size, self.variable_scope)
+
+        self._dropout_layer = None
+        if self._hparams.dropout_rate > 0.:
+            with tf.variable_scope(tf.variable_scope):
+                self._dropout_layer = tf.layers.Dropout(
+                    rate=self._hparams.dropout_rate)
+
         if self._hparams.trainable:
             self._add_trainable_variable(self._embedding)
 
@@ -97,9 +104,7 @@ class WordEmbedder(ModuleBase):
                             "l2": 0.
                         }
                     },
-                    "dropout": {
-                        "keep_prob": 1.0,
-                    },
+                    "dropout_rate": 0,
                     "trainable": True,
                 }
 
@@ -110,12 +115,16 @@ class WordEmbedder(ModuleBase):
         hparams["name"] = "word_embedder"
         return hparams
 
-    def _build(self, inputs, **kwargs):
+    def _build(self, inputs, mode=None, **kwargs):
         """Embeds inputs with look-up.
 
         Args:
             inputs (Tensor): A `Tensor` with type `int32` or `int64`
                 containing the ids to be looked up.
+            mode (optional): A `Tensor` taking value in
+                :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
+                `TRAIN`, `EVAL`, and `PREDICT`. If `None`, dropout will be
+                controlled by :func:`texar.context.global_mode`.
             kwargs: Additional keyword arguments for
                 :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>` besides
                 :attr:`params` and :attr:`ids`.
@@ -123,7 +132,12 @@ class WordEmbedder(ModuleBase):
         Returns:
             A `Tensor` of shape `shape(inputs) + embedding dimension`.
         """
-        outputs = tf.nn.embedding_lookup(self._embedding, inputs, **kwargs)
+        embedding = self._embedding
+        if self._dropout_layer is not None:
+            is_training = utils.is_train_mode(mode)
+            embedding = self._dropout_layer.apply(
+                inputs=embedding, training=is_training)
+        outputs = tf.nn.embedding_lookup(embedding, inputs, **kwargs)
         return outputs
 
     @property
