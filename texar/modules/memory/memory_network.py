@@ -9,7 +9,6 @@ from __future__ import print_function
 import tensorflow as tf
 
 from texar.module_base import ModuleBase
-from texar.modules.embedders.embedder_utils import get_embedding
 from texar.modules.embedders import WordEmbedder
 import texar.utils as utils
 
@@ -29,24 +28,40 @@ def default_embedder_fn(memory, vocab_size, hparams):
         memory: Memory elements used for embedding lookup.
         vocab_size(int): Size of vocabulary used for embedding.
         hparams(HParams or dict): Hyperparameters of this function.
+            Example:
+
+            .. code-block:: python
+            
+                {
+                    "memory_size": 100,
+                    "word_embedder": {
+                        "name": "word_embedder",
+                        "dim": 100,
+                        "initializer": None, # use default initializer
+                        "dropout_rate": 0
+                    }
+                    "temporal_embedding": {
+                        "name": "temporal_embedding",
+                        "dim": 100,
+                        "dropout_rate": 0
+                    }
+                }
 
     Returns:
         Result of the memory operation.
         In this case, :attr:`embedded_memory + temporal_embedding`.
     """
     memory_size = hparams["memory_size"]
-    #word_embedder = WordEmbedder(vocab_size=vocab_size,
-    #    hparams=hparams["word_embedder"])
-    word_embedding = get_embedding(
-        hparams["word_embedding"].todict(),
+    word_embedder = WordEmbedder(
         vocab_size=vocab_size,
-        variable_scope="word_embedding")
-    embedded_memory = tf.nn.embedding_lookup(word_embedding, memory)
+        hparams=hparams["word_embedder"]
+    )
+    embedded_memory = word_embedder(memory)
     # temporal embedding
-    temporal_embedding = get_embedding(
-        hparams["temporal_embedding"].todict(),
+    temporal_embedding = WordEmbedder(
         vocab_size=memory_size,
-        variable_scope="temporal_embedding")
+        hparams=hparams["temporal_embedding"]
+    ).embedding
     return tf.add(embedded_memory, temporal_embedding)
 
 class MemNetSingleLayer(ModuleBase):
@@ -153,9 +168,10 @@ class MemNetBase(ModuleBase):
             else:
                 self.H = None
             self._final_matrix = tf.transpose(
-                get_embedding(self.hparams.final_matrix.todict(),
+                WordEmbedder(
                     vocab_size=vocab_size,
-                    variable_scope=self.variable_scope),
+                    hparams=self.hparams.final_matrix
+                ).embedding,
                 name="final_matrix")
 
     @staticmethod
@@ -174,13 +190,9 @@ class MemNetBase(ModuleBase):
                     "final_matrix": {
                         "name": "final_matrix",
                         "dim": 100,
-                        "dropout": {
-                            "keep_prob": 1.0
-                        }
+                        "dropout_rate": 0,
                     },
-                    "dropout": {
-                        "keep_prob": 1.0
-                    },
+                    "dropout_rate": 0,
                     "variational": False,
                 }
 
@@ -204,9 +216,11 @@ class MemNetBase(ModuleBase):
 
             "final_matrix": dict
                 Hyperparameters of the final matrix.
+                Should be same as :class:`~texar.modules.embedders.WordEmbedder`.
 
-            "dropout": dict
-                Hyperparameters of dropout after each hop.
+            "dropout_rate": float
+                The dropout rate to apply to the output of each hop. Should be between 0 and 1.
+                E.g., `dropout_rate=0.1` would drop out 10% of the units.
 
             "variational": bool
                 Whether to share dropout masks after each hop like variational RNNs.
@@ -221,14 +235,10 @@ class MemNetBase(ModuleBase):
             "final_matrix": {
                 "name": "final_matrix",
                 "dim": 100,
-                "dropout": {
-                    "keep_prob": 1.0
-                }
+                "dropout_rate": 0,
             },
-            "dropout": {
-                "keep_prob": 1.0
-            },
-            "variational": False, # share dropout masks in each hop
+            "dropout_rate": 0,
+            "variational": False,
         }
 
     def _build(self, memory, query, **kwargs):
@@ -305,9 +315,7 @@ class MemNetRNNLike(MemNetBase):
                     "final_matrix": {
                         "name": "final_matrix",
                         "dim": 100,
-                        "dropout": {
-                            "keep_prob": 1.0,
-                        },
+                        "dropout_rate": 0
                     }
                     "A": {
                         "memory_size": 100,
@@ -315,16 +323,12 @@ class MemNetRNNLike(MemNetBase):
                             "name": "word_embedder",
                             "dim": 100,
                             "initializer": None, # use default initializer
-                            "dropout": {
-                                "keep_prob": 1.0,
-                            },
+                            "dropout_rate": 0
                         }
                         "temporal_embedding": {
                             "name": "temporal_embedding",
                             "dim": 100,
-                            "dropout": {
-                                "keep_prob": 1.0,
-                            },
+                            "dropout_rate": 0
                         }
                     }
                     "C": {
@@ -333,16 +337,12 @@ class MemNetRNNLike(MemNetBase):
                             "name": "word_embedder",
                             "dim": 100,
                             "initializer": None, # use default initializer
-                            "dropout": {
-                                "keep_prob": 1.0,
-                            },
+                            "dropout_rate": 0
                         }
                         "temporal_embedding": {
                             "name": "temporal_embedding",
                             "dim": 100,
-                            "dropout": {
-                                "keep_prob": 1.0,
-                            },
+                            "dropout_rate": 0
                         }
                     }
                     "B": {
@@ -351,21 +351,15 @@ class MemNetRNNLike(MemNetBase):
                             "name": "word_embedder",
                             "dim": 100,
                             "initializer": None, # use default initializer
-                            "dropout": {
-                                "keep_prob": 1.0,
-                            },
+                            "dropout_rate": 0
                         }
                         "temporal_embedding": {
                             "name": "temporal_embedding",
                             "dim": 100,
-                            "dropout": {
-                                "keep_prob": 1.0,
-                            },
+                            "dropout_rate": 0
                         }
                     }
-                    "dropout": { # dropout after each hop
-                        "keep_prob": 1.0,
-                    }
+                    "dropout_rate": 0 # dropout after each hop
                 }
         """
         hparams = MemNetBase.default_hparams()
@@ -373,19 +367,16 @@ class MemNetRNNLike(MemNetBase):
         hparams["need_H"] = True
         default_embedder_hparams = {
             "memory_size": 100,
-            "word_embedding": {
-                "name": "word_embedding",
+            "word_embedder": {
+                "name": "word_embedder",
                 "dim": 100,
-                "dropout": {
-                    "keep_prob": 1.0
-                }
+                "initializer": None,
+                "dropout_rate": 0
             },
             "temporal_embedding": {
                 "name": "temporal_embedding",
                 "dim": 100,
-                "dropout": {
-                    "keep_prob": 1.0
-                }
+                "dropout_rate": 0
             }
         }
         for _ in ("A", "C", "B"):
@@ -403,7 +394,7 @@ class MemNetRNNLike(MemNetBase):
             self.Aout = self.A(memory)
             self.Cout = self.C(memory)
 
-            keep_prob = utils.switch_dropout(self.hparams.dropout.keep_prob)
+            keep_prob = utils.switch_dropout(1-self.hparams.dropout_rate)
             if self.hparams.variational:
                 with tf.variable_scope("variational_dropout"):
                     noise = tf.random_uniform(tf.shape(self.u[-1]))
