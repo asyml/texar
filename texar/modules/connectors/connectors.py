@@ -414,9 +414,9 @@ class ReparameterizedStochasticConnector(ConnectorBase):
                 to generate. `None` is required in training stage.
 
         Returns:
-            output: If `num_samples`==None, returns a Tensor of shape 
-                `[batch_size x output_size]`, else returns a Tensor of shape 
-                `[num_samples x output_size]`. `num_samples` should be specified 
+            output: If `num_samples`==None, returns a Tensor of shape
+                `[batch_size x output_size]`, else returns a Tensor of shape
+                `[num_samples x output_size]`. `num_samples` should be specified
                 if not in training stage.
             latent_z: The latent sampled z
 
@@ -644,7 +644,7 @@ class ConcatConnector(ConnectorBase):
 
         Args:
             connector_inputs: a list of connector states
-            transform: If ``True``, then the output are automatically 
+            transform: If `True`, then the output are automatically
                 transformed to match :attr:`output_size`.
 
         Returns:

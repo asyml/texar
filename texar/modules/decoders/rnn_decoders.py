@@ -355,7 +355,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
             Here:
 
             "attention" : dict
-                A dictionary of attention hyperparameters, which includes:
+                Attention hyperparameters, which includes:
 
                 "type" : str
                     Name or full path to the attention class which can be
