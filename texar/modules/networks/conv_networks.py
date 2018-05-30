@@ -184,7 +184,7 @@ class Conv1DNetwork(FeedForwardNetworkBase):
         dense_hparams = []
         for i in range(ndense):
             activation = self._hparams.dense_activation
-            if i == ndense - 1 and not self._hparams.final_dense_activation:
+            if i == ndense - 1:
                 activation = self._hparams.final_dense_activation
 
             kwargs_i = {"units": dense_size[i],

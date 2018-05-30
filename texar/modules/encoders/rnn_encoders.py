@@ -12,15 +12,109 @@ import tensorflow as tf
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.networks.conv_networks import _to_list
 from texar.core import layers
+from texar.utils import utils
 from texar.hyperparams import HParams
 
-# pylint: disable=not-context-manager, too-many-arguments
+# pylint: disable=too-many-arguments, invalid-name, no-member
 
 __all__ = [
     "RNNEncoderBase",
     "UnidirectionalRNNEncoder",
     "BidirectionalRNNEncoder"
 ]
+
+def _build_dense_output_layer(hparams):
+    nlayers = hparams.num_layers
+
+    if nlayers <= 0:
+        return None
+
+    layer_size = _to_list(
+        hparams.layer_size, 'output_layer.layer_size', nlayers)
+
+    other_kwargs = hparams.other_dense_kwargs or {}
+    if isinstance(other_kwargs, HParams):
+        other_kwargs = other_kwargs.todict()
+    if not isinstance(other_kwargs, dict):
+        raise ValueError(
+            "hparams 'output_layer.other_dense_kwargs' must be a dict.")
+
+    dense_layers = []
+    for i in range(nlayers):
+        if i == nlayers - 1:
+            activation = hparams.final_layer_activation
+        else:
+            activation = hparams.activation
+
+        kwargs_i = {"units": layer_size[i],
+                    "activation": activation,
+                    "name": "dense_%d" % (i+1)}
+        kwargs_i.update(other_kwargs)
+
+        layer_hparams = {"type": "Dense", "kwargs": kwargs_i}
+        dense_layers.append(layers.get_layer(hparams=layer_hparams))
+
+    return dense_layers
+
+def _forward_single_output_layer(inputs, output_layer):
+    """Forwards the input through a single output layer.
+
+    :attr:`inputs` is a Tensor of shape `[batch_size, max_time, dim]`
+    or `[max_time, batch_size, dim]`.
+    """
+    # Reshape inputs to [-1, dim]
+    inputs_T = tf.transpose(inputs, perm=[2, 0, 1])
+    inputs_flat = tf.transpose(tf.layers.flatten(inputs_T), perm=[1, 0])
+    # Feeds to the layer
+    output_flat = output_layer(inputs_flat)
+    # Reshape output to [batch_size/max_time, max_time/batch_size, new_dim]
+    output_shape = tf.concat([tf.shape(inputs)[:2], [-1]], axis=0)
+    output = tf.reshape(output_flat, output_shape)
+    return output
+
+def _apply_dropout(inputs, time_major, hparams, training):
+    """Applies dropout to the inputs.
+
+    :attr:`inputs` is a Tensor of shape `[batch_size, max_time, dim]`
+    if :attr:`time_major=False`, or shape `[max_time, batch_size, dim]`
+    if :attr:`time_major=True`.
+    """
+    noise_shape = None
+    if hparams.variational_dropout:
+        if time_major:
+            noise_shape = [1, None, None]
+        else:
+            noise_shape = [None, 1, None]
+    return tf.layers.dropout(inputs, rate=hparams.dropout_rate,
+                             noise_shape=noise_shape, training=training)
+
+def _forward_output_layers(inputs, output_layer, time_major, hparams, mode):
+    """Forwards inputs through the output layers.
+
+    :attr:`inputs` is a Tensor of shape `[batch_size, max_time, dim]`
+    if :attr:`time_major=False`, or shape `[max_time, batch_size, dim]`
+    if :attr:`time_major=True`.
+
+    Returns a Tensor of shape `[batch_size, max_time, new_dim]` or
+    `[max_time, batch_size, new_dim]`.
+    """
+    if output_layer is None:
+        return inputs
+    if not isinstance(output_layer, (list, tuple)):
+          # output_layer was passed in from the constructor
+        return _forward_single_output_layer(inputs, output_layer)
+    else: # output_layer was built based on hparams
+        dropout_layer_ids = hparams.dropout_layer_ids
+        if len(dropout_layer_ids) > 0:
+            training = utils.is_train_mode(mode)
+        output = inputs
+        for i, layer in enumerate(output_layer):
+            if i in dropout_layer_ids:
+                output = _apply_dropout(output, time_major, hparams, training)
+            output = _forward_single_output_layer(output, layer)
+        if len(output_layer) in dropout_layer_ids:
+            output = _apply_dropout(output, time_major, hparams, training)
+        return output
 
 class RNNEncoderBase(EncoderBase):
     """Base class for all RNN encoder classes.
@@ -81,7 +175,8 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
             Ignored if :attr:`cell` is given.
         output_layer (optional): An instance of
             :tf_main:`tf.layers.Layer <layers/Layer>`. Apply to the RNN cell
-            output. If `None` (default), no output layer is applied.
+            output of each step. If `None` (default), no output layer is
+            applied.
         hparams (dict, optional): Encoder hyperparameters. If it is not
             specified, the default hyperparameter setting is used. See
             :attr:`default_hparams` for the sturcture and default values.
@@ -103,10 +198,11 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                     self._hparams.rnn_cell, cell_dropout_mode)
 
         # Make output layer
-        self._output_layer = output_layer
-        if output_layer is None:
-            with tf.variable_scope(self.variable_scope):
-                pass
+        with tf.variable_scope(self.variable_scope):
+            self._output_layer = output_layer
+            if output_layer is None:
+                self._output_layer = _build_dense_output_layer(
+                    self._hparams.output_layer)
 
     @staticmethod
     def default_hparams():
@@ -117,7 +213,16 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
 
                 {
                     "rnn_cell": default_rnn_cell_hparams(),
-                    "output_layer": None,
+                    "output_layer": {
+                        "num_layers": 0,
+                        "layer_size": 128,
+                        "activation": "identity",
+                        "final_layer_activation": None,
+                        "other_dense_kwargs": None,
+                        "dropout_layer_ids": [],
+                        "dropout_rate": 0.5,
+                        "variational_dropout": False
+                    },
                     "name": "unidirectional_rnn_encoder"
                 }
 
@@ -166,62 +271,46 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                 "final_layer_activation": None,
                 "other_dense_kwargs": None,
                 "dropout_layer_ids": [],
-                "dropout_rate": 0.75,
+                "dropout_rate": 0.5,
+                "variational_dropout": False,
+                "@no_typecheck": ["activation", "final_layer_activation",
+                                  "layer_size", "dropout_layer_ids"]
             },
             "name": "unidirectional_rnn_encoder"
         })
         return hparams
 
-    @staticmethod
-    def _build_output_layer(hparams):
-        nlayers = hparams.num_layers
-
-        if nlayers <= 0:
-            return None
-
-        layer_size = _to_list(
-            hparams.layer_size, 'output_layer.layer_size', nlayers)
-
-        other_kwargs = hparams.other_dense_kwargs or {}
-        if isinstance(other_kwargs, HParams):
-            other_kwargs = other_kwargs.todict()
-        if not isinstance(other_kwargs, dict):
-            raise ValueError(
-                "hparams 'output_layer.other_dense_kwargs' must be a dict.")
-
-        layer_hparams = []
-        for i in range(nlayers):
-
-
-            activation = hparams.activation
-            if i == nlayers - 1 and not hparams.final_layer_activation:
-                activation = hparams.final_layer_activation
-
-            kwargs_i = {"units": layer_size[i],
-                        "activation": activation,
-                        "name": "dense_%d" % (i+1)}
-            kwargs_i.update(other_kwargs)
-
-            layer_hparams.append({"type": "Dense", "kwargs": kwargs_i})
-
-
-
-    def _build(self, inputs, sequence_length=None, initial_state=None,
+    def _build(self,
+               inputs,
+               sequence_length=None,
+               initial_state=None,
+               time_major=False,
+               mode=None,
                **kwargs):
         """Encodes the inputs.
 
         Args:
             inputs: A 3D Tensor of shape `[batch_size, max_time, dim]`.
                 The first two dimensions
-                `batch_size` and `max_time` may be exchanged if
-                `time_major=True` is specified.
+                :attr:`batch_size` and :attr:`max_time` are exchanged if
+                :attr:`time_major=True` is specified.
             sequence_length (int list or 1D Tensor, optional): Sequence lengths
                 of the batch inputs. Used to copy-through state and zero-out
                 outputs when past a batch element's sequence length.
             initial_state (optional): Initial state of the RNN.
+            time_major (bool): The shape format of the :attr:`inputs` and
+                :attr:`outputs` Tensors. If `True`, these tensors are of shape
+                `[max_time, batch_size, depth]`. If `False` (default),
+                these tensors are of shape `[batch_size, max_time, depth]`.
+            mode (optional): A tensor taking value in
+                :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
+                `TRAIN`, `EVAL`, and `PREDICT`. Controls output layer dropout
+                if the output layer is specified with :attr:`hparams`.
+                If `None` (default), :func:`texar.context.global_mode()`
+                is used.
             **kwargs: Optional keyword arguments of
                 :tf_main:`tf.nn.dynamic_rnn <nn/dynamic_rnn>`,
-                such as `time_major`, `dtype`, etc.
+                such as `swap_memory`, `dtype`, `parallel_iterations`, etc.
 
         Returns:
             Outputs and final state of the encoder.
@@ -233,6 +322,7 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                 inputs=inputs,
                 sequence_length=sequence_length,
                 initial_state=initial_state,
+                time_major=time_major,
                 dtype=tf.float32,
                 **kwargs)
         else:
@@ -241,14 +331,23 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                 inputs=inputs,
                 sequence_length=sequence_length,
                 initial_state=initial_state,
+                time_major=time_major,
                 **kwargs)
+
+        outputs = _forward_output_layers(
+            outputs, self._output_layer, time_major,
+            self._hparams.output_layer, mode)
 
         if not self._built:
             self._add_internal_trainable_variables()
-            # Add trainable variables of `self._cell` which may be constructed
-            # externally.
+            # Add trainable variables of `self._cell` and `self._output_layer`
+            # which may be constructed externally.
             self._add_trainable_variable(
                 layers.get_rnn_cell_trainable_variables(self._cell))
+            if self._output_layer and \
+                    not isinstance(self._output_layer, (list, tuple)):
+                self._add_trainable_variable(
+                    self._output_layer.trainable_variables)
             self._built = True
 
         return outputs, state

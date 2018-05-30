@@ -26,10 +26,12 @@ class UnidirectionalRNNEncoderTest(tf.test.TestCase):
         """
         inputs = tf.ones([64, 16, 100])
 
+        # case 1
         encoder = UnidirectionalRNNEncoder()
         _, _ = encoder(inputs)
         self.assertEqual(len(encoder.trainable_variables), 2)
 
+        # case 2
         hparams = {
             "rnn_cell": {
                 "dropout": {
@@ -41,9 +43,27 @@ class UnidirectionalRNNEncoderTest(tf.test.TestCase):
         _, _ = encoder(inputs)
         self.assertEqual(len(encoder.trainable_variables), 2)
 
+        # case 3
+        hparams = {
+            "output_layer": {
+                "num_layers": 2,
+                "layer_size": [100, 6],
+                "activation": "relu",
+                "final_layer_activation": "identity",
+                "dropout_layer_ids": [0, 1, 2],
+                "variational_dropout": False
+            }
+        }
+        encoder = UnidirectionalRNNEncoder(hparams=hparams)
+        _, _ = encoder(inputs)
+        self.assertEqual(len(encoder.trainable_variables), 2+2+2)
+        _, _ = encoder(inputs)
+        self.assertEqual(len(encoder.trainable_variables), 2+2+2)
+
     def test_encode(self):
         """Tests encoding.
         """
+        # case 1
         encoder = UnidirectionalRNNEncoder()
 
         max_time = 8
@@ -59,6 +79,31 @@ class UnidirectionalRNNEncoderTest(tf.test.TestCase):
             outputs_, state_ = sess.run([outputs, state])
             self.assertEqual(outputs_.shape, (batch_size, max_time, cell_dim))
             self.assertEqual(state_[0].shape, (batch_size, cell_dim))
+
+        # case 2: with output layers
+        hparams = {
+            "output_layer": {
+                "num_layers": 2,
+                "layer_size": [100, 6],
+                "dropout_layer_ids": [0, 1, 2],
+                "variational_dropout": True
+            }
+        }
+        encoder = UnidirectionalRNNEncoder(hparams=hparams)
+
+        max_time = 8
+        batch_size = 16
+        emb_dim = 100
+        inputs = tf.random_uniform([batch_size, max_time, emb_dim],
+                                   maxval=1., dtype=tf.float32)
+        outputs, state = encoder(inputs)
+
+        out_dim = encoder.hparams.output_layer.layer_size[-1]
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            outputs_ = sess.run(outputs)
+            self.assertEqual(outputs_.shape, (batch_size, max_time, out_dim))
+
 
     def test_encode_with_embedder(self):
         """Tests encoding companioned with :mod:`texar.modules.embedders`.
