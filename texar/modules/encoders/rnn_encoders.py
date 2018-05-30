@@ -7,7 +7,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import functools
+
 import tensorflow as tf
+from tensorflow.contrib.framework import nest
 
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.networks.conv_networks import _to_list
@@ -286,6 +289,7 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                initial_state=None,
                time_major=False,
                mode=None,
+               return_cell_output=False,
                **kwargs):
         """Encodes the inputs.
 
@@ -308,16 +312,41 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                 if the output layer is specified with :attr:`hparams`.
                 If `None` (default), :func:`texar.context.global_mode()`
                 is used.
+            return_cell_output (bool): Whether to return the output of the RNN
+                cell. This is the results prior to the output layer.
             **kwargs: Optional keyword arguments of
                 :tf_main:`tf.nn.dynamic_rnn <nn/dynamic_rnn>`,
                 such as `swap_memory`, `dtype`, `parallel_iterations`, etc.
 
         Returns:
-            Outputs and final state of the encoder.
+            If :attr:`return_cell_output` is `False` (default), returns a
+            pair :attr:`(outputs, final_state)` where
+
+            - :attr:`outputs`: The RNN output tensor by the output layer \
+              (if exists) or the RNN cell (otherwise). The tensor is of shape \
+              `[batch_size, max_time, output_dim]` (if \
+              :attr:`time_major` == `False`) or \
+              `[max_time, batch_size, output_dim]` (if \
+              :attr:`time_major` == `True`). \
+
+              If RNN cell output is a (nested) tuple of Tensors, then the \
+              :attr:`outputs` will be a tuple having the same structure as \
+              the cell output.
+
+            - :attr:`final_state`: The final state of the RNN, which is a \
+              Tensor of shape `[batch_size] + cell.state_size` or \
+              a (nested) tuple of Tensors (if `cell.state_size` is a (nested) \
+              tuple).
+
+            If :attr:`return_cell_output` is `True`, returns a triple
+            :attr:`(outputs, final_state, cell_outputs)` where
+
+            - :attr:`cell_outputs`: The outputs by the RNN cell prior to the \
+              output layer, having the same structure with :attr:`outputs` \
+              except for the `output_dim`.
         """
-        #TODO(zhiting): add docs of 'Returns'
         if ('dtype' not in kwargs) and (initial_state is None):
-            outputs, state = tf.nn.dynamic_rnn(
+            cell_outputs, state = tf.nn.dynamic_rnn(
                 cell=self._cell,
                 inputs=inputs,
                 sequence_length=sequence_length,
@@ -326,7 +355,7 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                 dtype=tf.float32,
                 **kwargs)
         else:
-            outputs, state = tf.nn.dynamic_rnn(
+            cell_outputs, state = tf.nn.dynamic_rnn(
                 cell=self._cell,
                 inputs=inputs,
                 sequence_length=sequence_length,
@@ -334,9 +363,13 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                 time_major=time_major,
                 **kwargs)
 
-        outputs = _forward_output_layers(
-            outputs, self._output_layer, time_major,
-            self._hparams.output_layer, mode)
+        map_func = functools.partial(
+            _forward_output_layers,
+            output_layer=self._output_layer,
+            time_major=time_major,
+            hparams=self._hparams.output_layer,
+            mode=mode)
+        outputs = nest.map_structure(map_func, cell_outputs)
 
         if not self._built:
             self._add_internal_trainable_variables()
@@ -350,7 +383,10 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                     self._output_layer.trainable_variables)
             self._built = True
 
-        return outputs, state
+        if return_cell_output:
+            return outputs, state, cell_outputs
+        else:
+            return outputs, state
 
     @property
     def cell(self):
