@@ -20,11 +20,19 @@ __all__ = [
 _GLOBAL_MODE_KEY = "GLOBAL_MODE"
 
 def global_mode():
-    """Returns the placeholder of global mode.
+    """Returns the tensor of global mode.
+
+    The default mode is
+    :tf_main:`tf.estimator.ModeKeys.TRAIN <estimator/ModeKeys>`.
     """
     mode = tf.get_collection_ref(_GLOBAL_MODE_KEY)
     if len(mode) < 1:
-        mode.append(tf.placeholder(tf.string, name="global_mode"))
+        #mode.append(tf.placeholder(tf.string, name="global_mode"))
+        mode_tensor = tf.constant(
+            value=tf.estimator.ModeKeys.TRAIN,
+            dtype=tf.string,
+            name="global_mode")
+        mode.append(mode_tensor)
     return mode[0]
 
 def global_mode_train():

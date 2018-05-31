@@ -322,7 +322,6 @@ def get_initializer(hparams=None):
         return None
 
     if is_str(hparams["type"]):
-        #print('hparams:{}'.format(hparams))
         kwargs = hparams["kwargs"]
         if isinstance(kwargs, HParams):
             kwargs = kwargs.todict()
@@ -862,7 +861,7 @@ def _common_default_conv_dense_kwargs():
     convolution layers.
     """
     return {
-        "activation": "identity",
+        "activation": None,
         "use_bias": True,
         "kernel_initializer": {
             "type": "glorot_uniform_initializer",
