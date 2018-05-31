@@ -6,7 +6,7 @@ import argparse
 import copy
 import os
 
-from texar.utils.data_reader import _batching_scheme
+from texar.utils.transformer_utils import _batching_scheme
 from texar.data import SpecialTokens
 
 class Hyperparams:

@@ -6,7 +6,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
-import math
 import copy
 
 import tensorflow as tf
@@ -56,9 +55,6 @@ __all__ = [
     #TODO(haoran): the reorganizing of following functions
     "multihead_attention",
     "layer_normalize",
-    "get_timing_signal_1d",
-    "add_timing_signal_1d",
-    "add_timing_signal_1d_given_position",
 ]
 
 def default_rnn_cell_hparams():
@@ -1271,22 +1267,6 @@ def combine_heads(x):
     return tf.reshape(t, [tf.shape(t)[0], tf.shape(t)[1], num_heads*dim])
 
 
-def shape_list(x):
-    """Return list of dims, statically where possible."""
-    x = tf.convert_to_tensor(x)
-    # If unknown rank, return dynamic shape
-    if x.get_shape().dims is None:
-        return tf.shape(x)
-    static = x.get_shape().as_list()
-    shape = tf.shape(x)
-    ret = []
-    for i in range(len(static)):
-        dim = static[i]
-        if dim is None:
-            dim = shape[i]
-        ret.append(dim)
-    return ret
-
 def ones_matrix_band_part(rows, cols, num_lower, num_upper, out_shape=None):
     """Matrix band part of ones."""
     if all([isinstance(el, int) for el in [rows, cols, num_lower, num_upper]]):
@@ -1308,102 +1288,3 @@ def ones_matrix_band_part(rows, cols, num_lower, num_upper, out_shape=None):
         if out_shape:
             band = tf.reshape(band, out_shape)
     return band
-
-def get_timing_signal_1d(length,
-                         channels,
-                         min_timescale=1.0,
-                         max_timescale=1.0e4):
-    """Gets a bunch of sinusoids of different frequencies.
-    Each channel of the input Tensor is incremented by a sinusoid of
-    a different frequency and phase.
-    This allows attention to learn to use absolute and relative positions.
-    Timing signals should be added to some precursors of both the query and
-    the memory inputs to attention.
-    The use of relative position is possible because sin(x+y) and cos(x+y) can
-    be expressed in terms of y, sin(x) and cos(x).
-    In particular, we use a geometric sequence of timescales starting with
-    min_timescale and ending with max_timescale.    The number of different
-    timescales is equal to channels / 2. For each timescale, we
-    generate the two sinusoidal signals sin(timestep/timescale) and
-    cos(timestep/timescale).    All of these sinusoids are concatenated in
-    the channels dimension.
-    Args:
-        length: scalar, length of timing signal sequence.
-        channels: scalar, size of timing embeddings to create. The number of
-                different timescales is equal to channels / 2.
-        min_timescale: a float
-        max_timescale: a float
-    Returns:
-        a Tensor of timing signals [1, length, channels]
-    """
-    position = tf.to_float(tf.range(length))
-    num_timescales = channels // 2
-    log_timescale_increment = (
-        math.log(float(max_timescale) / float(min_timescale)) /
-        (tf.to_float(num_timescales) - 1))
-    inv_timescales = min_timescale * tf.exp(
-        tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
-    scaled_time = tf.expand_dims(position, 1) \
-        * tf.expand_dims(inv_timescales, 0)
-    signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=1)
-    signal = tf.pad(signal, [[0, 0], [0, tf.mod(channels, 2)]])
-    signal = tf.reshape(signal, [1, length, channels])
-    return signal
-
-def add_timing_signal_1d(x, min_timescale=1.0, max_timescale=1.0e4):
-    """Adds a bunch of sinusoids of different frequencies to a Tensor.
-    Each channel of the input Tensor is incremented by a sinusoid of a
-    different frequency and phase.
-    This allows attention to learn to use absolute and relative positions.
-    Timing signals should be added to some precursors of both the query
-    and the memory inputs to attention.
-    The use of relative position is possible because sin(x+y) and
-    cos(x+y) can be experessed in terms of y, sin(x) and cos(x).
-    In particular, we use a geometric sequence of timescales starting with
-    min_timescale and ending with max_timescale.    The number of different
-    timescales is equal to channels / 2. For each timescale, we
-    generate the two sinusoidal signals sin(timestep/timescale) and
-    cos(timestep/timescale).    All of these sinusoids are concatenated in
-    the channels dimension.
-    Args:
-        x: a Tensor with shape [batch, length, channels]
-        min_timescale: a float
-        max_timescale: a float
-    Returns:
-        a Tensor the same shape as x.
-    """
-    length = shape_list(x)[1]
-    channels = shape_list(x)[2]
-    signal = get_timing_signal_1d(
-        length, channels, min_timescale, max_timescale)
-    return x + signal
-
-
-def add_timing_signal_1d_given_position(x,
-                                        position,
-                                        min_timescale=1.0,
-                                        max_timescale=1.0e4):
-    """Adds sinusoids of diff frequencies to a Tensor,
-        with timing position given.
-    Args:
-        x: a Tensor with shape [batch, length, channels]
-        position: a Tensor with shape [batch, length]
-        min_timescale: a float
-        max_timescale: a float
-    Returns:
-        a Tensor the same shape as x.
-    """
-    channels = shape_list(x)[2]
-    num_timescales = channels // 2
-    log_timescale_increment = (
-        math.log(float(max_timescale) / float(min_timescale)) /
-        (tf.to_float(num_timescales) - 1))
-    inv_timescales = min_timescale * tf.exp(
-        tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
-    scaled_time = (
-        tf.expand_dims(tf.to_float(position), 2) * tf.expand_dims(
-            tf.expand_dims(inv_timescales, 0), 0))
-    signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=2)
-    signal = tf.pad(signal, [[0, 0], [0, 0], [0, tf.mod(channels, 2)]])
-    signal = tf.cast(signal, x.dtype)
-    return x + signal
