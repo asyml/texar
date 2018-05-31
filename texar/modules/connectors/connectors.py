@@ -61,7 +61,7 @@ def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
             (nested) tuple of such elements. A Tensor or a (nested) tuple of
             Tensors with shape `[max_time, batch_size, ...]` (i.e., time-major)
             can be transposed to batch-major using
-            :meth:`~texar.core.utils.transpose_batch_time` prior to this
+            :func:`~texar.utils.transpose_batch_time` prior to this
             function.
         output_size: Can be an Integer, a TensorShape, or a (nested) tuple of
             Integers or TensorShape.
@@ -440,9 +440,10 @@ class ReparameterizedStochasticConnector(ConnectorBase):
         else:
             latent_z = dstr.sample()
 
-        # if dstr.event_shape == []:
-        #     latent_z = tf.reshape(latent_z,
-        #                           latent_z.shape.concatenate(tf.TensorShape(1)))
+        #if dstr.event_shape == []:
+        #    latent_z = tf.reshape(
+        #        latent_z,
+        #        latent_z.shape.concatenate(tf.TensorShape(1)))
 
         # latent_z = tf.cast(latent_z, tf.float32)
         if transform:

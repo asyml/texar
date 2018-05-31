@@ -16,11 +16,13 @@ from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.networks.conv_networks import _to_list
 from texar.core import layers
 from texar.utils import utils
+from texar.utils.shapes import mask_sequences
 from texar.hyperparams import HParams
 
 # pylint: disable=too-many-arguments, too-many-locals, invalid-name, no-member
 
 __all__ = [
+    "_forward_single_output_layer",
     "RNNEncoderBase",
     "UnidirectionalRNNEncoder",
     "BidirectionalRNNEncoder"
@@ -71,22 +73,27 @@ def _build_dense_output_layer(hparams):
         layer_hparams = {"type": "Dense", "kwargs": kwargs_i}
         dense_layers.append(layers.get_layer(hparams=layer_hparams))
 
+    if len(dense_layers) == 1:
+        dense_layers = dense_layers[0]
+
     return dense_layers
 
-def _forward_single_output_layer(inputs, output_layer):
+def _forward_single_output_layer(inputs, output_layer, flatten_inputs=True):
     """Forwards the input through a single output layer.
 
     :attr:`inputs` is a Tensor of shape `[batch_size, max_time, dim]`
     or `[max_time, batch_size, dim]`.
     """
+    d3_shape = tf.concat([tf.shape(inputs)[:2], [-1]], axis=0)
     # Reshape inputs to [-1, dim]
+    if flatten_inputs:
+        inputs = tf.reshape(inputs, d3_shape)
     inputs_T = tf.transpose(inputs, perm=[2, 0, 1])
     inputs_flat = tf.transpose(tf.layers.flatten(inputs_T), perm=[1, 0])
-    # Feeds to the layer
+    # Feed to the layer
     output_flat = output_layer(inputs_flat)
     # Reshape output to [batch_size/max_time, max_time/batch_size, new_dim]
-    output_shape = tf.concat([tf.shape(inputs)[:2], [-1]], axis=0)
-    output = tf.reshape(output_flat, output_shape)
+    output = tf.reshape(output_flat, d3_shape)
     return output
 
 def _apply_dropout(inputs, time_major, hparams, training):
@@ -105,7 +112,8 @@ def _apply_dropout(inputs, time_major, hparams, training):
     return tf.layers.dropout(inputs, rate=hparams.dropout_rate,
                              noise_shape=noise_shape, training=training)
 
-def _forward_output_layers(inputs, output_layer, time_major, hparams, mode):
+def _forward_output_layers(inputs, output_layer, time_major, hparams, mode,
+                           sequence_length=None):
     """Forwards inputs through the output layers.
 
     :attr:`inputs` is a Tensor of shape `[batch_size, max_time, dim]`
@@ -117,21 +125,34 @@ def _forward_output_layers(inputs, output_layer, time_major, hparams, mode):
     """
     if output_layer is None:
         return inputs
-    if not isinstance(output_layer, (list, tuple)):
-          # output_layer was passed in from the constructor
-        return _forward_single_output_layer(inputs, output_layer)
-    else: # output_layer was built based on hparams
+
+    if hparams is None:
+        # output_layer was passed in from the constructor
+        if isinstance(output_layer, (list, tuple)):
+            raise ValueError('output_layer must not be a list or tuple.')
+        output = _forward_single_output_layer(inputs, output_layer)
+    else:
+        # output_layer was built based on hparams
+        output_layer = _to_list(output_layer)
+
         dropout_layer_ids = _to_list(hparams.dropout_layer_ids)
         if len(dropout_layer_ids) > 0:
             training = utils.is_train_mode(mode)
+
         output = inputs
         for i, layer in enumerate(output_layer):
             if i in dropout_layer_ids:
                 output = _apply_dropout(output, time_major, hparams, training)
             output = _forward_single_output_layer(output, layer)
+
         if len(output_layer) in dropout_layer_ids:
             output = _apply_dropout(output, time_major, hparams, training)
-        return output
+
+    if sequence_length is not None:
+        output = mask_sequences(
+            output, sequence_length, rank=3, time_major=time_major)
+
+    return output
 
 class RNNEncoderBase(EncoderBase):
     """Base class for all RNN encoder classes.
@@ -217,10 +238,13 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
 
         # Make output layer
         with tf.variable_scope(self.variable_scope):
-            self._output_layer = output_layer
-            if output_layer is None:
+            if output_layer is not None:
+                self._output_layer = output_layer
+                self._output_layer_hparams = None
+            else:
                 self._output_layer = _build_dense_output_layer(
                     self._hparams.output_layer)
+                self._output_layer_hparams = self._hparams.output_layer
 
     @staticmethod
     def default_hparams():
@@ -408,7 +432,7 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
             _forward_output_layers,
             output_layer=self._output_layer,
             time_major=time_major,
-            hparams=self._hparams.output_layer,
+            hparams=self._output_layer_hparams,
             mode=mode)
         outputs = nest.map_structure(map_func, cell_outputs)
 
@@ -428,6 +452,31 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
             return outputs, state, cell_outputs
         else:
             return outputs, state
+
+    #def append_layer(self, layer):
+    #    """Appends a layer to the end of the output layer. The layer must take
+    #    as inputs a 2D Tensor and output another 2D Tensor (e.g., a
+    #    :tf_main:`Dense <layers/Dense>` layer).
+
+    #    The method is only feasible before :meth:`_build` is called.
+
+    #    Args:
+    #        layer: A :tf_main:`tf.layers.Layer <layers/Layer>` instance, or
+    #            a `dict` of layer hyperparameters.
+    #    """
+    #    if self._built:
+    #        raise TexarError("`UnidirectionalRNNEncoder.append_layer` can be "
+    #                         "called only before `_build` is called.")
+
+    #    with tf.variable_scope(self.variable_scope):
+    #        layer_ = layer
+    #        if not isinstance(layer_, tf.layers.Layer):
+    #            layer_ = layers.get_layer(hparams=layer_)
+    #        if self._output_layer is None:
+    #            self._output_layer = layer_
+    #        else:
+    #            self._output_layer = _to_list(self._output_layer)
+    #            self._output_layers.append(layer_)
 
     @property
     def cell(self):
@@ -660,7 +709,6 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
         })
         return hparams
 
-    #TODO(zhiting): add docs of 'Returns'
     def _build(self,
                inputs,
                sequence_length=None,

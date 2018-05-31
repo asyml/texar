@@ -10,7 +10,7 @@ from __future__ import print_function
 import tensorflow as tf
 from tensorflow.python.ops import rnn          # pylint: disable=E0611
 
-from texar.utils.utils import mask_sequences
+from texar.utils.shapes import mask_sequences
 
 # pylint: disable=invalid-name, not-context-manager, protected-access,
 # pylint: disable=too-many-arguments

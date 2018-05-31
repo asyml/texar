@@ -14,6 +14,8 @@ import tensorflow as tf
 from texar.utils.exceptions import TexarError
 from texar.modules.classifiers.classifier_base import ClassifierBase
 from texar.modules.encoders.conv_encoders import Conv1DEncoder
+from texar.utils import utils
+from texar.hyperparams import HParams
 
 __all__ = [
     "Conv1DClassifier"
@@ -27,7 +29,9 @@ class Conv1DClassifier(ClassifierBase):
         ClassifierBase.__init__(self, hparams)
 
         with tf.variable_scope(self.variable_scope):
-            self._encoder = Conv1DEncoder(hparams=hparams)
+            encoder_hparams = utils.fetch_subdict(
+                hparams, Conv1DEncoder.default_hparams())
+            self._encoder = Conv1DEncoder(hparams=encoder_hparams)
 
             # Add an additional dense layer if needed
             self._num_classes = self._hparams.num_classes
@@ -35,15 +39,18 @@ class Conv1DClassifier(ClassifierBase):
                 if self._hparams.num_dense_layers <= 0:
                     self._encoder.append_layer({"type": "Flatten"})
 
-                logit_kwargs = {}
-                if self._hparams.logit_layer_kwargs is not None:
-                    if not isinstance(self._hparams.logit_layer_kwargs, dict):
-                        raise ValueError(
-                            "hparams['logit_layer_kwargs'] must be a dict.")
-                    logit_kwargs = self._hparams.logit_layer_kwargs
+                logit_kwargs = self._hparams.logit_layer_kwargs
+                if logit_kwargs is None:
+                    logit_kwargs = {}
+                elif not isinstance(logit_kwargs, HParams):
+                    raise ValueError(
+                        "hparams['logit_layer_kwargs'] must be a dict.")
+                else:
+                    logit_kwargs = logit_kwargs.todict()
                 logit_kwargs.update({"units": self._num_classes})
                 if 'name' not in logit_kwargs:
                     logit_kwargs['name'] = "logit_layer"
+
                 self._encoder.append_layer(
                     {"type": "Dense", "kwargs": logit_kwargs})
 
@@ -52,10 +59,11 @@ class Conv1DClassifier(ClassifierBase):
         """Returns a dictionary of hyperparameters with default values.
         """
         hparams = Conv1DEncoder.default_hparams()
-        hparams.update(
-            {"name": "conv1d_classifier",
-             "num_classes": 2, #set to <=0 to avoid appending output layer
-             "logit_layer_kwargs": None})
+        hparams.update({
+            "name": "conv1d_classifier",
+            "num_classes": 2, #set to <=0 to avoid appending output layer
+            "logit_layer_kwargs": None
+        })
         return hparams
 
     def _build(self, inputs, mode=None): # pylint: disable=arguments-differ
@@ -137,4 +145,3 @@ class Conv1DClassifier(ClassifierBase):
         """A list containing output tensors of each layer.
         """
         return self._encoder.layer_outputs
-

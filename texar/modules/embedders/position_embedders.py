@@ -12,6 +12,7 @@ import tensorflow as tf
 from texar.modules.embedders.embedder_base import EmbedderBase
 from texar.modules.embedders import embedder_utils
 from texar.utils import utils
+from texar.utils.shapes import get_batch_size, mask_sequences
 
 __all__ = [
     "PositionEmbedder"
@@ -131,7 +132,7 @@ class PositionEmbedder(EmbedderBase):
             max_length = tf.reduce_max(sequence_length)
             single_inputs = tf.range(start=0, limit=max_length, dtype=tf.int32)
             inputs = tf.tile(tf.expand_dims(single_inputs, 0),
-                             [utils.get_batch_size(sequence_length), 1])
+                             [get_batch_size(sequence_length), 1])
 
         embedding = self._embedding
         dropout_layer = self._get_dropout_layer(self._hparams, inputs)
@@ -148,7 +149,7 @@ class PositionEmbedder(EmbedderBase):
                 inputs=outputs, training=is_training)
 
         if positions is None:
-            outputs = utils.mask_sequences(
+            outputs = mask_sequences(
                 outputs, sequence_length, rank=2+self._dim_rank)
 
         return outputs
