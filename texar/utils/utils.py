@@ -54,7 +54,6 @@ __all__ = [
     "patch_dict",
     "fetch_subdict",
     "uniquify_str",
-    "_bucket_boundaries",
     "soft_sequence_embedding",
     "straight_through",
     "ceildiv",
@@ -584,16 +583,6 @@ def uniquify_str(str_, str_set):
                 return unique_str
     raise ValueError("Fails to uniquify string: " + str_)
 
-def _bucket_boundaries(max_length, min_length=8, length_bucket_step=1.1):
-    if length_bucket_step <= 1.0:
-        raise ValueError("length_bucket_step must > 1.0")
-    x = min_length
-    boundaries = []
-    while x < max_length:
-        boundaries.append(x)
-        x = max(x+1, int(x*length_bucket_step))
-    return boundaries
-
 def soft_sequence_embedding(embedding, soft_sequence):
     """Mixes sequences of soft vectors with a embedding tensor.
 
@@ -642,3 +631,19 @@ def ceildiv(a, b):
     """
     return -(-a // b)
 
+#TODO(haoran):is it appropriate to put shape_list function here?
+def shape_list(x):
+    """Return list of dims, statically where possible."""
+    x = tf.convert_to_tensor(x)
+    # If unknown rank, return dynamic shape
+    if x.get_shape().dims is None:
+        return tf.shape(x)
+    static = x.get_shape().as_list()
+    shape = tf.shape(x)
+    ret = []
+    for i in range(len(static)):
+        dim = static[i]
+        if dim is None:
+            dim = shape[i]
+        ret.append(dim)
+    return ret

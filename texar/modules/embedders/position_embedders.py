@@ -14,8 +14,10 @@ from texar.modules.embedders import embedder_utils
 from texar.utils import utils
 from texar.utils.shapes import get_batch_size, mask_sequences
 
+import math
 __all__ = [
-    "PositionEmbedder"
+    "PositionEmbedder",
+    "SinusoidsPositionEmbedder",
 ]
 
 class PositionEmbedder(EmbedderBase):
@@ -174,5 +176,44 @@ class PositionEmbedder(EmbedderBase):
 
 
 class SinusoidsPositionEmbedder(EmbedderBase):
-    pass
+    """Sinusoid position embedder that maps position indexes into embeddings
+    via sinusoid calculation.
+    Args:
+        min_timescale: a float
+        max_timescale: a float
+    """
+    def __init__(self, hparams=None):
+        EmbedderBase.__init__(self, hparams=hparams)
+
+    def default_hparams(self):
+        """returns a dictionary of hyperparameters with default values"""
+        hparams = {
+            'name':'sinusoid_posisiton_embedder',
+            'min_timescale': 1.0,
+            'max_timescale': 1.0e4,
+            'trainable': False,
+        }
+        return hparams
+
+    def _build(self, x):
+        """add positional embedding to the input"""
+        length = utils.shape_list(x)[1]
+        channels = utils.shape_list(x)[2]
+        position_embeddings = self.get_position_embedding(length, channels)
+        return x + position_embeddings
+
+    def get_position_embedding(self, length, channels):
+        position = tf.to_float(tf.range(length))
+        num_timescales = channels // 2
+        log_timescale_increment = (
+            math.log(float(self.max_timescale) / float(self.min_timescale)) /
+            (tf.to_float(num_timescales) - 1))
+        inv_timescales = self.min_timescale * tf.exp(
+            tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
+        scaled_time = tf.expand_dims(position, 1) \
+            * tf.expand_dims(inv_timescales, 0)
+        signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=1)
+        signal = tf.pad(signal, [[0, 0], [0, tf.mod(channels, 2)]])
+        signal = tf.reshape(signal, [1, length, channels])
+        return signal
 

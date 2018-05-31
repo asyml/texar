@@ -20,8 +20,9 @@ from texar import context
 from texar.module_base import ModuleBase
 from texar.modules.networks.networks import FeedForwardNetwork
 from texar.modules.embedders import embedder_utils
+from texar.modules.embedders import position_embedders
 from texar.utils import beam_search
-
+from texar.utils import utils
 class TransformerDecoderOutput(
         collections.namedtuple("TransformerDecoderOutput",\
             ("output_logits", "sample_ids"))):
@@ -35,10 +36,14 @@ class TransformerDecoder(ModuleBase):
         ModuleBase.__init__(self, hparams)
         self._vocab_size = vocab_size
         self._embedding = None
-        if self._hparams.initializer:
-            with tf.variable_scope(self.variable_scope):
+        with tf.variable_scope(self.variable_scope):
+            if self._hparams.initializer:
                 tf.get_variable_scope().set_initializer( \
                     layers.get_initializer(self._hparams.initializer))
+            if self._hparams.position_embedder == 'sinusoids':
+                self.position_embedder = \
+                    position_embedders.SinusoidsPositionEmbedder( \
+                    self._hparams.position_embedder.hparams)
 
         if self._hparams.use_embedding:
             if embedding is None and vocab_size is None:
@@ -50,7 +55,7 @@ class TransformerDecoder(ModuleBase):
                 self._embedding = embedder_utils.get_embedding(
                     self._hparams.embedding, embedding, vocab_size,
                     variable_scope=self.variable_scope)
-                self._embed_dim = layers.shape_list(self._embedding)[-1]
+                self._embed_dim = utils.shape_list(self._embedding)[-1]
                 if self._hparams.zero_pad:
                     self._embedding = tf.concat( \
                         (tf.zeros(shape=[1, self._embed_dim]),\
@@ -58,7 +63,7 @@ class TransformerDecoder(ModuleBase):
             if self._vocab_size is None:
                 self._vocab_size = self._embedding.get_shape().as_list()[0]
         self.output_layer = \
-            self.build_output_layer(layers.shape_list(self._embedding)[-1])
+            self.build_output_layer(utils.shape_list(self._embedding)[-1])
     @staticmethod
     def default_hparams():
         """default hyperrams for transformer deocder.
@@ -96,8 +101,9 @@ class TransformerDecoder(ModuleBase):
         return token_emb
 
     def _symbols_to_logits_fn(self, embedding_fn, max_length):
-        timing_signal = layers.get_timing_signal_1d(max_length, \
-            self._embedding.shape.as_list()[-1])
+        channels = utils.shape_list(self._embedding)[-1]
+        timing_signal = self.position_embedder.get_position_embedding(\
+            max_length, channels)
 
         """ the function is normally called in dynamic decoding mode.
                 the ids should be `next_id` with the shape [batch_size, 1]
@@ -138,12 +144,12 @@ class TransformerDecoder(ModuleBase):
         logits = None
         decoder_self_attention_bias = (
             attentions.attention_bias_lower_triangle(
-                layers.shape_list(decoder_input)[1]))
+                utils.shape_list(decoder_input)[1]))
         target_inputs = tf.nn.embedding_lookup(self._embedding, decoder_input)
         if self._hparams.multiply_embedding_mode == 'sqrt_depth':
             target_inputs = target_inputs * \
                 (self._embedding.shape.as_list()[-1]**0.5)
-        inputs = layers.add_timing_signal_1d(target_inputs)
+        inputs = self.position_embedder(target_inputs)
 
         self.decoder_output = self._self_attention_stack(
             inputs,
@@ -222,7 +228,7 @@ class TransformerDecoder(ModuleBase):
             layer_cache = cache[layer_name] if cache is not None else None
             with tf.variable_scope(layer_name):
                 with tf.variable_scope("self_attention"):
-                    selfatt_output = layers.multihead_attention(
+                    selfatt_output = attentions.multihead_attention(
                         queries=layers.layer_normalize(x),
                         memory=None,
                         memory_attention_bias=decoder_self_attention_bias,
@@ -239,7 +245,7 @@ class TransformerDecoder(ModuleBase):
                     )
                 if encoder_output is not None:
                     with tf.variable_scope('encdec_attention'):
-                        encdec_output = layers.multihead_attention(
+                        encdec_output = attentions.multihead_attention(
                             queries=layers.layer_normalize(x),
                             memory=encoder_output,
                             memory_attention_bias=encoder_decoder_attention_bias,
@@ -273,7 +279,7 @@ class TransformerDecoder(ModuleBase):
             else:
                 affine_bias = None
             def outputs_to_logits(outputs):
-                shape = layers.shape_list(outputs)
+                shape = utils.shape_list(outputs)
                 outputs = tf.reshape(outputs, [-1, num_units])
                 logits = tf.matmul(outputs, self._embedding, transpose_b=True)
                 if affine_bias is not None:

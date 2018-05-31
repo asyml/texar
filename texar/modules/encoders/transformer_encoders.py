@@ -10,6 +10,7 @@ import tensorflow as tf
 
 from texar.core import layers, attentions
 from texar import context
+from texar.modules.embedders import position_embedders
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.networks.networks import FeedForwardNetwork
 from texar import utils
@@ -46,6 +47,10 @@ class TransformerEncoder(EncoderBase):
             if self._hparams.initializer:
                 tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
+            if self._hparams.position_embedder=='sinusoids':
+                self.position_embedder = \
+                    position_embedders.SinusoidsPositionEmbedder(\
+                    self._hparams.position_embedder.hparams)
 
         if self._hparams.use_embedding:
             if isinstance(embedding, tf.Variable):
@@ -139,16 +144,16 @@ class TransformerEncoder(EncoderBase):
                 self.target_symbol_embedding, [1, 1, -1])
             self.enc = self.enc + emb_target_space
 
-        input_embedding = layers.add_timing_signal_1d(self.enc)
+        input_embedding = self.position_embedder(self.enc)
 
         x = tf.layers.dropout(input_embedding,
                               rate=self._hparams.embedding_dropout,
                               training=context.global_mode_train())
-        pad_remover = utils.padding_related.PadRemover(encoder_padding)
+        pad_remover = utils.transformer_utils.PadRemover(encoder_padding)
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("layer_{}".format(i)):
                 with tf.variable_scope('self_attention'):
-                    selfatt_output = layers.multihead_attention(
+                    selfatt_output = attentions.multihead_attention(
                         queries=layers.layer_normalize(x),
                         memory=None,
                         memory_attention_bias=encoder_self_attention_bias,
