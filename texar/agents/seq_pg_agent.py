@@ -7,13 +7,12 @@ from __future__ import print_function
 
 # pylint: disable=too-many-instance-attributes, too-many-arguments, no-member
 
-import numpy as np
-
 import tensorflow as tf
 
 from texar.agents.seq_agent_base import SeqAgentBase
 from texar.core import optimization as opt
 from texar.losses import pg_losses as losses
+from texar.losses.rewards import discount_reward
 
 __all__ = [
     "SeqPGAgent"
@@ -44,6 +43,7 @@ class SeqPGAgent(SeqAgentBase):
         self._trainable_variables = trainable_variables
 
         self._samples_py = None
+        self._sequence_length_py = None
         self._rewards = None
 
         self._build_graph()
@@ -86,6 +86,7 @@ class SeqPGAgent(SeqAgentBase):
     def default_hparams():
         return {
             'discount_factor': 0.95,
+            'normalize_reward': False,
             'loss': {
                 'average_across_batch': True,
                 'average_across_timesteps': False,
@@ -110,12 +111,13 @@ class SeqPGAgent(SeqAgentBase):
 
         vals = self._sess.run(fetches, feed_dict=feed_dict_)
         samples = vals['samples']
+        sequence_length = vals['sequence_length']
 
         self._samples_py = samples
+        self._sequence_length_py = sequence_length
 
-        return vals['samples'], vals['sequence_length']
+        return samples, sequence_length
 
-    #TODO(zhiting): Allow local rewards
     def observe(self, reward, train_policy=True,
                 return_loss=True, feed_dict=None):
         """
@@ -133,24 +135,12 @@ class SeqPGAgent(SeqAgentBase):
         else:
             return None
 
-    # TODO
     def _get_qvalues(self):
-        discount_factor = self._hparams.discount_factor
-
-        qvalues = np.array(self._rewards)
-        qvalues = np.expand_dims(qvalues, -1)
-        max_seq_length = self._samples_py.shape[1]
-        if max_seq_length > 1:
-            prefix = np.zeros(
-                [qvalues.shape[0], max_seq_length-1], dtype=qvalues.dtype)
-            qvalues = np.concatenate([prefix, qvalues], axis=1)
-            for i in range(max_seq_length - 2, -1, -1):
-                qvalues[:, i] += discount_factor * qvalues[:, i + 1]
-
-        #q_mean = np.mean(qvalues)
-        #q_std = np.std(qvalues)
-        #qvalues = [(q - q_mean) / q_std for q in qvalues]
-
+        qvalues = discount_reward(
+            self._rewards,
+            self._sequence_length_py,
+            discount=self._hparams.discount_factor,
+            normalize=self._hparams.normalize_reward)
         return qvalues
 
     def _evaluate_pg_loss(self, feed_dict=None):

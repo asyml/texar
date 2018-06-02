@@ -20,5 +20,6 @@ Cartpole config.
 policy_hparams = None # Use default hyperparameters
 
 pg_agent_hparams = {
-    "policy_hparams": policy_hparams
+    "policy_hparams": policy_hparams,
+    "normalize_reward": True
 }

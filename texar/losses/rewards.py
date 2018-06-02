@@ -15,31 +15,55 @@ from texar.utils.shapes import mask_sequences
 # pylint: disable=invalid-name, too-many-arguments, no-member
 
 __all__ = [
-    "discount_reward"
+    "discount_reward",
+    "_discount_reward_py_1d",
+    "_discount_reward_tensor_1d",
+    "_discount_reward_py_2d",
+    "_discount_reward_tensor_2d"
 ]
 
 def discount_reward(reward,
                     sequence_length=None,
-                    ndims=1,
                     discount=1.,
                     normalize=False,
-                    dtype=None):
-    """TODO
+                    dtype=None,
+                    tensor_rank=1):
+    """Computes discounted reward.
+
+    :attr:`reward` and :attr:`sequence_length` can be either Tensors or python
+    arrays. If both are
+
     """
     is_tensor = tf.contrib.framework.is_tensor
     if is_tensor(reward) or is_tensor(sequence_length):
-        if ndims == 1:
+        if tensor_rank == 1:
             disc_reward = _discount_reward_tensor_1d(
                 reward, sequence_length, discount, dtype)
-        elif ndims == 2:
+        elif tensor_rank == 2:
             disc_reward = _discount_reward_tensor_2d(
                 reward, sequence_length, discount, dtype)
+        else:
+            raise ValueError("`tensor_rank` can only be 1 or 2.")
 
         if normalize:
             mu, var = tf.nn.moments(disc_reward, axes=[0, 1], keep_dims=True)
             disc_reward = (disc_reward - mu) / (tf.sqrt(var) + 1e-8)
     else:
-        raise NotImplementedError
+        reward = np.array(reward)
+        tensor_rank = reward.ndim
+        if tensor_rank == 1:
+            disc_reward = _discount_reward_py_1d(
+                reward, sequence_length, discount, dtype)
+        elif tensor_rank == 2:
+            disc_reward = _discount_reward_py_2d(
+                reward, sequence_length, discount, dtype)
+        else:
+            raise ValueError("`reward` can only be 1D or 2D.")
+
+        if normalize:
+            mu = np.mean(disc_reward)
+            std = np.std(disc_reward)
+            disc_reward = (disc_reward - mu) / (std + 1e-8)
 
     return disc_reward
 

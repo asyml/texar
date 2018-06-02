@@ -7,14 +7,13 @@ from __future__ import print_function
 
 # pylint: disable=too-many-instance-attributes, too-many-arguments
 
-import numpy as np
-
 import tensorflow as tf
 
 from texar.agents.episodic_agent_base import EpisodicAgentBase
 from texar.utils import utils
 from texar.core import optimization as opt
 from texar.losses import pg_losses as losses
+from texar.losses.rewards import discount_reward
 
 
 class PGAgent(EpisodicAgentBase):
@@ -101,9 +100,10 @@ class PGAgent(EpisodicAgentBase):
     @staticmethod
     def default_hparams():
         return {
-            'discount_factor': 0.95,
             'policy_type': 'CategoricalPolicyNet',
             'policy_hparams': None,
+            'discount_factor': 0.95,
+            'normalize_reward': False,
             'optimization': opt.default_optimization_hparams(),
             'name': 'pg_agent',
         }
@@ -139,16 +139,10 @@ class PGAgent(EpisodicAgentBase):
         Args:
             TODO
         """
-        discount_factor = self._hparams.discount_factor
-        qvalues = list(self._rewards)
-        max_seq_length = len(qvalues)
-        if max_seq_length >= 2:
-            for i in range(max_seq_length - 2, -1, -1):
-                qvalues[i] += discount_factor * qvalues[i + 1]
-
-        q_mean = np.mean(qvalues)
-        q_std = np.std(qvalues)
-        qvalues = [(q - q_mean) / q_std for q in qvalues]
+        qvalues = discount_reward(
+            [self._rewards], discount=self._hparams.discount_factor,
+            normalize=self._hparams.normalize_reward)
+        qvalues = qvalues[0, :]
 
         fetches = dict(loss=self._train_op)
         feed_dict_ = {

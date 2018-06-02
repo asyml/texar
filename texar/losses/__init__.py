@@ -13,3 +13,4 @@ from texar.losses.losses_utils import *
 from texar.losses.mle_losses import *
 from texar.losses.pg_losses import *
 from texar.losses.adv_losses import *
+from texar.losses.rewards import *
