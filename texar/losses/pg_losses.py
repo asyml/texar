@@ -136,7 +136,7 @@ def pg_loss_with_log_probs(log_probs,
 
     Args:
         log_probs: Log probabilities of shape
-            `[(batch_size,) max_time, d_2, ..., d_rank]` and dtype `float32`
+            `[(batch_size,) max_time, ..., d_rank]` and dtype `float32`
             or `float64`. The rank of the Tensor is specified
             with :attr:`rank`.
 
@@ -155,8 +155,8 @@ def pg_loss_with_log_probs(log_probs,
             are exchanged, i.e., `[max_time, batch_size, ...]` if
             :attr:`time_major` is `True`.
         rank (int, optional): The rank of :attr:`log_probs`.
-            If `None` (default), :attr:`rank`=1 if :attr:`batched` is `False`,
-            and :attr:`rank`=2 if :attr:`batched` is `True`.
+            If `None` (default), :attr:`rank`=1 if :attr:`batched`==`False`,
+            and :attr:`rank`=2 if :attr:`batched`==`True`.
         batched (bool): `True` if the inputs are batched.
         sequence_length (optional): A Tensor of shape `[batch_size]`.
             Time steps beyond the respective sequence lengths will have zero

@@ -34,8 +34,8 @@ def mask_and_reduce(sequence,
     """Masks out sequence entries that are beyond the respective sequence
     lengths, and reduces (average or sum) away dimensions.
 
-    This is a combined function of :func:`_mask_sequences` and
-    :func:`_reduce_batch_time`.
+    This is a combined function of :func:`~texar.utils.shapes.mask_sequences`
+    and :func:`~texar.losses.losses_utils.reduce_batch_time`.
 
     Args:
         sequence: A Tensor of sequence values.
@@ -79,8 +79,8 @@ def mask_and_reduce(sequence,
     if time_major:
         sequence = rnn._transpose_batch_time(sequence)
 
-    sequence = mask_sequences(
-        sequence, sequence_length, rank=rank, dtype=dtype, time_major=False)
+    sequence = mask_sequences(sequence, sequence_length, dtype=dtype,
+                              time_major=False, tensor_rank=rank)
 
     if rank > 2:
         if average_across_remaining and sum_over_remaining:

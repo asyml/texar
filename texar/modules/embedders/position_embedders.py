@@ -152,7 +152,7 @@ class PositionEmbedder(EmbedderBase):
 
         if positions is None:
             outputs = mask_sequences(
-                outputs, sequence_length, rank=2+self._dim_rank)
+                outputs, sequence_length, tensor_rank=2+self._dim_rank)
 
         return outputs
 
@@ -185,6 +185,8 @@ class SinusoidsPositionEmbedder(EmbedderBase):
     def __init__(self, hparams=None):
         EmbedderBase.__init__(self, hparams=hparams)
 
+    # TODO(zhiting): Add docstring explaining what do all the hyperparameters
+    # mean?
     def default_hparams(self):
         """returns a dictionary of hyperparameters with default values"""
         hparams = {
@@ -195,6 +197,8 @@ class SinusoidsPositionEmbedder(EmbedderBase):
         }
         return hparams
 
+    # TODO(zhiting): would it be better to simply return the position embedding,
+    # rather than directly add the embedding to inputs?
     def _build(self, x):
         """add positional embedding to the input"""
         length = utils.shape_list(x)[1]
@@ -202,6 +206,8 @@ class SinusoidsPositionEmbedder(EmbedderBase):
         position_embeddings = self.get_position_embedding(length, channels)
         return x + position_embeddings
 
+    # TODO(zhiting): add docstring; Is this an interface for users? If not,
+    # make it private
     def get_position_embedding(self, length, channels):
         position = tf.to_float(tf.range(length))
         num_timescales = channels // 2

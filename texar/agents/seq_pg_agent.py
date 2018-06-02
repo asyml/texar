@@ -86,8 +86,6 @@ class SeqPGAgent(SeqAgentBase):
     def default_hparams():
         return {
             'discount_factor': 0.95,
-            'policy_type': 'CategoricalPolicyNet',
-            'policy_hparams': None,
             'loss': {
                 'average_across_batch': True,
                 'average_across_timesteps': False,
@@ -135,6 +133,7 @@ class SeqPGAgent(SeqAgentBase):
         else:
             return None
 
+    # TODO
     def _get_qvalues(self):
         discount_factor = self._hparams.discount_factor
 

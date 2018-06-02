@@ -150,7 +150,7 @@ def _forward_output_layers(inputs, output_layer, time_major, hparams, mode,
 
     if sequence_length is not None:
         output = mask_sequences(
-            output, sequence_length, rank=3, time_major=time_major)
+            output, sequence_length, time_major=time_major, tensor_rank=3)
 
     return output
 
