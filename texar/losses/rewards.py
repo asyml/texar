@@ -31,8 +31,50 @@ def discount_reward(reward,
     """Computes discounted reward.
 
     :attr:`reward` and :attr:`sequence_length` can be either Tensors or python
-    arrays. If both are
+    arrays. If both are python array (or None), the return will be a python
+    array as well.
 
+    :attr:`tensor_rank` is ignored when :attr:`sequence` and
+    :attr:`sequence_length` are both python arrays (or None) rather than
+    Tensors.
+
+    Args:
+        reward: A Tensor or python array. Can be 1D with shape `[batch_size]`,
+            or 2D with shape `[batch_size, max_time]`.
+        sequence_length (optional): A Tensor or python array of shape
+            `[batch_size]`. Time steps beyond the respective sequence lengths
+            will be masked. Required if :attr:`reward` is 1D.
+        discount (float): A scalar. The discount factor.
+        normalize (bool): Whether to normalize the discounted reward, by
+            `(discounted_reward - mean) / std`.
+        dtype (dtype): Type of :attr:`sequence`. If `None`, infer from
+            :attr:`reward` automatically.
+        tensor_rank (int): The number of dimensions of :attr:`reward`.
+            Default is 1, i.e., :attr:`reward` is a 1D Tensor consisting
+            of a batch dimension. Ignored if :attr:`reward`
+            and :attr:`sequence_length` are python arrays (or None).
+
+    Returns:
+        A 2D Tensor or python array of the discounted reward.
+
+        If :attr:`reward` and :attr:`sequence_length` are python
+        arrays (or None), the returned value is a python array as well.
+
+
+    Example:
+        .. code-block:: python
+
+            r = [2., 1.]
+            seq_length = [3, 2]
+            discounted_r = discount_reward(r, seq_length, discount=0.1)
+            # discounted_r == [[2. * 0.1^2, 2. * 0.1, 2.],
+            #                  [1. * 0.1,   1.,       0.]]
+
+            r = [[3., 4., 5.], [6., 7., 0.]]
+            seq_length = [3, 2]
+            discounted_r = discount_reward(r, seq_length, discount=0.1)
+            # discounted_r == [[3. + 4.*0.1 + 5.*0.1^2, 4. + 5.*0.1, 5.],
+            #                  [6. + 7.*0.1,            7.,          0.]]
     """
     is_tensor = tf.contrib.framework.is_tensor
     if is_tensor(reward) or is_tensor(sequence_length):

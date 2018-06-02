@@ -59,10 +59,10 @@ def mask_sequences(sequence,
     lengths. Masks along the time dimension.
 
     :attr:`sequence` and :attr:`sequence_length` can either be python
-    arrays or Tensors, respectively. If both are python arrays, the return
-    will be a python array as well.
+    arrays or Tensors, respectively. If both are python arrays (or None), the
+    return will be a python array as well.
 
-    :attr:`tensor_rank` is NOT used when :attr:`sequence` and
+    :attr:`tensor_rank` is ignored when :attr:`sequence` and
     :attr:`sequence_length` are both python arrays (rather than Tensors).
 
     Args:
