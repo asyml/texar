@@ -139,6 +139,10 @@ class PositionEmbedder(EmbedderBase):
         embedding = self._embedding
         dropout_layer = self._get_dropout_layer(self._hparams, inputs)
         if dropout_layer:
+            #TODO(haoran): June 5th, how to check the training mode?
+            #My current code cannot run because training mode placeholder,
+            #Has it been changed?
+            #ValueError: Tensor Tensor("encoder_2/global_mode:0", shape=(), dtype=string) may not be fed.
             is_training = utils.is_train_mode(mode)
             if self._hparams.dropout_strategy == 'item_type':
                 embedding = dropout_layer.apply(
@@ -178,17 +182,29 @@ class PositionEmbedder(EmbedderBase):
 class SinusoidsPositionEmbedder(EmbedderBase):
     """Sinusoid position embedder that maps position indexes into embeddings
     via sinusoid calculation.
-    Args:
-        min_timescale: a float
-        max_timescale: a float
+    Each channel of the input Tensor is incremented by a sinusoid of a
+    different frequency and phase.
+    This allows attention to learn to use absolute and relative positions.
+    Timing signals should be added to some precursors of both the query
+    and thememory inputs to attention.
+    The use of relative position is possible because sin(x+y) and
+    cos(x+y) can be experessed in terms of y, sin(x) and cos(x).
+    In particular, we use a geometric sequence of timescales starting with
+    min_timescale and ending with max_timescale.  The number of different
+    timescales is equal to channels / 2. For each timescale, we
+    generate the two sinusoidal signals sin(timestep/timescale) and
+    cos(timestep/timescale).  All of these sinusoids are concatenated in
+    the channels dimension.
     """
     def __init__(self, hparams=None):
         EmbedderBase.__init__(self, hparams=hparams)
 
-    # TODO(zhiting): Add docstring explaining what do all the hyperparameters
-    # mean?
     def default_hparams(self):
-        """returns a dictionary of hyperparameters with default values"""
+        """returns a dictionary of hyperparameters with default values
+        We use a geometric sequence of timescales starting with
+        min_timescale and ending with max_timescale. The number of different
+        timescales is equal to channels/2.
+        """
         hparams = {
             'name':'sinusoid_posisiton_embedder',
             'min_timescale': 1.0,
@@ -197,24 +213,15 @@ class SinusoidsPositionEmbedder(EmbedderBase):
         }
         return hparams
 
-    # TODO(zhiting): would it be better to simply return the position embedding,
-    # rather than directly add the embedding to inputs?
-    def _build(self, x):
-        """add positional embedding to the input"""
-        length = utils.shape_list(x)[1]
-        channels = utils.shape_list(x)[2]
-        position_embeddings = self.get_position_embedding(length, channels)
-        return x + position_embeddings
-
-    # TODO(zhiting): add docstring; Is this an interface for users? If not,
-    # make it private
-    def get_position_embedding(self, length, channels):
+    def _build(self, length, channels):
         position = tf.to_float(tf.range(length))
         num_timescales = channels // 2
+        min_timescale = self._hparams.min_timescale
+        max_timescale = self._hparams.max_timescale
         log_timescale_increment = (
-            math.log(float(self.max_timescale) / float(self.min_timescale)) /
+            math.log(float(max_timescale) / float(min_timescale)) /
             (tf.to_float(num_timescales) - 1))
-        inv_timescales = self.min_timescale * tf.exp(
+        inv_timescales = min_timescale * tf.exp(
             tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
         scaled_time = tf.expand_dims(position, 1) \
             * tf.expand_dims(inv_timescales, 0)

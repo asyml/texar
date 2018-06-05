@@ -47,7 +47,7 @@ class TransformerEncoder(EncoderBase):
             if self._hparams.initializer:
                 tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
-            if self._hparams.position_embedder=='sinusoids':
+            if self._hparams.position_embedder.name=='sinusoids':
                 self.position_embedder = \
                     position_embedders.SinusoidsPositionEmbedder(\
                     self._hparams.position_embedder.hparams)
@@ -113,6 +113,7 @@ class TransformerEncoder(EncoderBase):
             'initializer':None,
             'multiply_embedding_mode': 'sqrt_depth',
             "use_embedding": True,
+            "position_embedder": None,
             "name":"encoder",
             "zero_pad":False,
             "bos_pad":False,
@@ -130,7 +131,7 @@ class TransformerEncoder(EncoderBase):
     def _build(self, inputs, encoder_padding):
         #pylint:disable=too-many-locals
         self.enc = tf.nn.embedding_lookup(self._embedding, inputs)
-        _, _, channels = layers.shape_list(self.enc)
+        _, _, channels = utils.utils.shape_list(self.enc)
         if self._hparams.multiply_embedding_mode == 'sqrt_depth':
             self.enc = self.enc * channels**0.5
 
@@ -143,8 +144,10 @@ class TransformerEncoder(EncoderBase):
             emb_target_space = tf.reshape(
                 self.target_symbol_embedding, [1, 1, -1])
             self.enc = self.enc + emb_target_space
-
-        input_embedding = self.position_embedder(self.enc)
+        lengths = utils.utils.shape_list(self.enc)[1]
+        channels = utils.utils.shape_list(self.enc)[2]
+        pos_embeds = self.position_embedder(lengths, channels)
+        input_embedding = self.enc + pos_embeds
 
         x = tf.layers.dropout(input_embedding,
                               rate=self._hparams.embedding_dropout,
@@ -171,7 +174,7 @@ class TransformerEncoder(EncoderBase):
                     hparams=self._hparams['poswise_feedforward'])
                 with tf.variable_scope(poswise_network.variable_scope):
                     y = layers.layer_normalize(x)
-                    original_shape = layers.shape_list(y)
+                    original_shape = utils.utils.shape_list(y)
                     y = tf.reshape(y, [-1, self._hparams.num_units])
                     y = tf.expand_dims(pad_remover.remove(y), axis=0)
                     #[1, batch_size*seq_length, hidden_dim]

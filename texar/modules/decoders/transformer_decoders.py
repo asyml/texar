@@ -23,6 +23,7 @@ from texar.modules.embedders import embedder_utils
 from texar.modules.embedders import position_embedders
 from texar.utils import beam_search
 from texar.utils import utils
+
 class TransformerDecoderOutput(
         collections.namedtuple("TransformerDecoderOutput",\
             ("output_logits", "sample_ids"))):
@@ -40,7 +41,7 @@ class TransformerDecoder(ModuleBase):
             if self._hparams.initializer:
                 tf.get_variable_scope().set_initializer( \
                     layers.get_initializer(self._hparams.initializer))
-            if self._hparams.position_embedder == 'sinusoids':
+            if self._hparams.position_embedder.name == 'sinusoids':
                 self.position_embedder = \
                     position_embedders.SinusoidsPositionEmbedder( \
                     self._hparams.position_embedder.hparams)
@@ -73,6 +74,7 @@ class TransformerDecoder(ModuleBase):
             'sampling_method': 'argmax',
             'initializer': None,
             'multiply_embedding_mode': 'sqrt_depth',
+            'position_embedder': None,
             'share_embed_and_transform': True,
             'transform_with_bias': True,
             "use_embedding": True,
@@ -102,8 +104,7 @@ class TransformerDecoder(ModuleBase):
 
     def _symbols_to_logits_fn(self, embedding_fn, max_length):
         channels = utils.shape_list(self._embedding)[-1]
-        timing_signal = self.position_embedder.get_position_embedding(\
-            max_length, channels)
+        timing_signal = self.position_embedder(max_length, channels)
 
         """ the function is normally called in dynamic decoding mode.
                 the ids should be `next_id` with the shape [batch_size, 1]
@@ -149,8 +150,10 @@ class TransformerDecoder(ModuleBase):
         if self._hparams.multiply_embedding_mode == 'sqrt_depth':
             target_inputs = target_inputs * \
                 (self._embedding.shape.as_list()[-1]**0.5)
-        inputs = self.position_embedder(target_inputs)
-
+        lengths = utils.shape_list(target_inputs)[1]
+        channels = utils.shape_list(target_inputs)[2]
+        pos_embeds = self.position_embedder(lengths, channels)
+        inputs = target_inputs + pos_embeds
         self.decoder_output = self._self_attention_stack(
             inputs,
             encoder_output,
