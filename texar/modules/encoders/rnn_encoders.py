@@ -79,8 +79,7 @@ def _build_dense_output_layer(hparams):
 
     return dense_layers
 
-def _forward_single_output_layer(inputs, input_size, output_layer,
-                                 flatten_inputs=True):
+def _forward_single_output_layer(inputs, input_size, output_layer):
     """Forwards the input through a single output layer.
 
     Args:
@@ -91,8 +90,7 @@ def _forward_single_output_layer(inputs, input_size, output_layer,
     """
     dim = np.prod(input_size)
     inputs_flat = inputs
-    if flatten_inputs:
-        inputs_flat = tf.reshape(inputs_flat, [-1, dim])
+    inputs_flat = tf.reshape(inputs_flat, [-1, dim])
     # Feed to the layer
     output_flat = output_layer(inputs_flat)
     output_size = output_layer.compute_output_shape([1, dim]).as_list()[1:]
