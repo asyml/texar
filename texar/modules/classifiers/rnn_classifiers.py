@@ -7,6 +7,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import numpy as np
+
 import tensorflow as tf
 from tensorflow.contrib.framework import nest
 
@@ -17,7 +19,8 @@ from texar.core import layers
 from texar.utils import utils, shapes
 from texar.hyperparams import HParams
 
-# pylint: disable=too-many-arguments, invalid-name, no-member, too-many-branches
+# pylint: disable=too-many-arguments, invalid-name, no-member,
+# pylint: disable=too-many-branches, too-many-locals, too-many-statements
 
 __all__ = [
     "UnidirectionalRNNClassifier"
@@ -107,6 +110,7 @@ class UnidirectionalRNNClassifier(ClassifierBase):
             "num_classes": 2,
             "logit_layer_kwargs": None,
             "clas_strategy": "final_time",
+            "max_seq_length": None,
             "name": "unidirectional_rnn_classifier"
         })
         return hparams
@@ -120,16 +124,21 @@ class UnidirectionalRNNClassifier(ClassifierBase):
                **kwargs):
         """
         """
-        enc_outputs, _ = self._encoder(inputs=inputs,
-                                       sequence_length=sequence_length,
-                                       initial_state=initial_state,
-                                       time_major=time_major,
-                                       mode=mode,
-                                       **kwargs)
+        enc_outputs, _, enc_output_size = self._encoder(
+            inputs=inputs,
+            sequence_length=sequence_length,
+            initial_state=initial_state,
+            time_major=time_major,
+            mode=mode,
+            return_output_size=True,
+            **kwargs)
 
         # Flatten enc_outputs
         enc_outputs_flat = nest.flatten(enc_outputs)
-        enc_outputs_flat = [shapes.flatten(x, 2) for x in enc_outputs_flat]
+        enc_output_size_flat = nest.flatten(enc_output_size)
+        enc_output_dims_flat = [np.prod(xs) for xs in enc_output_size_flat]
+        enc_outputs_flat = [shapes.flatten(x, 2, xs) for x, xs
+                            in zip(enc_outputs_flat, enc_output_dims_flat)]
         if len(enc_outputs_flat) == 1:
             enc_outputs_flat = enc_outputs_flat[0]
         else:
@@ -141,9 +150,9 @@ class UnidirectionalRNNClassifier(ClassifierBase):
             logits = enc_outputs_flat
         elif stra == 'final_time':
             if time_major:
-                logits = tf.squeeze(enc_outputs_flat[-1, :, :])
+                logits = enc_outputs_flat[-1, :, :]
             else:
-                logits = tf.squeeze(enc_outputs_flat[:, -1, :])
+                logits = enc_outputs_flat[:, -1, :]
         elif stra == 'all_time':
             if self._logit_layer is None:
                 raise ValueError(
@@ -151,16 +160,32 @@ class UnidirectionalRNNClassifier(ClassifierBase):
                     'clas_strategy="all_time". Specify the logit layer by '
                     'either passing the layer in the constructor or '
                     'specifying the hparams.')
-            logits = tf.layers.flatten(enc_outputs_flat)
+            if self._hparams.max_seq_length is None:
+                raise ValueError(
+                    'hparams.max_seq_length must not be `None` if '
+                    'clas_strategy="all_time"')
         else:
             raise ValueError('Unknown classification strategy: {}'.format(stra))
 
         if self._logit_layer is not None:
+            logit_input_dim = np.sum(enc_output_dims_flat)
             if stra == 'time_wise':
-                logits = _forward_single_output_layer(
-                    logits, self._logit_layer, flatten_inputs=False)
-            else:
+                logits, _ = _forward_single_output_layer(
+                    logits, logit_input_dim, self._logit_layer)
+            elif stra == 'final_time':
                 logits = self._logit_layer(logits)
+            elif stra == 'all_time':
+                # Pad `enc_outputs_flat` to have max_seq_length before flatten
+                length_diff = self._hparams.max_seq_length - tf.shape(inputs)[1]
+                length_diff = tf.reshape(length_diff, [1, 1])
+                # Set `paddings = [[0, 0], [0, length_dif], [0, 0]]`
+                paddings = tf.pad(length_diff, paddings=[[1, 1], [1, 0]])
+                logit_input = tf.pad(enc_outputs_flat, paddings=paddings)
+
+                logit_input_dim *= self._hparams.max_seq_length
+                logit_input = tf.reshape(logit_input, [-1, logit_input_dim])
+
+                logits = self._logit_layer(logit_input)
 
         # Compute predications
         if stra == 'time_wise':

@@ -8,6 +8,7 @@ from __future__ import division
 from __future__ import print_function
 
 import functools
+import numpy as np
 
 import tensorflow as tf
 from tensorflow.contrib.framework import nest
@@ -78,23 +79,26 @@ def _build_dense_output_layer(hparams):
 
     return dense_layers
 
-def _forward_single_output_layer(inputs, output_layer, flatten_inputs=True):
+def _forward_single_output_layer(inputs, input_size, output_layer):
     """Forwards the input through a single output layer.
 
-    :attr:`inputs` is a Tensor of shape `[batch_size, max_time, dim]`
-    or `[max_time, batch_size, dim]`.
+    Args:
+        inputs: A Tensor of shape `[batch_size, max_time] + input_size` if
+            :attr:`time_major=False`, or shape
+            `[max_time, batch_size] + input_size` if :attr:`time_major=True`.
+        input_size: An `int` or 1D `int` array.
     """
-    d3_shape = tf.concat([tf.shape(inputs)[:2], [-1]], axis=0)
-    # Reshape inputs to [-1, dim]
-    if flatten_inputs:
-        inputs = tf.reshape(inputs, d3_shape)
-    inputs_T = tf.transpose(inputs, perm=[2, 0, 1])
-    inputs_flat = tf.transpose(tf.layers.flatten(inputs_T), perm=[1, 0])
+    dim = np.prod(input_size)
+    inputs_flat = inputs
+    inputs_flat = tf.reshape(inputs_flat, [-1, dim])
     # Feed to the layer
     output_flat = output_layer(inputs_flat)
-    # Reshape output to [batch_size/max_time, max_time/batch_size, new_dim]
-    output = tf.reshape(output_flat, d3_shape)
-    return output
+    output_size = output_layer.compute_output_shape([1, dim]).as_list()[1:]
+    output_size = np.array(output_size)
+    # Reshape output to [batch_size/max_time, max_time/batch_size] + output_size
+    output_shape = tf.concat([tf.shape(inputs)[:2], output_size], axis=0)
+    output = tf.reshape(output_flat, output_shape)
+    return output, output_size
 
 def _apply_dropout(inputs, time_major, hparams, training):
     """Applies dropout to the inputs.
@@ -112,25 +116,33 @@ def _apply_dropout(inputs, time_major, hparams, training):
     return tf.layers.dropout(inputs, rate=hparams.dropout_rate,
                              noise_shape=noise_shape, training=training)
 
-def _forward_output_layers(inputs, output_layer, time_major, hparams, mode,
-                           sequence_length=None):
+def _forward_output_layers(inputs, input_size, output_layer, time_major,
+                           hparams, mode, sequence_length=None):
     """Forwards inputs through the output layers.
 
-    :attr:`inputs` is a Tensor of shape `[batch_size, max_time, dim]`
-    if :attr:`time_major=False`, or shape `[max_time, batch_size, dim]`
-    if :attr:`time_major=True`.
+    Args:
+        inputs: A Tensor of shape `[batch_size, max_time] + input_size` if
+            :attr:`time_major=False`, or shape
+            `[max_time, batch_size] + input_size` if :attr:`time_major=True`.
 
-    Returns a Tensor of shape `[batch_size, max_time, new_dim]` or
-    `[max_time, batch_size, new_dim]`.
+    Returns:
+        A pair :attr:`(outputs, outputs_size), where
+
+        - :attr:`outputs`: A Tensor of shape \
+          `[batch_size, max_time] + outputs_size`.
+
+        - :attr:`outputs_size`: An `int` or 1D `int` array representing the \
+          output size.
     """
     if output_layer is None:
-        return inputs
+        return inputs, input_size
 
     if hparams is None:
         # output_layer was passed in from the constructor
         if isinstance(output_layer, (list, tuple)):
             raise ValueError('output_layer must not be a list or tuple.')
-        output = _forward_single_output_layer(inputs, output_layer)
+        output, output_size = _forward_single_output_layer(
+            inputs, input_size, output_layer)
     else:
         # output_layer was built based on hparams
         output_layer = _to_list(output_layer)
@@ -140,10 +152,12 @@ def _forward_output_layers(inputs, output_layer, time_major, hparams, mode,
             training = utils.is_train_mode(mode)
 
         output = inputs
+        output_size = input_size
         for i, layer in enumerate(output_layer):
             if i in dropout_layer_ids:
                 output = _apply_dropout(output, time_major, hparams, training)
-            output = _forward_single_output_layer(output, layer)
+            output, output_size = _forward_single_output_layer(
+                output, output_size, layer)
 
         if len(output_layer) in dropout_layer_ids:
             output = _apply_dropout(output, time_major, hparams, training)
@@ -152,7 +166,25 @@ def _forward_output_layers(inputs, output_layer, time_major, hparams, mode,
         output = mask_sequences(
             output, sequence_length, time_major=time_major, tensor_rank=3)
 
-    return output
+    return output, output_size
+
+def _apply_rnn_encoder_output_layer(output_layer, time_major, hparams, mode,
+                                    cell_outputs, cell_output_size):
+    map_func = functools.partial(
+        _forward_output_layers,
+        output_layer=output_layer,
+        time_major=time_major,
+        hparams=hparams,
+        mode=mode)
+    cell_outputs_flat = nest.flatten(cell_outputs)
+    cell_output_size_flat = nest.flatten(cell_output_size)
+    o = [map_func(inputs=x, input_size=xs)
+         for x, xs in zip(cell_outputs_flat, cell_output_size_flat)]
+    outputs_flat, output_size_flat = zip(*o)
+    outputs = nest.pack_sequence_as(cell_outputs, outputs_flat)
+    output_size = nest.pack_sequence_as(cell_outputs, output_size_flat)
+    return outputs, output_size
+
 
 class RNNEncoderBase(EncoderBase):
     """Base class for all RNN encoder classes.
@@ -355,6 +387,7 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                time_major=False,
                mode=None,
                return_cell_output=False,
+               return_output_size=False,
                **kwargs):
         """Encodes the inputs.
 
@@ -379,24 +412,27 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                 is used.
             return_cell_output (bool): Whether to return the output of the RNN
                 cell. This is the results prior to the output layer.
+            return_output_size (bool): Whether to return the size of the
+                output (i.e., the results after output layers).
             **kwargs: Optional keyword arguments of
                 :tf_main:`tf.nn.dynamic_rnn <nn/dynamic_rnn>`,
                 such as `swap_memory`, `dtype`, `parallel_iterations`, etc.
 
         Returns:
-            If :attr:`return_cell_output` is `False` (default), returns a
-            pair :attr:`(outputs, final_state)` where
+            By default (both :attr:`return_cell_output` and
+            :attr:`return_output_size` are `False`), returns a pair
+            :attr:`(outputs, final_state)` where
 
             - :attr:`outputs`: The RNN output tensor by the output layer \
               (if exists) or the RNN cell (otherwise). The tensor is of shape \
-              `[batch_size, max_time, output_dim]` (if \
+              `[batch_size, max_time, output_size]` (if \
               :attr:`time_major` == `False`) or \
-              `[max_time, batch_size, output_dim]` (if \
+              `[max_time, batch_size, output_size]` (if \
               :attr:`time_major` == `True`). \
 
               If RNN cell output is a (nested) tuple of Tensors, then the \
               :attr:`outputs` will be a (nested) tuple having the same \
-              structure as the cell output.
+              nest structure as the cell output.
 
             - :attr:`final_state`: The final state of the RNN, which is a \
               Tensor of shape `[batch_size] + cell.state_size` or \
@@ -409,6 +445,16 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
             - :attr:`cell_outputs`: The outputs by the RNN cell prior to the \
               output layer, having the same structure with :attr:`outputs` \
               except for the `output_dim`.
+
+            If :attr:`return_output_size` is also `True`, returns a tuple
+            :attr:`(outputs, final_state, cell_outputs, output_size)` where
+
+            - :attr:`output_size`: A (possibly nested tuple of) `int` \
+              representing the size of :attr:`outputs`. If a single `int` or \
+              an `int` array, then :attr:`outputs` has shape \
+              `[batch/time, time/batch] + output_size`. If :attr:`output_size` \
+              is a (nested) tuple, then :attr:`output_size` has the same \
+              structure as with :attr:`outputs`.
         """
         if ('dtype' not in kwargs) and (initial_state is None):
             cell_outputs, state = tf.nn.dynamic_rnn(
@@ -428,13 +474,9 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                 time_major=time_major,
                 **kwargs)
 
-        map_func = functools.partial(
-            _forward_output_layers,
-            output_layer=self._output_layer,
-            time_major=time_major,
-            hparams=self._output_layer_hparams,
-            mode=mode)
-        outputs = nest.map_structure(map_func, cell_outputs)
+        outputs, output_size = _apply_rnn_encoder_output_layer(
+            self._output_layer, time_major, self._output_layer_hparams,
+            mode, cell_outputs, self._cell.output_size)
 
         if not self._built:
             self._add_internal_trainable_variables()
@@ -448,10 +490,12 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                     self._output_layer.trainable_variables)
             self._built = True
 
+        returns = (outputs, state)
         if return_cell_output:
-            return outputs, state, cell_outputs
-        else:
-            return outputs, state
+            returns += (cell_outputs, )
+        if return_output_size:
+            returns += (output_size, )
+        return returns
 
     #def append_layer(self, layer):
     #    """Appends a layer to the end of the output layer. The layer must take
@@ -555,18 +599,23 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
         with tf.variable_scope(self.variable_scope):
             if output_layer_fw is not None:
                 self._output_layer_fw = output_layer_fw
+                self._output_layer_hparams_fw = None
             else:
                 self._output_layer_fw = _build_dense_output_layer(
                     self._hparams.output_layer_fw)
+                self._output_layer_hparams_fw = self._hparams.output_layer_fw
 
             if output_layer_bw is not None:
                 self._output_layer_bw = output_layer_bw
+                self._output_layer_hparams_bw = None
             elif self._hparams.output_layer_share_config:
                 self._output_layer_bw = _build_dense_output_layer(
                     self._hparams.output_layer_fw)
+                self._output_layer_hparams_bw = self._hparams.output_layer_fw
             else:
                 self._output_layer_bw = _build_dense_output_layer(
                     self._hparams.output_layer_bw)
+                self._output_layer_hparams_bw = self._hparams.output_layer_bw
 
 
     @staticmethod
@@ -717,6 +766,7 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
                time_major=False,
                mode=None,
                return_cell_output=False,
+               return_output_size=False,
                **kwargs):
         """Encodes the inputs.
 
@@ -778,7 +828,7 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
         """
         no_initial_state = initial_state_fw is None and initial_state_bw is None
         if ('dtype' not in kwargs) and no_initial_state:
-            cell_outputs, output_states = tf.nn.bidirectional_dynamic_rnn(
+            cell_outputs, states = tf.nn.bidirectional_dynamic_rnn(
                 cell_fw=self._cell_fw,
                 cell_bw=self._cell_bw,
                 inputs=inputs,
@@ -789,7 +839,7 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
                 dtype=tf.float32,
                 **kwargs)
         else:
-            cell_outputs, output_states = tf.nn.bidirectional_dynamic_rnn(
+            cell_outputs, states = tf.nn.bidirectional_dynamic_rnn(
                 cell_fw=self._cell_fw,
                 cell_bw=self._cell_bw,
                 inputs=inputs,
@@ -799,26 +849,16 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
                 time_major=time_major,
                 **kwargs)
 
-        map_func_fw = functools.partial(
-            _forward_output_layers,
-            output_layer=self._output_layer_fw,
-            time_major=time_major,
-            hparams=self._hparams.output_layer_fw,
-            mode=mode)
-        outputs_fw = nest.map_structure(map_func_fw, cell_outputs[0])
+        outputs_fw, output_size_fw = _apply_rnn_encoder_output_layer(
+            self._output_layer_fw, time_major, self._output_layer_hparams_fw,
+            mode, cell_outputs[0], self._cell_fw.output_size)
 
-        hparams_output_layer_bw = self._hparams.output_layer_bw
-        if self._hparams.output_layer_share_config:
-            hparams_output_layer_bw = self._hparams.output_layer_fw
-        map_func_bw = functools.partial(
-            _forward_output_layers,
-            output_layer=self._output_layer_bw,
-            time_major=time_major,
-            hparams=hparams_output_layer_bw,
-            mode=mode)
-        outputs_bw = nest.map_structure(map_func_bw, cell_outputs[1])
+        outputs_bw, output_size_bw = _apply_rnn_encoder_output_layer(
+            self._output_layer_bw, time_major, self._output_layer_hparams_bw,
+            mode, cell_outputs[1], self._cell_bw.output_size)
 
         outputs = (outputs_fw, outputs_bw)
+        output_size = (output_size_fw, output_size_bw)
 
         if not self._built:
             self._add_internal_trainable_variables()
@@ -838,10 +878,12 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
                     self._output_layer_bw.trainable_variables)
             self._built = True
 
+        returns = (outputs, states)
         if return_cell_output:
-            return outputs, output_states, cell_outputs
-        else:
-            return outputs, output_states
+            returns += (cell_outputs, )
+        if return_output_size:
+            returns += (output_size, )
+        return returns
 
     @staticmethod
     def concat_outputs(outputs):

@@ -15,6 +15,7 @@ from texar.modules.encoders.rnn_encoders import BidirectionalRNNEncoder
 #from texar.modules.encoders.rnn_encoders import HierarchicalForwardRNNEncoder
 from texar.modules.embedders.embedders import WordEmbedder
 
+# pylint: disable=too-many-locals
 
 class UnidirectionalRNNEncoderTest(tf.test.TestCase):
     """Tests :class:`~texar.modules.UnidirectionalRNNEncoder` class.
@@ -24,7 +25,7 @@ class UnidirectionalRNNEncoderTest(tf.test.TestCase):
         """Tests the functionality of automatically collecting trainable
         variables.
         """
-        inputs = tf.ones([64, 16, 100])
+        inputs = tf.placeholder(dtype=tf.float32, shape=[None, None, 100])
 
         # case 1
         encoder = UnidirectionalRNNEncoder()
@@ -96,7 +97,11 @@ class UnidirectionalRNNEncoderTest(tf.test.TestCase):
         emb_dim = 100
         inputs = tf.random_uniform([batch_size, max_time, emb_dim],
                                    maxval=1., dtype=tf.float32)
-        outputs, state = encoder(inputs)
+        outputs, state, cell_outputs, output_size = encoder(
+            inputs, return_cell_output=True, return_output_size=True)
+
+        self.assertEqual(output_size[0], 6)
+        self.assertEqual(cell_outputs.shape[-1], encoder.cell.output_size)
 
         out_dim = encoder.hparams.output_layer.layer_size[-1]
         with self.test_session() as sess:
@@ -129,7 +134,7 @@ class BidirectionalRNNEncoderTest(tf.test.TestCase):
         """Tests the functionality of automatically collecting trainable
         variables.
         """
-        inputs = tf.ones([64, 16, 100])
+        inputs = tf.placeholder(dtype=tf.float32, shape=[None, None, 100])
 
         # case 1
         encoder = BidirectionalRNNEncoder()
@@ -207,7 +212,13 @@ class BidirectionalRNNEncoderTest(tf.test.TestCase):
         emb_dim = 100
         inputs = tf.random_uniform([batch_size, max_time, emb_dim],
                                    maxval=1., dtype=tf.float32)
-        outputs, state = encoder(inputs)
+        outputs, state, cell_outputs, output_size = encoder(
+            inputs, return_cell_output=True, return_output_size=True)
+
+        self.assertEqual(output_size[0][0], 6)
+        self.assertEqual(output_size[1][0], 6)
+        self.assertEqual(cell_outputs[0].shape[-1], encoder.cell_fw.output_size)
+        self.assertEqual(cell_outputs[1].shape[-1], encoder.cell_bw.output_size)
 
         out_dim = encoder.hparams.output_layer_fw.layer_size[-1]
         with self.test_session() as sess:
