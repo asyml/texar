@@ -213,17 +213,20 @@ def _mask_sequences_py(sequence,
     return sequence
 
 
-def flatten(tensor, preserve_dims):
-    """Flattens a tensor whiling keeping the leading dimensions.
+def flatten(tensor, preserve_dims, flattened_dim=None):
+    """Flattens a tensor whiling keeping several leading dimensions.
 
     :attr:`preserve_dims` must < tensor's rank
 
     Args:
         tensor: A Tensor to flatten.
         preserve_dims (int): The number of leading dimensions to preserve.
+        flatterned_dim (int, optional): The size of the resulting flattened
+            dimension. If not given, infer automatically, which can cause
+            a statically unknown dimension size.
 
     Returns:
-        A Tensor with rank `perserve_dims + 1`.
+        A Tensor with rank :attr:`perserve_dims`+1.
 
     Example:
         .. code-block:: python
@@ -231,6 +234,9 @@ def flatten(tensor, preserve_dims):
             x = tf.ones(shape=[d_1, d_2, d_3, d_4])
             y = flatten(x, 2) # y.shape == [d_1, d_2, d_3 * d_4]
     """
-    shape = tf.concat([tf.shape(tensor)[:preserve_dims], [-1]], axis=0)
+    if flattened_dim is None:
+        flattened_dim = -1
+    shape = tf.concat([tf.shape(tensor)[:preserve_dims], [flattened_dim]],
+                      axis=0)
     tensor_ = tf.reshape(tensor, shape)
     return tensor_
