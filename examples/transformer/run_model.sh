@@ -30,6 +30,8 @@ case ${hparams_set} in
     100)
     echo 'running the model according to tensor2tensor hparams on small dataset'
     echo "mode ${running_mode} ${src_language}-${tgt_language} "
+    logging_filename=logging_100_${src_language}_${tgt_language}_${running_mode}.txt
+    echo "logging file:${logging_filename}"
     python transformer_overall.py --running_mode=${running_mode} --max_train_epoch=70 --max_training_steps=125000 \
         --pre_encoding=${encoder} \
         --data_dir=${DATA_DIR}  --model_dir=${model_dir}\
@@ -39,13 +41,14 @@ case ${hparams_set} in
         --log_disk_dir=/space/hzt/shr/transformer_${encoder}/ \
         --draw_for_debug=0 --affine_bias=0 --eval_interval_epoch=1 \
         --zero_pad=1 --bos_pad=0 \
-        --filename_prefix=processed. &> logging_100_${src_language}_${tgt_language}_${running_mode}.txt;;
+        --filename_prefix=processed. &> ${logging_filename};;
 
     200)
         echo 'running the model with bigger batch_size and training steps'
         echo 'only support en and de language for now'
         src_language=en
         tgt_language=de
+        logging_filename=logging_200_${running_mode}.txt
         echo "mode ${running_mode} ${src_language}-${tgt_language}"
         python transformer_overall.py --running_mode=${running_mode} --max_train_epoch=70\
             --pre_encoding=${encoder} --data_dir=${DATA_DIR} \
@@ -55,7 +58,7 @@ case ${hparams_set} in
             --log_disk_dir=/space/shr/transformer_${encoder}/ \
             --draw_for_debug=0 --affine_bias=0 --eval_interval_epoch=1 \
             --zero_pad=1 --bos_pad=1 \
-            --filename_prefix=processed. &> logging_200_${running_mode}.txt;;
+            --filename_prefix=processed. &> ${logging_filename};;
     3)
     echo 'test_given_fullpath'
     if [ -z $2 ] ; then

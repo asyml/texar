@@ -188,6 +188,10 @@ def load_hyperparams():
     encoder_hparams = {
         'multiply_embedding_mode': "sqrt_depth",
         'embedding_dropout': 0.1,
+        'position_embedder': {
+            'name': 'sinusoids',
+            'hparams': None,
+        },
         'attention_dropout': 0.1,
         'residual_dropout': 0.1,
         'sinusoid': True,
