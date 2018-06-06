@@ -1,4 +1,4 @@
-#
+# -*- coding: utf-8 -*-
 """
 The BLEU metric.
 """
@@ -9,6 +9,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import os
+from io import open # pylint: disable=redefined-builtin
 import shutil
 import re
 import subprocess
@@ -79,19 +80,20 @@ def corpus_bleu(list_of_references, hypotheses, lowercase=False):
     # Create hyperthesis file
     hfile_path = os.path.join(result_path, 'hyp')
     hyps = [_maybe_list_to_string(h) for h in hypotheses]
-    with open(hfile_path, "wb") as hfile:
-        #hfile.write("\n".join(hyps).encode("utf-8"))
-        hfile.write("\n".join(hyps).encode("utf-8"))
+    with open(hfile_path, 'w', encoding='utf-8') as hfile:
+        text = tf.compat.as_text("\n".join(hyps))
+        hfile.write(text)
         hfile.write("\n")
     # Create reference files
     max_nrefs = max([len(refs) for refs in list_of_references])
     rfile_path = os.path.join(result_path, 'ref')
     for rid in range(max_nrefs):
-        with open(rfile_path + '%d'%rid, "w") as rfile:
+        with open(rfile_path + '%d'%rid, 'w', encoding='utf-8') as rfile:
             for refs in list_of_references:
                 if rid < len(refs):
                     ref = _maybe_list_to_string(refs[rid])
-                    rfile.write(ref.encode("utf-8") + "\n")
+                    text = tf.compat.as_text(ref + "\n")
+                    rfile.write(text)
                 else:
                     rfile.write("\n")
 

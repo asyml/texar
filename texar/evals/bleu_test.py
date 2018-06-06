@@ -21,54 +21,54 @@ class BLEUTest(tf.test.TestCase):
     """Tests the bleu functions.
     """
 
-    #def _test_sentence_bleu(self, references, hypothesis, lowercase,
-    #                        true_bleu):
-    #    bleu = sentence_bleu(references=references,
-    #                         hypothesis=hypothesis,
-    #                         lowercase=lowercase)
-    #    self.assertAlmostEqual(bleu, true_bleu, places=2)
+    def _test_sentence_bleu(self, references, hypothesis, lowercase,
+                            true_bleu):
+        bleu = sentence_bleu(references=references,
+                             hypothesis=hypothesis,
+                             lowercase=lowercase)
+        self.assertAlmostEqual(bleu, true_bleu, places=2)
 
-    #def test_sentence_strings(self):
-    #    """Tests hypothesis as strings.
-    #    """
-    #    hypothesis = \
-    #        "this is a test sentence to evaluate the good bleu score . 词"
-    #    references = ["this is a test sentence to evaluate the bleu score ."]
-    #    self._test_sentence_bleu(
-    #        references, hypothesis, lowercase=False, true_bleu=67.03)
+    def test_sentence_strings(self):
+        """Tests hypothesis as strings.
+        """
+        hypothesis = \
+            "this is a test sentence to evaluate the good bleu score . 词"
+        references = ["this is a test sentence to evaluate the bleu score ."]
+        self._test_sentence_bleu(
+            references, hypothesis, lowercase=False, true_bleu=67.03)
 
-    #def test_sentence_list(self):
-    #    """Tests hypothesis as a list of tokens.
-    #    """
-    #    hypothesis = \
-    #        "this is a test sentence to evaluate the good bleu score . 词"
-    #    hypothesis = hypothesis.split()
-    #    references = ["this is a test sentence to evaluate the bleu score ."]
-    #    references = [references[0].split()]
-    #    self._test_sentence_bleu(
-    #        references, hypothesis, lowercase=False, true_bleu=67.03)
+    def test_sentence_list(self):
+        """Tests hypothesis as a list of tokens.
+        """
+        hypothesis = \
+            "this is a test sentence to evaluate the good bleu score . 词"
+        hypothesis = hypothesis.split()
+        references = ["this is a test sentence to evaluate the bleu score ."]
+        references = [references[0].split()]
+        self._test_sentence_bleu(
+            references, hypothesis, lowercase=False, true_bleu=67.03)
 
-    #def test_sentence_multi_references(self):
-    #    """Tests multiple references.
-    #    """
-    #    hypothesis = \
-    #        "this is a test sentence to evaluate the good bleu score . 词"
-    #    references = ["this is a test sentence to evaluate the bleu score .",
-    #                  "this is a test sentence to evaluate the good score ."]
-    #    self._test_sentence_bleu(
-    #        references, hypothesis, lowercase=False, true_bleu=76.12)
+    def test_sentence_multi_references(self):
+        """Tests multiple references.
+        """
+        hypothesis = \
+            "this is a test sentence to evaluate the good bleu score . 词"
+        references = ["this is a test sentence to evaluate the bleu score .",
+                      "this is a test sentence to evaluate the good score ."]
+        self._test_sentence_bleu(
+            references, hypothesis, lowercase=False, true_bleu=76.12)
 
-    #def test_sentence_numpy(self):
-    #    """Tests with numpy format.
-    #    """
-    #    hypothesis = \
-    #        "this is a test sentence to evaluate the good bleu score . 词"
-    #    hypothesis = np.array(hypothesis.split())
-    #    references = ["this is a test sentence to evaluate the bleu score .",
-    #                  "this is a test sentence to evaluate the good score ."]
-    #    references = np.array([np.array(r.split()) for r in references])
-    #    self._test_sentence_bleu(
-    #        references, hypothesis, lowercase=False, true_bleu=76.12)
+    def test_sentence_numpy(self):
+        """Tests with numpy format.
+        """
+        hypothesis = \
+            "this is a test sentence to evaluate the good bleu score . 词"
+        hypothesis = np.array(hypothesis.split())
+        references = ["this is a test sentence to evaluate the bleu score .",
+                      "this is a test sentence to evaluate the good score ."]
+        references = np.array([np.array(r.split()) for r in references])
+        self._test_sentence_bleu(
+            references, hypothesis, lowercase=False, true_bleu=76.12)
 
 
     def _test_corpus_bleu(self, list_of_references, hypotheses, lowercase,
