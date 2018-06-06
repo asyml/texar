@@ -2,6 +2,10 @@
 This script is adapted from the tensor2tensor repositor.
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+
 import tensorflow as tf
 
 class PadRemover(object):

@@ -11,4 +11,5 @@ from __future__ import print_function
 
 from texar.utils.utils import *
 from texar.utils.exceptions import *
-from texar.utils.padding_related import *
+from texar.utils.shapes import *
+from texar.utils.dtypes import *
