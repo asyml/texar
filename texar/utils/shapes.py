@@ -19,6 +19,7 @@ from tensorflow.python.framework import ops
 __all__ = [
     "transpose_batch_time",
     "get_batch_size",
+    "get_rank",
     "mask_sequences",
     "_mask_sequences_tensor",
     "_mask_sequences_py",
@@ -49,6 +50,28 @@ def get_batch_size(tensor):
     """
     return tf.shape(tensor)[0]
 
+
+def get_rank(tensor):
+    """Returns the tensor rank as a python `int`. The input tensor can also be
+    a python array.
+
+    Args:
+        tensor: A Tensor or python array.
+
+    Returns:
+        A python `int` representing the rank of :attr:`tensor`. Returns
+        `None` if the rank cannot be determined.
+    """
+    if tf.contrib.framework.is_tensor(tensor):
+        shape = tensor.shape
+        try:
+            rank = len(shape.as_list())
+        except ValueError: # when `shape==TensorShape(None)`
+            rank = None
+    else:
+        array = np.asarray(tensor)
+        rank = array.ndim
+    return rank
 
 def mask_sequences(sequence,
                    sequence_length,
