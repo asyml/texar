@@ -79,7 +79,8 @@ def corpus_bleu(list_of_references, hypotheses, lowercase=False):
     # Create hyperthesis file
     hfile_path = os.path.join(result_path, 'hyp')
     hyps = [_maybe_list_to_string(h) for h in hypotheses]
-    with open(hfile_path, "w") as hfile:
+    with open(hfile_path, "wb") as hfile:
+        #hfile.write("\n".join(hyps).encode("utf-8"))
         hfile.write("\n".join(hyps).encode("utf-8"))
         hfile.write("\n")
     # Create reference files

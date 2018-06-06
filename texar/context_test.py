@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 """
 Unit tests for various context functionalities.
@@ -30,6 +31,10 @@ class ContextTest(tf.test.TestCase):
 
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
+
+            global_mode_ = sess.run(global_mode)
+            self.assertEqual(tf.compat.as_str(global_mode_),
+                             tf.estimator.ModeKeys.TRAIN)
 
             global_mode_, mode_train_, mode_eval_, mode_predict_ = sess.run(
                 [global_mode, mode_train, mode_eval, mode_predict],

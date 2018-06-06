@@ -27,11 +27,15 @@ def global_mode():
     """
     mode = tf.get_collection_ref(_GLOBAL_MODE_KEY)
     if len(mode) < 1:
-        #mode.append(tf.placeholder(tf.string, name="global_mode"))
-        mode_tensor = tf.constant(
-            value=tf.estimator.ModeKeys.TRAIN,
-            dtype=tf.string,
+        #mode_tensor = tf.placeholder(tf.string, name="global_mode")
+        mode_tensor = tf.placeholder_with_default(
+            input=tf.estimator.ModeKeys.TRAIN,
+            shape=(),
             name="global_mode")
+        #mode_tensor = tf.constant(
+        #    value=tf.estimator.ModeKeys.TRAIN,
+        #    dtype=tf.string,
+        #    name="global_mode")
         mode.append(mode_tensor)
     return mode[0]
 
