@@ -84,6 +84,18 @@ class MLELossesTest(tf.test.TestCase):
             tx.losses.sequence_sparse_softmax_cross_entropy,
             self._labels, self._logits, self._sequence_length)
 
+    def test_sequence_sigmoid_cross_entropy(self):
+        """Tests `texar.losses.test_sequence_sigmoid_cross_entropy`.
+        """
+        self._test_sequence_loss(
+            tx.losses.sequence_sigmoid_cross_entropy,
+            self._one_hot_labels, self._logits, self._sequence_length)
+
+        self._test_sequence_loss(
+            tx.losses.sequence_sigmoid_cross_entropy,
+            self._one_hot_labels[:, :, 0],
+            self._logits[:, :, 0],
+            self._sequence_length)
 
 if __name__ == "__main__":
     tf.test.main()
