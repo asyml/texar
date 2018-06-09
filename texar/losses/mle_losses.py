@@ -279,8 +279,8 @@ def smoothing_cross_entropy(logits,
     """Cross entropy with label smoothing to limit over-confidence.
 
     Args:
-        logits: Tensor of size [batch_size, ?, ?, ?, vocab_size]
-        labels: Tensor of size [batch_size, ?, ?, ?]
+        logits: Tensor of size [batch_size, ?, vocab_size]
+        labels: Tensor of size [batch_size, ?]
         vocab_size: Tensor representing the size of the vocabulary.
         confidence: Used to determine on and off values for label smoothing.
         If `gaussian` is true, `confidence` is the variance to the gaussian
@@ -295,17 +295,16 @@ def smoothing_cross_entropy(logits,
             low_confidence = (1.0 - confidence) / tf.to_float(vocab_size - 2)
         else:
             low_confidence = (1.0 - confidence) / tf.to_float(vocab_size - 1)
-
         if gaussian and confidence > 0.0:
             labels = tf.cast(labels, tf.float32)
             normal_dist = tf.distributions.Normal(loc=labels, scale=confidence)
-            # Locations to evaluate the probability distributions.
             soft_targets = normal_dist.prob(
                 tf.cast(tf.range(vocab_size), tf.float32)\
-                    [:, None, None, None, None])
-            # Reordering soft_targets from [vocab_sizkje, batch_size, ?, ?, ?]
-            # to match logits: [batch_size, ?, ?, ?, vocab_size]
-            soft_targets = tf.transpose(soft_targets, perm=[1, 2, 3, 4, 0])
+                    [:, None, None])
+            # Reordering soft_targets from [vocab_size, batch_size, ?]
+            # to match logits: [batch_size, ?, vocab_size]
+            soft_targets = tf.transpose(soft_targets, perm=[1, 2, 0])
+
         else:
             if zero_pad:
                 soft_targets = tf.one_hot(
@@ -314,8 +313,6 @@ def smoothing_cross_entropy(logits,
                     on_value=confidence,
                     off_value=low_confidence,
                     dtype=logits.dtype)
-                print('labels shape:{}'.format(labels.shape))
-                print('soft_targets shape:{}'.format(soft_targets.shape))
                 soft_targets = tf.concat([tf.expand_dims(\
                     tf.zeros_like(labels, dtype=tf.float32), 2),\
                     soft_targets[:, :, 1:]], -1)
