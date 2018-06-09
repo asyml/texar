@@ -89,7 +89,7 @@ def get_optimizer_fn(hparams=None):
 
     opt = hparams["type"]
     if isinstance(opt, tf.train.Optimizer):
-        return opt
+        return opt, type(opt)
     else:
         opt_modules = ['tensorflow.train',
                        'tensorflow.contrib.opt',
@@ -111,7 +111,7 @@ def get_optimizer_fn(hparams=None):
             opt_kwargs["learning_rate"] = learning_rate
         return opt_class(**opt_kwargs)
 
-    return _get_opt, opt
+    return _get_opt, opt_class
 
 def get_learning_rate_decay_fn(hparams=None):
     """Creates learning rate decay function based on the hyperparameters.

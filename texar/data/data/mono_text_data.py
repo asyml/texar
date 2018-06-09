@@ -67,6 +67,7 @@ def _default_mono_text_dataset_hparams():
         "delimiter": " ",
         "max_seq_length": None,
         "length_filter_mode": "truncate",
+        "pad_to_max_seq_length": False,
         "bos_token": SpecialTokens.BOS,
         "eos_token": SpecialTokens.EOS,
         "other_transformations": [],
@@ -237,8 +238,57 @@ class MonoTextData(TextDataBase):
             length_fn = utils.get_function(length_fn, ["texar.custom"])
         return length_fn
 
+    @staticmethod
+    def _make_padded_text_and_id_shapes(dataset, dataset_hparams, decoder,
+                                        text_name, text_id_name):
+        max_length = dataset_hparams['max_seq_length']
+        if max_length is None:
+            raise ValueError("hparams 'max_seq_length' must be specified "
+                             "when 'pad_to_max_seq_length' is True.")
+        max_length += decoder.added_length
+
+        padded_shapes = dataset.output_shapes
+
+        def _get_new_shape(name):
+            dim = len(padded_shapes[name])
+            if not dataset_hparams['variable_utterance']:
+                if dim != 1:
+                    raise ValueError(
+                        "Unable to pad data '%s' to max seq length. Expected "
+                        "1D Tensor, but got %dD Tensor." % (name, dim))
+                return tf.TensorShape(max_length)
+            else:
+                if dim != 2:
+                    raise ValueError(
+                        "Unable to pad data '%s' to max seq length. Expected "
+                        "2D Tensor, but got %dD Tensor." % (name, dim))
+                return tf.TensorShape([padded_shapes[name][0], max_length])
+
+        text_and_id_shapes = {}
+        if text_name in padded_shapes:
+            text_and_id_shapes[text_name] = _get_new_shape(text_name)
+        if text_id_name in padded_shapes:
+            text_and_id_shapes[text_id_name] = _get_new_shape(text_id_name)
+
+        return text_and_id_shapes
+
+    def _make_padded_shapes(self, dataset, decoder):
+        if not self._hparams.dataset.pad_to_max_seq_length:
+            return None
+
+        text_and_id_shapes = MonoTextData._make_padded_text_and_id_shapes(
+            dataset, self._hparams.dataset, decoder,
+            self.text_name, self.text_id_name)
+
+        padded_shapes = dataset.output_shapes
+        padded_shapes.update(text_and_id_shapes)
+
+        return padded_shapes
+
     def _make_data(self):
         dataset_hparams = self._hparams.dataset
+
+        # Create vocab and embedding
         self._vocab = self.make_vocab(dataset_hparams)
         self._embedding = self.make_embedding(
             dataset_hparams["embedding_init"], self._vocab.token_to_id_map_py)
@@ -261,7 +311,9 @@ class MonoTextData(TextDataBase):
 
         # Batching
         length_fn = self._make_bucket_length_fn()
-        dataset = self._make_batch(dataset, self._hparams, length_fn)
+        padded_shapes = self._make_padded_shapes(dataset, self._decoder)
+        dataset = self._make_batch(
+            dataset, self._hparams, length_fn, padded_shapes)
 
         # Prefetching
         if self._hparams.prefetch_buffer_size > 0:

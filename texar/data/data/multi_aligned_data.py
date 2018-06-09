@@ -33,7 +33,7 @@ __all__ = [
     "MultiAlignedData"
 ]
 
-class _DataTypes: # pylint: disable=old-style-class, no-init, too-few-public-methods
+class _DataTypes(object): # pylint: disable=no-init, too-few-public-methods
     """Enumeration of data types.
     """
     TEXT = "text"
@@ -333,6 +333,21 @@ class MultiAlignedData(TextDataBase):
             length_fn = utils.get_function(length_fn, ["texar.custom"])
         return length_fn
 
+    def _make_padded_shapes(self, dataset, decoders):
+        padded_shapes = dataset.output_shapes
+        for i, hparams_i in enumerate(self._hparams.datasets):
+            if not _is_text_data(hparams_i["data_type"]):
+                continue
+            if not hparams_i["pad_to_max_seq_length"]:
+                continue
+            text_and_id_shapes = MonoTextData._make_padded_text_and_id_shapes(
+                dataset, hparams_i, decoders[i],
+                self.text_name(i), self.text_id_name(i))
+
+            padded_shapes.update(text_and_id_shapes)
+
+        return padded_shapes
+
     def _make_data(self):
         self._vocab = self.make_vocab(self._hparams.datasets)
         self._embedding = self.make_embedding(self._hparams.datasets,
@@ -356,7 +371,9 @@ class MultiAlignedData(TextDataBase):
 
         # Batching
         length_fn = self._make_bucket_length_fn()
-        dataset = self._make_batch(dataset, self._hparams, length_fn)
+        padded_shapes = self._make_padded_shapes(dataset, self._decoder)
+        dataset = self._make_batch(
+            dataset, self._hparams, length_fn, padded_shapes)
 
         # Prefetching
         if self._hparams.prefetch_buffer_size > 0:

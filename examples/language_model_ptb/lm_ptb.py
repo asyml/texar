@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Example for building the PTB language model.
+"""Example for building the language model.
 
 This is a reimpmentation of the TensorFlow official PTB example in:
 tensorflow/models/rnn/ptb
@@ -20,7 +20,7 @@ Model and training are described in:
 (Zaremba, et. al.) Recurrent Neural Network Regularization
  http://arxiv.org/abs/1409.2329
 
-There are 3 supported model configurations:
+There are 3 provided model configurations:
 ===========================================
 | config | epochs | train | valid  | test
 ===========================================
@@ -35,7 +35,7 @@ PTB dataset from Tomas Mikolov's webpage:
 $ wget http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz
 $ tar xvf simple-examples.tgz
 
-If data is now provided, the program will download from above automatically.
+If data is not provided, the program will download from above automatically.
 
 To run:
 
@@ -127,6 +127,7 @@ def _main(_):
         mode = (tf.estimator.ModeKeys.TRAIN
                 if is_train
                 else tf.estimator.ModeKeys.EVAL)
+
         epoch_size = (len(data) // batch_size - 1) // num_steps
         for step, (x, y) in enumerate(data_iter):
             feed_dict = {

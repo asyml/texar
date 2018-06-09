@@ -13,7 +13,7 @@ import tensorflow as tf
 from texar.data.data.data_base import DataBase
 from texar.data.data import dataset_utils as dsutils
 
-# pylint: disable=protected-access
+# pylint: disable=protected-access, arguments-differ
 
 __all__ = [
     "TextDataBase"
@@ -39,18 +39,21 @@ class TextDataBase(DataBase): # pylint: disable=too-few-public-methods
         return hparams
 
     @staticmethod
-    def _make_batch(dataset, hparams, element_length_func):
+    def _make_batch(dataset, hparams, element_length_func, padded_shapes=None):
         dataset = dataset.repeat(hparams.num_epochs)
-        bucket_boundaries = hparams["bucket_boundaries"]
+
         batch_size = hparams["batch_size"]
+        bucket_boundaries = hparams["bucket_boundaries"]
+        if padded_shapes is None:
+            padded_shapes = dataset.output_shapes
+
         if len(bucket_boundaries) == 0:
             if hparams["allow_smaller_final_batch"]:
-                dataset = dataset.padded_batch(
-                    batch_size, dataset.output_shapes)
+                dataset = dataset.padded_batch(batch_size, padded_shapes)
             else:
                 dataset = dataset.apply(
                     tf.contrib.data.padded_batch_and_drop_remainder(
-                        batch_size, dataset.output_shapes))
+                        batch_size, padded_shapes))
         else:
             bucket_batch_size = hparams["bucket_batch_sizes"]
             if bucket_batch_size is None:

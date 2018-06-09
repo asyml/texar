@@ -35,7 +35,7 @@ class DataBase(object):
         """
         return {
             "name": "data",
-            "num_epochs": None,
+            "num_epochs": 1,
             "batch_size": 64,
             "allow_smaller_final_batch": True,
             "shuffle": True,

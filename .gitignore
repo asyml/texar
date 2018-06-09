@@ -223,3 +223,4 @@ checkpoints/
 simple-examples.tgz
 /examples/sequence_tagging/data/
 /examples/sequence_tagging/tmp/
+/examples/sentence_classifier/data/

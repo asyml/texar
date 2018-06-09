@@ -11,6 +11,8 @@ from __future__ import unicode_literals
 
 # pylint: disable=invalid-name
 
+import numpy as np
+
 import tensorflow as tf
 
 import texar as tx
@@ -96,6 +98,17 @@ class MLELossesTest(tf.test.TestCase):
             self._one_hot_labels[:, :, 0],
             self._logits[:, :, 0],
             self._sequence_length)
+
+        labels = tf.placeholder(dtype=tf.int32, shape=None)
+        loss = tx.losses.sequence_sigmoid_cross_entropy(
+            logits=self._logits[:, :, 0],
+            labels=tf.to_float(labels),
+            sequence_length=self._sequence_length)
+        with self.test_session() as sess:
+            rank = sess.run(
+                tf.rank(loss),
+                feed_dict={labels: np.ones([self._batch_size, self._max_time])})
+            self.assertEqual(rank, 0)
 
 if __name__ == "__main__":
     tf.test.main()

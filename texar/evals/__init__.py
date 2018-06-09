@@ -10,3 +10,4 @@ from __future__ import print_function
 # pylint: disable=wildcard-import
 
 from texar.evals.bleu import *
+from texar.evals.metrics import *

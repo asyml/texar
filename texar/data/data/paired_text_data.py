@@ -235,6 +235,27 @@ class PairedTextData(TextDataBase):
             length_fn = utils.get_function(length_fn, ["texar.custom"])
         return length_fn
 
+    def _make_padded_shapes(self, dataset, src_decoder, tgt_decoder):
+        src_text_and_id_shapes = {}
+        if self._hparams.source_dataset.pad_to_max_seq_length:
+            src_text_and_id_shapes = \
+                    MonoTextData._make_padded_text_and_id_shapes(
+                        dataset, self._hparams.source_dataset, src_decoder,
+                        self.source_text_name, self.source_text_id_name)
+
+        tgt_text_and_id_shapes = {}
+        if self._hparams.target_dataset.pad_to_max_seq_length:
+            tgt_text_and_id_shapes = \
+                    MonoTextData._make_padded_text_and_id_shapes(
+                        dataset, self._hparams.target_dataset, tgt_decoder,
+                        self.target_text_name, self.target_text_id_name)
+
+        padded_shapes = dataset.output_shapes
+        padded_shapes.update(src_text_and_id_shapes)
+        padded_shapes.update(tgt_text_and_id_shapes)
+
+        return padded_shapes
+
     def _make_data(self):
         self._src_vocab, self._tgt_vocab = self.make_vocab(
             self._hparams.source_dataset, self._hparams.target_dataset)
@@ -271,7 +292,10 @@ class PairedTextData(TextDataBase):
 
         # Batching
         length_fn = self._make_bucket_length_fn()
-        dataset = self._make_batch(dataset, self._hparams, length_fn)
+        padded_shapes = self._make_padded_shapes(
+            dataset, self._src_decoder, self._tgt_decoder)
+        dataset = self._make_batch(
+            dataset, self._hparams, length_fn, padded_shapes)
 
         # Prefetching
         if self._hparams.prefetch_buffer_size > 0:

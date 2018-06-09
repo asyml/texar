@@ -17,7 +17,8 @@ import tensorflow as tf
 
 import texar as tx
 
-# pylint: disable=too-many-locals, protected-access
+# pylint: disable=too-many-locals, protected-access, too-many-branches
+# pylint: disable=invalid-name
 
 class MonoTextDataTest(tf.test.TestCase):
     """Tests text data class.
@@ -49,7 +50,8 @@ class MonoTextDataTest(tf.test.TestCase):
             }
         }
 
-    def _run_and_test(self, hparams,
+    def _run_and_test(self,
+                      hparams,
                       test_batch_size=False,
                       length_inc=None):
         # Construct database
@@ -68,13 +70,15 @@ class MonoTextDataTest(tf.test.TestCase):
 
             while True:
                 try:
-                    # Run the logics
                     data_batch_ = sess.run(text_data_batch)
+
                     self.assertEqual(set(data_batch_.keys()),
                                      set(text_data.list_items()))
+
                     if test_batch_size:
                         self.assertEqual(len(data_batch_['text']),
                                          hparams['batch_size'])
+
                     if length_inc:
                         for i in range(len(data_batch_['text'])):
                             text_ = data_batch_['text'][i].tolist()
@@ -82,9 +86,9 @@ class MonoTextDataTest(tf.test.TestCase):
                                 text_.index(b'<EOS>') + 1,
                                 data_batch_['length'][i] - length_inc)
 
-                    max_seq_length = text_data._hparams.dataset.max_seq_length
-                    mode = text_data._hparams.dataset.length_filter_mode
-                    if max_seq_length is not None:
+                    max_seq_length = text_data.hparams.dataset.max_seq_length
+                    mode = text_data.hparams.dataset.length_filter_mode
+                    if max_seq_length == 6:
                         max_l = max_seq_length
                         max_l += text_data._decoder.added_length
                         for length in data_batch_['length']:
@@ -99,6 +103,13 @@ class MonoTextDataTest(tf.test.TestCase):
                             self.assertGreater(num_length_6, 0)
                         else:
                             raise ValueError("Unknown mode: %s" % mode)
+
+                    if text_data.hparams.dataset.pad_to_max_seq_length:
+                        max_l = max_seq_length + text_data._decoder.added_length
+                        for x in data_batch_['text']:
+                            self.assertEqual(len(x), max_l)
+                        for x in data_batch_['text_ids']:
+                            self.assertEqual(len(x), max_l)
 
                 except tf.errors.OutOfRangeError:
                     print('Done -- epoch limit reached')
@@ -228,6 +239,15 @@ class MonoTextDataTest(tf.test.TestCase):
         hparams["allow_smaller_final_batch"] = False
         self._run_and_test(hparams)
 
+    def test_pad_to_max_length(self):
+        """Tests padding.
+        """
+        hparams = copy.copy(self._hparams)
+        hparams["dataset"].update({"max_seq_length": 10,
+                                   "length_filter_mode": "truncate",
+                                   "pad_to_max_seq_length": True})
+        self._run_and_test(hparams)
+
 
 class VarUttMonoTextDataTest(tf.test.TestCase):
     """Tests variable utterance text data class.
@@ -290,14 +310,26 @@ class VarUttMonoTextDataTest(tf.test.TestCase):
                 try:
                     # Run the logics
                     data_batch_ = sess.run(text_data_batch)
+
                     self.assertEqual(set(data_batch_.keys()),
                                      set(text_data.list_items()))
+
                     # Test utterance count
                     utt_ind = np.sum(data_batch_["text_ids"], 2) != 0
                     utt_cnt = np.sum(utt_ind, 1)
                     self.assertListEqual(
                         data_batch_[text_data.utterance_cnt_name].tolist(),
                         utt_cnt.tolist())
+
+                    if text_data.hparams.dataset.pad_to_max_seq_length:
+                        max_l = text_data.hparams.dataset.max_seq_length
+                        max_l += text_data._decoder.added_length
+                        for x in data_batch_['text']:
+                            for xx in x:
+                                self.assertEqual(len(xx), max_l)
+                        for x in data_batch_['text_ids']:
+                            for xx in x:
+                                self.assertEqual(len(xx), max_l)
 
                 except tf.errors.OutOfRangeError:
                     print('Done -- epoch limit reached')
@@ -308,6 +340,14 @@ class VarUttMonoTextDataTest(tf.test.TestCase):
         """
         self._run_and_test(self._hparams)
 
+    def test_pad_to_max_length(self):
+        """Tests padding.
+        """
+        hparams = copy.copy(self._hparams)
+        hparams["dataset"].update({"max_seq_length": 20,
+                                   "length_filter_mode": "truncate",
+                                   "pad_to_max_seq_length": True})
+        self._run_and_test(hparams)
 
 if __name__ == "__main__":
     tf.test.main()
