@@ -13,7 +13,7 @@
 # limitations under the License.
 """Example for building a sentence convolutional classifier.
 
-Use `prepare_data.py` to download and clean the data.
+Use `prepare_sst_data.py` to download and clean the SST binary data.
 
 To run:
 
