@@ -244,6 +244,7 @@ def sequence_sigmoid_cross_entropy(labels,
         - If :attr:`average_across_batch` is `True` and other arguments are \
         `False`, the return Tensor is of shape `[max_time]`.
     """
+
     with tf.name_scope(name, "sequence_sigmoid_cross_entropy"):
         if stop_gradient_to_label:
             labels = tf.stop_gradient(labels)
@@ -269,64 +270,3 @@ def sequence_sigmoid_cross_entropy(labels,
             time_major=time_major)
 
         return losses
-
-def smoothing_cross_entropy(logits,
-                            labels,
-                            vocab_size,
-                            confidence,
-                            gaussian=False,
-                            zero_pad=True):
-    """Cross entropy with label smoothing to limit over-confidence.
-
-    Args:
-        logits: Tensor of size [batch_size, ?, vocab_size]
-        labels: Tensor of size [batch_size, ?]
-        vocab_size: Tensor representing the size of the vocabulary.
-        confidence: Used to determine on and off values for label smoothing.
-        If `gaussian` is true, `confidence` is the variance to the gaussian
-        distribution.
-        gaussian: Uses a gaussian distribution for label smoothing
-
-    Returns:
-    """
-    with tf.name_scope("smoothing_cross_entropy", values=[logits, labels]):
-        # Low confidence is given to all non-true labels, uniformly.
-        if zero_pad:
-            low_confidence = (1.0 - confidence) / tf.to_float(vocab_size - 2)
-        else:
-            low_confidence = (1.0 - confidence) / tf.to_float(vocab_size - 1)
-        if gaussian and confidence > 0.0:
-            labels = tf.cast(labels, tf.float32)
-            normal_dist = tf.distributions.Normal(loc=labels, scale=confidence)
-            soft_targets = normal_dist.prob(
-                tf.cast(tf.range(vocab_size), tf.float32)\
-                    [:, None, None])
-            # Reordering soft_targets from [vocab_size, batch_size, ?]
-            # to match logits: [batch_size, ?, vocab_size]
-            soft_targets = tf.transpose(soft_targets, perm=[1, 2, 0])
-
-        else:
-            if zero_pad:
-                soft_targets = tf.one_hot(
-                    tf.cast(labels, tf.int32),
-                    depth=vocab_size,
-                    on_value=confidence,
-                    off_value=low_confidence,
-                    dtype=logits.dtype)
-                soft_targets = tf.concat([tf.expand_dims(\
-                    tf.zeros_like(labels, dtype=tf.float32), 2),\
-                    soft_targets[:, :, 1:]], -1)
-            else:
-                soft_targets = tf.one_hot(
-                    tf.cast(labels, tf.int32),
-                    depth=vocab_size,
-                    on_value=confidence,
-                    off_value=low_confidence,
-                    dtype=logits.dtype)
-
-        if hasattr(tf.nn, 'softmax_cross_entropy_with_logits_v2'):
-            cross_entropy_fn = tf.nn.softmax_cross_entropy_with_logits_v2
-        else:
-            cross_entropy_fn = tf.nn.softmax_cross_entropy_with_logits
-    return cross_entropy_fn(
-        logits=logits, labels=soft_targets)

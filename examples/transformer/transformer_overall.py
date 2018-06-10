@@ -40,6 +40,7 @@ if __name__ == "__main__":
     logging.shutdown()
     reload(logging)
     logging_file = os.path.join(args.log_dir, 'logging.txt')
+    print('logging file is saved in :{}'.format(logging_file))
     logging.basicConfig(filename=logging_file, \
         format='%(asctime)s:%(levelname)s:%(message)s',\
         level=logging.INFO)
@@ -341,10 +342,10 @@ if __name__ == "__main__":
         test_bleu = float(100 * bleu_tool.bleu_wrapper(refer_tmp_filename, \
             outputs_tmp_filename, case_sensitive=True))
         test_loss = float(np.sum(np.array(test_loss)))
-        print('test_bleu:%s test_loss:%s', \
-            test_bleu, test_loss)
-        logging.info('test_bleu:%s test_loss:%s', \
-            test_bleu, test_loss)
+        print('test_bleu:%s test_loss:%s' %( \
+            test_bleu, test_loss))
+        logging.info('test_bleu:%s test_loss:%s' %( \
+            test_bleu, test_loss))
         return {'loss': test_loss,
                 'bleu': test_bleu}
 
