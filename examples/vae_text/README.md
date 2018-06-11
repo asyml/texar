@@ -1,6 +1,6 @@
 # Variational Autoencoder for Text Generation
 
-This is implementation of VAE for text generation, with LSTM as encoder and LSTM or Transformer as decoder.
+This example builds a VAE for text generation, with LSTM as encoder and LSTM or Transformer as decoder.
 
 
 
@@ -9,8 +9,12 @@ This is implementation of VAE for text generation, with LSTM as encoder and LSTM
 Training can be performed with the following command:
 
 ```shell
-python vae_train.py --config config_trans
+python vae_train.py --config config_trans --dataset ptb
 ```
+
+Here:
+
+* `--config` specifies the config file to use
 
 `config_trans.py` specifies the data paths and hyperparameters when transformer is the decoder, and `config_lstm.py` specifies the configuration when LSTM is the decoder.
 
