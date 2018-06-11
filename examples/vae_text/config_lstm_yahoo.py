@@ -17,20 +17,21 @@
 
 # pylint: disable=invalid-name, too-few-public-methods, missing-docstring
 
-num_epochs = 50
-hidden_size = 256
+num_epochs = 100
+hidden_size = 550 
+dec_keep_prob_in = 0.5
+dec_keep_prob_out = 0.5
 enc_keep_prob_in = 1.0
 enc_keep_prob_out = 1.0
-dec_keep_prob_in = 0.5
 batch_size = 32
-embed_dim = 256
+embed_dim = 512
 
 latent_dims = 32
 
 lr_decay_hparams = {
     "init_lr": 0.001,
-    "threshold": 1,
-    "rate": 0.1
+    "threshold": 5,
+    "rate": 0.5
 }
 
 
@@ -41,7 +42,8 @@ residual_dropout = 0.2
 num_blocks = 3
 
 decoder_hparams = {
-    "type": "transformer"
+    "type": "lstm",
+    "train": "vae"
 }
 
 enc_cell_hparams = {
@@ -51,6 +53,16 @@ enc_cell_hparams = {
         "forget_bias": 0.
     },
     "dropout": {"output_keep_prob": enc_keep_prob_out},
+    "num_layers": 1
+}
+
+dec_cell_hparams = {
+    "type": "LSTMBlockCell",
+    "kwargs": {
+        "num_units": hidden_size,
+        "forget_bias": 0.
+    },
+    "dropout": {"output_keep_prob": dec_keep_prob_out},
     "num_layers": 1
 }
 
@@ -75,10 +87,6 @@ trans_hparams = {
     'embedding_dropout': embedding_dropout,
     'attention_dropout': attention_dropout,
     'residual_dropout': residual_dropout,
-    'position_embedder': {
-        'name': 'sinusoids',
-        'hparams': None,
-    },
     'sinusoid': True,
     'num_heads': 8,
     'num_blocks': num_blocks,
@@ -124,6 +132,7 @@ trans_hparams = {
 }
 
 # KL annealing
+# kl_weight = 1.0 / (1 + np.exp(-k*(step-x0)))
 kl_anneal_hparams={
     "warm_up": 10,
     "start": 0.1
@@ -134,8 +143,8 @@ train_data_hparams = {
     "batch_size": batch_size,
     "seed": 123,
     "dataset": {
-        "files": 'ptb_data/ptb.train.txt',
-        "vocab_file": 'ptb_data/vocab.txt'
+        "files": 'yahoo_data/yahoo.train.txt',
+        "vocab_file": 'yahoo_data/vocab.txt'
     }
 }
 
@@ -144,8 +153,8 @@ val_data_hparams = {
     "batch_size": batch_size,
     "seed": 123,
     "dataset": {
-        "files": 'ptb_data/ptb.valid.txt',
-        "vocab_file": 'ptb_data/vocab.txt'
+        "files": 'yahoo_data/yahoo.valid.txt',
+        "vocab_file": 'yahoo_data/vocab.txt'
     }
 }
 
@@ -153,7 +162,27 @@ test_data_hparams = {
     "num_epochs": 1,
     "batch_size": batch_size,
     "dataset": {
-        "files": 'ptb_data/ptb.test.txt',
-        "vocab_file": 'ptb_data/vocab.txt'
+        "files": 'yahoo_data/yahoo.test.txt',
+        "vocab_file": 'yahoo_data/vocab.txt'
+    }
+}
+
+opt_hparams = {
+    "optimizer": {
+        "type": "GradientDescentOptimizer",
+        "kwargs": {"learning_rate": 1.0}
+    },
+    "gradient_clip": {
+        "type": "clip_by_global_norm",
+        "kwargs": {"clip_norm": 5.}
+    },
+    "learning_rate_decay": {
+        "type": "exponential_decay",
+        "kwargs": {
+            "decay_steps": 1,
+            "decay_rate": 0.5,
+            "staircase": True
+        },
+        "start_decay_step": 3
     }
 }

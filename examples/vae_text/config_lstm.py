@@ -84,8 +84,8 @@ train_data_hparams = {
     "batch_size": batch_size,
     "seed": 123,
     "dataset": {
-        "files": 'data/ptb.train.txt',
-        "vocab_file": 'data/vocab.txt'
+        "files": 'ptb_data/ptb.train.txt',
+        "vocab_file": 'ptb_data/vocab.txt'
     }
 }
 
@@ -94,8 +94,8 @@ val_data_hparams = {
     "batch_size": batch_size,
     "seed": 123,
     "dataset": {
-        "files": 'data/ptb.valid.txt',
-        "vocab_file": 'data/vocab.txt'
+        "files": 'ptb_data/ptb.valid.txt',
+        "vocab_file": 'ptb_data/vocab.txt'
     }
 }
 
@@ -103,8 +103,8 @@ test_data_hparams = {
     "num_epochs": 1,
     "batch_size": batch_size,
     "dataset": {
-        "files": 'data/ptb.test.txt',
-        "vocab_file": 'data/vocab.txt'
+        "files": 'ptb_data/ptb.test.txt',
+        "vocab_file": 'ptb_data/vocab.txt'
     }
 }
 

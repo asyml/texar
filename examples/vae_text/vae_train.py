@@ -28,6 +28,7 @@ from __future__ import print_function
 
 # pylint: disable=invalid-name, no-member, too-many-locals
 
+import os
 import sys
 import time
 import importlib
@@ -36,6 +37,14 @@ import tensorflow as tf
 import texar as tx
 
 flags = tf.flags
+
+flags.DEFINE_string("dataset", "ptb",
+                    "perform training on ptb or yahoo.")
+
+flags.DEFINE_string("data_path", "./",
+                    "Directory containing PTB or Yahoo raw data. "
+                    "If not exists, the directory will be created, "
+                    "and the data will be downloaded.")
 
 flags.DEFINE_string("config", "config", "The config to use.")
 
@@ -52,8 +61,39 @@ def kl_dvg(means, logvars):
 
     return tf.reduce_sum(kl_cost)
 
+def prepare_data(train_path):
+    """Download the PTB or Yahoo dataset
+    """
+    ptb_url = 'https://jxhe.github.io/download/ptb_data.tgz'
+    yahoo_url = 'https://jxhe.github.io/download/yahoo_data.tgz'
+
+    data_path = FLAGS.data_path
+
+    if not tf.gfile.Exists(train_path):
+        url = ptb_url if FLAGS.dataset == 'ptb' else yahoo_url
+        tx.data.maybe_download(url, data_path, extract=True)
+        os.remove('%s_data.tgz' % FLAGS.dataset)
+
+        data_path = os.path.join(data_path, '%s_data' % FLAGS.dataset)
+
+        train_path = os.path.join(data_path, "%s.train.txt" % FLAGS.dataset)
+        valid_path = os.path.join(data_path, "%s.valid.txt" % FLAGS.dataset)
+        test_path = os.path.join(data_path, "%s.test.txt" % FLAGS.dataset)
+        vocab_path = os.path.join(data_path, "vocab.txt")
+
+        config.train_data_hparams['dataset'] = {'files': train_path,
+                                                'vocab_file': vocab_path}
+
+        config.val_data_hparams['dataset'] = {'files': valid_path,
+                                              'vocab_file': vocab_path}
+
+        config.test_data_hparams['dataset'] = {'files': test_path,
+                                               'vocab_file': vocab_path}
+
 
 def _main(_):
+
+    prepare_data(config.train_data_hparams['dataset']['files'])
 
     # Data
     train_data = tx.data.MonoTextData(config.train_data_hparams)
@@ -175,30 +215,42 @@ def _main(_):
     # train_op = optimizer.minimize(
     #     nll, global_step=global_step)
 
-    def _train_epochs(sess, epoch, step, display=10):
+    def _run_epoch(sess, epoch, mode_string, display=10):
+        if mode_string == 'train':
+            iterator.switch_to_train_data(sess)
+        elif mode_string == 'valid':
+            iterator.switch_to_val_data(sess)
+        elif mode_string == 'test':
+            iterator.switch_to_test_data(sess)
+
+        step = 0
         start_time = time.time()
-        iterator.switch_to_train_data(sess)
         num_words = num_sents = 0
         nll_ = 0.
         kl_loss_ = rc_loss_ = 0.
+
         while True:
             try:
-                fetches = {"train_op": train_op,
-                           "nll": nll,
+                fetches = {"nll": nll,
                            "kl_loss": kl_loss,
                            "rc_loss": rc_loss,
                            "lengths": seq_lengths}
 
-                opt_vars["kl_weight"] = min(1.0,
-                                            opt_vars["kl_weight"] + anneal_r)
-                feed = {tx.global_mode(): tf.estimator.ModeKeys.TRAIN,
-                        kl_weight: opt_vars["kl_weight"],
-                        learning_rate: opt_vars["learning_rate"]}
+                if mode_string == 'train':
+                    fetches["train_op"] = train_op
+                    opt_vars["kl_weight"] = min(1.0,
+                        opt_vars["kl_weight"] + anneal_r)
 
-                 #fetch_debug = {"debug_data": debug_data,
-                 #                "logits": logits,
-                 #                "rc_loss": rc_loss}
-                 #fetch_debug_ = sess.run(fetch_debug, feed_dict=feed)
+                    kl_weight_ = opt_vars["kl_weight"]
+                else:
+                    kl_weight_ = 1.0
+
+                mode = (tf.estimator.ModeKeys.TRAIN if mode_string=='train'
+                        else tf.estimator.ModeKeys.EVAL)
+
+                feed = {tx.global_mode(): mode,
+                        kl_weight: kl_weight_,
+                        learning_rate: opt_vars["learning_rate"]}
 
                 fetches_ = sess.run(fetches, feed_dict=feed)
 
@@ -210,92 +262,29 @@ def _main(_):
                 kl_loss_ += fetches_["kl_loss"] * batch_size
                 rc_loss_ += fetches_["rc_loss"] * batch_size
 
-                if step % display == 0:
-                    print('epoch %d, step %d, nll %.4f, klw: %.4f, KL %.4f,  ' \
-                           'rc %.4f, log_ppl %.4f, ppl %.4f, ' \
+                if step % display == 0 and mode_string == 'train':
+                    print('%s: epoch %d, step %d, nll %.4f, klw: %.4f, ' \
+                           'KL %.4f,  rc %.4f, log_ppl %.4f, ppl %.4f, ' \
                            'time elapsed: %.1fs' % \
-                          (epoch, step, nll_ / num_sents, opt_vars["kl_weight"],
-                           kl_loss_ / num_sents, rc_loss_ / num_sents,
-                           nll_ / num_words, np.exp(nll_ / num_words),
-                           time.time() - start_time))
+                          (mode_string, epoch, step, nll_ / num_sents,
+                           opt_vars["kl_weight"], kl_loss_ / num_sents,
+                           rc_loss_ / num_sents, nll_ / num_words,
+                           np.exp(nll_ / num_words), time.time() - start_time))
 
                     sys.stdout.flush()
 
                 step += 1
 
             except tf.errors.OutOfRangeError:
-                break
-        return
-
-    def _val_epochs(sess, epoch):
-        iterator.switch_to_val_data(sess)
-        num_words = num_sents = 0
-        nll_ = 0.
-        kl_loss_ = rc_loss_ = 0.
-        while True:
-            try:
-                fetches = {"nll": nll,
-                           "kl_loss": kl_loss,
-                           "rc_loss": rc_loss,
-                           "lengths": seq_lengths}
-                feed = {tx.global_mode(): tf.estimator.ModeKeys.EVAL,
-                        kl_weight: 1.0,
-                        learning_rate: opt_vars["learning_rate"]}
-                fetches_ = sess.run(fetches, feed_dict=feed)
-
-                batch_size = len(fetches_["lengths"])
-
-                num_sents += batch_size
-
-                num_words += sum(fetches_["lengths"])
-                nll_ += fetches_["nll"] * batch_size
-                kl_loss_ += fetches_["kl_loss"] * batch_size
-                rc_loss_ += fetches_["rc_loss"] * batch_size
-
-            except tf.errors.OutOfRangeError:
-                print('\nVAL: epoch %d, nll %.4f, KL %.4f, rc %.4f, ' \
+                print('\n%s: epoch %d, nll %.4f, KL %.4f, rc %.4f, ' \
                       'log_ppl %.4f, ppl %.4f\n' %
-                      (epoch, nll_ / num_sents, kl_loss_ / num_sents,
-                       rc_loss_ / num_sents, nll_ / num_words,
-                       np.exp(nll_ / num_words)))
+                      (mode_string, epoch, nll_ / num_sents,
+                       kl_loss_ / num_sents, rc_loss_ / num_sents,
+                       nll_ / num_words, np.exp(nll_ / num_words)))
                 break
 
         return nll_ / num_sents, np.exp(nll_ / num_words)
 
-    def _test_epochs(sess, epoch):
-        iterator.switch_to_test_data(sess)
-        num_words = num_sents = 0
-        nll_ = 0.
-        kl_loss_ = rc_loss_ = 0.
-        while True:
-            try:
-                fetches = {"nll": nll,
-                           "kl_loss": kl_loss,
-                           "rc_loss": rc_loss,
-                           "lengths": seq_lengths}
-                feed = {tx.global_mode(): tf.estimator.ModeKeys.EVAL,
-                        kl_weight: 1.0,
-                        learning_rate: opt_vars["learning_rate"]}
-                fetches_ = sess.run(fetches, feed_dict=feed)
-
-                batch_size = len(fetches_["lengths"])
-
-                num_sents += batch_size
-
-                num_words += sum(fetches_["lengths"])
-                nll_ += fetches_["nll"] * batch_size
-                kl_loss_ += fetches_["kl_loss"] * batch_size
-                rc_loss_ += fetches_["rc_loss"] * batch_size
-
-            except tf.errors.OutOfRangeError:
-                print('\nTEST: epoch %d, nll %.4f, KL %.4f, rc %.4f, ' \
-                      'log_ppl %.4f, ppl %.4f\n' %
-                      (epoch, nll_ / num_sents, kl_loss_ / num_sents,
-                       rc_loss_ / num_sents, nll_ / num_words,
-                       np.exp(nll_ / num_words)))
-                break
-
-        return nll_ / num_sents, np.exp(nll_ / num_words)
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -314,13 +303,12 @@ def _main(_):
 
         print("%d total parameters" % total_parameters)
 
-        step = 0
         best_nll = best_ppl = 0.
 
         for epoch in range(config.num_epochs):
-            _train_epochs(sess, epoch, step, display=200)
-            val_nll, val_ppl = _val_epochs(sess, epoch)
-            test_nll, test_ppl = _test_epochs(sess, epoch)
+            train_nll, train_ppl = _run_epoch(sess, epoch, 'train', display=200)
+            val_nll, val_ppl = _run_epoch(sess, epoch, 'valid')
+            test_nll, test_ppl = _run_epoch(sess, epoch, 'test')
 
             if val_nll < opt_vars['best_valid_nll']:
                 opt_vars['best_valid_nll'] = val_nll
