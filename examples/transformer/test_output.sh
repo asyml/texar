@@ -4,7 +4,7 @@ TF=$(pwd)
 
 export PATH=$PATH:$TF/../../tools/
 
-encoder=spm
+encoder=bpe
 if [ -z $1 ]; then
     src_language=en
 else
@@ -12,7 +12,7 @@ else
 fi
 
 if [ -z $2 ] ; then
-    src_language=vi
+    tgt_language=vi
 else
     tgt_language=$2
 fi
@@ -34,7 +34,8 @@ model_filename="my-model-highest_bleu.ckpt"
 beam_size=5
 alpha=0.6
 decodes_file=${model_filename}.test.beam${beam_size}alpha${alpha}.outputs.decodes
-model_dir="/space/shr/transformer_${encoder}/log_dir/${src_language}_${tgt_language}.bsize${batch_size}.epoch${max_epoch}.lr_c${lr_constant}warm${warmup_steps}/"
+#model_dir="/space/shr/transformer_${encoder}/log_dir/${src_language}_${tgt_language}.bsize${batch_size}.epoch${max_epoch}.lr_c${lr_constant}warm${warmup_steps}/"
+model_dir="./debug/"
 if [ "$3"x == "max"x ]; then
     model_dir=${model_dir}max/
 fi
