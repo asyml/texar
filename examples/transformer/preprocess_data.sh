@@ -4,6 +4,7 @@ TF=$(pwd)
 
 export PATH=$PATH:$TF/../../bin/
 encoder=spm
+
 if [ -z $1 ]; then
     src_language=en
 else

@@ -16,7 +16,6 @@ from tensorflow.python.framework import tensor_shape, dtypes
 from tensorflow.python.util import nest
 
 from texar.core import layers, attentions
-from texar import context
 from texar.module_base import ModuleBase
 from texar.modules.networks.networks import FeedForwardNetwork
 from texar.modules.embedders import embedder_utils
@@ -132,7 +131,8 @@ class TransformerDecoder(ModuleBase):
 
         return _impl
     #pylint:disable=arguments-differ
-    def _build(self, decoder_input, encoder_output, encoder_decoder_attention_bias):
+    def _build(self, decoder_input, encoder_output, \
+        encoder_decoder_attention_bias, mode=None):
         """
             this function is called on training generally.
             Args:
@@ -160,6 +160,7 @@ class TransformerDecoder(ModuleBase):
             decoder_self_attention_bias=decoder_self_attention_bias,
             encoder_decoder_attention_bias=encoder_decoder_attention_bias,
             cache=None,
+            mode=None,
         )
 
         logits = self.output_layer(self.decoder_output)
@@ -212,13 +213,14 @@ class TransformerDecoder(ModuleBase):
                               encoder_output,
                               decoder_self_attention_bias=None,
                               encoder_decoder_attention_bias=None,
-                              cache=None):
+                              cache=None,
+                              mode=None):
         """
             stacked multihead attention module.
         """
         inputs = tf.layers.dropout(inputs,
                                    rate=self._hparams.embedding_dropout,
-                                   training=context.global_mode_train())
+                                   training=utils.is_train_mode(mode))
         if cache is not None:
             encoder_decoder_attention_bias = \
                 cache['encoder_decoder_attention_bias']
@@ -244,7 +246,7 @@ class TransformerDecoder(ModuleBase):
                     x = x + tf.layers.dropout(
                         selfatt_output,
                         rate=self._hparams.residual_dropout,
-                        training=context.global_mode_train()
+                        training=utils.is_train_mode(mode),
                     )
                 if encoder_output is not None:
                     with tf.variable_scope('encdec_attention'):
@@ -259,7 +261,7 @@ class TransformerDecoder(ModuleBase):
                         )
                         x = x + tf.layers.dropout(encdec_output, \
                             rate=self._hparams.residual_dropout, \
-                            training=context.global_mode_train()
+                            training=utils.is_train_mode(mode),
                         )
                 poswise_network = FeedForwardNetwork( \
                     hparams=self._hparams['poswise_feedforward'])
@@ -267,7 +269,7 @@ class TransformerDecoder(ModuleBase):
                     sub_output = tf.layers.dropout(
                         poswise_network(layers.layer_normalize(x)),
                         rate=self._hparams.residual_dropout,
-                        training=context.global_mode_train()
+                        training=utils.is_train_mode(mode),
                     )
                     x = x + sub_output
 
