@@ -17,7 +17,8 @@ from texar.utils.shapes import mask_sequences
 
 __all__ = [
     "mask_and_reduce",
-    "reduce_batch_time"
+    "reduce_batch_time",
+    "reduce_dimensions"
 ]
 
 def mask_and_reduce(sequence,
@@ -132,3 +133,46 @@ def reduce_batch_time(sequence,
     if average_across_batch:
         sequence = sequence / tf.to_float(tf.shape(sequence_length)[0])
     return sequence
+
+
+def reduce_dimensions(tensor, average_axes=None, sum_axes=None, keepdims=None):
+    """Average or sum over the respective dimensions of :attr:`tensor`.
+
+    :attr:`average_axes` and :attr:`sum_axes` must be mutually exclusive. That
+    is, elements in :attr:`average_axes` must not be contained in
+    :attr:`sum_axes`, and vice versa.
+
+    Args:
+        tensor: A tensor to reduce.
+        average_axes (optional): A (list of) `int` that indicates the
+            dimensions to reduce by taking average.
+        sum_axes (optional): A (list of) `int` that indicates the
+            dimensions to reduce by taking sum.
+        keepdims (optional): If `True`, retains reduced dimensions with
+            length 1.
+    """
+    reduced_axes = []
+    if average_axes is not None and len(average_axes) > 0:
+        tensor = tf.reduce_mean(tensor, axis=average_axes, keepdims=True)
+
+        if not isinstance(average_axes, (list, tuple)):
+            average_axes = [average_axes]
+        reduced_axes += average_axes
+
+    if sum_axes is not None and len(sum_axes) > 0:
+        tensor = tf.reduce_sum(tensor, axis=sum_axes, keepdims=True)
+
+        if not isinstance(sum_axes, (list, tuple)):
+            sum_axes = [sum_axes]
+        reduced_axes += sum_axes
+
+        if average_axes is not None:
+            if len(reduced_axes) != len(average_axes) + len(sum_axes):
+                raise ValueError('`average_axes` and `sum_axes` must not have '
+                                 'overlapped elements.')
+
+    if not keepdims:
+        tensor = tf.squeeze(tensor, axis=reduced_axes)
+
+    return tensor
+

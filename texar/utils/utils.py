@@ -38,6 +38,7 @@ __all__ = [
     "get_instance_with_redundant_kwargs",
     "get_function",
     "call_function_with_redundant_kwargs",
+    "get_args",
     "get_default_arg_values",
     "get_instance_kwargs",
     "add_variable",
@@ -306,6 +307,17 @@ def call_function_with_redundant_kwargs(fn, kwargs):
 
     return fn(**selected_kwargs)
 
+def get_args(fn):
+    """Gets the arguments of a function.
+
+    Args:
+        fn (callable): The function to inspect.
+
+    Returns:
+        list: A list of argument names (str) of the function.
+    """
+    argspec = inspect.getargspec(fn)
+    return argspec.args
 
 def get_default_arg_values(fn):
     """Gets the arguments and respective default values of a function.
@@ -313,7 +325,7 @@ def get_default_arg_values(fn):
     Only arguments with default values are included in the output dictionary.
 
     Args:
-        fn (function): The function to inspect.
+        fn (callable): The function to inspect.
 
     Returns:
         dict: A dictionary that maps argument names (str) to their default

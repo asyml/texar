@@ -65,7 +65,7 @@ clas = {
     "filters": 100,
     "kernel_size": [3, 4, 5],
     "conv_activation": "relu",
-    "pooling": "MaxReducePooling1D",
+    "pooling": "MaxPooling1D",
     "num_dense_layers": 0,
     "dropout_conv": [1],
     "dropout_rate": 0.5,

@@ -4,7 +4,7 @@ This example builds an LSTM language model, and trains on PTB data. Model and tr
 [(Zaremba, et. al.) Recurrent Neural Network Regularization](https://arxiv.org/pdf/1409.2329.pdf). This is a reimpmentation of the TensorFlow official PTB example in [tensorflow/models/rnn/ptb](https://github.com/tensorflow/models/tree/master/tutorials/rnn/ptb).
 
 The example shows:
-  * Contruction of simple model, involving the Embedder and RNN Decoder.
+  * Contruction of simple model, involving the `Embedder` and `RNN Decoder`.
   * Use of Texar with external Python data pipeline ([ptb_reader.py](./ptb_reader.py)).
   * Specification of various features of train op, like *gradient clipping* and *lr decay*.
 

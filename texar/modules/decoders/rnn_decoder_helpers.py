@@ -183,10 +183,15 @@ class SoftmaxEmbeddingHelper(TFHelper):
         """Initializer.
 
         Args:
-          embedding: An embedding argument for embedding_lookup.
-          start_tokens: 'int32' vector shaped [batch_size], the start tokens.
-          tau: softmax anneal temperature.
-          stop_gradient: stop the gradient when feeding to the next step.
+            embedding: An embedding argument (:attr:`params`) for
+                :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`. Note
+                that a callable is not acceptable here.
+            start_tokens: An `int32` vector tensor  shaped `[batch_size]`. The
+                start tokens.
+            end_token: An `int32` scalar tensor. The token that marks end of
+                decoding.
+            tau: softmax anneal temperature.
+            stop_gradient: stop the gradient when feeding to the next step.
         """
 
         if callable(embedding):
@@ -237,6 +242,7 @@ class SoftmaxEmbeddingHelper(TFHelper):
         next_inputs = tf.matmul(sample_ids, self._embedding)
         return (finished, next_inputs, state)
 
+
 class GumbelSoftmaxEmbeddingHelper(SoftmaxEmbeddingHelper):
     """A helper that use Gumbel Softmax sampling.
 
@@ -249,14 +255,17 @@ class GumbelSoftmaxEmbeddingHelper(SoftmaxEmbeddingHelper):
         """Initializer.
 
         Args:
-          embedding: A callabel that takes a vector tensors of 'ids' or the
-            params argument for embedding_lookup.
-          start_tokens: 'int32' vector shaped [batch_size], the start tokens.
-          tau: anneal temperature for sampling.
-          straight_through: whether to use straight_through estimator.
-          stop_gradient: stop the gradients when feeding to the next step.
+            embedding: An embedding argument (:attr:`params`) for
+                :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`. Note
+                that a callable is not acceptable here.
+            start_tokens: An `int32` vector tensor shaped `[batch_size]`. The
+                start tokens.
+            end_token: An `int32` scalar tensor. The token that marks end of
+                decoding.
+            tau: anneal temperature for sampling.
+            straight_through: whether to use the straight through estimator.
+            stop_gradient: stop gradients when feeding to the next step.
         """
-
         super(GumbelSoftmaxEmbeddingHelper, self).__init__(
             embedding, start_tokens, end_token, tau, stop_gradient, use_finish)
         self._straight_through = straight_through

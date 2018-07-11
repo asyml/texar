@@ -11,8 +11,9 @@ import tensorflow as tf
 
 from texar.modules.networks.network_base import FeedForwardNetworkBase
 from texar.modules.networks.network_base import _build_layers
-from texar.core.layers import get_pooling_layer_hparams
+from texar.core.layers import get_pooling_layer_hparams, get_activation_fn
 from texar.utils.utils import uniquify_str
+from texar.utils.shapes import mask_sequences
 from texar.hyperparams import HParams
 
 # pylint: disable=not-context-manager, too-many-arguments, too-many-locals
@@ -64,6 +65,7 @@ class Conv1DNetwork(FeedForwardNetworkBase):
             "filters": 128,
             "kernel_size": [3, 4, 5],
             "conv_activation": "relu",
+            "conv_activation_kwargs": None,
             "other_conv_kwargs": None,
             # Pooling layers
             "pooling": "MaxPooling1D",
@@ -74,7 +76,9 @@ class Conv1DNetwork(FeedForwardNetworkBase):
             "num_dense_layers": 1,
             "dense_size": 128,
             "dense_activation": "identity",
+            "dense_activation_kwargs": None,
             "final_dense_activation": None,
+            "final_dense_activation_kwargs": None,
             "other_dense_kwargs": None,
             # Dropout
             "dropout_conv": [1],
@@ -141,6 +145,9 @@ class Conv1DNetwork(FeedForwardNetworkBase):
             raise ValueError("hparams['other_conv_kwargs'] must be a dict.")
 
         conv_pool_hparams = []
+        activation_fn = get_activation_fn(
+            self._hparams.conv_activation,
+            self._hparams.conv_activation_kwargs)
         for i in range(nconv):
             hparams_i = []
             names = []
@@ -150,7 +157,7 @@ class Conv1DNetwork(FeedForwardNetworkBase):
                 conv_kwargs_ij = {
                     "filters": filters[i],
                     "kernel_size": ks_ij,
-                    "activation": self._hparams.conv_activation,
+                    "activation": activation_fn,
                     "name": name
                 }
                 conv_kwargs_ij.update(other_kwargs)
@@ -182,13 +189,17 @@ class Conv1DNetwork(FeedForwardNetworkBase):
             raise ValueError("hparams['other_dense_kwargs'] must be a dict.")
 
         dense_hparams = []
+        activation_fn = get_activation_fn(
+            self._hparams.dense_activation,
+            self._hparams.dense_activation_kwargs)
         for i in range(ndense):
-            activation = self._hparams.dense_activation
             if i == ndense - 1:
-                activation = self._hparams.final_dense_activation
+                activation_fn = get_activation_fn(
+                    self._hparams.final_dense_activation,
+                    self._hparams.final_dense_activation_kwargs)
 
             kwargs_i = {"units": dense_size[i],
-                        "activation": activation,
+                        "activation": activation_fn,
                         "name": "dense_%d" % (i+1)}
             kwargs_i.update(other_kwargs)
 
@@ -232,4 +243,15 @@ class Conv1DNetwork(FeedForwardNetworkBase):
 
         return layers_hparams
 
+    def _build(self,    # pylint: disable=arguments-differ
+               inputs,
+               sequence_length=None,
+               dtype=None,
+               time_major=False,
+               mode=None):
+        if sequence_length is not None:
+            inputs = mask_sequences(
+                inputs, sequence_length, dtype=dtype, time_major=time_major,
+                tensor_rank=3)
+        return super(Conv1DNetwork, self)._build(inputs, mode=mode)
 

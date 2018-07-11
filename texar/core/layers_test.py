@@ -115,6 +115,37 @@ class GetRNNCellTest(tf.test.TestCase):
             self.assertEqual(output_test.shape[0], batch_size)
 
 
+class GetActivationFnTest(tf.test.TestCase):
+    """Tests :func:`texar.core.layers.get_activation_fn`.
+    """
+    def test_get_activation_fn(self):
+        """Tests.
+        """
+        fn = layers.get_activation_fn()
+        self.assertEqual(fn, tf.identity)
+
+        fn = layers.get_activation_fn('relu')
+        self.assertEqual(fn, tf.nn.relu)
+
+        inputs = tf.random_uniform([64, 100], -5, 20, dtype=tf.int32)
+
+        fn = layers.get_activation_fn('leaky_relu')
+        fn_output = fn(inputs)
+        ref_output = tf.nn.leaky_relu(inputs)
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            fn_output_, ref_output_ = sess.run([fn_output, ref_output])
+            np.testing.assert_array_equal(fn_output_, ref_output_)
+
+        fn = layers.get_activation_fn('leaky_relu', kwargs={'alpha': 0.1})
+        fn_output = fn(inputs)
+        ref_output = tf.nn.leaky_relu(inputs, alpha=0.1)
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            fn_output_, ref_output_ = sess.run([fn_output, ref_output])
+            np.testing.assert_array_equal(fn_output_, ref_output_)
+
+
 class GetLayerTest(tf.test.TestCase):
     """Tests layer creator.
     """

@@ -112,6 +112,15 @@ class Conv1DNetworkTest(tf.test.TestCase):
         outputs_2 = network_2(inputs_2)
         self.assertEqual(outputs_2.shape, [64, 10])
 
+    def test_mask_input(self):
+        """Tests masked inputs.
+        """
+        network_1 = Conv1DNetwork()
+        inputs_1 = tf.ones([3, 16, 300], tf.float32)
+        seq_length = [10, 15, 1]
+        outputs_1 = network_1(inputs_1, sequence_length=seq_length)
+        self.assertEqual(outputs_1.shape, [3, 128])
+
 
 if __name__ == "__main__":
     tf.test.main()

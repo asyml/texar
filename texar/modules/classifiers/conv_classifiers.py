@@ -62,14 +62,29 @@ class Conv1DClassifier(ClassifierBase):
         hparams.update({
             "name": "conv1d_classifier",
             "num_classes": 2, #set to <=0 to avoid appending output layer
-            "logit_layer_kwargs": None
+            "logit_layer_kwargs": {"use_bias": False}
         })
         return hparams
 
-    def _build(self, inputs, mode=None): # pylint: disable=arguments-differ
-        logits = self._encoder(inputs, mode)
-        pred = tf.argmax(logits, 1, name="pred")
+    def _build(self,    # pylint: disable=arguments-differ
+               inputs,
+               sequence_length=None,
+               dtype=None,
+               time_major=False,
+               mode=None):
+        logits = self._encoder(inputs, sequence_length, dtype, time_major, mode)
+
+        num_classes = self._hparams.num_classes
+        is_binary = num_classes == 1
+        is_binary = is_binary or (num_classes <= 0 and logits.shape[1] == 1)
+
+        if is_binary:
+            pred = tf.reshape(tf.less(logits, 0), [-1])
+        else:
+            pred = tf.argmax(logits, 1)
+
         self._built = True
+
         return logits, pred
 
     @property

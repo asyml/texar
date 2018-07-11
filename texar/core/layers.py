@@ -337,8 +337,15 @@ def get_initializer(hparams=None):
         initializer = hparams["type"]
     return initializer
 
-def get_activation_fn(fn_name="identity"):
-    """Returns an activation function based on its name or full path.
+def get_activation_fn(fn_name="identity", kwargs=None):
+    """Returns an activation function `fn` with the signature
+    `output = fn(input)`.
+
+    If the function specified by :attr:`fn_name` has more than one arguments
+    without default values, then all these arguments except the input feature
+    argument must be specified in :attr:`kwargs`. Arguments with default values
+    can also be specified in :attr:`kwargs` to take values other than the
+    defaults.
 
     Args:
         fn_name (str or callable): The name or full path to an activation
@@ -354,6 +361,9 @@ def get_activation_fn(fn_name="identity"):
 
             If a callable is provided, then it is returned directly.
 
+        kwargs (optional): A `dict` or instance of :class:`~texar.HParams`
+            containing the keyword arguments of the activation function.
+
     Returns:
         The activation function. `None` if :attr:`fn_name` is `None`.
     """
@@ -361,7 +371,17 @@ def get_activation_fn(fn_name="identity"):
         return None
 
     fn_modules = ['tensorflow', 'tensorflow.nn', 'texar.custom']
-    activation_fn = utils.get_function(fn_name, fn_modules)
+    activation_fn_ = utils.get_function(fn_name, fn_modules)
+    activation_fn = activation_fn_
+
+    # Make a partial function if necessary
+    if kwargs is not None:
+        if isinstance(kwargs, HParams):
+            kwargs = kwargs.todict()
+        def _partial_fn(features):
+            return activation_fn_(features, **kwargs)
+        activation_fn = _partial_fn
+
     return activation_fn
 
 
