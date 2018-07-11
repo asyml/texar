@@ -29,10 +29,10 @@ def load_hyperparams():
     """
     For devendra data loader
     """
-    argparser.add_argument('--input', type=str, default='temp/run_en_vi_bpe/data')
+    argparser.add_argument('--input', type=str, default='temp/run_en_nl_bpe/data')
     argparser.add_argument('--data', type=str, default='processed')
     argparser.add_argument('--wbatchsize', type=int, default=3000)
-    argparser.add_argument('--epoch', type=int, default=15)
+    argparser.add_argument('--epoch', type=int, default=40)
     argparser.add_argument('--start_epoch', type=int, default=0)
     #argparser.add_argument('--max_train_size', type=int, default=60)
     #argparser.add_argument('--max_eval_size', type=int, default=30)
@@ -115,7 +115,7 @@ def load_hyperparams():
         args.src_language, args.tgt_language, args.batch_size, \
         args.max_train_epoch, args.lr_constant, args.warmup_steps)
     #args.log_dir = os.path.join(args.log_disk_dir, log_params_dir)
-    args.log_dir = './debug/'
+    args.log_dir = './debug/run_en_nl_bpe/'
     batching_scheme = _batching_scheme(
         args.batch_size,
         args.max_seq_length,

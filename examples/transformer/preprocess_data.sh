@@ -12,7 +12,7 @@ else
 fi
 
 if  [ -z $2 ]; then
-    tgt_language=vi
+    tgt_language=nl
 else
     tgt_language=$2
 fi

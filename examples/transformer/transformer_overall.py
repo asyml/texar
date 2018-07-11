@@ -133,11 +133,6 @@ if __name__ == "__main__":
     config = tf.ConfigProto(
         allow_soft_placement=True)
     config.gpu_options.allow_growth = True
-    src_data, tgt_data = list(zip(*train_data))
-    total_src_words = len(list(itertools.chain.from_iterable(src_data)))
-    total_tgt_words = len(list(itertools.chain.from_iterable(tgt_data)))
-    iter_per_epoch = (total_src_words + total_tgt_words) // (2 * args.wbatchsize)
-    print('Approximate number of iter/epoch =', iter_per_epoch)
     best_score = 0
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -149,8 +144,6 @@ if __name__ == "__main__":
                 outfile.write('var:{} shape:{} dtype:{}\n'.format(\
                     var.name, var.shape, var.dtype))
         writer = tf.summary.FileWriter(args.log_dir, graph=sess.graph)
-        eval_writer = tf.summary.FileWriter(os.path.join(args.log_dir, \
-            'eval/'), graph=sess.graph)
         if args.mode == 'train_and_evaluate':
             for epoch in range(args.start_epoch, args.epoch):
                 random.shuffle(train_data)
@@ -160,13 +153,9 @@ if __name__ == "__main__":
                                                 batch_size_fn=batch_size_fn,
                                                 random_shuffler=
                                                 data.iterator.RandomShuffler())
-                report_stats = utils.Statistics()
-                train_stats = utils.Statistics()
                 for num_steps, train_batch in enumerate(train_iter):
                     src_iter = list(zip(*train_batch))[0]
                     src_words = len(list(itertools.chain.from_iterable(src_iter)))
-                    report_stats.n_src_words += src_words
-                    train_stats.n_src_words += src_words
                     in_arrays = utils.seq2seq_pad_concat_convert(train_batch, -1)
                     _feed_dict = {
                         encoder_input: in_arrays[0],
