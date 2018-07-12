@@ -7,14 +7,17 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import math
+
 import tensorflow as tf
 
 from texar.modules.embedders.embedder_base import EmbedderBase
 from texar.modules.embedders import embedder_utils
 from texar.utils import utils
-from texar.utils.shapes import get_batch_size, mask_sequences
+from texar.utils.shapes import mask_sequences
 
-import math
+# pylint: disable=arguments-differ, invalid-name
+
 __all__ = [
     "PositionEmbedder",
     "SinusoidsPositionEmbedder",
@@ -105,12 +108,17 @@ class PositionEmbedder(EmbedderBase):
     def _build(self, positions=None, sequence_length=None, mode=None, **kwargs):
         """Embeds with look-up.
 
-        Either :attr:`position` or :attr:`sequence_length` is required. If both
-        are given, :attr:`sequence_length` is ignored.
+        Either :attr:`position` or :attr:`sequence_length` is required:
+
+            - If both are given, :attr:`sequence_length` is used to mask out \
+            embeddings of those time steps beyond the respective sequence \
+            lengths.
+            - If only :attr:`sequence_length` is given, then positions \
+            from 0 to sequence length - 1 are embedded.
 
         Args:
             positions (optional): An integer tensor containing the position
-                ids to be looked up.
+                ids to embed.
             sequence_length (optional): An integer tensor of shape
                 `[batch_size]`. Time steps beyond
                 the respective sequence lengths will have zero-valued
@@ -133,30 +141,36 @@ class PositionEmbedder(EmbedderBase):
                     'Either `positions` or `sequence_length` is required.')
             max_length = tf.reduce_max(sequence_length)
             single_inputs = tf.range(start=0, limit=max_length, dtype=tf.int32)
-            inputs = tf.tile(tf.expand_dims(single_inputs, 0),
-                             [get_batch_size(sequence_length), 1])
+            # Expands `single_inputs` to have shape [batch_size, max_length]
+            expander = tf.expand_dims(tf.ones_like(sequence_length), -1)
+            inputs = expander * tf.expand_dims(single_inputs, 0)
+
+        st = self._hparams.dropout_strategy
+        if positions is None and st == 'item':
+            # If `inputs` is based on `sequence_length`, then dropout
+            # strategies 'item' and 'item_type' have the same effect, we
+            # use 'item_type' to avoid unknown noise_shape in the 'item'
+            # strategy
+            st = 'item_type'
+        dropout_layer = self._get_dropout_layer(self._hparams, inputs, st)
 
         embedding = self._embedding
-        dropout_layer = self._get_dropout_layer(self._hparams, inputs)
         if dropout_layer:
-            #TODO(haoran): June 5th, how to check the training mode?
-            #My current code cannot run because training mode placeholder,
-            #Has it been changed?
-            #ValueError: Tensor Tensor("encoder_2/global_mode:0", shape=(), dtype=string) may not be fed.
             is_training = utils.is_train_mode(mode)
-            if self._hparams.dropout_strategy == 'item_type':
+            if st == 'item_type':
                 embedding = dropout_layer.apply(
                     inputs=embedding, training=is_training)
 
         outputs = tf.nn.embedding_lookup(embedding, inputs, **kwargs)
 
-        if dropout_layer and self._hparams.dropout_strategy != 'item_type':
+        if dropout_layer and st != 'item_type':
             outputs = dropout_layer.apply(
                 inputs=outputs, training=is_training)
 
-        if positions is None:
+        if sequence_length is not None:
             outputs = mask_sequences(
-                outputs, sequence_length, tensor_rank=2+self._dim_rank)
+                outputs, sequence_length,
+                tensor_rank=len(inputs.shape.dims) + self._dim_rank)
 
         return outputs
 

@@ -141,5 +141,29 @@ class EmbedderTest(tf.test.TestCase):
         self._test_word_embedder(hparams)
         self._test_position_embedder(hparams)
 
+    def test_embedder_multi_calls(self):
+        """Tests embedders called by multiple times.
+        """
+        hparams = {"dim": 1024, "dropout_rate": 0.3,
+                   "dropout_strategy": "item"}
+        embedder = WordEmbedder(
+            vocab_size=100, hparams=hparams)
+        inputs = tf.ones([64, 16], dtype=tf.int32)
+        outputs = embedder(inputs)
+
+        emb_dim = embedder.dim
+        if not isinstance(emb_dim, (list, tuple)):
+            emb_dim = [emb_dim]
+        self.assertEqual(outputs.shape, [64, 16] + emb_dim)
+
+        # Call with inputs in a different shape
+        inputs = tf.ones([64, 10, 20], dtype=tf.int32)
+        outputs = embedder(inputs)
+
+        emb_dim = embedder.dim
+        if not isinstance(emb_dim, (list, tuple)):
+            emb_dim = [emb_dim]
+        self.assertEqual(outputs.shape, [64, 10, 20] + emb_dim)
+
 if __name__ == "__main__":
     tf.test.main()

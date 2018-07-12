@@ -14,6 +14,7 @@ from texar.core import layers
 __all__ = [
     "default_embedding_hparams",
     "get_embedding",
+    "soft_embedding_lookup"
 ]
 
 def default_embedding_hparams():
@@ -36,7 +37,7 @@ def default_embedding_hparams():
                         "l2": 0.
                     }
                 },
-                "dropout_rate": 0,
+                "dropout_rate": 0.,
                 "dropout_strategy": 'element',
                 "trainable": True,
             }
@@ -147,7 +148,7 @@ def default_embedding_hparams():
         "dim": 100,
         "initializer": None,
         "regularizer": layers.default_regularizer_hparams(),
-        "dropout_rate": 0,
+        "dropout_rate": 0.,
         "dropout_strategy": 'element',
         "trainable": True,
         "@no_typecheck": ["dim"]
@@ -203,3 +204,29 @@ def get_embedding(hparams=None,
                                         trainable=hparams["trainable"])
 
         return embedding
+
+def soft_embedding_lookup(embedding, soft_ids):
+    """Transforms soft ids (e.g., probability distribution over ids) into
+    embeddings, by mixing the embedding vectors with the soft weights.
+
+    Args:
+        embedding: A Tensor of shape `[num_classes] + embedding-dim` containing
+            the embedding vectors. Embedding can have dimensionality > 1, i.e.,
+            :attr:`embedding` can be of shape
+            `[num_classes, emb_dim_1, emb_dim_2, ...]`
+        soft_ids: A Tensor of weights (probabilities) used to mix the
+            embedding vectors.
+
+    Returns:
+        A Tensor of shape `shape(soft_ids)[:-1] + shape(embedding)[1:]`. For
+        example, if `shape(soft_ids) = [batch_size, max_time, vocab_size]`
+        and `shape(embedding) = [vocab_size, emb_dim]`, then the return tensor
+        has shape `[batch_size, max_time, emb_dim]`.
+
+    Example::
+
+        decoder_outputs, ... = decoder(...)
+        soft_seq_emb = soft_embedding_lookup(
+            embedding, tf.nn.softmax(decoder_outputs.logits))
+    """
+    return tf.tensordot(soft_ids, embedding, [-1, 0])

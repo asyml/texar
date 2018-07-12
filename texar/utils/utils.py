@@ -55,7 +55,6 @@ __all__ = [
     "patch_dict",
     "fetch_subdict",
     "uniquify_str",
-    "soft_sequence_embedding",
     "straight_through",
     "ceildiv",
 ]
@@ -594,26 +593,6 @@ def uniquify_str(str_, str_set):
             if unique_str not in str_set:
                 return unique_str
     raise ValueError("Fails to uniquify string: " + str_)
-
-def soft_sequence_embedding(embedding, soft_sequence):
-    """Mixes sequences of soft vectors with a embedding tensor.
-
-    Args:
-        embedding: A Tensor of shape `[num_classes, emb_dim]` containing
-            the embedding vectors.
-        soft_sequence: A Tensor of shape `[batch_size, max_time, num_classes]`
-            containing the weights (probabilities) of embedding vectors.
-
-    Returns:
-        A Tensor of shape `[batch_size, max_time, emb_dim]`
-
-    Example::
-
-        decoder_outputs, ... = decoder(...)
-        soft_seq_emb = soft_sequence_embedding(
-            tf.nn.softmax(decoder_outputs.logits), embedding)
-    """
-    return tf.tensordot(soft_sequence, embedding, [2, 0])
 
 def straight_through(fw_tensor, bw_tensor):
     """Use a tensor in forward pass while backpropagating gradient to another.
