@@ -34,7 +34,7 @@ The model will train the whole training set once, and evaluate on the validation
 The following command trains a raml model. Before using it you need a augmented file in the specified format, and we have provided in the data packet:
 
 ```
-python raml.py --raml_file=data/giga/samples_rouge.txt --n_samples=5
+python raml.py --task=ts --raml_file=data/giga/samples_rouge.txt --n_samples=5
 ```
 
 Here:
