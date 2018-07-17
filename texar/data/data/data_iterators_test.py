@@ -9,7 +9,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-# pylint: disable=no-member
+# pylint: disable=no-member, invalid-name
 
 import tempfile
 import numpy as np
@@ -20,8 +20,7 @@ import texar as tx
 
 
 class DataIteratorTest(tf.test.TestCase):
-    """Tests :class:`texar.data.DataIterator` and
-    :class:`texar.data.TrainTestDataIterator`.
+    """Tests data iterators.
     """
 
     def setUp(self):
@@ -143,7 +142,6 @@ class DataIteratorTest(tf.test.TestCase):
                         self.assertEqual(i, 2001)
                         break
 
-
     def test_train_test_data_iterator(self):
         """Tests :class:`texar.data.TrainTestDataIterator`
         """
@@ -177,6 +175,100 @@ class DataIteratorTest(tf.test.TestCase):
                 while True:
                     try:
                         data_batch_ = sess.run(data_batch)
+                        self.assertEqual(data_batch_['text'][0][0], str(i))
+                        i += 1
+                    except tf.errors.OutOfRangeError:
+                        print('Test data limit reached')
+                        self.assertEqual(i, 2001)
+                        break
+
+    def test_feedable_iterator_multi_datasets(self):
+        """Tests iterating over multiple datasets with the
+        :class:`FeedableDataIterator`.
+        """
+        train_data = tx.data.MonoTextData(self._train_hparams)
+        test_data = tx.data.MonoTextData(self._test_hparams)
+
+        iterator = tx.data.FeedableDataIterator([train_data, test_data])
+        data_batch = iterator.get_next()
+
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            sess.run(tf.local_variables_initializer())
+            sess.run(tf.tables_initializer())
+
+            iterator.initialize_dataset(sess)
+
+            for _ in range(2):
+                # Iterates over train data
+                iterator.restart_dataset(sess, train_data.name)
+                data_handle = iterator.get_handle(sess, train_data.name)
+                i = 0
+                while True:
+                    try:
+                        feed_dict = {iterator.handle: data_handle}
+                        data_batch_ = sess.run(data_batch, feed_dict=feed_dict)
+                        self.assertEqual(data_batch_['text'][0][0], str(i+1))
+                        i = (i+1) % 1000
+                    except tf.errors.OutOfRangeError:
+                        print('Train data limit reached')
+                        self.assertEqual(i, 0)
+                        break
+
+                # Iterates over test data
+                iterator.restart_dataset(sess, test_data.name)
+                data_handle = iterator.get_handle(sess, test_data.name)
+                i = 1001
+                while True:
+                    try:
+                        feed_dict = {iterator.handle: data_handle}
+                        data_batch_ = sess.run(data_batch, feed_dict=feed_dict)
+                        self.assertEqual(data_batch_['text'][0][0], str(i))
+                        i += 1
+                    except tf.errors.OutOfRangeError:
+                        print('Test data limit reached')
+                        self.assertEqual(i, 2001)
+                        break
+
+    def test_train_test_feedable_data_iterator(self):
+        """Tests :class:`texar.data.TrainTestFeedableDataIterator`
+        """
+        train_data = tx.data.MonoTextData(self._train_hparams)
+        test_data = tx.data.MonoTextData(self._test_hparams)
+
+        iterator = tx.data.TrainTestFeedableDataIterator(train=train_data,
+                                                         test=test_data)
+        data_batch = iterator.get_next()
+
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            sess.run(tf.local_variables_initializer())
+            sess.run(tf.tables_initializer())
+
+            for _ in range(2):
+                iterator.restart_train_dataset(sess)
+                i = 0
+                while True:
+                    try:
+                        feed_dict = {
+                            iterator.handle: iterator.get_train_handle(sess)
+                        }
+                        data_batch_ = sess.run(data_batch, feed_dict=feed_dict)
+                        self.assertEqual(data_batch_['text'][0][0], str(i+1))
+                        i = (i+1) % 1000
+                    except tf.errors.OutOfRangeError:
+                        print('Train data limit reached')
+                        self.assertEqual(i, 0)
+                        break
+
+                iterator.restart_test_dataset(sess)
+                i = 1001
+                while True:
+                    try:
+                        feed_dict = {
+                            iterator.handle: iterator.get_test_handle(sess)
+                        }
+                        data_batch_ = sess.run(data_batch, feed_dict=feed_dict)
                         self.assertEqual(data_batch_['text'][0][0], str(i))
                         i += 1
                     except tf.errors.OutOfRangeError:

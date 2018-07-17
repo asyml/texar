@@ -7,7 +7,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
-# pylint: disable=no-name-in-module, protected-access, no-member
+# pylint: disable=no-name-in-module, protected-access, no-member, invalid-name
 
 import numpy as np
 
@@ -263,3 +263,28 @@ def flatten(tensor, preserve_dims, flattened_dim=None):
                       axis=0)
     tensor_ = tf.reshape(tensor, shape)
     return tensor_
+
+def shape_list(x):
+    """Returns the tensor shape.
+
+    Returns static shape when possible.
+
+    Returns:
+
+        - If the rank of :attr:`x` is unknown, returns the dynamic shape: \
+        `tf.shape(x)`
+        - Otherwise, returns a list of dims, each of which is either an `int` \
+        whenever it can be statically determined, or a scalar Tensor.
+    """
+    x = tf.convert_to_tensor(x)
+    # If unknown rank, return dynamic shape
+    if x.get_shape().dims is None:
+        return tf.shape(x)
+    static = x.get_shape().as_list()
+    shape = tf.shape(x)
+    ret = []
+    for i, dim in enumerate(static):
+        if dim is None:
+            dim = shape[i]
+        ret.append(dim)
+    return ret

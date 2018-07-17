@@ -7,6 +7,7 @@ from __future__ import print_function
 from __future__ import division
 
 import copy
+import numpy as np
 
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
@@ -14,7 +15,7 @@ from texar import context
 from texar.hyperparams import HParams
 from texar.utils import utils
 from texar.utils.dtypes import is_str
-import numpy as np
+from texar.utils.variables import add_variable
 
 # pylint: disable=not-context-manager, redefined-variable-type, invalid-name
 # pylint: disable=too-many-branches, too-many-arguments, too-many-lines
@@ -729,12 +730,12 @@ class MergeLayer(tf.layers.Layer):
             pass
         for layer in self._layers:
             if self.trainable:
-                utils.add_variable(
+                add_variable(
                     layer._trainable_weights, self._trainable_weights)
             else:
-                utils.add_variable(
+                add_variable(
                     layer._trainable_weights, self._non_trainable_weights)
-            utils.add_variable(
+            add_variable(
                 layer._non_trainable_weights, self._non_trainable_weights)
 
     def call(self, inputs):
@@ -842,12 +843,12 @@ class SequentialLayer(tf.layers.Layer):
         """
         for layer in self._layers:
             if self.trainable:
-                utils.add_variable(
+                add_variable(
                     layer._trainable_weights, self._trainable_weights)
             else:
-                utils.add_variable(
+                add_variable(
                     layer._trainable_weights, self._non_trainable_weights)
-            utils.add_variable(
+            add_variable(
                 layer._non_trainable_weights, self._non_trainable_weights)
 
     def call(self, inputs, mode=None): # pylint: disable=arguments-differ

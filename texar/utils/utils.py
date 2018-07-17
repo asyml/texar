@@ -41,8 +41,6 @@ __all__ = [
     "get_args",
     "get_default_arg_values",
     "get_instance_kwargs",
-    "add_variable",
-    "get_unique_named_variable_scope",
     "maybe_gloabl_mode",
     "is_train_mode",
     "is_eval_mode",
@@ -362,32 +360,6 @@ def get_instance_kwargs(kwargs, hparams):
     kwargs_.update(kwargs or {})
     return kwargs_
 
-def add_variable(variable, var_list):
-    """Adds variable to a given list.
-
-    Args:
-        variable: A (list of) variable(s).
-        var_list (list): The list where the :attr:`variable` are added.
-    """
-    if isinstance(variable, (list, tuple)):
-        for var in variable:
-            add_variable(var, var_list)
-    else:
-        if variable not in var_list:
-            var_list.append(variable)
-
-def get_unique_named_variable_scope(base_name):
-    """Returns a variable scope with a unique name.
-
-    Args:
-        base_name (str): The base name to uniquified.
-
-    Returns:
-        An instance of :tf_main:`variable_scope <variable_scope>`.
-    """
-    with tf.variable_scope(None, default_name=base_name) as vs:
-        return vs
-
 
 def maybe_gloabl_mode(mode):
     """Returns :func:`texar.contex.global_mode` if :attr:`mode` is `None`,
@@ -622,19 +594,3 @@ def ceildiv(a, b):
     """
     return -(-a // b)
 
-#TODO(haoran):is it appropriate to put shape_list function here?
-def shape_list(x):
-    """Return list of dims, statically where possible."""
-    x = tf.convert_to_tensor(x)
-    # If unknown rank, return dynamic shape
-    if x.get_shape().dims is None:
-        return tf.shape(x)
-    static = x.get_shape().as_list()
-    shape = tf.shape(x)
-    ret = []
-    for i in range(len(static)):
-        dim = static[i]
-        if dim is None:
-            dim = shape[i]
-        ret.append(dim)
-    return ret

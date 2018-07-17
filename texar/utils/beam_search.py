@@ -19,15 +19,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-# Dependency imports
-
 import tensorflow as tf
 
 from tensorflow.python.util import nest
-from texar.utils import utils
+from texar.utils.shapes import shape_list
+
 # Default value for INF
 INF = 1. * 1e7
-
 
 def _merge_beam_dim(tensor):
     """Reshapes first two dimensions in to single dimension.
@@ -38,7 +36,7 @@ def _merge_beam_dim(tensor):
     Returns:
         Reshaped tensor of shape [A*B, ...]
     """
-    shape = utils.shape_list(tensor)
+    shape = shape_list(tensor)
     shape[0] *= shape[1]    # batch -> batch * beam_size
     shape.pop(1)    # Remove beam dim
     return tf.reshape(tensor, shape)
@@ -55,7 +53,7 @@ def _unmerge_beam_dim(tensor, batch_size, beam_size):
     Returns:
         Reshaped tensor of shape [batch_size, beam_size, ...]
     """
-    shape = utils.shape_list(tensor)
+    shape = shape_list(tensor)
     new_shape = [batch_size] + [beam_size] + shape[1:]
     return tf.reshape(tensor, new_shape)
 
@@ -227,7 +225,7 @@ def beam_search(symbols_to_logits_fn,
         (decoded beams [batch_size, beam_size, decode_length]
          decoding probablities [batch_size, beam_size])
     """
-    batch_size = utils.shape_list(initial_ids)[0]
+    batch_size = shape_list(initial_ids)[0]
 
     # Assume initial_ids are prob 1.0
     initial_log_probs = tf.constant([[0.] + [-float("inf")] * (beam_size - 1)])
@@ -246,7 +244,7 @@ def beam_search(symbols_to_logits_fn,
     # Finished will keep track of all the sequences that have finished so far
     # Finished log probs will be negative infinity in the beginning
     # finished_flags will keep track of booleans
-    finished_seq = tf.zeros(utils.shape_list(alive_seq), tf.int32)
+    finished_seq = tf.zeros(shape_list(alive_seq), tf.int32)
     # Setting the scores of the initial to negative infinity.
     finished_scores = tf.ones([batch_size, beam_size]) * -INF
     finished_flags = tf.zeros([batch_size, beam_size], tf.bool)

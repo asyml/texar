@@ -7,7 +7,7 @@ from __future__ import division
 from __future__ import print_function
 
 from texar.hyperparams import HParams
-from texar.utils import utils
+from texar.utils.variables import get_unique_named_variable_scope
 
 # pylint: disable=too-many-instance-attributes
 
@@ -26,7 +26,7 @@ class AgentBase(object):
         self._hparams = HParams(hparams, self.default_hparams())
 
         name = self._hparams.name
-        self._variable_scope = utils.get_unique_named_variable_scope(name)
+        self._variable_scope = get_unique_named_variable_scope(name)
         self._unique_name = self._variable_scope.name.split("/")[-1]
 
     @staticmethod
