@@ -16,7 +16,7 @@ from tensorflow.contrib.framework import nest
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.networks.conv_networks import _to_list
 from texar.core import layers
-from texar.utils import utils
+from texar.utils.mode import is_train_mode
 from texar.utils.shapes import mask_sequences
 from texar.hyperparams import HParams
 
@@ -149,7 +149,7 @@ def _forward_output_layers(inputs, input_size, output_layer, time_major,
 
         dropout_layer_ids = _to_list(hparams.dropout_layer_ids)
         if len(dropout_layer_ids) > 0:
-            training = utils.is_train_mode(mode)
+            training = is_train_mode(mode)
 
         output = inputs
         output_size = input_size

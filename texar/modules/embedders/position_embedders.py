@@ -13,7 +13,7 @@ import tensorflow as tf
 
 from texar.modules.embedders.embedder_base import EmbedderBase
 from texar.modules.embedders import embedder_utils
-from texar.utils import utils
+from texar.utils.mode import is_train_mode
 from texar.utils.shapes import mask_sequences
 
 # pylint: disable=arguments-differ, invalid-name
@@ -157,7 +157,7 @@ class PositionEmbedder(EmbedderBase):
 
         embedding = self._embedding
         if dropout_layer:
-            is_training = utils.is_train_mode(mode)
+            is_training = is_train_mode(mode)
             if st == 'item_type':
                 embedding = dropout_layer.apply(
                     inputs=embedding, training=is_training)

@@ -21,6 +21,7 @@ from tensorflow.python.util import nest
 
 from texar.core import layers
 from texar.utils import utils
+from texar.utils.mode import is_train_mode, is_train_mode_py
 from texar.module_base import ModuleBase
 from texar.modules.decoders import rnn_decoder_helpers
 
@@ -268,7 +269,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 raise ValueError(
                     "Unknown decoding strategy: {}".format(decoding_strategy))
         else:
-            if utils.is_train_mode_py(mode):
+            if is_train_mode_py(mode):
                 kwargs_ = copy.copy(self._hparams.helper_train.kwargs.todict())
                 helper_type = self._hparams.helper_train.type
             else:
@@ -302,7 +303,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             max_l_infer = self._hparams.max_decoding_length_infer
             if max_l_infer is None:
                 max_l_infer = utils.MAX_SEQ_LENGTH
-            max_l = tf.cond(utils.is_train_mode(mode),
+            max_l = tf.cond(is_train_mode(mode),
                             lambda: max_l_train, lambda: max_l_infer)
 
         # Decode

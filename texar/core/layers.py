@@ -16,6 +16,7 @@ from texar.hyperparams import HParams
 from texar.utils import utils
 from texar.utils.dtypes import is_str
 from texar.utils.variables import add_variable
+from texar.utils.mode import is_train_mode, switch_dropout
 
 # pylint: disable=not-context-manager, redefined-variable-type, invalid-name
 # pylint: disable=too-many-branches, too-many-arguments, too-many-lines
@@ -199,11 +200,11 @@ def get_rnn_cell(hparams=None, mode=None):
                 vr_kwargs = {"variational_recurrent": True,
                              "input_size": d_hp["input_size"][layer_i],
                              "dtype": tf.float32}
-            input_keep_prob = utils.switch_dropout(d_hp["input_keep_prob"],
+            input_keep_prob = switch_dropout(d_hp["input_keep_prob"],
                                                    mode)
-            output_keep_prob = utils.switch_dropout(d_hp["output_keep_prob"],
+            output_keep_prob = switch_dropout(d_hp["output_keep_prob"],
                                                     mode)
-            state_keep_prob = utils.switch_dropout(d_hp["state_keep_prob"],
+            state_keep_prob = switch_dropout(d_hp["state_keep_prob"],
                                                    mode)
             cell = rnn.DropoutWrapper(
                 cell=cell,
@@ -854,7 +855,7 @@ class SequentialLayer(tf.layers.Layer):
     def call(self, inputs, mode=None): # pylint: disable=arguments-differ
         """TODO
         """
-        training = utils.is_train_mode(mode)
+        training = is_train_mode(mode)
 
         outputs = inputs
         for layer in self._layers:

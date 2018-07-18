@@ -10,9 +10,7 @@ import tensorflow as tf
 
 from texar.module_base import ModuleBase
 from texar.modules.embedders import WordEmbedder
-import texar.utils as utils
-
-import copy
+from texar.utils.mode import switch_dropout
 
 __all__ = [
     'MemNetSingleLayer',
@@ -31,7 +29,7 @@ def default_embedder_fn(memory, vocab_size, hparams):
             Example:
 
             .. code-block:: python
-            
+
                 {
                     "memory_size": 100,
                     "word_embedder": {
@@ -99,7 +97,7 @@ class MemNetSingleLayer(ModuleBase):
         return {
             "name": "memnet_single_layer"
         }
-    
+
     def _build(self, query, Aout, Cout, **kwargs):
         """An A-C operation with memory and query vector.
 
@@ -247,7 +245,7 @@ class MemNetBase(ModuleBase):
 class MemNetRNNLike(MemNetBase):
     """An implementation of multi-layer end-to-end memory network
     with RNN-like weight tying described in the paper.
-        
+
     If you want to customize the embedder functions,
     look at :func:`~texar.modules.memory.default_embedder_fn` for implemention details.
 
@@ -296,7 +294,7 @@ class MemNetRNNLike(MemNetBase):
                 create_scope_now_=True)
             self.AC = MemNetSingleLayer(self.H,
                 hparams={"name": "AC"})
-        
+
 
     @staticmethod
     def default_hparams():
@@ -304,7 +302,7 @@ class MemNetRNNLike(MemNetBase):
 
         Returns:
             .. code-block:: python
-            
+
                 {
                     "name": "memnet_rnnlike",
                     "n_hops": 1,
@@ -394,7 +392,7 @@ class MemNetRNNLike(MemNetBase):
             self.Aout = self.A(memory)
             self.Cout = self.C(memory)
 
-            keep_prob = utils.switch_dropout(1-self.hparams.dropout_rate)
+            keep_prob = switch_dropout(1-self.hparams.dropout_rate)
             if self.hparams.variational:
                 with tf.variable_scope("variational_dropout"):
                     noise = tf.random_uniform(tf.shape(self.u[-1]))
@@ -427,5 +425,5 @@ class MemNetRNNLike(MemNetBase):
         if not self._built:
             self._add_internal_trainable_variables()
             self._built = True
-        
+
         return logits

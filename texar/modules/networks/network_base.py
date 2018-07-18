@@ -12,7 +12,8 @@ import tensorflow as tf
 from texar.module_base import ModuleBase
 from texar.utils import TexarError
 from texar.core.layers import get_layer
-from texar.utils.utils import uniquify_str, is_train_mode
+from texar.utils.utils import uniquify_str
+from texar.utils.mode import is_train_mode
 
 # pylint: disable=too-many-instance-attributes, arguments-differ
 # pylint: disable=protected-access

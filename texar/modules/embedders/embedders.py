@@ -11,7 +11,7 @@ import tensorflow as tf
 
 from texar.modules.embedders.embedder_base import EmbedderBase
 from texar.modules.embedders import embedder_utils
-from texar.utils import utils
+from texar.utils.mode import is_train_mode
 
 __all__ = [
     "WordEmbedder"
@@ -148,7 +148,7 @@ class WordEmbedder(EmbedderBase):
 
         dropout_layer = self._get_dropout_layer(self._hparams, ids_rank)
         if dropout_layer:
-            is_training = utils.is_train_mode(mode)
+            is_training = is_train_mode(mode)
             if self._hparams.dropout_strategy == 'item_type':
                 embedding = dropout_layer.apply(
                     inputs=embedding, training=is_training)

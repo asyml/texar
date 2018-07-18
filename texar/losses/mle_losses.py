@@ -416,7 +416,7 @@ def binary_sigmoid_cross_entropy_with_clas(clas_fn,
             pos_logits = pos_logits[0]
 
     neg_logits = None
-    if neg_logits is not None:
+    if neg_inputs is not None:
         neg_logits = clas_fn(neg_inputs)
         if isinstance(neg_logits, (list, tuple)):
             neg_logits = neg_logits[0]

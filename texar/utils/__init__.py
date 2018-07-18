@@ -14,3 +14,4 @@ from texar.utils.exceptions import *
 from texar.utils.shapes import *
 from texar.utils.dtypes import *
 from texar.utils.variables import *
+from texar.utils.mode import *

@@ -7,10 +7,8 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from texar.hyperparams import HParams
 from texar import ModuleBase
-from texar.core.layers import get_layer
-from texar import utils
+from texar.utils.mode import switch_dropout
 
 
 class CNN(ModuleBase):
@@ -89,7 +87,7 @@ class CNN(ModuleBase):
 
     # input keep prob??
     inputs = tf.nn.dropout(
-      inputs, utils.switch_dropout(self._hparams.input_keep_prob))
+      inputs, switch_dropout(self._hparams.input_keep_prob))
 
     pooled_outputs = []
     for conv_layer in self._conv_layers:
@@ -101,7 +99,7 @@ class CNN(ModuleBase):
 
     outputs = tf.concat(pooled_outputs, 1)
     outputs = tf.nn.dropout(
-      outputs, utils.switch_dropout(self._hparams.output_keep_prob))
+      outputs, switch_dropout(self._hparams.output_keep_prob))
 
     logits = self._proj_layer(outputs)
 
