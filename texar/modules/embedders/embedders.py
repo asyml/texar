@@ -134,15 +134,29 @@ class WordEmbedder(EmbedderBase):
             and `shape(embedding) = [vocab_size, emb_dim]`, then the return
             tensor has shape `[batch_size, max_time, emb_dim]`.
         """
+        if ids is not None:
+            if soft_ids is not None:
+                raise ValueError(
+                    'Must not specify `ids` and `soft_ids` at the same time.')
+            ids_rank = len(ids.shape.dims)
+        elif soft_ids is not None:
+            ids_rank = len(soft_ids.shape.dims) - 1
+        else:
+            raise ValueError('Either `ids` or `soft_ids` must be given.')
+
         embedding = self._embedding
-        dropout_layer = self._get_dropout_layer(self._hparams, ids)
+
+        dropout_layer = self._get_dropout_layer(self._hparams, ids_rank)
         if dropout_layer:
             is_training = utils.is_train_mode(mode)
             if self._hparams.dropout_strategy == 'item_type':
                 embedding = dropout_layer.apply(
                     inputs=embedding, training=is_training)
 
-        outputs = tf.nn.embedding_lookup(embedding, ids, **kwargs)
+        if ids is not None:
+            outputs = tf.nn.embedding_lookup(embedding, ids, **kwargs)
+        else:
+            outputs = embedder_utils.soft_embedding_lookup(embedding, soft_ids)
 
         if dropout_layer and self._hparams.dropout_strategy != 'item_type':
             outputs = dropout_layer.apply(

@@ -152,7 +152,8 @@ class PositionEmbedder(EmbedderBase):
             # use 'item_type' to avoid unknown noise_shape in the 'item'
             # strategy
             st = 'item_type'
-        dropout_layer = self._get_dropout_layer(self._hparams, inputs, st)
+        ids_rank = len(inputs.shape.dims)
+        dropout_layer = self._get_dropout_layer(self._hparams, ids_rank, st)
 
         embedding = self._embedding
         if dropout_layer:

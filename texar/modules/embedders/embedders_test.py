@@ -25,8 +25,12 @@ class EmbedderTest(tf.test.TestCase):
         """
         embedder = WordEmbedder(
             vocab_size=100, hparams=hparams)
+
         inputs = tf.ones([64, 16], dtype=tf.int32)
         outputs = embedder(inputs)
+
+        inputs_soft = tf.ones([64, 16, embedder.vocab_size], dtype=tf.float32)
+        outputs_soft = embedder(soft_ids=inputs_soft)
 
         emb_dim = embedder.dim
         if not isinstance(emb_dim, (list, tuple)):
@@ -37,16 +41,18 @@ class EmbedderTest(tf.test.TestCase):
             hparams_dim = [hparams["dim"]]
 
         self.assertEqual(outputs.shape, [64, 16] + emb_dim)
+        self.assertEqual(outputs_soft.shape, [64, 16] + emb_dim)
         self.assertEqual(emb_dim, hparams_dim)
         self.assertEqual(embedder.vocab_size, 100)
         self.assertEqual(len(embedder.trainable_variables), 1)
 
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
-            outputs_ = sess.run(
-                outputs,
+            outputs_, outputs_soft_ = sess.run(
+                [outputs, outputs_soft],
                 feed_dict={global_mode(): tf.estimator.ModeKeys.TRAIN})
             self.assertEqual(outputs_.shape, (64, 16) + tuple(emb_dim))
+            self.assertEqual(outputs_soft_.shape, (64, 16) + tuple(emb_dim))
 
     def _test_position_embedder(self, hparams):
         """Tests :class:`texar.modules.PositionEmbedder`.
@@ -79,7 +85,6 @@ class EmbedderTest(tf.test.TestCase):
                 feed_dict={global_mode(): tf.estimator.ModeKeys.TRAIN})
             self.assertEqual(outputs_.shape,
                              (64, max_seq_length) + tuple(emb_dim))
-
 
     def test_embedder(self):
         """Tests various embedders.
@@ -164,6 +169,7 @@ class EmbedderTest(tf.test.TestCase):
         if not isinstance(emb_dim, (list, tuple)):
             emb_dim = [emb_dim]
         self.assertEqual(outputs.shape, [64, 10, 20] + emb_dim)
+
 
 if __name__ == "__main__":
     tf.test.main()
