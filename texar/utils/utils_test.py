@@ -15,8 +15,8 @@ class UtilsTest(tf.test.TestCase):
     """Tests utility functions.
     """
 
-    def test_patch_dict(self):
-        """Tests :meth:`texar.core.utils.patch_dict`.
+    def test_dict_patch(self):
+        """Tests :meth:`texar.core.utils.dict_patch`.
         """
         src_dict = {
             "k1": "k1",
@@ -36,7 +36,7 @@ class UtilsTest(tf.test.TestCase):
             "k_dict_2": "kd2_not_dict"
         }
 
-        patched_dict = utils.patch_dict(tgt_dict, src_dict)
+        patched_dict = utils.dict_patch(tgt_dict, src_dict)
         self.assertEqual(patched_dict["k1"], tgt_dict["k1"])
         self.assertEqual(patched_dict["k_dict_1"], src_dict["k_dict_1"])
         self.assertEqual(patched_dict["k_dict_2"], tgt_dict["k_dict_2"])

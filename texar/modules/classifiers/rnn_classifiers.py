@@ -67,7 +67,7 @@ class UnidirectionalRNNClassifier(ClassifierBase):
 
         with tf.variable_scope(self.variable_scope):
             # Creates the underlying encoder
-            encoder_hparams = utils.fetch_subdict(
+            encoder_hparams = utils.dict_fetch(
                 hparams, UnidirectionalRNNEncoder.default_hparams())
             if encoder_hparams is not None:
                 encoder_hparams['name'] = None

@@ -41,11 +41,13 @@ __all__ = [
     "get_default_arg_values",
     "get_instance_kwargs",
     "default_string",
-    "patch_dict",
-    "fetch_subdict",
+    "dict_patch",
+    "dict_lookup",
+    "dict_fetch",
+    "dict_pop",
     "uniquify_str",
-    "straight_through",
     "ceildiv",
+    "straight_through"
 ]
 
 
@@ -367,7 +369,7 @@ def default_string(str_, default_str):
     else:
         return default_str
 
-def patch_dict(tgt_dict, src_dict):
+def dict_patch(tgt_dict, src_dict):
     """Recursively patch :attr:`tgt_dict` by adding items from :attr:`src_dict`
     that do not exist in :attr:`tgt_dict`.
 
@@ -386,10 +388,30 @@ def patch_dict(tgt_dict, src_dict):
         if key not in patched_dict:
             patched_dict[key] = copy.deepcopy(value)
         elif isinstance(value, dict) and isinstance(patched_dict[key], dict):
-            patched_dict[key] = patch_dict(patched_dict[key], value)
+            patched_dict[key] = dict_patch(patched_dict[key], value)
     return patched_dict
 
-def fetch_subdict(src_dict, tgt_dict_or_keys):
+def dict_lookup(dict_, keys, default=None):
+    """Looks up :attr:`keys` in the dict, outputs the corresponding values.
+
+    The :attr:`default` is used for keys not present in the dict.
+
+    Args:
+        dict_ (dict): A dictionary for lookup.
+        keys: A numpy array or a (possibly nested) list of keys.
+        default (optional): Value to be returned when a key is not in
+            :attr:`dict_`. Error is raised if :attr:`default` is not given and
+            key is not in the dict.
+
+    Returns:
+        A numpy array of values with the same structure as :attr:`keys`.
+
+    Raises:
+        TypeError: If key is not in :attr:`dict_` and :attr:`default` is `None`.
+    """
+    return np.vectorize(lambda x: dict_.get(x, default))(keys)
+
+def dict_fetch(src_dict, tgt_dict_or_keys):
     """Fetches a sub dict of :attr:`src_dict` with the keys in
     :attr:`tgt_dict_or_keys`.
 
@@ -417,6 +439,24 @@ def fetch_subdict(src_dict, tgt_dict_or_keys):
 
     return {k: src_dict[k] for k in keys if k in src_dict}
 
+def dict_pop(dict_, pop_keys, default=None):
+    """Removes keys from a dict and returns their values.
+
+    Args:
+        dict_ (dict): A dictionary from which items are removed.
+        pop_keys: A key or a list of keys to remove and return respective
+            values or :attr:`default`.
+        default (optional): Value to be returned when a key is not in
+            :attr:`dict_`. The default value is `None`.
+
+    Returns:
+        A `dict` of the items removed from :attr:`dict_`.
+    """
+    if not isinstance(pop_keys, (list, tuple)):
+        pop_keys = [pop_keys]
+    ret_dict = {key: dict_.pop(key, default) for key in pop_keys}
+    return ret_dict
+
 def uniquify_str(str_, str_set):
     """Uniquifies :attr:`str_` if :attr:`str_` is included in :attr:`str_set`.
 
@@ -442,20 +482,6 @@ def uniquify_str(str_, str_set):
                 return unique_str
     raise ValueError("Fails to uniquify string: " + str_)
 
-def straight_through(fw_tensor, bw_tensor):
-    """Use a tensor in forward pass while backpropagating gradient to another.
-
-    Args:
-        fw_tensor: A tensor to be used in the forward pass.
-        bw_tensor: A tensor to which gradient is backpropagated. Must have the
-            same shape and type with :attr:`fw_tensor`.
-
-    Returns:
-        A tensor of the same shape and value with :attr:`fw_tensor` but will
-            direct gradient to bw_tensor.
-    """
-    return tf.stop_gradient(fw_tensor) + bw_tensor - tf.stop_gradient(bw_tensor)
-
 def ceildiv(a, b):
     """Divides with ceil.
 
@@ -470,3 +496,16 @@ def ceildiv(a, b):
     """
     return -(-a // b)
 
+def straight_through(fw_tensor, bw_tensor):
+    """Use a tensor in forward pass while backpropagating gradient to another.
+
+    Args:
+        fw_tensor: A tensor to be used in the forward pass.
+        bw_tensor: A tensor to which gradient is backpropagated. Must have the
+            same shape and type with :attr:`fw_tensor`.
+
+    Returns:
+        A tensor of the same shape and value with :attr:`fw_tensor` but will
+            direct gradient to bw_tensor.
+    """
+    return tf.stop_gradient(fw_tensor) + bw_tensor - tf.stop_gradient(bw_tensor)

@@ -29,7 +29,7 @@ class Conv1DClassifier(ClassifierBase):
         ClassifierBase.__init__(self, hparams)
 
         with tf.variable_scope(self.variable_scope):
-            encoder_hparams = utils.fetch_subdict(
+            encoder_hparams = utils.dict_fetch(
                 hparams, Conv1DEncoder.default_hparams())
             self._encoder = Conv1DEncoder(hparams=encoder_hparams)
 

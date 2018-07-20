@@ -14,6 +14,8 @@ import tensorflow as tf
 from tensorflow import gfile
 import numpy as np
 
+from texar.utils.utils import dict_lookup
+
 __all__ = [
     "SpecialTokens",
     "Vocab"
@@ -139,26 +141,58 @@ class Vocab(object):  # pylint: disable=too-many-instance-attributes
                id_to_token_map_py, token_to_id_map_py
 
     def map_ids_to_tokens(self, ids):
-        """Maps ids into token text.
+        """Maps ids into text tokens.
+
+        The returned tokens are a Tensor.
 
         Args:
-            ids: An int tensor of token ids.
+            ids: An `int` tensor of token ids.
 
         Returns:
-            A tensor of token text of the same shape.
+            A tensor of text tokens of the same shape.
         """
         return self.id_to_token_map.lookup(tf.to_int64(ids))
 
     def map_tokens_to_ids(self, tokens):
-        """Maps token text into ids.
+        """Maps text tokens into ids.
+
+        The returned ids are a Tensor.
 
         Args:
-            ids: An tensor of token text.
+            tokens: An tensor of text tokens.
 
         Returns:
             A tensor of token ids of the same shape.
         """
         return self.token_to_id_map.lookup(tokens)
+
+    def map_ids_to_tokens_py(self, ids):
+        """Maps ids into text tokens.
+
+        The input :attr:`ids` and returned tokens are both python
+        arrays or list.
+
+        Args:
+            ids: An `int` numpy arry or (possibly nested) list of token ids.
+
+        Returns:
+            A numpy array of text tokens of the same shape as :attr:`ids`.
+        """
+        return dict_lookup(self.id_to_token_map_py, ids, self.unk_token)
+
+    def map_tokens_to_ids_py(self, tokens):
+        """Maps text tokens into ids.
+
+        The input :attr:`tokens` and returned ids are both python
+        arrays or list.
+
+        Args:
+            tokens: A numpy array or (possibly nested) list of text tokens.
+
+        Returns:
+            A numpy array of token ids of the same shape as :attr:`tokens`.
+        """
+        return dict_lookup(self.token_to_id_map_py, tokens, self.unk_token_id)
 
     @property
     def id_to_token_map(self):

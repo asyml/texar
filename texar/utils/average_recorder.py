@@ -9,8 +9,6 @@ from __future__ import division
 
 from collections import deque
 
-from texar.utils.exceptions import TexarError
-
 __all__ = [
     "_SingleAverageRecorder",
     "AverageRecorder"
@@ -23,54 +21,91 @@ class _SingleAverageRecorder(object):
     Args:
         size (int, optional): The window size of moving average. If `None`,
             the average of all added records is maintained.
+        name (str, optional): name of the recorder. Used when printing.
     """
 
-    def __init__(self, size=None):
+    def __init__(self, size=None, name=None):
         if size is not None and size <= 0:
             raise ValueError("`size` must be > 0 or `None`.")
         self._size = size
         self._q = deque([])
+        self._w = deque([])
         self._sum = 0.
-        self._num = 0
+        self._w_sum = 0
+        self._name = name
 
-    def add(self, record):
+    def add(self, record, weight=None):
         """Appends a new record.
 
         Args:
             record: A scalar; the new record to append.
+            weight (optional): A scalar, weight of the new record for
+                calculating a weighted average. If `None`, weight is set to `1`.
+                For example, :attr:`weight` can be set to batch size and
+                :attr:`record` the average value of certain metric on the batch
+                in order to calculate the average metric value on a whole
+                dataset.
 
         Returns:
             The (moving) average after appending the record.
         """
-        self._sum += record
-        self._num += 1
+        w = weight if weight is not None else 1
+        self._w_sum += w
+        self._sum += record * w
 
         if self._size is not None:
             if len(self._q) == self._size:
-                self._sum -= self._q.popleft()
+                w_pop = self._w.popleft()
+                self._sum -= self._q.popleft() * w_pop
+                self._w_sum -= w_pop
             self._q.append(record)
-            self._num = min(self._num, self._size)
-
-            if len(self._q) != self._num:
-                raise TexarError(
-                    "Internal error: length of `_q` does not match `_num`.")
+            self._w.append(w)
 
         return self.avg()
 
     def avg(self):
         """Returns the (moving) average.
         """
-        if self._num == 0:
+        if self._w_sum == 0:
             return 0.
-        return self._sum / self._num
+        return self._sum / self._w_sum
 
     def reset(self):
         """Cleans all records.
         """
         self._q.clear()
+        self._w.clear()
         self._sum = 0.
-        self._num = 0
+        self._w_sum = 0
 
+    def to_str(self, precision=None):
+        """Returns a string of the average value.
+
+        Args:
+            precision (int, optional): The number of decimal places to keep in
+                the returned string. E.g., for an average value of `0.1234`,
+                :attr:`precision = 2` leads to `'0.12'`.
+
+        Returns:
+            A string of the average value. If :meth:`name` is given, the
+            string is of the format like `'name: 0.1234'`, otherwise
+            the string is of the format like `'0.1234'`.
+        """
+        prec_str = "{}"
+        if precision is not None:
+            prec_str = "{:.%df}" % precision
+
+        avg_str = prec_str.format(self.avg())
+        if self._name is not None:
+            avg_str = "{}: {}".format(self._name, avg_str)
+
+        return avg_str
+
+    @property
+    def name(self):
+        """The name of the recorder.
+        """
+        return self.name
 
 class AverageRecorder(object):
     """Maintains the moving average (i.e., the average of the latest N records)
@@ -100,7 +135,7 @@ class AverageRecorder(object):
             record_dict = {self._default_metric_name: record}
         return record_dict
 
-    def add(self, record):
+    def add(self, record, weight=None):
         """Appends a new record.
 
         :attr:`record` can be a `list`, `dict`, or a single scalar. The
@@ -120,6 +155,12 @@ class AverageRecorder(object):
 
         Args:
             record: A single scalar, a list of scalars, or a dict of scalars.
+            weight (optional): A scalar, weight of the new record for
+                calculating a weighted average. If `None`, weight is set to `1`.
+                For example, :attr:`weight` can be set to batch size and
+                :attr:`record` the average value of certain metrics on the batch
+                in order to calculate the average metric values on a whole
+                dataset.
 
         Returns:
             The (moving) average after appending the record, with the same
@@ -134,12 +175,13 @@ class AverageRecorder(object):
         record_dict = self._to_dict(record)
         if self._recorders is None:
             self._recorders = {
-                name: _SingleAverageRecorder(self._size)
+                name: _SingleAverageRecorder(
+                    self._size, name if self._record_type == dict else None)
                 for name in record_dict.keys()
             }
 
         for name, val in record_dict.items():
-            self._recorders[name].add(val)
+            self._recorders[name].add(val, weight=weight)
 
         return self.avg()
 
@@ -192,3 +234,38 @@ class AverageRecorder(object):
 
         for key in keys:
             self._recorders[key].reset()
+
+    def to_str(self, precision=None, delimiter=' '):
+        """Returns a string of the average values of the records.
+
+        Args:
+            precision (int, optional): The number of decimal places to keep in
+                the returned string. E.g., for an average value of `0.1234`,
+                :attr:`precision = 2` leads to `'0.12'`.
+            delimiter (str): The delimiter string that separates between
+                fields.
+
+        Returns:
+            A string of the average values.
+
+            If record is of type `dict`, the string is a concatenation of
+            'field_name: average_value', delimited with :attr:`delimiter`.
+            E.g., `'field_name_1: 0.1234 field_name_2: 0.5678 ...'`.
+
+            Otherwise, the string is of a concatenation of 'average_value'.
+            E.g., `'0.1234 0.5678 ...'`
+        """
+        strs = {name: rec.to_str(precision=precision)
+                for name, rec in self._recorders.items()}
+        str_list = []
+        if self._record_type in {list, tuple}:
+            for i in range(len(strs)):
+                str_list.append(strs[i])
+        elif self._record_type == dict:
+            str_list = list(strs.values())
+        else:
+            str_list = [strs[self._default_metric_name]]
+
+        avg_str = delimiter.join(str_list)
+
+        return avg_str
