@@ -31,7 +31,12 @@ class DataBase(object):
     @staticmethod
     def default_hparams():
         """Returns a dictionary of default hyperparameters.
-              max_records: int, number of records to truncate to.
+
+            max_dataset_size: int, maximum number of instances to include in
+                the dataset. If set to `-1` or greater than the size of
+                dataset, all instances will be included. This constraint is
+                imposed after data shuffling and filtering.
+
         """
         return {
             "name": "data",
@@ -43,7 +48,7 @@ class DataBase(object):
             "shard_and_shuffle": False,
             "num_parallel_calls": 1,
             "prefetch_buffer_size": 0,
-            "max_records": -1,
+            "max_dataset_size": -1,
             "seed": None
         }
 

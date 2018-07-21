@@ -108,11 +108,16 @@ def _make_combined_filter_fn(filter_fns, mode="and"):
     """Returns a new predicate function that combines multiple
     predicate functions with certain mode.
 
+    Returns `None` if all elements in :attr:`filter_fns` are `None`.
+
     Args:
         filter_fns (list): Filter functions to combine. `None` functions are
             ignored.
         mode (str): A mode from `{"and", "or"}`.
     """
+    if not any(filter_fns):
+        return None
+
     def _combined_fn(data):
         outputs = []
         for fn in filter_fns:

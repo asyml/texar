@@ -301,7 +301,7 @@ class MultiAlignedData(TextDataBase):
             lambda *args: tran_fn(dsutils.maybe_tuple(args)),
             num_parallel_calls=num_parallel_calls)
 
-        # Filter by length
+        # Filters by length
         def _get_length_name(i):
             if not _is_text_data(hparams["datasets"][i]["data_type"]):
                 return None
@@ -313,7 +313,11 @@ class MultiAlignedData(TextDataBase):
             hparams["datasets"],
             [_get_length_name(i) for i in range(len(hparams["datasets"]))],
             data_spec.decoder)
-        dataset = dataset.apply(lambda dataset: dataset.filter(filter_fn))
+        if filter_fn:
+            dataset = dataset.filter(filter_fn)
+
+        # Truncates data count
+        dataset = dataset.take(hparams["max_dataset_size"])
 
         return dataset, data_spec
 
@@ -398,6 +402,9 @@ class MultiAlignedData(TextDataBase):
 
     def dataset_size(self):
         """Returns the number of data instances in the dataset.
+
+        Note that this is the total data count in the raw files, before any
+        filtering and truncation.
         """
         if not self._dataset_size:
             # pylint: disable=attribute-defined-outside-init

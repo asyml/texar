@@ -102,6 +102,10 @@ class ScalarData(DataBase):
         dataset = dataset.map(
             lambda *args: chained_tran(dsutils.maybe_tuple(args)),
             num_parallel_calls=num_parallel_calls)
+
+        # Truncates data count
+        dataset = dataset.take(hparams["max_dataset_size"])
+
         return dataset, data_spec
 
     def _make_data(self):
@@ -147,6 +151,9 @@ class ScalarData(DataBase):
 
     def dataset_size(self):
         """Returns the number of data instances in the dataset.
+
+        Note that this is the total data count in the raw files, before any
+        filtering and truncation.
         """
         if not self._dataset_size:
             # pylint: disable=attribute-defined-outside-init

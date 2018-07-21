@@ -210,7 +210,7 @@ class PairedTextData(TextDataBase):
             lambda *args: tran_fn(dsutils.maybe_tuple(args)),
             num_parallel_calls=num_parallel_calls)
 
-        # Filter by length
+        # Filters by length
         src_length_name = dsutils._connect_name(
             data_spec.name_prefix[0],
             data_spec.decoder[0].length_tensor_name)
@@ -221,7 +221,11 @@ class PairedTextData(TextDataBase):
             hparams["source_dataset"], hparams["target_dataset"],
             src_length_name, tgt_length_name,
             data_spec.decoder[0], data_spec.decoder[1])
-        dataset = dataset.apply(lambda dataset: dataset.filter(filter_fn))
+        if filter_fn:
+            dataset = dataset.filter(filter_fn)
+
+        # Truncates data count
+        dataset = dataset.take(hparams["max_dataset_size"])
 
         return dataset, data_spec
 
@@ -319,6 +323,9 @@ class PairedTextData(TextDataBase):
 
     def dataset_size(self):
         """Returns the number of data instances in the dataset.
+
+        Note that this is the total data count in the raw files, before any
+        filtering and truncation.
         """
         if not self._dataset_size:
             # pylint: disable=attribute-defined-outside-init

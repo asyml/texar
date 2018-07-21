@@ -218,14 +218,17 @@ class MonoTextData(TextDataBase):
             lambda *args: chained_tran(dsutils.maybe_tuple(args)),
             num_parallel_calls=num_parallel_calls)
 
-        # Filter by length
+        # Filters by length
         length_name = dsutils._connect_name(
             data_spec.name_prefix,
             data_spec.decoder.length_tensor_name)
         filter_fn = self._make_length_filter(
             hparams["dataset"], length_name, data_spec.decoder)
         if filter_fn:
-            dataset = dataset.apply(lambda dataset: dataset.filter(filter_fn))
+            dataset = dataset.filter(filter_fn)
+
+        # Truncates data count
+        dataset = dataset.take(hparams["max_dataset_size"])
 
         return dataset, data_spec
 
@@ -336,7 +339,10 @@ class MonoTextData(TextDataBase):
         return self._dataset
 
     def dataset_size(self):
-        """Returns the number of data instances in the dataset.
+        """Returns the number of data instances in the data files.
+
+        Note that this is the total data count in the raw files, before any
+        filtering and truncation.
         """
         if not self._dataset_size:
             # pylint: disable=attribute-defined-outside-init
