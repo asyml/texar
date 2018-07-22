@@ -9,7 +9,6 @@ from __future__ import division
 
 # pylint: disable=invalid-name, no-member, no-name-in-module, protected-access
 
-#import importlib
 import inspect
 from pydoc import locate
 import copy
@@ -40,11 +39,15 @@ __all__ = [
     "get_args",
     "get_default_arg_values",
     "get_instance_kwargs",
-    "default_string",
     "dict_patch",
     "dict_lookup",
     "dict_fetch",
     "dict_pop",
+    "strip_token",
+    "strip_eos",
+    "str_join",
+    "map_ids_to_strs",
+    "default_str",
     "uniquify_str",
     "ceildiv",
     "straight_through"
@@ -353,22 +356,6 @@ def get_instance_kwargs(kwargs, hparams):
     kwargs_.update(kwargs or {})
     return kwargs_
 
-def default_string(str_, default_str):
-    """Returns :attr:`str_` if it is not `None` or empty, otherwise returns
-    :attr:`default_str`.
-
-    Args:
-        str_: A string.
-        default_str: A string.
-
-    Returns:
-        Either :attr:`str_` or :attr:`default_str`.
-    """
-    if str_ is not None and str_ != "":
-        return str_
-    else:
-        return default_str
-
 def dict_patch(tgt_dict, src_dict):
     """Recursively patch :attr:`tgt_dict` by adding items from :attr:`src_dict`
     that do not exist in :attr:`tgt_dict`.
@@ -457,6 +444,22 @@ def dict_pop(dict_, pop_keys, default=None):
     ret_dict = {key: dict_.pop(key, default) for key in pop_keys}
     return ret_dict
 
+def default_str(str_, default_str):
+    """Returns :attr:`str_` if it is not `None` or empty, otherwise returns
+    :attr:`default_str`.
+
+    Args:
+        str_: A string.
+        default_str: A string.
+
+    Returns:
+        Either :attr:`str_` or :attr:`default_str`.
+    """
+    if str_ is not None and str_ != "":
+        return str_
+    else:
+        return default_str
+
 def uniquify_str(str_, str_set):
     """Uniquifies :attr:`str_` if :attr:`str_` is included in :attr:`str_set`.
 
@@ -481,6 +484,134 @@ def uniquify_str(str_, str_set):
             if unique_str not in str_set:
                 return unique_str
     raise ValueError("Fails to uniquify string: " + str_)
+
+def strip_token(str_, token):
+    """Returns a copy of the strings with leading and trailing tokens
+    removed.
+
+    Assumes tokens in the strings are separated with the space character.
+
+    Args:
+        str_: A `str`, or an `n`-D numpy array or (possibly nested)
+            list of `str`.
+        token (str): The token to strip, e.g., the '<PAD>' token defined in
+            :class:`~texar.data.vocabulary.SpecialTokens`.PAD
+
+    Returns:
+        The stripped strings of the same structure/shape as :attr:`str_`.
+    """
+    def _recur_strip(s):
+        if is_str(s):
+            return ' '.join(s.strip().split()).strip(' '+token).strip(token+' ')
+        else:
+            return [_recur_strip(si) for si in s]
+
+    strp_str = _recur_strip(str_)
+
+    if isinstance(str_, (list, tuple)):
+        return type(str_)(strp_str)
+    else:
+        return np.asarray(strp_str)
+
+def strip_eos(str_, eos_token='<EOS>'):
+    """Remove the EOS token and all subsequent tokens.
+
+    Assumes tokens in the strings are separated with the space character.
+
+    Args:
+        str_: A `str`, or an `n`-D numpy array or (possibly nested)
+            list of `str`.
+        eos_token (str): The EOS token. Default is '<EOS>' as defined in
+            :class:`~texar.data.vocabulary.SpecialTokens`.EOS
+
+    Returns:
+        Strings of the same structure/shape as :attr:`str_`.
+    """
+    def _recur_strip(s):
+        if is_str(s):
+            s_tokens = s.split()
+            if eos_token in s_tokens:
+                return ' '.join(s_tokens[:s_tokens.index(eos_token)])
+            else:
+                return s
+        else:
+            return [_recur_strip(si) for si in s]
+
+    strp_str = _recur_strip(str_)
+
+    if isinstance(str_, (list, tuple)):
+        return type(str_)(strp_str)
+    else:
+        return np.asarray(strp_str)
+_strip_eos_ = strip_eos
+
+def str_join(tokens, sep=' '):
+    """Concats :attr:`tokens` along the last dimension with intervening
+    occurrences of :attr:`sep`.
+
+    Args:
+        tokens: An `n`-D numpy array or (possibly nested) list of `str`.
+        sep (str): The string intervening between the tokens.
+
+    Returns:
+        An `(n-1)`-D numpy array (or list) of `str`.
+    """
+    def _recur_join(s):
+        if len(s) == 0:
+            return ''
+        elif is_str(s[0]):
+            return sep.join(s)
+        else:
+            return [_recur_join(si) for si in s]
+
+    str_ = _recur_join(tokens)
+
+    if isinstance(tokens, (list, tuple)):
+        return type(tokens)(str_)
+    else:
+        return np.asarray(str_)
+
+def map_ids_to_strs(ids, vocab, join=True,
+                    strip_pad='<PAD>', strip_eos='<EOS>'):
+    """Transforms indexes to strings by id-token mapping, token concat, token
+    stripping, etc.
+
+    Args:
+        ids: An n-D numpy array or (possibly nested) list of `int` indexes.
+        vocab: An instance of :class:`~texar.data.Vocab`.
+        join (bool): Whether concat along the last dimension of :attr:`ids`
+            the tokens into a string with a space character.
+        strip_pad (str): The token to strip from the strings (i.e., remove the
+            leading and trailing tokens of the strings). The default is the
+            pad token `<PAD>` (defined in
+            :class:`~texar.data.vocabulary.SpecialTokens`.PAD). Set to `None`
+            to disable the stripping. Ignored if :attr:`join` is `False`.
+        strip_eos (str): The EOS token to strip from the strings. This is
+            different from stripping the pad token because here the EOS
+            token and all subsequent tokens in a string are removed. Set to
+            `None` to disable the stripping.
+    Returns:
+        If :attr:`join`=True, returns a (n-1)-D numpy array (or list) of
+        concatenated strings. If :attr:`join`=False, returns an n-D numpy
+        array (or list) of str tokens.
+    """
+    tokens = vocab.map_ids_to_tokens_py(ids)
+
+    if not join:
+        if isinstance(ids, (list, tuple)):
+            return type(ids)(tokens.tolist())
+        else:
+            return tokens
+
+    str_ = str_join(tokens)
+
+    if strip_eos is not None:
+        str_ = _strip_eos_(str_, strip_eos)
+
+    if strip_pad is not None:
+        str_ = strip_token(str_, strip_pad)
+
+    return str_
 
 def ceildiv(a, b):
     """Divides with ceil.

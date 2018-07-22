@@ -16,3 +16,4 @@ from texar.utils.dtypes import *
 from texar.utils.variables import *
 from texar.utils.mode import *
 from texar.utils.average_recorder import *
+from texar.utils.utils_io import *

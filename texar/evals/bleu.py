@@ -25,7 +25,7 @@ __all__ = [
     "corpus_bleu"
 ]
 
-def _maybe_list_to_string(list_or_str):
+def _maybe_list_to_str(list_or_str):
     if isinstance(list_or_str, (tuple, list, np.ndarray)):
         return ' '.join(list_or_str)
     return list_or_str
@@ -79,7 +79,7 @@ def corpus_bleu(list_of_references, hypotheses, lowercase=False):
     result_path = tempfile.mkdtemp()
     # Create hyperthesis file
     hfile_path = os.path.join(result_path, 'hyp')
-    hyps = [_maybe_list_to_string(h) for h in hypotheses]
+    hyps = [_maybe_list_to_str(h) for h in hypotheses]
     with open(hfile_path, 'w', encoding='utf-8') as hfile:
         text = tf.compat.as_text("\n".join(hyps))
         hfile.write(text)
@@ -91,7 +91,7 @@ def corpus_bleu(list_of_references, hypotheses, lowercase=False):
         with open(rfile_path + '%d'%rid, 'w', encoding='utf-8') as rfile:
             for refs in list_of_references:
                 if rid < len(refs):
-                    ref = _maybe_list_to_string(refs[rid])
+                    ref = _maybe_list_to_str(refs[rid])
                     text = tf.compat.as_text(ref + "\n")
                     rfile.write(text)
                 else:

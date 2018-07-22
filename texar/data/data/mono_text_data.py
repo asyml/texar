@@ -112,9 +112,9 @@ class MonoTextData(TextDataBase):
         """Reads vocab file and returns an instance of
         :class:`texar.data.Vocab`.
         """
-        bos_token = utils.default_string(
+        bos_token = utils.default_str(
             hparams["bos_token"], SpecialTokens.BOS)
-        eos_token = utils.default_string(
+        eos_token = utils.default_str(
             hparams["eos_token"], SpecialTokens.EOS)
         vocab = Vocab(hparams["vocab_file"],
                       bos_token=bos_token, eos_token=eos_token)

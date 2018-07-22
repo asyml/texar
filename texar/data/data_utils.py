@@ -12,7 +12,6 @@ import os
 import sys
 import tarfile
 import zipfile
-import logging
 import collections
 import numpy as np
 from six.moves import urllib
@@ -80,15 +79,15 @@ def maybe_download(urls, path, extract=False):
                 filename, statinfo.st_size))
 
             if extract:
-                logging.info('Extract %s', filepath)
+                tf.logging.info('Extract %s', filepath)
                 if tarfile.is_tarfile(filepath):
                     tarfile.open(filepath, 'r').extractall(path)
                 elif zipfile.is_zipfile(filepath):
                     with zipfile.ZipFile(filepath) as zfile:
                         zfile.extractall(path)
                 else:
-                    logging.info("Unknown compression type. Only .tar.gz, "
-                                 ".tar.bz2, .tar, and .zip are supported")
+                    tf.logging.info("Unknown compression type. Only .tar.gz, "
+                                    ".tar.bz2, .tar, and .zip are supported")
 
     return result
 

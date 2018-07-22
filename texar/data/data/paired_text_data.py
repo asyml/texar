@@ -96,10 +96,10 @@ class PairedTextData(TextDataBase):
         else:
             tgt_bos_token = tgt_hparams["bos_token"]
             tgt_eos_token = tgt_hparams["eos_token"]
-        tgt_bos_token = utils.default_string(tgt_bos_token,
-                                             SpecialTokens.BOS)
-        tgt_eos_token = utils.default_string(tgt_eos_token,
-                                             SpecialTokens.EOS)
+        tgt_bos_token = utils.default_str(tgt_bos_token,
+                                          SpecialTokens.BOS)
+        tgt_eos_token = utils.default_str(tgt_eos_token,
+                                          SpecialTokens.EOS)
         if tgt_hparams["vocab_share"]:
             if tgt_bos_token == src_vocab.bos_token and \
                     tgt_eos_token == src_vocab.eos_token:
