@@ -25,7 +25,9 @@ class ModelBase(object):
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
         """
-        hparams = {"name": "model"}
+        hparams = {
+            "name": "model"
+        }
         return hparams
 
     def __call__(self, features, labels, params, mode, config=None):
@@ -35,9 +37,15 @@ class ModelBase(object):
         """
         return self._build(features, labels, params, mode, config=config)
 
-    #def _build(self, features, labels, params, mode, config=None):
-    #    """
-    #    """
+    def _build(self, features, labels, params, mode, config=None):
+        raise NotImplementedError
+
+    def get_input_fn(self, *args, **kwargs):
+        """Returns the :attr:`input_fn` function that constructs the input
+        data, used in :tf_main:`tf.estimator.Estimator <estimator/Estimator>`.
+        """
+        raise NotImplementedError
+
 
     #def build(self, *args, **kwargs):
     #    """The model logic.
