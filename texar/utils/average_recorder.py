@@ -189,13 +189,18 @@ class AverageRecorder(object):
         """Returns the (moving) average.
 
         Args:
-            id_or_name (optional): A list or a single element. Each element is
-                the index (if the record type is `list`) or name (if the
-                record type is `dict`) of the field to calculate average.
-                If `None`, the average of all fields are returned.
+            id_or_name (optional): A list of or a single element.
+                Each element is the index (if the record type is `list`) or
+                name (if the record type is `dict`) of the field for which
+                the average is calculated. If not given, the average of all
+                fields are returned.
 
         Returns:
-            The average, with the same type as record.
+            The average value(s). If :attr:`id_or_name` is a single element
+            (not a list), then returns the average value of the corresponding
+            field. Otherwise, if :attr:`id_or_name` is a list of element(s),
+            then returns average value(s) in the same type as :attr:`record`
+            of :meth:`add`.
         """
         if self._recorders is None:
             return 0.
@@ -203,8 +208,9 @@ class AverageRecorder(object):
         keys = id_or_name
         if keys is None:
             keys = list(self._recorders.keys())
-        elif not isinstance(keys, (list, tuple)):
-            keys = [keys]
+
+        if not isinstance(keys, (list, tuple)):
+            return self._recorders[keys].avg()
 
         avg = {key: self._recorders[key].avg() for key in keys}
         if self._record_type in {list, tuple}:

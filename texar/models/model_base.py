@@ -7,10 +7,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
-
-from texar.module_base import ModuleBase
-from texar import core
 from texar import HParams
 
 __all__ = [
@@ -31,6 +27,17 @@ class ModelBase(object):
         """
         hparams = {"name": "model"}
         return hparams
+
+    def __call__(self, features, labels, params, mode, config=None):
+        """Used for the :tf_main:`model_fn <estimator/Estimator#__init__>`
+        argument when constructing
+        :tf_main:`tf.estimator.Estimator <estimator/Estimator>`.
+        """
+        return self._build(features, labels, params, mode, config=config)
+
+    #def _build(self, features, labels, params, mode, config=None):
+    #    """
+    #    """
 
     #def build(self, *args, **kwargs):
     #    """The model logic.
