@@ -198,8 +198,8 @@ class ForwardConnector(ConnectorBase):
             `output_size=decoder.cell.state_size`.
     """
 
-    def __init__(self, output_size):
-        ConnectorBase.__init__(self, output_size, None)
+    def __init__(self, output_size, hparams=None):
+        ConnectorBase.__init__(self, output_size, hparams)
 
     @staticmethod
     def default_hparams():

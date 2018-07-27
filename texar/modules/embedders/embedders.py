@@ -12,6 +12,7 @@ import tensorflow as tf
 from texar.modules.embedders.embedder_base import EmbedderBase
 from texar.modules.embedders import embedder_utils
 from texar.utils.mode import is_train_mode
+from texar.utils.shapes import get_rank
 
 __all__ = [
     "WordEmbedder"
@@ -138,9 +139,9 @@ class WordEmbedder(EmbedderBase):
             if soft_ids is not None:
                 raise ValueError(
                     'Must not specify `ids` and `soft_ids` at the same time.')
-            ids_rank = len(ids.shape.dims)
+            ids_rank = get_rank(ids)
         elif soft_ids is not None:
-            ids_rank = len(soft_ids.shape.dims) - 1
+            ids_rank = get_rank(soft_ids) - 1
         else:
             raise ValueError('Either `ids` or `soft_ids` must be given.')
 

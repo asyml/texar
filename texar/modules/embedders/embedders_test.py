@@ -10,6 +10,8 @@ from __future__ import unicode_literals
 
 # pylint: disable=no-member
 
+import numpy as np
+
 import tensorflow as tf
 
 from texar.modules.embedders.embedders import WordEmbedder
@@ -170,6 +172,22 @@ class EmbedderTest(tf.test.TestCase):
             emb_dim = [emb_dim]
         self.assertEqual(outputs.shape, [64, 10, 20] + emb_dim)
 
+    def test_word_embedder_soft_ids(self):
+        """Tests the correctness of using soft ids.
+        """
+        init_value = np.expand_dims(np.arange(5), 1)
+        embedder = WordEmbedder(init_value=init_value)
+
+        ids = np.array([3])
+        soft_ids = np.array([[0, 0, 0, 1, 0]])
+
+        outputs = embedder(ids=ids)
+        soft_outputs = embedder(soft_ids=soft_ids)
+
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            outputs_, soft_outputs_ = sess.run([outputs, soft_outputs])
+            self.assertEqual(outputs_, soft_outputs_)
 
 if __name__ == "__main__":
     tf.test.main()

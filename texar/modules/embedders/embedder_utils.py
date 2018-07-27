@@ -229,4 +229,4 @@ def soft_embedding_lookup(embedding, soft_ids):
         soft_seq_emb = soft_embedding_lookup(
             embedding, tf.nn.softmax(decoder_outputs.logits))
     """
-    return tf.tensordot(soft_ids, embedding, [-1, 0])
+    return tf.tensordot(tf.to_float(soft_ids), embedding, [-1, 0])

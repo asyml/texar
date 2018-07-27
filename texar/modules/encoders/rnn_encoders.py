@@ -490,12 +490,12 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                     self._output_layer.trainable_variables)
             self._built = True
 
-        returns = (outputs, state)
+        rets = (outputs, state)
         if return_cell_output:
-            returns += (cell_outputs, )
+            rets += (cell_outputs, )
         if return_output_size:
-            returns += (output_size, )
-        return returns
+            rets += (output_size, )
+        return rets
 
     #def append_layer(self, layer):
     #    """Appends a layer to the end of the output layer. The layer must take
