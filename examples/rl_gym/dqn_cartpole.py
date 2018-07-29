@@ -35,45 +35,36 @@ FLAGS = flags.FLAGS
 config = importlib.import_module(FLAGS.config)
 
 
-def _main(_):
+if __name__ == '__main__':
     env = gym.make('CartPole-v0')
     env = env.unwrapped
 
     env_config = tx.agents.get_gym_env_config(env)
-    agent = PGAgent(
-        env_config,
-        policy_kwargs={'action_space': env_config.action_space},
-        hparams=config.pg_agent_hparams)
 
-    sess = tf.Session()
-    agent.sess = sess
-    sess.run(tf.global_variables_initializer())
-    sess.run(tf.local_variables_initializer())
-    sess.run(tf.tables_initializer())
-    feed_dict = {tx.global_mode(): tf.estimator.ModeKeys.TRAIN}
+    with tf.Session() as sess:
+        agent = tx.agents.DQNAgent(sess=sess, env_config=env_config)
 
-    for e in range(300):
-        reward_sum = 0.
-        observ = env.reset()
-        agent.reset()
-        while True:
-            action = agent.get_action(observ, feed_dict=feed_dict)
+        sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
+        sess.run(tf.tables_initializer())
 
-            next_observ, reward, terminal, _ = env.step(action=action)
-            if terminal:
-                reward = 0.
-            agent.observe(observ, action, reward, terminal, next_observ, feed_dict=feed_dict)
-            observ = next_observ
+        feed_dict = {tx.global_mode(): tf.estimator.ModeKeys.TRAIN}
 
-            reward_sum += reward
-            if terminal:
-                break
+        for e in range(3000):
+            reward_sum = 0.
+            observ = env.reset()
+            agent.reset()
+            while True:
+                action = agent.get_action(observ, feed_dict=feed_dict)
 
-        if (e + 1) % 10 == 0:
-            print('episode {}: {}'.format(e + 1, reward_sum))
+                next_observ, reward, terminal, _ = env.step(action=action)
+                agent.observe(observ, action, reward, terminal, next_observ,
+                              feed_dict=feed_dict)
+                observ = next_observ
 
-    sess.close()
+                reward_sum += reward
+                if terminal:
+                    break
 
-
-if __name__ == '__main__':
-    tf.app.run(main=_main)
+            if (e + 1) % 10 == 0:
+                print('episode {}: {}'.format(e + 1, reward_sum))

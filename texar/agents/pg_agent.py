@@ -127,7 +127,7 @@ class PGAgent(EpisodicAgentBase):
 
         return action
 
-    def _observe(self, reward, terminal, train_policy, feed_dict):
+    def _observe(self, observ, action, reward, terminal, next_observ, train_policy, feed_dict):
         self._rewards.append(reward)
 
         if terminal and train_policy:
