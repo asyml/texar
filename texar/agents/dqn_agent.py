@@ -179,7 +179,8 @@ class DQNAgent(EpisodicAgentBase):
         action_batch = np.array([data['action'] for data in minibatch])
         reward_batch = np.array([data['reward'] for data in minibatch])
         terminal_batch = np.array([data['terminal'] for data in minibatch])
-        next_observ_batch = np.array([data['next_observ'] for data in minibatch])
+        next_observ_batch = \
+            np.array([data['next_observ'] for data in minibatch])
 
         target_qvalue = self._sess.run(
             self._target_outputs['qvalues'], feed_dict={
