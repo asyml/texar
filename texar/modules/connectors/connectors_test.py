@@ -16,8 +16,8 @@ from texar.core import layers
 from texar.modules import ConstantConnector
 from texar.modules import MLPTransformConnector
 from texar.modules import ReparameterizedStochasticConnector
-from texar.modules import StochasticConnector
-from texar.modules import ConcatConnector
+#from texar.modules import StochasticConnector
+#from texar.modules import ConcatConnector
 from texar.modules.connectors.connectors import _assert_same_size
 
 # pylint: disable=too-many-locals
@@ -139,46 +139,46 @@ class TestConnectors(tf.test.TestCase):
                # self.assertAlmostEqual(0, sample_mu[i], delta=0.2)
                # self.assertAlmostEqual(1, sample_var[i], delta=0.2)
 
-    def test_concat_connector(self): # pylint: disable=too-many-locals
-        """Tests the logic of
-        :class:`~texar.modules.connectors.ConcatConnector`.
-        """
-        gauss_size = 5
-        constant_size = 7
-        variable_size = 13
+    #def test_concat_connector(self): # pylint: disable=too-many-locals
+    #    """Tests the logic of
+    #    :class:`~texar.modules.connectors.ConcatConnector`.
+    #    """
+    #    gauss_size = 5
+    #    constant_size = 7
+    #    variable_size = 13
 
-        decoder_size1 = 16
-        decoder_size2 = (16, 32)
+    #    decoder_size1 = 16
+    #    decoder_size2 = (16, 32)
 
-        gauss_connector = StochasticConnector(gauss_size)
-        categorical_connector = StochasticConnector(1)
-        constant_connector = ConstantConnector(constant_size)
-        concat_connector1 = ConcatConnector(decoder_size1)
-        concat_connector2 = ConcatConnector(decoder_size2)
+    #    gauss_connector = StochasticConnector(gauss_size)
+    #    categorical_connector = StochasticConnector(1)
+    #    constant_connector = ConstantConnector(constant_size)
+    #    concat_connector1 = ConcatConnector(decoder_size1)
+    #    concat_connector2 = ConcatConnector(decoder_size2)
 
-        # pylint: disable=invalid-name
-        mu = tf.zeros([self._batch_size, gauss_size])
-        var = tf.ones([self._batch_size, gauss_size])
-        categorical_prob = tf.constant([[0.1, 0.2, 0.7] for _ in xrange(self._batch_size)])
-        categorical_ds = tfds.Categorical(probs = categorical_prob)
-        gauss_ds = tfds.MultivariateNormalDiag(loc = mu, scale_diag = var)
+    #    # pylint: disable=invalid-name
+    #    mu = tf.zeros([self._batch_size, gauss_size])
+    #    var = tf.ones([self._batch_size, gauss_size])
+    #    categorical_prob = tf.constant([[0.1, 0.2, 0.7] for _ in xrange(self._batch_size)])
+    #    categorical_ds = tfds.Categorical(probs = categorical_prob)
+    #    gauss_ds = tfds.MultivariateNormalDiag(loc = mu, scale_diag = var)
 
-        gauss_state = gauss_connector(gauss_ds)
-        categorical_state = categorical_connector(categorical_ds)
-        constant_state = constant_connector(self._batch_size, value=1.)
-        with tf.Session() as debug_sess:
-            debug_cater = debug_sess.run(categorical_state)
+    #    gauss_state = gauss_connector(gauss_ds)
+    #    categorical_state = categorical_connector(categorical_ds)
+    #    constant_state = constant_connector(self._batch_size, value=1.)
+    #    with tf.Session() as debug_sess:
+    #        debug_cater = debug_sess.run(categorical_state)
 
-        state1 = concat_connector1([gauss_state, categorical_state, constant_state])
-        state2 = concat_connector2([gauss_state, categorical_state, constant_state])
+    #    state1 = concat_connector1([gauss_state, categorical_state, constant_state])
+    #    state2 = concat_connector2([gauss_state, categorical_state, constant_state])
 
-        with self.test_session() as sess:
-            sess.run(tf.global_variables_initializer())
-            [output1, output2] = sess.run([state1, state2])
+    #    with self.test_session() as sess:
+    #        sess.run(tf.global_variables_initializer())
+    #        [output1, output2] = sess.run([state1, state2])
 
-            # check the same size
-            self.assertEqual(output1.shape[1], decoder_size1)
-            self.assertEqual(output2[1].shape[1], decoder_size2[1])
+    #        # check the same size
+    #        self.assertEqual(output1.shape[1], decoder_size1)
+    #        self.assertEqual(output2[1].shape[1], decoder_size2[1])
 
 if __name__ == "__main__":
     tf.test.main()

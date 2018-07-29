@@ -79,7 +79,8 @@ class Conv1DClassifier(ClassifierBase):
         is_binary = is_binary or (num_classes <= 0 and logits.shape[1] == 1)
 
         if is_binary:
-            pred = tf.reshape(tf.greater(logits, 0), [-1])
+            pred = tf.to_int64(tf.reshape(tf.greater(logits, 0), [-1]))
+            logits = tf.reshape(logits, [-1])
         else:
             pred = tf.argmax(logits, 1)
 

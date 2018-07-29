@@ -21,9 +21,12 @@ from texar.utils.utils import get_function, get_instance
 # pylint: disable=too-many-arguments, invalid-name
 
 __all__ = [
-    "ConstantConnector", "ForwardConnector", "MLPTransformConnector",
-    "ReparameterizedStochasticConnector", "StochasticConnector",
-    "ConcatConnector"
+    "ConstantConnector",
+    "ForwardConnector",
+    "MLPTransformConnector",
+    "ReparameterizedStochasticConnector",
+    "StochasticConnector",
+    #"ConcatConnector"
 ]
 
 def _assert_same_size(outputs, output_size):
@@ -585,85 +588,84 @@ class StochasticConnector(ConnectorBase):
         return output
 
 
-class ConcatConnector(ConnectorBase):
-    """Concatenates multiple connectors into one connector. Used in, e.g.,
-    semi-supervised variational autoencoders, disentangled representation
-    learning, and other models.
-
-    Args:
-        output_size: Size of output excluding the batch dimension (eg.
-            :attr:`output_size = p` if :attr:`output.shape` is :attr:`[N, p]`).
-            Can be an int, a tuple of int, a Tensorshape, or a tuple of
-            TensorShapes.
-            For example, to transform to decoder state size, set
-            `output_size=decoder.cell.state_size`.
-        hparams (dict): Hyperparameters of the connector.
-    """
-
-    def __init__(self, output_size, hparams=None):
-        ConnectorBase.__init__(self, output_size, hparams)
-
-    @staticmethod
-    def default_hparams():
-        """Returns a dictionary of hyperparameters with default values.
-
-        Returns:
-            .. code-block:: python
-
-                {
-                    "activation_fn": "tensorflow.identity",
-                    "name": "concat_connector"
-                }
-
-            Here:
-
-            "activation_fn" : (str or callable)
-                The name or full path to the activation function applied to
-                the outputs of the MLP layer. The activation functions can be:
-
-                - Built-in activation functions defined in :mod:`tf` or \
-                  :mod:`tf.nn`, e.g., :tf_main:`identity <identity>`.
-                - User-defined activation functions in `texar.custom`.
-                - External activation functions. Must provide the full path, \
-                  e.g., "my_module.my_activation_fn".
-
-                The default value is :attr:`"identity"`, i.e., the MLP
-                transformation is linear.
-
-            "name" : str
-                Name of the connector.
-
-                The default value is "concat_connector".
-        """
-        return {
-            "activation_fn": "tensorflow.identity",
-            "name": "concat_connector"
-        }
-
-    def _build(self, connector_inputs, transform=True):
-        """Concatenate multiple input connectors
-
-        Args:
-            connector_inputs: a list of connector states
-            transform: If `True`, then the output are automatically
-                transformed to match :attr:`output_size`.
-
-        Returns:
-            A Tensor or a (nested) tuple of Tensors of the same structure of
-            the decoder state.
-        """
-
-        connector_inputs = [tf.cast(connector, tf.float32)
-                            for connector in connector_inputs]
-        output = tf.concat(connector_inputs, axis=1)
-
-        if transform:
-            fn_modules = ['texar.custom', 'tensorflow', 'tensorflow.nn']
-            activation_fn = get_function(self.hparams.activation_fn, fn_modules)
-            output = _mlp_transform(output, self._output_size, activation_fn)
-        _assert_same_size(output, self._output_size)
-
-        self._add_internal_trainable_variables()
-        self._built = True
-
-        return output
+#class ConcatConnector(ConnectorBase):
+#    """Concatenates multiple connectors into one connector. Used in, e.g.,
+#    semi-supervised variational autoencoders, disentangled representation
+#    learning, and other models.
+#
+#    Args:
+#        output_size: Size of output excluding the batch dimension (eg.
+#            :attr:`output_size = p` if :attr:`output.shape` is :attr:`[N, p]`).
+#            Can be an int, a tuple of int, a Tensorshape, or a tuple of
+#            TensorShapes.
+#            For example, to transform to decoder state size, set
+#            `output_size=decoder.cell.state_size`.
+#        hparams (dict): Hyperparameters of the connector.
+#    """
+#
+#    def __init__(self, output_size, hparams=None):
+#        ConnectorBase.__init__(self, output_size, hparams)
+#
+#    @staticmethod
+#    def default_hparams():
+#        """Returns a dictionary of hyperparameters with default values.
+#
+#        Returns:
+#            .. code-block:: python
+#
+#                {
+#                    "activation_fn": "tensorflow.identity",
+#                    "name": "concat_connector"
+#                }
+#
+#            Here:
+#
+#            "activation_fn" : (str or callable)
+#                The name or full path to the activation function applied to
+#                the outputs of the MLP layer. The activation functions can be:
+#
+#                - Built-in activation functions defined in :mod:`tf` or \
+#                  :mod:`tf.nn`, e.g., :tf_main:`identity <identity>`.
+#                - User-defined activation functions in `texar.custom`.
+#                - External activation functions. Must provide the full path, \
+#                  e.g., "my_module.my_activation_fn".
+#
+#                The default value is :attr:`"identity"`, i.e., the MLP
+#                transformation is linear.
+#
+#            "name" : str
+#                Name of the connector.
+#
+#                The default value is "concat_connector".
+#        """
+#        return {
+#            "activation_fn": "tensorflow.identity",
+#            "name": "concat_connector"
+#        }
+#
+#    def _build(self, connector_inputs, transform=True):
+#        """Concatenate multiple input connectors
+#
+#        Args:
+#            connector_inputs: a list of connector states
+#            transform (bool): If `True`, then the output are automatically
+#                transformed to match :attr:`output_size`.
+#
+#        Returns:
+#            A Tensor or a (nested) tuple of Tensors of the same structure of
+#            the decoder state.
+#        """
+#        connector_inputs = [tf.cast(connector, tf.float32)
+#                            for connector in connector_inputs]
+#        output = tf.concat(connector_inputs, axis=1)
+#
+#        if transform:
+#            fn_modules = ['texar.custom', 'tensorflow', 'tensorflow.nn']
+#            activation_fn = get_function(self.hparams.activation_fn, fn_modules)
+#            output = _mlp_transform(output, self._output_size, activation_fn)
+#        _assert_same_size(output, self._output_size)
+#
+#        self._add_internal_trainable_variables()
+#        self._built = True
+#
+#        return output

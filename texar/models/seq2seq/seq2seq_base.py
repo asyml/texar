@@ -119,7 +119,3 @@ class Seq2seqBase(ModelBase):
                 self._hparams.connector_type, kwargs,
                 ["texar.modules, texar.custom"])
 
-    def encode(self, features, labels):
-        """Encodes the inputs.
-        """
-        raise NotImplementedError
