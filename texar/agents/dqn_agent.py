@@ -91,7 +91,7 @@ class DQNAgent(EpisodicAgentBase):
             'cold_start_steps': 100,
             'sample_batch_size': 32,
             'update_period': 100,
-            'discount_factor': 0.99,
+            'discount_factor': 0.95,
             'name': 'dqn_agent'
         }
 
@@ -130,12 +130,11 @@ class DQNAgent(EpisodicAgentBase):
         return self._target(inputs=state_inputs, **self._qnet_caller_kwargs)
 
     def _get_td_error(self, qnet_qvalues, actions, y):
-        estimate = tf.reduce_sum(qnet_qvalues * tf.to_float(actions), axis=1)
-        return (estimate - y) ** 2
+        return y - tf.reduce_sum(qnet_qvalues * tf.to_float(actions), axis=1)
 
     def _get_train_op(self):
         train_op = opt.get_train_op(
-            loss=tf.reduce_sum(self._td_error),
+            loss=tf.reduce_sum(self._td_error ** 2),
             variables=self._qnet.trainable_variables,
             hparams=self._hparams.optimization.todict())
         return train_op
