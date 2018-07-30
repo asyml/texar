@@ -16,4 +16,4 @@ from texar.modules.decoders import *
 from texar.modules.connectors import *
 from texar.modules.classifiers import *
 from texar.modules.policies import *
-from texar.modules.q_nets import *
+from texar.modules.qnets import *
