@@ -92,7 +92,6 @@ def prepare_data(train_path):
 
 
 def _main(_):
-
     prepare_data(config.train_data_hparams['dataset']['files'])
 
     # Data
