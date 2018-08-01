@@ -19,8 +19,8 @@ class Seq2seqBase(ModelBase):
     """
 
     def __init__(self,
-                 source_vocab_size=None,
-                 target_vocab_size=None,
+                 source_vocab,
+                 target_vocab=None,
                  source_embedder=None,
                  target_embedder=None,
                  encoder=None,
@@ -29,19 +29,21 @@ class Seq2seqBase(ModelBase):
                  hparams=None):
         ModelBase.__init__(hparams)
 
-        self._src_vocab_size = source_vocab_size
-        if source_vocab_size is None:
-            if source_embedder is None:
-                raise ValueError('Either `source_vocab_size` or '
-                                 '`source_embedder` must be given.')
-            self._src_vocab_size = source_embedder.num_embeds
+        self._src_vocab = source_vocab
+        if source_embedder is not None:
+            if self._src_vocab.size != source_embedder.num_embeds:
+                raise ValueError(
+                    'source vocab size ({}) does not match the source embedder '
+                    'size ({}).'.format(self._src_vocab.size,
+                                        source_embedder.num_embeds))
 
-        self._tgt_vocab_size = target_vocab_size
-        if target_vocab_size is None:
-            if target_embedder is not None:
-                self._tgt_vocab_size = target_embedder.num_embeds
-            else:
-                self._tgt_vocab_size = self._src_vocab_size
+        self._tgt_vocab = target_vocab or self._src_vocab
+        if target_embedder is not None:
+            if self._tgt_vocab.size != target_embedder.num_embeds:
+                raise ValueError(
+                    'target vocab size ({}) does not match the target embedder '
+                    'size ({}).'.format(self._tgt_vocab.size,
+                                        target_embedder.num_embeds))
 
         self._src_embedder = source_embedder
         self._tgt_embedder = target_embedder
@@ -66,16 +68,19 @@ class Seq2seqBase(ModelBase):
             "encoder": {},
             "decoder_type": "BasicRNNDecoder",
             "decoder": {},
+            "decoding_strategy_train": "train_greedy",
+            "decoding_strategy_infer": "infer_greedy",
+            "beam_search_width": 0,
             "connector_type": "MLPTransformConnector",
             "connector": {},
             "optimization": {}
         })
         return hparams
 
-    def _get_embedders(self):
+    def _build_embedders(self):
         if self._src_embedder is None:
             kwargs = {
-                "vocab_size": self._src_vocab_size,
+                "vocab_size": self._src_vocab.size,
                 "hparams": self._hparams.source_embedder.todict()
             }
             self._src_embedder = utils.check_or_get_instance(
@@ -87,7 +92,7 @@ class Seq2seqBase(ModelBase):
                 self._tgt_embedder = self._src_embedder
             else:
                 kwargs = {
-                    "vocab_size": self._tgt_vocab_size,
+                    "vocab_size": self._tgt_vocab.size,
                 }
                 if self._hparams.embedder_hparams_share:
                     kwargs["hparams"] = self._hparams.source_embedder.todict()
@@ -97,7 +102,7 @@ class Seq2seqBase(ModelBase):
                     self._hparams.target_embedder_type, kwargs,
                     ["texar.modules, texar.custom"])
 
-    def _get_encoder(self):
+    def _build_encoder(self):
         if self._encoder is None:
             kwargs = {
                 "hparams": self._hparams.encoder.todict()
@@ -106,10 +111,10 @@ class Seq2seqBase(ModelBase):
                 self._hparams.encoder_type, kwargs,
                 ["texar.modules, texar.custom"])
 
-    def _get_decoder(self):
+    def _build_decoder(self):
         raise NotImplementedError
 
-    def _get_connector(self):
+    def _build_connector(self):
         if self._connector is None:
             kwargs = {
                 "output_size": self._decoder.state_size,

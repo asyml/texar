@@ -16,12 +16,15 @@ import numpy as np
 
 from texar.utils.utils import dict_lookup
 
+# pylint: disable=too-few-public-methods, invalid-name
+# pylint: disable=too-many-instance-attributes, too-many-arguments
+
 __all__ = [
     "SpecialTokens",
     "Vocab"
 ]
 
-class SpecialTokens(object): #pylint: disable=too-few-public-methods
+class SpecialTokens(object):
     """Special tokens, including :attr:`PAD`, :attr:`BOS`, :attr:`BOS`,
     :attr:`UNK`.
     """
@@ -44,13 +47,13 @@ def _make_defaultdict(keys, values, default_value):
         defaultdict: A python `defaultdict` instance that maps keys to values.
     """
     dict_ = defaultdict(lambda: default_value)
-    for k, v in zip(keys, values):  # pylint: disable=invalid-name
+    for k, v in zip(keys, values):
         dict_[k] = v
 
     return dict_
 
 
-class Vocab(object):  # pylint: disable=too-many-instance-attributes
+class Vocab(object):
     """Vocabulary class that loads vocabulary from file, and maintains mapping
     tables between token strings and indexes.
 
@@ -67,7 +70,8 @@ class Vocab(object):  # pylint: disable=too-many-instance-attributes
                                 default to be a empty string.
     """
 
-    def __init__(self, filename, # pylint: disable=too-many-arguments
+    def __init__(self,
+                 filename,
                  pad_token=SpecialTokens.PAD,
                  bos_token=SpecialTokens.BOS,
                  eos_token=SpecialTokens.EOS,

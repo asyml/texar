@@ -155,7 +155,7 @@ def beam_search_decode(decoder_or_cell,
             maximum_iterations=max_decoding_length,
             **kwargs)
 
-        return outputs, final_state
+        return outputs, final_state, final_state.lengths
 
     if isinstance(decoder_or_cell, RNNDecoderBase):
         vs = decoder_or_cell.variable_scope

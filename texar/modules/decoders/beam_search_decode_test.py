@@ -46,7 +46,7 @@ class BeamSearchDecodeTest(tf.test.TestCase):
             self, decoder, initial_state=None, tiled_initial_state=None,
             tf_initial_state=None, beam_width_1=1, initiated=False):
         ## Compare with tf built-in BeamSearchDecoder
-        outputs, final_state = beam_search_decode(
+        outputs, final_state, _ = beam_search_decode(
             decoder_or_cell=decoder,
             embedding=self._embedding,
             start_tokens=[1]*self._batch_size,
@@ -84,7 +84,7 @@ class BeamSearchDecodeTest(tf.test.TestCase):
             decoder=beam_decoder, maximum_iterations=20)
 
         ## Tests time major
-        outputs_2, _ = beam_search_decode(
+        outputs_2, _, _ = beam_search_decode(
             decoder_or_cell=decoder,
             embedding=self._embedding,
             start_tokens=[1]*self._batch_size,
@@ -93,7 +93,7 @@ class BeamSearchDecodeTest(tf.test.TestCase):
             initial_state=initial_state,
             tiled_initial_state=tiled_initial_state,
             max_decoding_length=21)
-        outputs_3, _ = beam_search_decode(
+        outputs_3, _, _ = beam_search_decode(
             decoder_or_cell=decoder,
             embedding=self._embedding,
             start_tokens=[1]*self._batch_size,
