@@ -109,10 +109,13 @@ def beam_search_decode(decoder_or_cell,
             is set to :attr:`max_decoding_length`.
 
     Returns:
-        outputs: An instance of :tf_main:`FinalBeamSearchDecoderOutput
+        (outputs, final_state, sequence_length):
+
+        - outputs: An instance of :tf_main:`FinalBeamSearchDecoderOutput
             <contrib/seq2seq/FinalBeamSearchDecoderOutput>`.
-        final_state: An instance of :tf_main:`BeamSearchDecoderState
+        - final_state: An instance of :tf_main:`BeamSearchDecoderState
             <contrib/seq2seq/BeamSearchDecoderState>`.
+        - sequence_length: A Tensor of shape `[batch_size]`.
     """
     if isinstance(decoder_or_cell, RNNDecoderBase):
         cell = decoder_or_cell._get_beam_search_cell(beam_width=beam_width)
