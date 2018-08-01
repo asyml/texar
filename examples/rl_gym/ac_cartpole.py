@@ -24,7 +24,6 @@ import importlib
 import gym
 import tensorflow as tf
 import texar as tx
-from texar.agents import PGAgent
 
 flags = tf.flags
 
@@ -34,15 +33,15 @@ FLAGS = flags.FLAGS
 
 config = importlib.import_module(FLAGS.config)
 
-
 if __name__ == '__main__':
     env = gym.make('CartPole-v0')
     env = env.unwrapped
 
     env_config = tx.agents.get_gym_env_config(env)
 
+    agent = tx.agents.ActorCriticAgent(env_config=env_config)
     with tf.Session() as sess:
-        agent = tx.agents.DQNAgent(sess=sess, env_config=env_config)
+        agent.sess = sess
 
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())

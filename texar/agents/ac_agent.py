@@ -1,161 +1,117 @@
-""" Actor-Critic Agent
-"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import numpy as np
-
 import tensorflow as tf
 
-from texar.agents.agent_base import AgentBase
-from texar.core import optimization as opt
-from texar.utils.utils import get_instance
-from texar.losses.pg_losses import pg_loss
-from texar.losses.dqn_losses import l2_loss
+from texar.agents.episodic_agent_base import EpisodicAgentBase
+from texar.agents import DQNAgent, PGAgent
+from texar.utils import utils
+
+__all__ = [
+    "ActorCriticAgent"
+]
 
 
-class ACAgent(AgentBase): #pylint: disable=too-many-instance-attributes
-    """
-    Actor-Critic Agent
-    (online & using td_error as advantage & no pre-train temporarily)
-    """
-    def __init__(self, actions, state_shape, hparams=None):
-        AgentBase.__init__(self, actions, state_shape, hparams)
+class ActorCriticAgent(EpisodicAgentBase):
+    def __init__(self,
+                 env_config,
+                 sess=None,
+                 actor=None,
+                 actor_kwargs=None,
+                 critic=None,
+                 critic_kwargs=None,
+                 hparams=None):
+        EpisodicAgentBase.__init__(self, env_config=env_config, hparams=hparams)
 
-        self.discount_factor = self._hparams.discount_factor
+        self._sess = sess
+        self._num_actions = self._env_config.action_space.high - \
+                            self._env_config.action_space.low
 
-        self.actor = get_instance(
-            self._hparams.actor_network.type,
-            {"hparams": self._hparams.actor_network.hparams},
-            module_paths=['texar.modules', 'texar.custom']
-        )
-        with tf.variable_scope(self.actor.variable_scope):
-            self.actor_state_inputs = tf.placeholder(
-                dtype=tf.float64, shape=[None, ] + list(state_shape))
-            self.actor_action_inputs = tf.placeholder(
-                dtype=tf.int32, shape=[None, ])
-            self.actor_advantage_inputs = tf.placeholder(
-                dtype=tf.float64, shape=[None, ])
-            self.actor_outputs = self.actor(self.actor_state_inputs)
-            self.actor_policy = tf.nn.softmax(self.actor_outputs)
-            self.actor_loss = self._hparams.actor_trainer.loss_fn(
-                outputs=self.actor_outputs,
-                action_inputs=self.actor_action_inputs,
-                advantages=self.actor_advantage_inputs
-            )
-            self.actor_trainer = opt.get_train_op(
-                loss=self.actor_loss,
-                variables=None,
-                hparams=self._hparams.actor_trainer.optimization_hparams
-            )
-        self.critic = get_instance(
-            self._hparams.critic_network.type,
-            {"hparams": self._hparams.critic_network.hparams},
-            module_paths=['texar.modules', 'texar.custom']
-        )
-        with tf.variable_scope(self.critic.variable_scope):
-            self.critic_state_inputs = tf.placeholder(
-                dtype=tf.float64, shape=[None, ] + list(state_shape))
-            self.critic_y_inputs = tf.placeholder(
-                dtype=tf.float64, shape=[None, ])
-            self.critic_qvalue = self.critic(self.critic_state_inputs)
-            self.td_error = self.critic_y_inputs - self.critic_qvalue
-            self.critic_loss = tf.reduce_sum(self.td_error ** 2)
-            self.critic_trainer = opt.get_train_op(
-                loss=self.critic_loss,
-                variables=None,
-                hparams=self._hparams.critic_trainer.optimization_hparams
-            )
-        self.sess = tf.Session()
-        self.sess.run(tf.global_variables_initializer())
+        with tf.variable_scope(self.variable_scope):
+            if actor is None:
+                kwargs = utils.get_instance_kwargs(
+                    actor_kwargs, self._hparams.actor_kwargs)
+                kwargs.update(dict(env_config=env_config, sess=sess))
+                actor = utils.get_instance(
+                    class_or_name=self._hparams.actor_type,
+                    kwargs=kwargs,
+                    module_paths=['texar.agents', 'texar.custom'])
+            self.actor = actor
+
+            if critic is None:
+                kwargs = utils.get_instance_kwargs(
+                    critic_kwargs, self._hparams.critic_kwargs)
+                kwargs.update(dict(env_config=env_config, sess=sess))
+                critic = utils.get_instance(
+                    class_or_name=self._hparams.critic_type,
+                    kwargs=kwargs,
+                    module_paths=['texar.agents', 'texar.custom'])
+            self.critic = critic
+
+            assert self.actor._discount_factor == self.critic._discount_factor
+            self._discount_factor = self.actor._discount_factor
 
     @staticmethod
     def default_hparams():
         return {
-            'name': 'actor-critic agent',
-            'discount_factor': 0.99,
-            'actor_network': {
-                'type': 'PGNet',
-                'hparams': None
-            },
-            'actor_trainer': {
-                'loss_fn': pg_loss,
-                'optimization_hparams': opt.default_optimization_hparams()
-            },
-            'critic_network': {
-                'type': 'SimpleQNet',
-                'hparams': None
-            },
-            'critic_trainer': {
-                'loss_fn': l2_loss,
-                'optimization_hparams': opt.default_optimization_hparams()
-            }
+            'actor_type': 'PGAgent',
+            'actor_kwargs': None,
+            'actor_hparams': PGAgent.default_hparams(),
+            'critic_type': 'DQNAgent',
+            'critic_kwargs': None,
+            'critic_hparams': DQNAgent.default_hparams(),
+            'name': 'actor_critic_agents'
         }
 
-    def set_initial_state(self, observation):
-        self.current_state = np.array(observation)
+    def _reset(self):
+        self.actor._reset()
+        self.critic._reset()
 
-    def train_critic(self, state, reward, next_observation):
+    def _observe(self, observ, action, reward, terminal, next_observ,
+                 train_policy, feed_dict):
+        self.critic._observe(observ, action, reward, terminal, next_observ,
+                 train_policy, feed_dict)
+
+        feed_dict_ = {self.critic._observ_inputs: [next_observ]}
+        feed_dict_.update(feed_dict)
+        next_step_qvalues = self.critic._sess.run(
+            self.critic._qnet_outputs['qvalues'], feed_dict=feed_dict_)
+
+        action_one_hot = [0.] * self._num_actions
+        action_one_hot[action] = 1.
+        feed_dict_ = {
+            self.critic._observ_inputs: [observ],
+            self.critic._y_inputs:
+                [reward + self._discount_factor * next_step_qvalues[0][action]],
+            self.critic._action_inputs: [action_one_hot]
+        }
+        feed_dict_.update(feed_dict)
+        td_errors = self.critic._sess.run(
+            self.critic._td_error, feed_dict=feed_dict_)
+
+        feed_dict_ = {
+            self.actor._observ_inputs: [observ],
+            self.actor._action_inputs: [action],
+            self.actor._advantage_inputs: td_errors
+        }
+        feed_dict_.update(feed_dict)
+
+        self.actor._train_policy(feed_dict=feed_dict_)
+
+    def get_action(self, observ, feed_dict=None):
+        return self.actor.get_action(observ, feed_dict=feed_dict)
+
+    @property
+    def sess(self):
+        """The tf session.
         """
-        Train the Critic
-        :param state:
-        :param reward:
-        :param next_observation:
-        :return: The td_error which will be given to Actor
-        """
-        next_step_qvalue = \
-            self.sess.run(self.critic_qvalue, feed_dict={
-                self.critic_state_inputs: [next_observation, ]})[0][0]
-        y_input = reward + self.discount_factor * next_step_qvalue
+        return self._sess
 
-        self.sess.run(self.critic_trainer, feed_dict={
-            self.critic_state_inputs: [state, ],
-            self.critic_y_inputs: [y_input, ]
-        })
-        return self.sess.run(self.td_error, feed_dict={
-            self.critic_state_inputs: [state, ],
-            self.critic_y_inputs: [y_input, ]
-        })
+    @sess.setter
+    def sess(self, session):
+        self._sess = session
+        self.actor._sess = session
+        self.critic._sess = session
 
-    def train_actor(self, state, action_id, advantage):
-        """
-        Train the Actor
-        :param state:
-        :param action_id:
-        :param advantage:
-        :return:
-        """
-        self.sess.run(self.actor_trainer, feed_dict={
-            self.actor_state_inputs: [state, ],
-            self.actor_action_inputs: [action_id, ],
-            self.actor_advantage_inputs: [advantage, ]
-        })
 
-    def perceive(self, action_id, reward, is_terminal, next_observation):
-        advantage = self.train_critic(
-            self.current_state, reward, next_observation)[0][0]
-        self.train_actor(self.current_state, action_id, advantage)
-
-        self.current_state = next_observation
-
-    def get_action(self, state=None, action_mask=None):
-        if state is None:
-            state = self.current_state
-        if action_mask is None:
-            action_mask = [True, ] * self.actions
-
-        probs = self.sess.run(self.actor_policy,
-                              feed_dict={self.actor_state_inputs: [state, ]})[0]
-
-        prob_sum = 0.
-        for i in range(self.actions):
-            if action_mask[i] is True:
-                prob_sum += probs[i]
-        for i in range(self.actions):
-            if action_mask[i] is True:
-                probs[i] /= prob_sum
-            else:
-                probs[i] = 0.
-
-        return np.random.choice(self.actions, p=probs)

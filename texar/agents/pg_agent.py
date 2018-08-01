@@ -34,6 +34,7 @@ class PGAgent(EpisodicAgentBase):
 
         self._sess = sess
         self._lr = learning_rate
+        self._discount_factor = self._hparams.discount_factor
 
         with tf.variable_scope(self.variable_scope):
             if policy is None:
@@ -64,10 +65,10 @@ class PGAgent(EpisodicAgentBase):
                 dtype=self._env_config.action_dtype,
                 shape=[None, ] + list(self._env_config.action_shape),
                 name='action_inputs')
-            self._qvalue_inputs = tf.placeholder(
+            self._advantage_inputs = tf.placeholder(
                 dtype=tf.float32,
                 shape=[None, ],
-                name='qvalue_inputs')
+                name='advantages_inputs')
 
             self._outputs = self._get_policy_outputs()
 
@@ -84,7 +85,7 @@ class PGAgent(EpisodicAgentBase):
         log_probs = self._outputs['dist'].log_prob(self._action_inputs)
         pg_loss = losses.pg_loss_with_log_probs(
             log_probs=log_probs,
-            advantages=self._qvalue_inputs,
+            advantages=self._advantage_inputs,
             average_across_timesteps=True,
             sum_over_timesteps=False)
         return pg_loss
@@ -148,8 +149,7 @@ class PGAgent(EpisodicAgentBase):
         feed_dict_ = {
             self._observ_inputs: self._observs,
             self._action_inputs: self._actions,
-            self._qvalue_inputs: qvalues
-        }
+            self._advantage_inputs: qvalues}
         feed_dict_.update(feed_dict or {})
 
         self._train_outputs = self._sess.run(fetches, feed_dict=feed_dict_)
