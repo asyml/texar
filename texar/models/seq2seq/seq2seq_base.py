@@ -7,8 +7,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import tensorflow as tf
+
 from texar.models.model_base import ModelBase
+from texar.losses.mle_losses import sequence_sparse_softmax_cross_entropy
+from texar.core.optimization import get_train_op
 from texar.utils import utils
+from texar.utils.variables import collect_trainable_variables
 
 __all__ = [
     "Seq2seqBase"
@@ -124,3 +129,59 @@ class Seq2seqBase(ModelBase):
                 self._hparams.connector_type, kwargs,
                 ["texar.modules, texar.custom"])
 
+    def get_loss(self, decoder_results, features, labels):
+        """Computes the training loss.
+        """
+        return sequence_sparse_softmax_cross_entropy(
+            labels=labels['target_text_ids'][:, 1:],
+            logist=decoder_results['outputs'].logits,
+            sequence_length=decoder_results['outputs']['sequence_length'])
+
+    def _get_predictions(self, decoder_results, features, labels, loss=None):
+        raise NotImplementedError
+
+    def _get_train_op(self, loss):
+        varlist = collect_trainable_variables(
+            [self._src_embedder, self._tgt_embedder, self._encoder,
+             self._connector, self._decoder])
+        return get_train_op(
+            loss, variables=varlist, hparams=self._hparams.optimization)
+
+    def _get_eval_metric_ops(self, decoder_results, features, labels):
+        return None
+
+    def _build(self, features, labels, params, mode, config=None):
+        self._build_embedders()
+        self._build_encoder()
+        self._build_decoder()
+        self._build_connector()
+
+        encoder_results = self.encode(features, labels, mode)
+        decoder_results = self.decode(encoder_results, features, labels, mode)
+
+        loss, train_op, preds, eval_metric_ops = None, None, None, None
+        if mode == tf.estimator.ModeKeys.PREDICT:
+            preds = self._get_predictions(decoder_results, features, labels)
+        else:
+            loss = self.get_loss(decoder_results, features, labels)
+
+            if mode == tf.estimator.ModeKeys.TRAIN:
+                train_op = self._get_train_op(loss)
+            if mode == tf.estimator.ModeKeys.EVAL:
+                eval_metric_ops = self._get_eval_metric_ops(
+                    decoder_results, features, labels)
+
+            preds = self._get_predictions(decoder_results, features, labels,
+                                          loss)
+
+        return tf.estimator.EstimatorSpec(
+            mode=mode,
+            predictions=preds,
+            loss=loss,
+            train_op=train_op,
+            eval_metric_ops=eval_metric_ops)
+
+    #def get_input_fn(self,
+    #                 train_data_hparams=None,
+    #                 test_data_hparams=None):
+    #    pass

@@ -522,7 +522,7 @@ def strip_eos(str_, eos_token='<EOS>'):
         str_: A `str`, or an `n`-D numpy array or (possibly nested)
             list of `str`.
         eos_token (str): The EOS token. Default is '<EOS>' as defined in
-            :class:`~texar.data.vocabulary.SpecialTokens`.EOS
+            :class:`~texar.data.vocabulary.SpecialTokens`.`EOS`
 
     Returns:
         Strings of the same structure/shape as :attr:`str_`.
@@ -544,6 +544,34 @@ def strip_eos(str_, eos_token='<EOS>'):
     else:
         return np.asarray(strp_str)
 _strip_eos_ = strip_eos
+
+def strip_bos(str_, bos_token='<BOS>'):
+    """Remove the leading BOS token.
+
+    Assumes tokens in the strings are separated with the space character.
+
+    Args:
+        str_: A `str`, or an `n`-D numpy array or (possibly nested)
+            list of `str`.
+        bos_token (str): The BOS token. Default is '<EOS>' as defined in
+            :class:`~texar.data.vocabulary.SpecialTokens`.`BOS`
+
+    Returns:
+        Strings of the same structure/shape as :attr:`str_`.
+    """
+    def _recur_strip(s):
+        if is_str(s):
+            return ' '.join(s.strip().split()).strip(bos_token+' ')
+        else:
+            return [_recur_strip(si) for si in s]
+
+    strp_str = _recur_strip(str_)
+
+    if isinstance(str_, (list, tuple)):
+        return type(str_)(strp_str)
+    else:
+        return np.asarray(strp_str)
+_strip_bos_ = strip_bos
 
 def str_join(tokens, sep=' '):
     """Concats :attr:`tokens` along the last dimension with intervening
@@ -571,8 +599,8 @@ def str_join(tokens, sep=' '):
     else:
         return np.asarray(str_)
 
-def map_ids_to_strs(ids, vocab, join=True,
-                    strip_pad='<PAD>', strip_eos='<EOS>'):
+def map_ids_to_strs(ids, vocab, join=True, strip_pad='<PAD>',
+                    strip_bos='<BOS>', strip_eos='<EOS>'):
     """Transforms indexes to strings by id-token mapping, token concat, token
     stripping, etc.
 
@@ -610,6 +638,9 @@ def map_ids_to_strs(ids, vocab, join=True,
 
     if strip_pad is not None:
         str_ = strip_token(str_, strip_pad)
+
+    if strip_bos is not None:
+        str_ = _strip_bos_(str_, strip_bos)
 
     return str_
 

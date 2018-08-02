@@ -10,9 +10,9 @@ from __future__ import print_function
 import tensorflow as tf
 
 from texar.models.seq2seq.seq2seq_base import Seq2seqBase
+from texar.modules.decoders.beam_search_decode import beam_search_decode
 from texar.utils import utils
 from texar.utils.shapes import get_batch_size
-from texar.modules.decoders.beam_search_decode import beam_search_decode
 
 __all__ = [
     "BasicSeq2seq"
@@ -84,7 +84,7 @@ class BasicSeq2seq(Seq2seqBase):
             initial_state=initial_state,
             decoding_strategy=self._hparams.decoding_strategy_train,
             inputs=self.embed_target(features, labels, mode),
-            sequence_length=labels['target_length'],
+            sequence_length=labels['target_length']-1,
             embedding=self._tgt_embedder.embedding,
             mode=mode)
 
@@ -96,7 +96,7 @@ class BasicSeq2seq(Seq2seqBase):
         max_l = self._decoder.hparams.max_decoding_length_infer
 
         if self._hparams.beam_search_width > 1:
-            outputs, final_state = beam_search_decode(
+            return beam_search_decode(
                 decoder_or_cell=self._decoder,
                 embedding=self._tgt_embedder.embedding,
                 start_tokens=start_tokens,
@@ -104,7 +104,6 @@ class BasicSeq2seq(Seq2seqBase):
                 beam_width=self._hparams.beam_search_width,
                 initial_state=initial_state,
                 max_decoding_length=max_l)
-            sequence_length = final_state.lengths
         else:
             return self._decoder(
                 initial_state=initial_state,
@@ -120,19 +119,29 @@ class BasicSeq2seq(Seq2seqBase):
         initial_state = self._connect(encoder_results, features, labels, mode)
 
         if self.mode == tf.contrib.learn.ModeKeys.TRAIN:
-            return self._decode_train(
+            outputs, final_state, sequence_length = self._decode_train(
                 initial_state, encoder_results, features, labels, mode)
         else:
-            return self._decode_infer(
+            outputs, final_state, sequence_length = self._decode_infer(
                 initial_state, encoder_results, features, labels, mode)
 
-    def get_loss(self, decoder_results,)
+        return {'outputs': outputs,
+                'final_state': final_state,
+                'sequence_length': sequence_length}
 
-    def _build(self, features, labels, params, mode, config=None):
-        self._build_embedders()
-        self._build_encoder()
-        self._build_decoder()
-        self._build_connector()
+    def _get_predictions(self, decoder_results, features, labels, loss=None):
+        preds = {}
 
-        encoder_results = self.encode(features, labels, mode)
-        decoder_results = self.decode(encoder_results, features, labels, mode)
+        preds.update(features)
+
+        if labels is not None:
+            preds.update(labels)
+
+        preds.update(dict(zip(decoder_results._fields, decoder_results)))
+        preds['sample'] = self._tgt_vocab.map_ids_to_tokens(preds['sample_id'])
+
+        if loss is not None:
+            preds['loss'] = loss
+
+        return preds
+
