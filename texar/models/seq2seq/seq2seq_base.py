@@ -11,6 +11,7 @@ import tensorflow as tf
 
 from texar.models.model_base import ModelBase
 from texar.losses.mle_losses import sequence_sparse_softmax_cross_entropy
+from texar.data.data.paired_text_data import PairedTextData
 from texar.core.optimization import get_train_op
 from texar.utils import utils
 from texar.utils.variables import collect_trainable_variables
@@ -181,7 +182,36 @@ class Seq2seqBase(ModelBase):
             train_op=train_op,
             eval_metric_ops=eval_metric_ops)
 
-    #def get_input_fn(self,
-    #                 train_data_hparams=None,
-    #                 test_data_hparams=None):
-    #    pass
+    def get_input_fn(self, mode, hparams=None):
+        """Creates an input function `input_fn` that provides input data
+        for the model in an :tf_main:`Estimator <estimator/Estimator>`.
+        See, e.g., :tf_main:`tf.estimator.train_and_evaluate
+        <estimator/train_and_evaluate>`.
+
+        Args:
+            mode: One of members in
+                :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`.
+            hparams: A `dict` or an :class:`~texar.hparams.HParams` instance
+                containing the hyperparameters of
+                :class:`~texar.data.PairedTextData`. See
+                :meth:`~texar.data.PairedTextData.default_hparams` for the
+                the structure and default values of hyperparameters.
+
+        Returns:
+            An input function that returns a tuple `(features, labels)`
+            when called.
+        """
+        def _input_fn():
+            data = PairedTextData(hparams)
+            iterator = data.dataset.make_one_shot_iterator()
+            batch = iterator.get_next()
+            features, labels = {}, {}
+            for key, value in batch:
+                if key.startswith('source_'):
+                    features[key] = value
+                else:
+                    labels[key] = value
+            return features, labels
+
+        return _input_fn
+

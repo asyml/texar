@@ -18,6 +18,7 @@ __all__ = [
     "get_tf_dtype",
     "is_callable",
     "is_str",
+    "maybe_hparams_to_dict"
 ]
 
 def get_tf_dtype(dtype): # pylint: disable=too-many-return-statements
@@ -70,3 +71,13 @@ def is_str(x):
     otherwise.
     """
     return isinstance(x, six.string_types)
+
+def maybe_hparams_to_dict(hparams):
+    """If :attr:`hparams` is an instance of :class:`~texar.hyperparams.HParams`,
+    converts it to a `dict` and returns. If :attr:`hparams` is a `dict`,
+    returns as is.
+    """
+    if isinstance(hparams, dict):
+        return hparams
+    return hparams.todict()
+
