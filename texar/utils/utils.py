@@ -12,6 +12,7 @@ from __future__ import division
 import inspect
 from pydoc import locate
 import copy
+import collections
 import numpy as np
 
 import tensorflow as tf
@@ -43,6 +44,7 @@ __all__ = [
     "dict_lookup",
     "dict_fetch",
     "dict_pop",
+    "flatten_dict",
     "strip_token",
     "strip_eos",
     "str_join",
@@ -284,16 +286,21 @@ def call_function_with_redundant_kwargs(fn, kwargs):
     function's argument list are used to call the function.
 
     Args:
-        fn (function): The function to call.
-        kwargs (dict): A dictionary of arguments for the class constructor. It
+        fn (function): A callable. If :attr:`fn` is not a python function,
+            :attr:`fn.__call__` is called.
+        kwargs (dict): A `dict` of arguments for the callable. It
             may include invalid arguments which will be ignored.
 
     Returns:
         The returned results by calling :attr:`fn`.
     """
+    try:
+        fn_args = set(inspect.getargspec(fn).args)
+    except TypeError:
+        fn_args = set(inspect.getargspec(fn.__call__).args)
+
     # Select valid arguments
     selected_kwargs = {}
-    fn_args = set(inspect.getargspec(fn).args)
     for key, value in kwargs.items():
         if key in fn_args:
             selected_kwargs[key] = value
@@ -443,6 +450,35 @@ def dict_pop(dict_, pop_keys, default=None):
         pop_keys = [pop_keys]
     ret_dict = {key: dict_.pop(key, default) for key in pop_keys}
     return ret_dict
+
+def flatten_dict(dict_, parent_key="", sep="."):
+    """Flattens a nested dictionary. Namedtuples within the dictionary are
+    converted to dicts.
+
+    Adapted from:
+    https://github.com/google/seq2seq/blob/master/seq2seq/models/model_base.py
+
+    Args:
+        dict_ (dict): The dictionary to flatten.
+        parent_key (str): A prefix to prepend to each key.
+        sep (str): Separator that intervenes between parent and child keys.
+            E.g., if :attr:`sep``='.'`, then { "a": { "b": 3 } } is converted
+            into { "a.b": 3 }.
+
+    Returns:
+        A new flattened `dict`.
+    """
+    items = []
+    for key, value in dict_.items():
+        key_ = parent_key + sep + key if parent_key else key
+        if isinstance(value, collections.MutableMapping):
+            items.extend(flatten_dict(value, key_, sep=sep).items())
+        elif isinstance(value, tuple) and hasattr(value, "_asdict"):
+            dict_items = collections.OrderedDict(zip(value._fields, value))
+            items.extend(flatten_dict(dict_items, key_, sep=sep).items())
+        else:
+          items.append((key_, value))
+    return dict(items)
 
 def default_str(str_, default_str):
     """Returns :attr:`str_` if it is not `None` or empty, otherwise returns

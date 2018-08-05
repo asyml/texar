@@ -13,6 +13,7 @@ from texar.models.model_base import ModelBase
 from texar.losses.mle_losses import sequence_sparse_softmax_cross_entropy
 from texar.data.data.paired_text_data import PairedTextData
 from texar.core.optimization import get_train_op
+from texar import HParams
 from texar.utils import utils
 from texar.utils.variables import collect_trainable_variables
 
@@ -24,38 +25,19 @@ class Seq2seqBase(ModelBase):
     """Base class inherited by all seq2seq model classes.
     """
 
-    def __init__(self,
-                 source_vocab,
-                 target_vocab=None,
-                 source_embedder=None,
-                 target_embedder=None,
-                 encoder=None,
-                 decoder=None,
-                 connector=None,
-                 hparams=None):
-        ModelBase.__init__(hparams)
+    def __init__(self, data_hparams ,hparams=None):
+        ModelBase.__init__(self, hparams)
 
-        self._src_vocab = source_vocab
-        if source_embedder is not None:
-            if self._src_vocab.size != source_embedder.num_embeds:
-                raise ValueError(
-                    'source vocab size ({}) does not match the source embedder '
-                    'size ({}).'.format(self._src_vocab.size,
-                                        source_embedder.num_embeds))
+        self._data_hparams = HParams(data_hparams,
+                                     PairedTextData.default_hparams())
 
-        self._tgt_vocab = target_vocab or self._src_vocab
-        if target_embedder is not None:
-            if self._tgt_vocab.size != target_embedder.num_embeds:
-                raise ValueError(
-                    'target vocab size ({}) does not match the target embedder '
-                    'size ({}).'.format(self._tgt_vocab.size,
-                                        target_embedder.num_embeds))
-
-        self._src_embedder = source_embedder
-        self._tgt_embedder = target_embedder
-        self._encoder = encoder
-        self._decoder = decoder
-        self._connector = connector
+        self._src_vocab = None
+        self._tgt_vocab = None
+        self._src_embedder = None
+        self._tgt_embedder = None
+        self._connector = None
+        self._encoder = None
+        self._decoder = None
 
     @staticmethod
     def default_hparams():
@@ -83,60 +65,61 @@ class Seq2seqBase(ModelBase):
         })
         return hparams
 
-    def _build_embedders(self):
-        if self._src_embedder is None:
-            kwargs = {
-                "vocab_size": self._src_vocab.size,
-                "hparams": self._hparams.source_embedder.todict()
-            }
-            self._src_embedder = utils.check_or_get_instance(
-                self._hparams.source_embedder_type, kwargs,
-                ["texar.modules, texar.custom"])
+    def _build_vocab(self):
+        self._src_vocab, self._tgt_vocab = PairedTextData.make_vocab(
+            self._data_hparams.source_dataset,
+            self._data_hparams.target_dataset)
 
-        if self._tgt_embedder is None:
-            if self._hparams.embedder_share:
-                self._tgt_embedder = self._src_embedder
+    def _build_embedders(self):
+        kwargs = {
+            "vocab_size": self._src_vocab.size,
+            "hparams": self._hparams.source_embedder.todict()
+        }
+        self._src_embedder = utils.check_or_get_instance(
+            self._hparams.source_embedder_type, kwargs,
+            ["texar.modules", "texar.custom"])
+
+        if self._hparams.embedder_share:
+            self._tgt_embedder = self._src_embedder
+        else:
+            kwargs = {
+                "vocab_size": self._tgt_vocab.size,
+            }
+            if self._hparams.embedder_hparams_share:
+                kwargs["hparams"] = self._hparams.source_embedder.todict()
             else:
-                kwargs = {
-                    "vocab_size": self._tgt_vocab.size,
-                }
-                if self._hparams.embedder_hparams_share:
-                    kwargs["hparams"] = self._hparams.source_embedder.todict()
-                else:
-                    kwargs["hparams"] = self._hparams.target_embedder.todict()
-                self._tgt_embedder = utils.check_or_get_instance(
-                    self._hparams.target_embedder_type, kwargs,
-                    ["texar.modules, texar.custom"])
+                kwargs["hparams"] = self._hparams.target_embedder.todict()
+            self._tgt_embedder = utils.check_or_get_instance(
+                self._hparams.target_embedder_type, kwargs,
+                ["texar.modules", "texar.custom"])
 
     def _build_encoder(self):
-        if self._encoder is None:
-            kwargs = {
-                "hparams": self._hparams.encoder.todict()
-            }
-            self._encoder = utils.check_or_get_instance(
-                self._hparams.encoder_type, kwargs,
-                ["texar.modules, texar.custom"])
+        kwargs = {
+            "hparams": self._hparams.encoder.todict()
+        }
+        self._encoder = utils.check_or_get_instance(
+            self._hparams.encoder_type, kwargs,
+            ["texar.modules", "texar.custom"])
 
     def _build_decoder(self):
         raise NotImplementedError
 
     def _build_connector(self):
-        if self._connector is None:
-            kwargs = {
-                "output_size": self._decoder.state_size,
-                "hparams": self._hparams.connector.todict()
-            }
-            self._connector = utils.check_or_get_instance(
-                self._hparams.connector_type, kwargs,
-                ["texar.modules, texar.custom"])
+        kwargs = {
+            "output_size": self._decoder.state_size,
+            "hparams": self._hparams.connector.todict()
+        }
+        self._connector = utils.check_or_get_instance(
+            self._hparams.connector_type, kwargs,
+            ["texar.modules", "texar.custom"])
 
     def get_loss(self, decoder_results, features, labels):
         """Computes the training loss.
         """
         return sequence_sparse_softmax_cross_entropy(
             labels=labels['target_text_ids'][:, 1:],
-            logist=decoder_results['outputs'].logits,
-            sequence_length=decoder_results['outputs']['sequence_length'])
+            logits=decoder_results['outputs'].logits,
+            sequence_length=decoder_results['sequence_length'])
 
     def _get_predictions(self, decoder_results, features, labels, loss=None):
         raise NotImplementedError
@@ -151,7 +134,33 @@ class Seq2seqBase(ModelBase):
     def _get_eval_metric_ops(self, decoder_results, features, labels):
         return None
 
+    def embed_source(self, features, labels, mode):
+        """Embeds the inputs.
+        """
+        raise NotImplementedError
+
+    def embed_target(self, features, labels, mode):
+        """Embeds the target inputs. Used in training.
+        """
+        raise NotImplementedError
+
+    def encode(self, features, labels, mode):
+        """Encodes the inputs.
+        """
+        raise NotImplementedError
+
+    def _connect(self, encoder_results, features, labels, mode):
+        """Transforms encoder final state into decoder initial state.
+        """
+        raise NotImplementedError
+
+    def decode(self, encoder_results, features, labels, mode):
+        """Decodes.
+        """
+        raise NotImplementedError
+
     def _build(self, features, labels, params, mode, config=None):
+        self._build_vocab()
         self._build_embedders()
         self._build_encoder()
         self._build_decoder()
@@ -195,7 +204,7 @@ class Seq2seqBase(ModelBase):
                 containing the hyperparameters of
                 :class:`~texar.data.PairedTextData`. See
                 :meth:`~texar.data.PairedTextData.default_hparams` for the
-                the structure and default values of hyperparameters.
+                the structure and default values of the hyperparameters.
 
         Returns:
             An input function that returns a tuple `(features, labels)`
@@ -203,10 +212,15 @@ class Seq2seqBase(ModelBase):
         """
         def _input_fn():
             data = PairedTextData(hparams)
-            iterator = data.dataset.make_one_shot_iterator()
+
+            iterator = data.dataset.make_initializable_iterator()
+            tf.add_to_collection(tf.GraphKeys.TABLE_INITIALIZERS,
+                                 iterator.initializer)
+
             batch = iterator.get_next()
+
             features, labels = {}, {}
-            for key, value in batch:
+            for key, value in batch.items():
                 if key.startswith('source_'):
                     features[key] = value
                 else:
@@ -214,4 +228,3 @@ class Seq2seqBase(ModelBase):
             return features, labels
 
         return _input_fn
-

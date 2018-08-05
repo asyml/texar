@@ -46,6 +46,12 @@ class ModelBase(object):
         """
         raise NotImplementedError
 
+    @property
+    def hparams(self):
+        """A :class:`~texar.hyperparams.HParams` instance. The hyperparameters
+        of the module.
+        """
+        return self._hparams
 
     #def build(self, *args, **kwargs):
     #    """The model logic.

@@ -10,3 +10,4 @@ from __future__ import print_function
 # pylint: disable=wildcard-import
 
 from texar.models.model_base import *
+from texar.models.seq2seq import *

@@ -19,4 +19,5 @@ from texar import models
 from texar import data
 from texar import evals
 from texar import agents
+from texar import run
 from texar import utils

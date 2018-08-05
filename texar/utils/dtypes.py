@@ -77,7 +77,8 @@ def maybe_hparams_to_dict(hparams):
     converts it to a `dict` and returns. If :attr:`hparams` is a `dict`,
     returns as is.
     """
+    if hparams is None:
+        return None
     if isinstance(hparams, dict):
         return hparams
     return hparams.todict()
-

@@ -322,8 +322,9 @@ class MLPTransformConnector(ConnectorBase):
 
         output = _mlp_transform(inputs, self._output_size, activation_fn)
 
-        self._add_internal_trainable_variables()
-        self._built = True
+        if not self._built:
+            self._add_internal_trainable_variables()
+            self._built = True
 
         return output
 
@@ -455,8 +456,9 @@ class ReparameterizedStochasticConnector(ConnectorBase):
             output = _mlp_transform(latent_z, self._output_size, activation_fn)
         _assert_same_size(output, self._output_size)
 
-        self._add_internal_trainable_variables()
-        self._built = True
+        if not self._built:
+            self._add_internal_trainable_variables()
+            self._built = True
 
         return output, latent_z
 
@@ -582,8 +584,9 @@ class StochasticConnector(ConnectorBase):
             output = _mlp_transform(output, self._output_size, activation_fn)
         _assert_same_size(output, self._output_size)
 
-        self._add_internal_trainable_variables()
-        self._built = True
+        if not self._built:
+            self._add_internal_trainable_variables()
+            self._built = True
 
         return output
 

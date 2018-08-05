@@ -211,7 +211,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             embedding (optional): A callable that returns embedding vectors
                 of inputs, or the :attr:`params` argument of
                 :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`. In the
-                later case, :attr:`inputs` (if used) must be a int Tensor
+                later case, :attr:`inputs` (if used) must be an `int` Tensor
                 containing the ids to be looked up in :attr:`embedding`.
                 Required when :attr:`decoding_strategy="infer_greedy"`
                 or `"infer_sample"`; optional when
