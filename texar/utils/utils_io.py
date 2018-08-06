@@ -9,12 +9,18 @@ from __future__ import division
 
 from io import open # pylint: disable=redefined-builtin
 #import logging
+import importlib
+import yaml
 
 import tensorflow as tf
+from tensorflow import gfile
+
 as_text = tf.compat.as_text
 
 __all__ = [
-    "write_paired_text"
+    "write_paired_text",
+    "load_config_single",
+    "load_config"
 ]
 
 #def get_tf_logger(fname,
@@ -38,7 +44,89 @@ __all__ = [
 #        The TF logger.
 #    """
 
+def _load_config_python(fname):
+    config = {}
 
+    config_module = importlib.import_module(fname.rstrip('.py'))
+    for key in dir(config_module):
+        if not (key.startswith('__') and key.endswith('__')):
+            config[key] = getattr(config_module, key)
+
+    return config
+
+def _load_config_yaml(fname):
+    with gfile.GFile(fname) as config_file:
+        config = yaml.load(config_file)
+    return config
+
+def load_config_single(fname, config=None):
+    """Loads config from a single file.
+
+    The config file can be either a Python file (with suffix '.py')
+    or a YAML file. If the filename is not suffixed with '.py', the file is
+    parsed as YAML.
+
+    Args:
+        fname (str): The config file name.
+        config (dict, optional): A config dict to which new configurations are
+            added. If `None`, a new config dict is created.
+
+    Returns:
+        A `dict` of configurations.
+    """
+    if fname.endswith('.py'):
+        new_config = _load_config_python(fname)
+    else:
+        new_config = _load_config_yaml(fname)
+
+    if config is None:
+        config = new_config
+    else:
+        for key, value in new_config.items():
+            if key in config:
+                if isinstance(config[key], dict):
+                    config[key].update(value)
+                else:
+                    config[key] = value
+            else:
+                config[key] = value
+
+    return config
+
+def load_config(config_path, config=None):
+    """Loads configs from (possibly multiple) file(s).
+
+    Args:
+        config_path: Paths to configuration files. This can be a `list` of
+            config file names, or a path to a directory in which all files
+            are loaded, or a string of multiple file names separated by commas.
+        config (dict, optional): A config dict to which new configurations are
+            added. If `None`, a new config dict is created.
+
+    Returns:
+        A `dict` of configurations.
+    """
+    fnames = []
+    if isinstance(config_path, (list, tuple)):
+        fnames = list(config_path)
+    elif gfile.IsDirectory(config_path):
+        for fname in gfile.ListDirectory(config_path):
+            if not gfile.IsDirectory(fname):
+                fnames.append(fname)
+    else:
+        for fname in config_path.split(","):
+            fname = fname.strip()
+            if not fname:
+                continue
+            fnames.append(fname)
+
+    if config is None:
+        config = {}
+
+    for fname in fnames:
+        config = load_config_single(fname, config)
+
+    return config
 
 def write_paired_text(src, tgt, fname, append=False, mode='h', sep='\t'):
     """Writes paired text to a file.

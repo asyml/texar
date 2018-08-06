@@ -34,6 +34,7 @@ __all__ = [
     "get_class",
     "check_or_get_instance",
     "get_instance",
+    "check_or_get_instance_with_redundant_kwargs",
     "get_instance_with_redundant_kwargs",
     "get_function",
     "call_function_with_redundant_kwargs",
@@ -206,6 +207,45 @@ def get_instance(class_or_name, kwargs, module_paths=None):
 
     return class_(**kwargs)
 
+def check_or_get_instance_with_redundant_kwargs(
+        ins_or_class_or_name, kwargs, module_paths=None, classtype=None):
+    """Returns a class instance and checks types.
+
+    Only those keyword arguments in :attr:`kwargs` that are included in the
+    class construction method are used.
+
+    Args:
+        ins_or_class_or_name: Can be of 3 types:
+
+            - A string representing the name or full path to a class to \
+              instantiate.
+            - The class itself to instantiate.
+            - The class instance itself to check types.
+
+        kwargs (dict): Keyword arguments for the class constructor.
+        module_paths (list, optional): Paths to candidate modules to
+            search for the class. This is used if the class cannot be
+            located solely based on :attr:`class_name`. The first module
+            in the list that contains the class is used.
+        classtype (optional): A (list of) classes of which the instance must
+            be an instantiation.
+
+    Raises:
+        ValueError: If class is not found based on :attr:`class_name` and
+            :attr:`module_paths`.
+        ValueError: If :attr:`kwargs` contains arguments that are invalid
+            for the class construction.
+        TypeError: If the instance is not an instantiation of
+            :attr:`classtype`.
+    """
+    ret = ins_or_class_or_name
+    if is_str(ret) or isinstance(ret, type):
+        ret = get_instance_with_redundant_kwargs(ret, kwargs, module_paths)
+    if classtype is not None:
+        if not isinstance(ret, classtype):
+            raise TypeError(
+                "An instance of {} is expected. Got: {}".format(classtype, ret))
+    return ret
 
 def get_instance_with_redundant_kwargs(
         class_name, kwargs, module_paths=None):
@@ -375,15 +415,17 @@ def dict_patch(tgt_dict, src_dict):
         src_dict (dict): Source dictionary.
 
     Return:
-        dict: A patched dictionary.
+        dict: The new :attr:`tgt_dict` that is patched.
     """
-    patched_dict = copy.deepcopy(tgt_dict)
+    if src_dict is None:
+        return tgt_dict
+
     for key, value in src_dict.items():
-        if key not in patched_dict:
-            patched_dict[key] = copy.deepcopy(value)
-        elif isinstance(value, dict) and isinstance(patched_dict[key], dict):
-            patched_dict[key] = dict_patch(patched_dict[key], value)
-    return patched_dict
+        if key not in tgt_dict:
+            tgt_dict[key] = copy.deepcopy(value)
+        elif isinstance(value, dict) and isinstance(tgt_dict[key], dict):
+            tgt_dict[key] = dict_patch(tgt_dict[key], value)
+    return tgt_dict
 
 def dict_lookup(dict_, keys, default=None):
     """Looks up :attr:`keys` in the dict, outputs the corresponding values.

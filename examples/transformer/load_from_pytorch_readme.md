@@ -3,7 +3,7 @@
 source ~/.bashrc # add conda path
 source activate py36 # there are latest version of tf and pytorch environments
 cd /home/hzt/shr/transformer_pytorch
-bash tools/bpe_pipeline_en_vi.sh
+bash bin/bpe_pipeline_en_vi.sh
 
 python resave_devendra_model.py &> logging.txt
 

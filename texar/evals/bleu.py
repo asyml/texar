@@ -73,7 +73,7 @@ def corpus_bleu(list_of_references, hypotheses, lowercase=False):
     # Get multi-bleu.perl
     cur_dir = os.path.dirname(os.path.realpath(__file__))
     multi_bleu_path = os.path.abspath(
-        os.path.join(cur_dir, "..", "..", "tools", "multi-bleu.perl"))
+        os.path.join(cur_dir, "..", "..", "bin", "multi-bleu.perl"))
 
     # Create a temporary folder containing hyperthesis and reference files
     result_path = tempfile.mkdtemp()

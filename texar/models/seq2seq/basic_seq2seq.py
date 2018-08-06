@@ -38,10 +38,10 @@ class BasicSeq2seq(Seq2seqBase):
     def _build_decoder(self):
         kwargs = {
             "vocab_size": self._tgt_vocab.size,
-            "hparams": self._hparams.decoder.todict()
+            "hparams": self._hparams.decoder_hparams.todict()
         }
         self._decoder = utils.check_or_get_instance(
-            self._hparams.decoder_type, kwargs,
+            self._hparams.decoder, kwargs,
             ["texar.modules", "texar.custom"])
 
     def _get_predictions(self, decoder_results, features, labels, loss=None):

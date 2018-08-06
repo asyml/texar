@@ -1,9 +1,9 @@
 ### *[Byte Pair Encoding](https://arxiv.org/abs/1508.07909)* (BPE) pipeline
 
-* Add `tools` directory to `PATH` env variable
+* Add `bin` directory to `PATH` env variable
 ```bash
 TXTGEN=$(pwd)  
-export PATH=$PATH:$TXTGEN/tools
+export PATH=$PATH:$TXTGEN/bin
 ```
 
 * Learning BPE vocab on source and target combined

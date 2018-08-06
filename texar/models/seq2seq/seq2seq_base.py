@@ -46,21 +46,21 @@ class Seq2seqBase(ModelBase):
         hparams = ModelBase.default_hparams()
         hparams.update({
             "name": "seq2seq",
-            "source_embedder_type": "WordEmbedder",
-            "source_embedder": {},
-            "target_embedder_type": "WordEmbedder",
-            "target_embedder": {},
+            "source_embedder": "WordEmbedder",
+            "source_embedder_hparams": {},
+            "target_embedder": "WordEmbedder",
+            "target_embedder_hparams": {},
             "embedder_share": True,
             "embedder_hparams_share": True,
-            "encoder_type": "UnidirectionalRNNEncoder",
-            "encoder": {},
-            "decoder_type": "BasicRNNDecoder",
-            "decoder": {},
+            "encoder": "UnidirectionalRNNEncoder",
+            "encoder_hparams": {},
+            "decoder": "BasicRNNDecoder",
+            "decoder_hparams": {},
             "decoding_strategy_train": "train_greedy",
             "decoding_strategy_infer": "infer_greedy",
             "beam_search_width": 0,
-            "connector_type": "MLPTransformConnector",
-            "connector": {},
+            "connector": "MLPTransformConnector",
+            "connector_hparams": {},
             "optimization": {}
         })
         return hparams
@@ -73,10 +73,10 @@ class Seq2seqBase(ModelBase):
     def _build_embedders(self):
         kwargs = {
             "vocab_size": self._src_vocab.size,
-            "hparams": self._hparams.source_embedder.todict()
+            "hparams": self._hparams.source_embedder_hparams.todict()
         }
         self._src_embedder = utils.check_or_get_instance(
-            self._hparams.source_embedder_type, kwargs,
+            self._hparams.source_embedder, kwargs,
             ["texar.modules", "texar.custom"])
 
         if self._hparams.embedder_share:
@@ -86,19 +86,21 @@ class Seq2seqBase(ModelBase):
                 "vocab_size": self._tgt_vocab.size,
             }
             if self._hparams.embedder_hparams_share:
-                kwargs["hparams"] = self._hparams.source_embedder.todict()
+                kwargs["hparams"] = \
+                        self._hparams.source_embedder_hparams.todict()
             else:
-                kwargs["hparams"] = self._hparams.target_embedder.todict()
+                kwargs["hparams"] = \
+                        self._hparams.target_embedder_hparams.todict()
             self._tgt_embedder = utils.check_or_get_instance(
-                self._hparams.target_embedder_type, kwargs,
+                self._hparams.target_embedder, kwargs,
                 ["texar.modules", "texar.custom"])
 
     def _build_encoder(self):
         kwargs = {
-            "hparams": self._hparams.encoder.todict()
+            "hparams": self._hparams.encoder_hparams.todict()
         }
         self._encoder = utils.check_or_get_instance(
-            self._hparams.encoder_type, kwargs,
+            self._hparams.encoder, kwargs,
             ["texar.modules", "texar.custom"])
 
     def _build_decoder(self):
@@ -107,10 +109,10 @@ class Seq2seqBase(ModelBase):
     def _build_connector(self):
         kwargs = {
             "output_size": self._decoder.state_size,
-            "hparams": self._hparams.connector.todict()
+            "hparams": self._hparams.connector_hparams.todict()
         }
         self._connector = utils.check_or_get_instance(
-            self._hparams.connector_type, kwargs,
+            self._hparams.connector, kwargs,
             ["texar.modules", "texar.custom"])
 
     def get_loss(self, decoder_results, features, labels):

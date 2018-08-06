@@ -71,6 +71,7 @@ class ExecutorTest(tf.test.TestCase):
             save_checkpoints_secs=None)
 
         exor = Executor(model=seq2seq, data_hparams=data_hparams, config=config)
+
         exor.train_and_evaluate(max_train_steps=20, eval_steps=5)
 
         exor.train(max_steps=20)
