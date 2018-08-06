@@ -7,7 +7,6 @@ import texar as tx
 
 import os
 import argparse
-from rouge import Rouge
 
 from data_hparams import data_hparams
 import model_hparams
@@ -16,14 +15,11 @@ arg_parser = argparse.ArgumentParser()
 
 arg_parser.add_argument('--num_epochs', type=int, default=10)
 
-arg_parser.add_argument('--dataset', type=str, choices=['iwslt14', 'giga'])
-arg_parser.add_argument('--metric', type=str, choices=['bleu', 'rouge'])
-
 args = arg_parser.parse_args()
 
-log_dir = args.dataset + '_training_log/'
+log_dir = 'training_log/'
 os.system('mkdir ' + log_dir)
-valid_test_log_file = open(log_dir + 'valid_test_log.txt', 'w')
+scores_file = open(log_dir + 'scores.txt', 'w')
 
 
 def loss_fn(data_batch, output):
@@ -72,7 +68,7 @@ def build_model(data_batch, batch_size, source_vocab_size, target_vocab_size,
 
     train_op = tx.core.get_train_op(loss_fn(data_batch, training_outputs))
 
-    beam_search_outputs, beam_search_final_state = \
+    beam_search_outputs, _, _ = \
         tx.modules.beam_search_decode(
             decoder_or_cell=decoder,
             embedding=embedder,
@@ -86,11 +82,11 @@ def build_model(data_batch, batch_size, source_vocab_size, target_vocab_size,
 
 def main():
     training_data = tx.data.PairedTextData(
-        hparams=data_hparams[args.dataset]['train'])
+        hparams=data_hparams['iwslt14']['train'])
     valid_data = tx.data.PairedTextData(
-        hparams=data_hparams[args.dataset]['valid'])
+        hparams=data_hparams['iwslt14']['valid'])
     test_data = tx.data.PairedTextData(
-        hparams=data_hparams[args.dataset]['test'])
+        hparams=data_hparams['iwslt14']['test'])
     data_iterator = tx.data.TrainTestDataIterator(
         train=training_data, val=valid_data, test=test_data)
 
@@ -154,26 +150,13 @@ def main():
                     valid_data.target_vocab.id_to_token_map_py)
 
                 for i in range(len(target_texts)):
-                    if args.metric == 'bleu':
-                        refs.append(
-                            [target_texts[i][
-                             :target_texts[i].index('<EOS>')]])
-                        hypos.append(output_texts[i])
-                    else:
-                        refs.append(' '.join(
-                            target_texts[i][:target_texts[i].index(
-                                '<EOS>')]).decode('utf-8'))
-                        hypos.append(
-                            ' '.join(output_texts[i]).decode('utf-8'))
+                    refs.append(
+                        [target_texts[i][:target_texts[i].index('<EOS>')]])
+                    hypos.append(output_texts[i])
             except tf.errors.OutOfRangeError:
                 break
 
-        if args.metric == 'bleu':
-            return tx.evals.corpus_bleu(
-                list_of_references=refs, hypotheses=hypos)
-        else:
-            rouge = Rouge()
-            return rouge.get_scores(hyps=hypos, refs=refs, avg=True)
+        return tx.evals.corpus_bleu(list_of_references=refs, hypotheses=hypos)
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -184,30 +167,17 @@ def main():
         for i in range(args.num_epochs):
             _train_epoch(sess, i)
 
-            if args.metric == 'bleu':
-                valid_score = _eval_epoch(sess, 'valid')
-                test_score = _eval_epoch(sess, 'test')
+            valid_score = _eval_epoch(sess, 'valid')
+            test_score = _eval_epoch(sess, 'test')
 
-                best_valid_score = max(best_valid_score, valid_score)
-                print('valid epoch', i, ':', valid_score,
-                      'max ever: ', best_valid_score,
-                      file=valid_test_log_file)
-                print('test epoch', i, ':', test_score,
-                      file=valid_test_log_file)
-                print('=' * 100, file=valid_test_log_file)
-                valid_test_log_file.flush()
-            else:
-                valid_score = _eval_epoch(sess, 'valid')
-                test_score = _eval_epoch(sess, 'test')
-
-                print('valid epoch', i, ':', file=valid_test_log_file)
-                for key, value in valid_score.items():
-                    print(key, value, file=valid_test_log_file)
-                print('test epoch', i, ':', file=valid_test_log_file)
-                for key, value in test_score.items():
-                    print(key, value, file=valid_test_log_file)
-                print('=' * 100, file=valid_test_log_file)
-                valid_test_log_file.flush()
+            best_valid_score = max(best_valid_score, valid_score)
+            print('valid epoch', i, ':', valid_score,
+                  'max ever: ', best_valid_score,
+                  file=scores_file)
+            print('test epoch', i, ':', test_score,
+                  file=scores_file)
+            print('=' * 50, file=scores_file)
+            scores_file.flush()
 
 
 if __name__ == '__main__':

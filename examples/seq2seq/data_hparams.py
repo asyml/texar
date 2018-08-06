@@ -43,48 +43,5 @@ data_hparams = {
                 'vocab_file': 'data/iwslt14/vocab.en'
             }
         }
-    },
-    'giga': {
-        'train': {
-            'num_epochs': 1,
-            'batch_size': 32,
-            'allow_smaller_final_batch': False,
-            'source_dataset': {
-                "files": ['data/giga/train.article'],
-                'vocab_file': 'data/giga/vocab.article',
-            },
-            'target_dataset': {
-                'files': ['data/giga/train.title'],
-                'vocab_file': 'data/giga/vocab.title',
-            }
-        },
-        'valid': {
-            'num_epochs': 1,
-            'batch_size': 32,
-            'allow_smaller_final_batch': False,
-            'shuffle': False,
-            'source_dataset': {
-                "files": ['data/giga/valid.article'],
-                'vocab_file': 'data/giga/vocab.article',
-            },
-            'target_dataset': {
-                'files': ['data/giga/valid.title'],
-                'vocab_file': 'data/giga/vocab.title',
-            }
-        },
-        'test': {
-            'num_epochs': 1,
-            'batch_size': 32,
-            'allow_smaller_final_batch': False,
-            'shuffle': False,
-            'source_dataset': {
-                "files": ['data/giga/test.article'],
-                'vocab_file': 'data/giga/vocab.article',
-            },
-            'target_dataset': {
-                'files': ['data/giga/test.title'],
-                'vocab_file': 'data/giga/vocab.title',
-            }
-        }
     }
 }
