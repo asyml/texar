@@ -1,0 +1,25 @@
+# NMT data config. See `texar.data.PairedTextData.default_hparams()` for 
+# hyperparameters of train/eval data. Hyperparameters not specified here will 
+# take the default values. 
+data_hparams_train:
+  num_epochs: 10
+  batch_size: 32
+  source_dataset:
+    files: ./data/iwslt14/train.de
+    vocab_file: ./data/iwslt14/vocab.de
+    max_seq_length: 50
+  target_dataset:
+    files: ./data/iwslt14/train.en
+    vocab_file: ./data/iwslt14/vocab.en
+    max_seq_length: 50
+data_hparams_eval:
+  batch_size: 32
+  shuffle: False
+  source_dataset:
+    files: ./data/iwslt14/valid.de
+    vocab_file: ./data/iwslt14/vocab.de
+    max_seq_length: 50
+  target_dataset:
+    files: ./data/iwslt14/valid.en
+    vocab_file: ./data/iwslt14/vocab.en
+    max_seq_length: 50
