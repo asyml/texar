@@ -20,7 +20,8 @@ tf.flags.DEFINE_string("config_paths", "",
                        "directory in which all files are loaded, or paths to "
                        "multiple files separated by commas. Setting a key in "
                        "these files is equivalent to setting the FLAG value "
-                       "with the same name.")
+                       "with the same name. If a key is set in both config "
+                       "files and FLAG, the value in config files is used.")
 
 tf.flags.DEFINE_string("model", "",
                        "Name of the model class.")
@@ -93,7 +94,7 @@ FLAGS = tf.flags.FLAGS
 
 def _process_config():
     # Loads configs
-    config = utils.load_config(FLAGS.config_path)
+    config = utils.load_config(FLAGS.config_paths)
 
     # Parses YAML FLAGS
     FLAGS.model_hparams = yaml.load(FLAGS.model_hparams)
@@ -103,10 +104,14 @@ def _process_config():
     # Merges
     final_config = {}
     for flag_key in dir(FLAGS):
+        if flag_key in {'h', 'help', 'helpshort'}: # Filters out help flags
+            continue
         flag_value = getattr(FLAGS, flag_key)
         config_value = config.get(flag_key, None)
         if isinstance(flag_value, dict) and isinstance(config_value, dict):
-            final_config[flag_key] = utils.dict_patch(flag_value, config_value)
+            final_config[flag_key] = utils.dict_patch(config_value, flag_value)
+        elif flag_key in config:
+            final_config[flag_key] = config_value
         else:
             final_config[flag_key] = flag_value
 
@@ -127,6 +132,14 @@ def _process_config():
     return final_config
 
 def _get_run_config(config):
+    gpu_options = tf.GPUOptions(
+        per_process_gpu_memory_fraction=\
+                config['per_process_gpu_memory_fraction'],
+        allow_growth=config['gpu_allow_growth'])
+    sess_config = tf.ConfigProto(
+        gpu_options=gpu_options,
+        log_device_placement=config['log_device_placement'])
+
     run_config = tf.estimator.RunConfig(
         model_dir=config['model_dir'],
         tf_random_seed=config['tf_random_seed'],
@@ -135,13 +148,8 @@ def _get_run_config(config):
         save_checkpoints_secs=config['save_checkpoints_secs'],
         keep_checkpoint_max=config['keep_checkpoint_max'],
         keep_checkpoint_every_n_hours=config['keep_checkpoint_every_n_hours'],
-        log_step_count_steps=config['log_step_count_steps'])
-    run_config.session_config.gpu_options.per_process_gpu_memory_fraction = \
-            config['per_process_gpu_memory_fraction']
-    run_config.session_config.gpu_options.allow_growth = \
-            config['gpu_allow_growth']
-    run_config.session_config.log_device_placement = \
-            config['log_device_placement']
+        log_step_count_steps=config['log_step_count_steps'],
+        session_config=sess_config)
 
     return run_config
 
@@ -152,17 +160,18 @@ def main(_):
 
     run_config = _get_run_config(config)
 
-    data_hparams = {
-        'train': config['data_hparams_train'],
-        'eval': config['data_hparams_eval']
-    }
     kwargs = {
-        'data_hparams': data_hparams,
+        'data_hparams': config['data_hparams_train'],
         'hparams': config['model_hparams']
     }
     model = utils.check_or_get_instance_with_redundant_kwargs(
         config['model'], kwargs=kwargs,
         module_paths=['texar.models', 'texar.custom'])
+
+    data_hparams = {
+        'train': config['data_hparams_train'],
+        'eval': config['data_hparams_eval']
+    }
 
     exor = Executor(
         model=model,

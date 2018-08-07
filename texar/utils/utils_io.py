@@ -8,6 +8,7 @@ from __future__ import print_function
 from __future__ import division
 
 from io import open # pylint: disable=redefined-builtin
+import os
 #import logging
 import importlib
 import yaml
@@ -111,6 +112,7 @@ def load_config(config_path, config=None):
         fnames = list(config_path)
     elif gfile.IsDirectory(config_path):
         for fname in gfile.ListDirectory(config_path):
+            fname = os.path.join(config_path, fname)
             if not gfile.IsDirectory(fname):
                 fnames.append(fname)
     else:
