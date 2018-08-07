@@ -20,4 +20,8 @@ model_hparams:
         num_units: 128
       dropout:
         input_keep_prob: 0.8
-    max_decoding_length_infer: 30
+  optimization:
+    optimizer:
+      type: AdamOptimizer
+      kwargs:
+        learning_rate: 0.0001
