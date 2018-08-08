@@ -12,6 +12,7 @@ data_hparams_train:
     files: ./data/toy_copy/train/targets.txt
     vocab_file: ./data/toy_copy/train/vocab.targets.txt
     max_seq_length: 30
+
 data_hparams_eval:
   batch_size: 32
   shuffle: False
