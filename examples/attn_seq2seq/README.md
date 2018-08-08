@@ -32,4 +32,5 @@ Here:
 
 ## Results ##
 
-On the IWSLT14 dataset, the model achieves `BLEU=XXX` after `xx` epochs. 
+On the IWSLT14 dataset, the model achieves `BLEU=21.66` within `10` epochs. 
+
