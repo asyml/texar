@@ -153,22 +153,6 @@ def _main(_):
 
     nll = rc_loss + kl_weight * kl_loss
 
-
-    # global_step = tf.Variable(0, dtype=tf.int32)
-    # learning_rate = \
-    #     tf.placeholder(dtype=tf.float32, shape=(), name='learning_rate')
-    # optimizer = tf.train.AdamOptimizer(
-    #     learning_rate=learning_rate,
-    #     beta1=0.,
-    #     beta2=0.999,
-    #     epsilon=1e-9)
-
-    # gradients, variables = zip(*optimizer.compute_gradients(nll))
-    # gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
-    # train_op = optimizer.apply_gradients(zip(gradients, variables),
-    #                                      global_step=global_step)
-
-
     learning_rate = \
         tf.placeholder(dtype=tf.float32, shape=(), name='learning_rate')
     train_op = tx.core.get_train_op(nll, learning_rate=learning_rate, 
