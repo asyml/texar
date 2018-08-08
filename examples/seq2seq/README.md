@@ -11,11 +11,11 @@ Our dataset can be found [here](https://drive.google.com/open?id=1muBmgzV6Hm2MZb
 ### Training & Evaluate ###
 
 ```
-python seq2seq.py --num_epochs=12
+python seq2seq.py --config=config_small
 ```
 
 Here:
-  * `--num_epochs` specifies the number of epochs(10 by default), every epoch the model will train the whole training set once, and then evaluate on the validation data and test data separately.
+  * `--config` specifies the config including data and model settings.
 
 
 

@@ -247,7 +247,7 @@ class MemNetRNNLike(MemNetBase):
     with RNN-like weight tying described in the paper.
 
     If you want to customize the embedder functions,
-    look at :func:`~texar.modules.memory.default_embedder_fn` for implemention details.
+    see :func:`~texar.modules.memory.default_embedder_fn` for implemention details.
 
     Args:
         vocab_size (int): Vocabulary size of all :attr:`embedder_fn`s and final embedding matrix.

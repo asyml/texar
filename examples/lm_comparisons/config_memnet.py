@@ -22,8 +22,11 @@ num_epochs = 200
 memory_size = 200
 initialize_stddev = 0.05
 query_constant = 0.1
-learning_rate_anneal_factor = 1.5
 terminating_learning_rate = 1e-5
+heuristic_lr_decay = True
+heuristic_threshold = 0.9
+heuristic_rate = 2.
+heuristic_smooth_rate = 1./3
 
 opt = {
     "optimizer": {

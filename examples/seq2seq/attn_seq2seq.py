@@ -5,59 +5,41 @@ from __future__ import division
 import tensorflow as tf
 import texar as tx
 
-import os
-import argparse
+import sys
+import importlib
 
-from data_hparams import data_hparams
-import model_hparams
+flags = tf.flags
 
-arg_parser = argparse.ArgumentParser()
+flags.DEFINE_string("config", "config_small", "The config to use.")
 
-arg_parser.add_argument('--num_epochs', type=int, default=10)
+FLAGS = flags.FLAGS
 
-args = arg_parser.parse_args()
-
-log_dir = 'training_log/'
-os.system('mkdir ' + log_dir)
-scores_file = open(log_dir + 'scores.txt', 'w')
-
-
-def loss_fn(data_batch, output):
-    return tx.losses.sequence_sparse_softmax_cross_entropy(
-        labels=data_batch['target_text_ids'][:, 1:],
-        logits=output.logits,
-        sequence_length=data_batch['target_length'] - 1)
-
-
-def encode(data_batch, vocab_size):
-    embedder = tx.modules.WordEmbedder(
-        vocab_size=vocab_size, hparams=model_hparams.embedder_hparams)
-
-    encoder = tx.modules.BidirectionalRNNEncoder(
-        hparams=model_hparams.encoder_hparams)
-
-    enc_outputs, enc_last = \
-        encoder(inputs=embedder(data_batch['source_text_ids']))
-
-    return enc_outputs, enc_last
+config = importlib.import_module(FLAGS.config)
 
 
 def build_model(data_batch, batch_size, source_vocab_size, target_vocab_size,
                 target_bos_token_id, target_eos_token_id):
-    enc_outputs, enc_last = encode(data_batch, source_vocab_size)
+    source_embedder = tx.modules.WordEmbedder(
+        vocab_size=source_vocab_size, hparams=config.embedder_hparams)
+
+    encoder = tx.modules.BidirectionalRNNEncoder(
+        hparams=config.encoder_hparams)
+
+    enc_outputs, enc_last = \
+        encoder(inputs=source_embedder(data_batch['source_text_ids']))
 
     decoder_cell = tx.core.layers.get_rnn_cell(
-        hparams=model_hparams.cell_hparams)
+        hparams=config.cell_hparams)
 
     embedder = tx.modules.WordEmbedder(
-        vocab_size=target_vocab_size, hparams=model_hparams.embedder_hparams)
+        vocab_size=target_vocab_size, hparams=config.embedder_hparams)
 
     decoder = tx.modules.AttentionRNNDecoder(
         cell=decoder_cell,
         memory=tx.modules.BidirectionalRNNEncoder.concat_outputs(enc_outputs),
         memory_sequence_length=data_batch['source_length'],
         vocab_size=target_vocab_size,
-        hparams=model_hparams.decoder_hparams)
+        hparams=config.decoder_hparams)
 
     training_outputs, training_final_state, sequence_lengths = decoder(
         decoding_strategy='train_greedy',
@@ -66,27 +48,28 @@ def build_model(data_batch, batch_size, source_vocab_size, target_vocab_size,
         initial_state=decoder.zero_state(
             batch_size=batch_size, dtype=tf.float32))
 
-    train_op = tx.core.get_train_op(loss_fn(data_batch, training_outputs))
+    train_op = tx.core.get_train_op(
+        tx.losses.sequence_sparse_softmax_cross_entropy(
+            labels=data_batch['target_text_ids'][:, 1:],
+            logits=training_outputs.logits,
+            sequence_length=data_batch['target_length'] - 1))
 
-    beam_search_outputs, _, _ = \
+    beam_search_outputs, beam_search_states, beam_search_lengths = \
         tx.modules.beam_search_decode(
             decoder_or_cell=decoder,
             embedding=embedder,
             start_tokens=[target_bos_token_id] * batch_size,
             end_token=target_eos_token_id,
-            beam_width=model_hparams.beam_width,
+            beam_width=config.beam_width,
             max_decoding_length=60)
 
     return train_op, beam_search_outputs
 
 
 def main():
-    training_data = tx.data.PairedTextData(
-        hparams=data_hparams['iwslt14']['train'])
-    valid_data = tx.data.PairedTextData(
-        hparams=data_hparams['iwslt14']['valid'])
-    test_data = tx.data.PairedTextData(
-        hparams=data_hparams['iwslt14']['test'])
+    training_data = tx.data.PairedTextData(hparams=config.train_hparams)
+    valid_data = tx.data.PairedTextData(hparams=config.valid_hparams)
+    test_data = tx.data.PairedTextData(hparams=config.test_hparams)
     data_iterator = tx.data.TrainTestDataIterator(
         train=training_data, val=valid_data, test=test_data)
 
@@ -102,30 +85,15 @@ def main():
         data_batch, batch_size, source_vocab_size, target_vocab_size,
         target_bos_token_id, target_eos_token_id)
 
-    def _id2texts(ids, eos_token_id, id2token_dict):
-        result = []
-        for i in range(len(ids)):
-            result.append([])
-            for j in range(len(ids[i])):
-                if ids[i][j] == eos_token_id:
-                    break
-                else:
-                    result[-1].append(id2token_dict[ids[i][j]].encode('utf-8'))
-        return result
-
-    def _train_epoch(sess, epoch):
+    def _train_epoch(sess):
         data_iterator.switch_to_train_data(sess)
-        log_file = open(log_dir + 'training_log' + str(epoch) + '.txt', 'w')
 
-        counter = 0
-        while True:
+        for counter in xrange(0, sys.maxint):
             try:
-                counter += 1
-                print(counter,
-                      sess.run(train_op, feed_dict={
-                          tx.global_mode(): tf.estimator.ModeKeys.TRAIN}),
-                      file=log_file)
-                log_file.flush()
+                loss = sess.run(train_op, feed_dict={
+                    tx.global_mode(): tf.estimator.ModeKeys.TRAIN})
+                if counter % 1000 == 0:
+                    print(counter, loss)
             except tf.errors.OutOfRangeError:
                 break
 
@@ -145,14 +113,13 @@ def main():
                         tx.global_mode(): tf.estimator.ModeKeys.PREDICT})
 
                 target_texts = target_texts.tolist()
-                output_texts = _id2texts(
-                    output_ids, target_eos_token_id,
-                    valid_data.target_vocab.id_to_token_map_py)
+                output_texts = tx.utils.map_ids_to_strs(
+                    ids=output_ids, vocab=valid_data.target_vocab, join=False)
 
-                for i in range(len(target_texts)):
+                for j in range(len(target_texts)):
                     refs.append(
-                        [target_texts[i][:target_texts[i].index('<EOS>')]])
-                    hypos.append(output_texts[i])
+                        [target_texts[j][:target_texts[j].index('<EOS>')]])
+                    hypos.append(output_texts[j])
             except tf.errors.OutOfRangeError:
                 break
 
@@ -164,21 +131,19 @@ def main():
         sess.run(tf.tables_initializer())
 
         best_valid_score = -1.
-        for i in range(args.num_epochs):
-            _train_epoch(sess, i)
+        for i in range(config.num_epochs):
+            _train_epoch(sess)
 
             valid_score = _eval_epoch(sess, 'valid')
             test_score = _eval_epoch(sess, 'test')
 
             best_valid_score = max(best_valid_score, valid_score)
             print('valid epoch', i, ':', valid_score,
-                  'max ever: ', best_valid_score,
-                  file=scores_file)
-            print('test epoch', i, ':', test_score,
-                  file=scores_file)
-            print('=' * 50, file=scores_file)
-            scores_file.flush()
+                  'max ever: ', best_valid_score)
+            print('test epoch', i, ':', test_score)
+            print('=' * 50)
 
 
 if __name__ == '__main__':
     main()
+
