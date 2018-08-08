@@ -580,7 +580,8 @@ def strip_token(str_, token):
     """
     def _recur_strip(s):
         if is_str(s):
-            return ' '.join(s.strip().split()).strip(' '+token).strip(token+' ')
+            return ' '.join(s.strip().split()).\
+                replace(' '+token, '').replace(token+' ', '')
         else:
             return [_recur_strip(si) for si in s]
 
@@ -639,7 +640,7 @@ def strip_bos(str_, bos_token='<BOS>'):
     """
     def _recur_strip(s):
         if is_str(s):
-            return ' '.join(s.strip().split()).strip(bos_token+' ')
+            return ' '.join(s.strip().split()).replace(bos_token+' ', '')
         else:
             return [_recur_strip(si) for si in s]
 
@@ -703,12 +704,6 @@ def map_ids_to_strs(ids, vocab, join=True, strip_pad='<PAD>',
     """
     tokens = vocab.map_ids_to_tokens_py(ids)
 
-    if not join:
-        if isinstance(ids, (list, tuple)):
-            return type(ids)(tokens.tolist())
-        else:
-            return tokens
-
     str_ = str_join(tokens)
 
     if strip_eos is not None:
@@ -720,7 +715,16 @@ def map_ids_to_strs(ids, vocab, join=True, strip_pad='<PAD>',
     if strip_bos is not None:
         str_ = _strip_bos_(str_, strip_bos)
 
-    return str_
+    def _recur_split(s):
+        if isinstance(s, str):
+            return s.split()
+        else:
+            return [_recur_split(ss) for ss in s]
+
+    if join == True:
+        return str_
+    else:
+        return _recur_split(str_)
 
 def ceildiv(a, b):
     """Divides with ceil.

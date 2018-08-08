@@ -15,10 +15,11 @@ import zipfile
 import collections
 import numpy as np
 from six.moves import urllib
+import requests
 
 import tensorflow as tf
 
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name, too-many-branches
 
 __all__ = [
     "create_dir_if_needed",
@@ -39,12 +40,15 @@ def create_dir_if_needed(dirname):
         return True
     return False
 
-def maybe_download(urls, path, extract=False):
+def maybe_download(urls, path, filenames=None, extract=False):
     """Downloads a set of files.
 
     Args:
         urls: A (list of) urls to download files.
         path (str): The destination path to save the files.
+        filenames: A (list of) strings of the file names. If given,
+            must have the same length with :attr:`urls`. If `None`,
+            filenames are extracted from :attr:`urls`.
         extract (bool): Whether to extract compressed files.
 
     Returns:
@@ -54,29 +58,34 @@ def maybe_download(urls, path, extract=False):
 
     if not isinstance(urls, (list, tuple)):
         urls = [urls]
+    if filenames is not None:
+        if not isinstance(filenames, (list, tuple)):
+            filenames = [filenames]
+        if len(urls) != len(filenames):
+            raise ValueError(
+                '`filenames` must have the same number of elements as `urls`.')
+
     result = []
-    for url in urls:
-        filename = url.split('/')[-1]
-        # If downloading from GitHub, remove suffix ?raw=True
-        # from local filename
-        if filename.endswith("?raw=true"):
-            filename = filename[:-9]
+    for i, url in enumerate(urls):
+        if filenames is not None:
+            filename = filenames[i]
+        elif 'drive.google.com' in url:
+            filename = _extract_google_drive_file_id(url)
+        else:
+            filename = url.split('/')[-1]
+            # If downloading from GitHub, remove suffix ?raw=True
+            # from local filename
+            if filename.endswith("?raw=true"):
+                filename = filename[:-9]
 
         filepath = os.path.join(path, filename)
         result.append(filepath)
 
         if not tf.gfile.Exists(filepath):
-            def _progress(count, block_size, total_size):
-                percent = float(count * block_size) / float(total_size) * 100.
-                # pylint: disable=cell-var-from-loop
-                sys.stdout.write('\r>> Downloading %s %.1f%%' %
-                                 (filename, percent))
-                sys.stdout.flush()
-            filepath, _ = urllib.request.urlretrieve(url, filepath, _progress)
-            print()
-            statinfo = os.stat(filepath)
-            print('Successfully downloaded {} {} bytes.'.format(
-                filename, statinfo.st_size))
+            if 'drive.google.com' in url:
+                filepath = _download_from_google_drive(url, filename, path)
+            else:
+                filepath = _download(url, filename, path)
 
             if extract:
                 tf.logging.info('Extract %s', filepath)
@@ -90,6 +99,60 @@ def maybe_download(urls, path, extract=False):
                                     ".tar.bz2, .tar, and .zip are supported")
 
     return result
+
+def _download(url, filename, path):
+    def _progress(count, block_size, total_size):
+        percent = float(count * block_size) / float(total_size) * 100.
+        # pylint: disable=cell-var-from-loop
+        sys.stdout.write('\r>> Downloading %s %.1f%%' %
+                         (filename, percent))
+        sys.stdout.flush()
+
+    filepath = os.path.join(path, filename)
+    filepath, _ = urllib.request.urlretrieve(url, filepath, _progress)
+    print()
+    statinfo = os.stat(filepath)
+    print('Successfully downloaded {} {} bytes.'.format(
+        filename, statinfo.st_size))
+
+    return filepath
+
+def _extract_google_drive_file_id(url):
+    # id is between `/d/` and '/'
+    url_suffix = url[url.find('/d/')+3:]
+    file_id = url_suffix[:url_suffix.find('/')]
+    return file_id
+
+def _download_from_google_drive(url, filename, path):
+    """Adapted from `https://github.com/saurabhshri/gdrive-downloader`
+    """
+    def _get_confirm_token(response):
+        for key, value in response.cookies.items():
+            if key.startswith('download_warning'):
+                return value
+        return None
+
+    file_id = _extract_google_drive_file_id(url)
+
+    gurl = "https://docs.google.com/uc?export=download"
+    sess = requests.Session()
+    response = sess.get(gurl, params={'id': file_id}, stream=True)
+    token = _get_confirm_token(response)
+
+    if token:
+        params = {'id': file_id, 'confirm': token}
+        response = sess.get(gurl, params=params, stream=True)
+
+    filepath = os.path.join(path, filename)
+    CHUNK_SIZE = 32768
+    with tf.gfile.GFile(filepath, "wb") as f:
+        for chunk in response.iter_content(CHUNK_SIZE):
+            if chunk:
+                f.write(chunk)
+
+    print('Successfully downloaded {}.'.format(filename))
+
+    return filepath
 
 def get_files(file_paths):
     """Gets a list of file paths given possibly a pattern :attr:`file_paths`.
