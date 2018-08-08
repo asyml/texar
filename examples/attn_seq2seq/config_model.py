@@ -1,5 +1,3 @@
-num_epochs = 15
-
 num_units = 256
 beam_width = 10
 
