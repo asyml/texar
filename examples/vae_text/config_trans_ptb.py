@@ -134,8 +134,8 @@ train_data_hparams = {
     "batch_size": batch_size,
     "seed": 123,
     "dataset": {
-        "files": 'ptb_data/ptb.train.txt',
-        "vocab_file": 'ptb_data/vocab.txt'
+        "files": './simple-examples/data/ptb.train.txt',
+        "vocab_file": './simple-examples/data/vocab.txt'
     }
 }
 
@@ -144,8 +144,8 @@ val_data_hparams = {
     "batch_size": batch_size,
     "seed": 123,
     "dataset": {
-        "files": 'ptb_data/ptb.valid.txt',
-        "vocab_file": 'ptb_data/vocab.txt'
+        "files": './simple-examples/data/ptb.valid.txt',
+        "vocab_file": './simple-examples/data/vocab.txt'
     }
 }
 
@@ -153,7 +153,21 @@ test_data_hparams = {
     "num_epochs": 1,
     "batch_size": batch_size,
     "dataset": {
-        "files": 'ptb_data/ptb.test.txt',
-        "vocab_file": 'ptb_data/vocab.txt'
+        "files": './simple-examples/data/ptb.test.txt',
+        "vocab_file": './simple-examples/data/vocab.txt'
     }
 }
+
+opt_hparams = {
+    "optimizer": {
+        "type": "AdamOptimizer",
+        "kwargs": {
+            "learning_rate": 0.001
+        }
+    },
+    "gradient_clip": {
+        "type": "clip_by_global_norm",
+        "kwargs": {"clip_norm": 5.}
+    }
+}
+

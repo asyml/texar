@@ -38,14 +38,6 @@ import texar as tx
 
 flags = tf.flags
 
-flags.DEFINE_string("dataset", "ptb",
-                    "perform training on ptb or yahoo.")
-
-flags.DEFINE_string("data_path", "./",
-                    "Directory containing PTB or Yahoo raw data. "
-                    "If not exists, the directory will be created, "
-                    "and the data will be downloaded.")
-
 flags.DEFINE_string("config", "config", "The config to use.")
 
 FLAGS = flags.FLAGS
@@ -61,39 +53,8 @@ def kl_dvg(means, logvars):
 
     return tf.reduce_sum(kl_cost)
 
-def prepare_data(train_path):
-    """Download the PTB or Yahoo dataset
-    """
-    ptb_url = 'https://jxhe.github.io/download/ptb_data.tgz'
-    yahoo_url = 'https://jxhe.github.io/download/yahoo_data.tgz'
-
-    data_path = FLAGS.data_path
-
-    if not tf.gfile.Exists(train_path):
-        url = ptb_url if FLAGS.dataset == 'ptb' else yahoo_url
-        tx.data.maybe_download(url, data_path, extract=True)
-        os.remove('%s_data.tgz' % FLAGS.dataset)
-
-        data_path = os.path.join(data_path, '%s_data' % FLAGS.dataset)
-
-        train_path = os.path.join(data_path, "%s.train.txt" % FLAGS.dataset)
-        valid_path = os.path.join(data_path, "%s.valid.txt" % FLAGS.dataset)
-        test_path = os.path.join(data_path, "%s.test.txt" % FLAGS.dataset)
-        vocab_path = os.path.join(data_path, "vocab.txt")
-
-        config.train_data_hparams['dataset'] = {'files': train_path,
-                                                'vocab_file': vocab_path}
-
-        config.val_data_hparams['dataset'] = {'files': valid_path,
-                                              'vocab_file': vocab_path}
-
-        config.test_data_hparams['dataset'] = {'files': test_path,
-                                               'vocab_file': vocab_path}
-
 
 def _main(_):
-    prepare_data(config.train_data_hparams['dataset']['files'])
-
     # Data
     train_data = tx.data.MonoTextData(config.train_data_hparams)
     val_data = tx.data.MonoTextData(config.val_data_hparams)
@@ -192,27 +153,26 @@ def _main(_):
 
     nll = rc_loss + kl_weight * kl_loss
 
-    # global_step = tf.placeholder(tf.int32)
-    # train_op = tx.core.get_train_op(nll,
-    #                                 global_step=global_step,
-    #                                 increment_global_step=False,
-    #                                 hparams=config.opt_hparams)
 
-    global_step = tf.Variable(0, dtype=tf.int32)
+    # global_step = tf.Variable(0, dtype=tf.int32)
+    # learning_rate = \
+    #     tf.placeholder(dtype=tf.float32, shape=(), name='learning_rate')
+    # optimizer = tf.train.AdamOptimizer(
+    #     learning_rate=learning_rate,
+    #     beta1=0.,
+    #     beta2=0.999,
+    #     epsilon=1e-9)
+
+    # gradients, variables = zip(*optimizer.compute_gradients(nll))
+    # gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
+    # train_op = optimizer.apply_gradients(zip(gradients, variables),
+    #                                      global_step=global_step)
+
+
     learning_rate = \
         tf.placeholder(dtype=tf.float32, shape=(), name='learning_rate')
-    optimizer = tf.train.AdamOptimizer(
-        learning_rate=learning_rate,
-        beta1=0.,
-        beta2=0.999,
-        epsilon=1e-9)
-
-    gradients, variables = zip(*optimizer.compute_gradients(nll))
-    gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
-    train_op = optimizer.apply_gradients(zip(gradients, variables),
-                                         global_step=global_step)
-    # train_op = optimizer.minimize(
-    #     nll, global_step=global_step)
+    train_op = tx.core.get_train_op(nll, learning_rate=learning_rate, 
+        hparams=config.opt_hparams)
 
     def _run_epoch(sess, epoch, mode_string, display=10):
         if mode_string == 'train':

@@ -84,8 +84,8 @@ train_data_hparams = {
     "batch_size": batch_size,
     "seed": 123,
     "dataset": {
-        "files": 'ptb_data/ptb.train.txt',
-        "vocab_file": 'ptb_data/vocab.txt'
+        "files": './simple-examples/data/ptb.train.txt',
+        "vocab_file": './simple-examples/data/vocab.txt'
     }
 }
 
@@ -94,8 +94,8 @@ val_data_hparams = {
     "batch_size": batch_size,
     "seed": 123,
     "dataset": {
-        "files": 'ptb_data/ptb.valid.txt',
-        "vocab_file": 'ptb_data/vocab.txt'
+        "files": './simple-examples/data/ptb.valid.txt',
+        "vocab_file": './simple-examples/data/vocab.txt'
     }
 }
 
@@ -103,27 +103,20 @@ test_data_hparams = {
     "num_epochs": 1,
     "batch_size": batch_size,
     "dataset": {
-        "files": 'ptb_data/ptb.test.txt',
-        "vocab_file": 'ptb_data/vocab.txt'
+        "files": './simple-examples/data/ptb.test.txt',
+        "vocab_file": './simple-examples/data/vocab.txt'
     }
 }
 
-# opt_hparams = {
-#     "optimizer": {
-#         "type": "GradientDescentOptimizer",
-#         "kwargs": {"learning_rate": 1.0}
-#     },
-#     "gradient_clip": {
-#         "type": "clip_by_global_norm",
-#         "kwargs": {"clip_norm": 5.}
-#     },
-#     "learning_rate_decay": {
-#         "type": "exponential_decay",
-#         "kwargs": {
-#             "decay_steps": 1,
-#             "decay_rate": 0.5,
-#             "staircase": True
-#         },
-#         "start_decay_step": 3
-#     }
-# }
+opt_hparams = {
+    "optimizer": {
+        "type": "AdamOptimizer",
+        "kwargs": {
+            "learning_rate": 0.001
+        }
+    },
+    "gradient_clip": {
+        "type": "clip_by_global_norm",
+        "kwargs": {"clip_norm": 5.}
+    }
+}

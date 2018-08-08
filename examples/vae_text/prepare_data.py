@@ -46,7 +46,7 @@ def prepare_data(data_name):
             url = 'https://drive.google.com/file/d/13IsiffVjcQ-wrrbBGMwiG3sYf-DFxtXH/view?usp=sharing'
             tx.data.maybe_download(url, './', extract=True)
     else:
-        raise ValueError("the %s dataset is not currently supported,
+        raise ValueError("the %s dataset is not currently supported, \
                           try \'ptb\' or \'yahoo\'")
 
 
