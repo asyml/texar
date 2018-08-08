@@ -228,3 +228,4 @@ simple-examples.tgz
 /examples/seq2seq/data.zip
 /examples/seq2seq_configs/data/
 /examples/seq2seq_configs/data.zip
+/examples/seq2seq/training_log/
