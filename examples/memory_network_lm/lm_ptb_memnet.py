@@ -158,13 +158,13 @@ def _main(_):
             if epoch >= config.num_epochs:
                 print('Too many epochs!')
                 break
-            print('epoch: {} learning_rate: {:.6}'.format(epoch, lr))
+            print('epoch: {} learning_rate: {:.6f}'.format(epoch, lr))
             # Train
             train_data_iter = ptb_iterator(
                 data["train_text_id"], batch_size, memory_size)
             train_ppl = _run_epoch(
                 sess, train_data_iter, epoch, is_train=True, verbose=True)
-            print("Train Perplexity: {:.3}".format(train_ppl))
+            print("Train Perplexity: {:.3f}".format(train_ppl))
             sess.run(increment_global_step)
             # checkpoint
             if epoch % 5 == 0:
@@ -177,7 +177,7 @@ def _main(_):
             valid_data_iter = ptb_iterator(
                 data["valid_text_id"], batch_size, memory_size)
             valid_ppl = _run_epoch(sess, valid_data_iter, epoch)
-            print("Valid Perplexity: {:.3}".format(valid_ppl))
+            print("Valid Perplexity: {:.3f}".format(valid_ppl))
             # learning rate annealing
             if last_valid_ppl:
                 if heuristic_lr_decay:
@@ -194,13 +194,13 @@ def _main(_):
                     last_valid_ppl = valid_ppl
             else:
                 last_valid_ppl = valid_ppl
-            print("last_valid_ppl: {:.6}".format(last_valid_ppl))
+            print("last_valid_ppl: {:.6f}".format(last_valid_ppl))
         epoch = sess.run(global_step)
         print('Terminate after epoch', epoch)
         # Test
         test_data_iter = ptb_iterator(data["test_text_id"], 1, memory_size)
         test_ppl = _run_epoch(sess, test_data_iter, 0)
-        print("Test Perplexity: {:.3}".format(test_ppl))
+        print("Test Perplexity: {:.3f}".format(test_ppl))
 
 if __name__ == '__main__':
     tf.app.run(main=_main)
