@@ -1,0 +1,35 @@
+# Seq2seq Model #
+
+This example builds an attentional seq2seq model for machine translation.
+
+## Usage ##
+
+### Dataset ###
+
+Two example datasets are provided:
+
+  * toy_copy: A small toy autoencoding dataset from [TF Seq2seq toolkit](https://github.com/google/seq2seq/tree/2500c26add91b079ca00cf1f091db5a99ddab9ae).
+  * iwslt14: The benchmark [IWSLT2014](https://sites.google.com/site/iwsltevaluation2014/home) (de-en) machine translation dataset. 
+
+Download the data with the following cmds:
+
+```
+python prepare_data.py --data toy_copy
+python prepare_data.py --data iwslt14
+```
+
+### Train the model ###
+
+Train the model with the following cmd:
+
+```
+python attn_seq2seq.py --config_model config_model --config_data config_toy_copy
+```
+
+Here:
+  * `--config_model` specifies the model config. Note not to include the `.py` suffix.
+  * `--config_data` specifies the data config.
+
+## Results ##
+
+On the IWSLT14 dataset, the model achieves `BLEU=XXX` after `xx` epochs. 
