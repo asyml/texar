@@ -30,6 +30,8 @@ Here:
   * `--config_model` specifies the model config. Note not to include the `.py` suffix.
   * `--config_data` specifies the data config.
 
+[config_model.py](./config_model.py) specifies a single-layer seq2seq model with Luong attention.
+
 ## Results ##
 
 On the IWSLT14 dataset, the model achieves `BLEU=21.66` within `10` epochs. 
