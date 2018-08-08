@@ -13,7 +13,10 @@
 # limitations under the License.
 """Utilities for downloading and preprocessing the PTB and Yohoo data.
 """
+import os
 import argparse
+
+import tensorflow as tf
 import texar as tx
 
 def prepare_data(data_name):
@@ -33,7 +36,7 @@ def prepare_data(data_name):
         train_path = os.path.join(data_path, "ptb.train.txt")
         vocab_path = os.path.join(data_path, "vocab.txt")
         word_to_id = tx.data.make_vocab(
-            train_path, newline_token="<EOS>", return_type="dict")
+            train_path, return_type="dict")
 
         with open(vocab_path, 'w') as fvocab:
             for word in word_to_id:
@@ -44,7 +47,7 @@ def prepare_data(data_name):
         train_path = os.path.join(data_path, "yahoo.train.txt")
         if not tf.gfile.Exists(train_path):
             url = 'https://drive.google.com/file/d/13IsiffVjcQ-wrrbBGMwiG3sYf-DFxtXH/view?usp=sharing'
-            tx.data.maybe_download(url, './', extract=True)
+            tx.data.maybe_download(url, path='./', filenames='yahoo.zip', extract=True)
     else:
         raise ValueError("the %s dataset is not currently supported, \
                           try \'ptb\' or \'yahoo\'")
@@ -54,4 +57,4 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='prepare data')
     parser.add_argument('--data', type=str, help='dataset to prepare')
     args = parser.parse_args()
-    prepare_data("./", args.data)
+    prepare_data(args.data)
