@@ -8,174 +8,291 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from tensorflow.python.ops import array_ops # pylint: disable=E0611
 from tensorflow.contrib.rnn import LSTMStateTuple
 
+from texar.modules.encoders import UnidirectionalRNNEncoder
 from texar.modules.encoders.encoder_base import EncoderBase
-from texar.core import layers
-from texar.modules.embedders import embedder_utils
+from texar.utils import utils
+
+from collections import Sequence
 
 #TODO(zhiting): this is incomplete
 __all__ = [
-    "HierarchicalEncoder"
+    "HierarchicalRNNEncoder"
 ]
 
-class HierarchicalEncoder(EncoderBase):
-    """One directional forward RNN encoder with 2 levels.
+class HierarchicalRNNEncoder(EncoderBase):
+    """Wrapper for RNN encoder with 2 levels.
 
     Useful for encoding structured long sequences, e.g. paragraphs, dialogs,
     etc.
 
-    Expect 3D tensor input [B, T, U]
-    B: batch size T: the major seq len U:the minor seq len
-    The major encoder encodes the inputs along the 1st axis
-    The minor encoder encodes the inputs along the 2nd axis
+    Args:
+       encoder_major (optional): The context-level encoder receiving final 
+                                 states from utterance-level encoder as its
+                                 inputs. If it is not specified, an encoder 
+                                 is created as specified in 
+                                :attr:`hparams["encoder_major"]`.
 
-    the minor encoder supports various types: RNN, bi-RNN, CNN, CBOW etc.
+       encoder_minor (optional): The utterance-level encoder. If it is not 
+                                 specified, an encoder is created as specified 
+                                 in :attr:`hparams["encoder_minor"]`.
+
+       hparams (optional): the hyperparameters.
 
     See :class:`~texar.modules.encoders.rnn_encoders.RNNEncoderBase` for the
     arguments, and :meth:`default_hparams` for the default hyperparameters.
     """
 
-    def __init__(self, cell=None,
-                 embedding=None,
-                 vocab_size=None,
+    def __init__(self, encoder_major=None, encoder_minor=None,
                  hparams=None):
         EncoderBase.__init__(self, hparams)
 
-        # Make embedding
-        self._embedding = None
-        if self._hparams.use_embedding:
-            if embedding is None and vocab_size is None:
-                raise ValueError(
-                    "`vocab_szie` is required if embedding is enabled and "
-                    "`embedding` is not provided")
-            if isinstance(embedding, tf.Variable):
-                self._embedding = embedding
-            else:
-                self._embedding = embedder_utils.get_embedding(
-                    self._hparams.embedding, embedding, vocab_size,
-                    self.variable_scope)
-            if self._hparams.embedding.trainable:
-                self._add_trainable_variable(self._embedding)
+        encoder_major_hparams = utils.get_instance_kwargs(
+            None, self._hparams.encoder_major_hparams)
+        encoder_minor_hparams = utils.get_instance_kwargs(
+            None, self._hparams.encoder_minor_hparams)
 
-        # Make RNN cell
-        with tf.variable_scope(self.variable_scope):
-            if cell is not None:
-                self._major_cell = cell
-            else:
-                self._major_cell = layers.get_rnn_cell(self._hparams.major_cell)
-
-        if self._hparams.minor_type == 'rnn':
-            # Make minor rnn cell
-            with tf.variable_scope(self.variable_scope):
-                self._minor_cell = layers.get_rnn_cell(self._hparams.minor_cell)
-
-        elif self._hparams.minor_type == 'bow':
-            raise ValueError("BOW encoder is not yet supported")
-
-        elif self._hparams.minor_type == 'cnn':
-            raise ValueError("CNN encoder is not yet supported")
-
+        if isinstance(encoder_major, EncoderBase):
+            self._encoder_major = encoder_major
         else:
-            raise ValueError("Unknown minor type {}"
-                             .format(self._hparams.minor_type))
+            with tf.variable_scope(self.variable_scope.name):
+                with tf.variable_scope('encoder_major'):
+                    self._encoder_major = utils.check_or_get_instance(
+                        self._hparams.encoder_major_type,
+                        encoder_major_hparams,
+                        ['texar.modules.encoders', 'texar.custom'])
+        if isinstance(encoder_minor, EncoderBase):
+            self._encoder_minor = encoder_minor
+        elif self._hparams.config_share:
+            with tf.variable_scope(self.variable_scope.name):
+                with tf.variable_scope('encoder_minor'):
+                    self._encoder_minor = utils.check_or_get_instance(
+                        self._hparams.encoder_major_type,
+                        encoder_major_hparams,
+                        ['texar.modules.encoders', 'texar.custom'])
+        else:
+            with tf.variable_scope(self.variable_scope.name):
+                with tf.variable_scope('encoder_minor'):
+                    self._encoder_minor = utils.check_or_get_instance(
+                        self._hparams.encoder_minor_type,
+                        encoder_minor_hparams,
+                        ['texar.modules.encoders', 'texar.custom'])
 
-    #TODO(zhiting): docs for hparams `minor_type` and `minor_cell`.
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
-
         The dictionary has the following structure and default values.
 
-        See :meth:`~texar.core.layers.default_rnn_cell_hparams` for the
-        default rnn cell hyperparameters, and
-        :meth:`~texar.core.layers.default_embedding_hparams` for the default
-        embedding hyperparameters.
+        Returns:
+            dict: Adictionary with following structure and values:
+            .. code-block:: python
+                {
+                    "encoder_major_type": "UnidirectionalRNNEncoder",
+                    "encoder_major_hparams": {},
+                    "encoder_minor_type": "UnidirectionalRNNEncoder",
+                    "encoder_minor_hparams": {},
+                    "config_share": False,
+                    "name": "hierarchical_encoder_wrapper"
+                }
 
-        .. code-block:: python
+            Here:
+        
+            "encoder_major_type": 
+                The class name of major encoder which can be found in 
+                ~texar.modules.encoders or ~texar.custom.
 
-            {
-                # A dictionary of rnn cell hyperparameters. Ignored if `cell`
-                # is given when constructing the encoder.
-                "rnn_cell": texar.core.layers.default_rnn_cell_hparams(),
+            "encoder_major_hparams":
+                The hparams for major encoder's construction.
 
-                # A dictionary of token embedding hyperparameters for embedding
-                # initialization. Ignored if `embedding` is given and is
-                # a tf.Variable when constructing the encoder. If `embedding`
-                # is given and is a Tensor or numpy array, the "dim" and
-                # "initializer" specs of embedding are ignored.
-                "embedding": texar.core.layers.default_embedding_hparams(),
+            "config_share":
+                :attr:`encoder_minor_type` and :attr:`encoder_minor_hparams`
+                will be replaced by major's corresponding hparams if set to true.
 
-                # The name of the encoder
-                "name": "hierarchical_forward_rnn_encoder"
-            }
+            "name":
+                Name of the encoder.
         """
         hparams = {
-            "use_embedding": True,
-            "embedding": embedder_utils.default_embedding_hparams(),
-            "minor_type": "rnn",
-            "minor_cell": layers.default_rnn_cell_hparams(),
-            "major_cell": layers.default_rnn_cell_hparams(),
+            "name": "hierarchical_encoder",
+            "encoder_major_type": "UnidirectionalRNNEncoder",
+            "encoder_major_hparams": {},
+            "encoder_minor_type": "UnidirectionalRNNEncoder",
+            "encoder_minor_hparams": {},
+            "config_share": False,
+            "@no_typecheck": [
+                'encoder_major_hparams',
+                'encoder_minor_hparams']
         }
         hparams.update(EncoderBase.default_hparams())
-        hparams["name"] = "hierarchical_forward_rnn_encoder"
         return hparams
 
-    def _build(self, inputs, **kwargs):
+    def _build(self, inputs, order='btu',
+               medium=None, **kwargs):
         """Encodes the inputs.
 
         Args:
-            inputs: 3D tensor input [B, T, U]
+            inputs: A 4D tensor of shape [B, T, U, dim], where
+                        B: batch_size
+                        T: the major seq len (context-level length)
+                        U: the minor seq len (utterance-level length)
+
+                    The order of first three dimensions can be changed
+                    regarding to :attr:`time_major` of the two encoders.
+
+            order (optional): a 3-char string with some order of 'b', 't', 'u',
+                              specifying the order of inputs dimension.
+                              Following four can be accepted:
+
+                              'btu': time_major=False for both. (default)
+                              'utb': time_major=True for both.
+                              'tbu': time_major=True for major encoder only.
+                              'ubt': time_major=True for minor encoder only.
+
+            medium (optional): A callable function processes the final states of 
+                               minor encoder to be the input for major encoder.
+                               Extra meta like speaker token can be added using 
+                               this function.
+                               If not specified, a final state will be flatten 
+                               into a vector while hidden part of LSTMTuple is 
+                               skipped, see :meth:`depack_lstmtuple` for the scheme.
+
+                               Use :attr:`states_minor_before_medium` and 
+                               :attr:`states_minor_after_medium` to see its input
+                               and output respectively.
+
             **kwargs: Optional keyword arguments of `tensorflow.nn.dynamic_rnn`,
-                such as `sequence_length`, `initial_state`, etc.
+                      such as `sequence_length`, `initial_state`, etc.
+
+                      By default, arguments except `initial_state` and 
+                      `sequence_length` will be sent to both major and minor 
+                      encoders. To specify the encoder that arguments sent to, add 
+                      '_minor'/'_major' as its suffix. 
+
+                      `initial_state` and `sequence_length` will be sent to minor
+                      encoder only if not specifing its encoder.
+
+                      `initial_state` and `sequence_length` sent to minor encoder 
+                      can be either 1-D tensor or 2-D tensor, with BxT units following
+                      correct order.
 
         Returns:
-            Outputs and final state of the encoder.
+            Outputs and final state of the major encoder.
+        
         """
 
-        major_len = array_ops.shape(inputs)[1]
-        minor_len = array_ops.shape(inputs)[2]
-        embed_dim = self.hparams.embedding.dim
-        minor_cell_size = self.hparams.minor_cell.cell.kwargs.num_units
+        def kwargs_split(kwargs):
+            kwargs_minor, kwargs_major = {}, {}
+            for k, v in kwargs.items():
+                if len(k) < 5 or (k[-5:] not in ['major', 'minor']):
+                    kwargs_minor[k] = v
+                    if k not in ['sequence_length', 'initial_state']:
+                        kwargs_major[k] = v
+                    else:
+                        kwargs_minor[k] = tf.reshape(v, [-1])
+            for k, v in kwargs.items():
+                if len(k) >= 6 and k[-6:] == ['_minor']:
+                    kwargs_minor[k[:-6]] = v
+                if len(k) >= 6 and k[-6:] == ['_major']:
+                    kwargs_major[k[:-6]] = v
 
-        embedded_inputs = tf.nn.embedding_lookup(self._embedding, inputs)
+            return kwargs_minor, kwargs_major
 
-        # B x T x U x E - > (BxT) x U x E
-        flat_embedded_inputs = tf.reshape(embedded_inputs,
-                                          [-1, minor_len, embed_dim])
+        kwargs_minor, kwargs_major = kwargs_split(kwargs)
 
-        with tf.variable_scope("minor_rnn"):
-            minor_outs, minor_states = tf.nn.dynamic_rnn(
-                cell=self._minor_cell,
-                inputs=flat_embedded_inputs,
-                dtype=tf.float32)
+        shape = tf.shape(inputs)[:3]
 
-            if type(minor_states) is LSTMStateTuple:
-                minor_states = minor_states.h
+        expand, shape = self._get_flatten_order(
+            order, kwargs_major, kwargs_minor, tf.shape(inputs))
 
-        # B x T x minor_size
-        major_inputs = tf.reshape(minor_states, [-1, major_len,
-                                                 minor_cell_size])
+        inputs = tf.reshape(inputs, shape + [inputs.shape[3]])
 
-        with tf.variable_scope("major_rnn"):
-            if ('dtype' not in kwargs) and ('initial_state' not in kwargs):
-                results = tf.nn.dynamic_rnn(
-                    cell=self._major_cell,
-                    inputs=major_inputs,
-                    dtype=tf.float32,
-                    **kwargs)
-            else:
-                results = tf.nn.dynamic_rnn(
-                    cell=self._major_cell,
-                    inputs=major_inputs,
-                    **kwargs)
+        outputs_minor, states_minor = self._encoder_minor(inputs,
+                                                          **kwargs_minor)
 
-        self._add_internal_trainable_variables()
+        self.states_minor_before_medium = states_minor
+
+        if medium is None:
+            states_minor = self.depack_lstmtuple(states_minor)
+        else:
+            states_minor = medium(states_minor)
+
+        self.states_minor_after_medium = states_minor
+
+        states_minor = tf.reshape(
+            states_minor, tf.concat([expand, tf.shape(states_minor)[1:]], 0))
+
+        outputs_major, states_major = self._encoder_major(states_minor,
+                                                          **kwargs_major)
+
         # Add trainable variables of `self._cell` which may be constructed
         # externally
-        self._add_trainable_variable(
-            layers.get_rnn_cell_trainable_variables(self._major_cell))
-        self._built = True
 
-        return results
+        if self._built == False:
+            self._add_trainable_variable(
+                self._encoder_minor.trainable_variables)
+            self._add_trainable_variable(
+                self._encoder_major.trainable_variables)
+            self._built = True
+
+        return outputs_major, states_major
+
+    @staticmethod
+    def _get_flatten_order(order, kwargs_minor, kwargs_major, shape):
+        def error_message(order):
+            return ('Fail to match input order \'{}\'' \
+                    'with given `time_major` params.').format(order)
+
+        time_major_minor = kwargs_minor.get('time_major', None)
+        time_major_major = kwargs_major.get('time_major', None)
+        if order == 'btu':
+            if not ((time_major_minor is None or not time_major_minor) and \
+                    (time_major_major is None or not time_major_major)):
+                raise ValueError(error_message(order))
+            kwargs_minor.setdefault('time_major', False)
+            kwargs_major.setdefault('time_major', False)
+            expand = shape[0:2]
+            shape = [shape[0] * shape[1], shape[2]]
+        elif order == 'utb':
+            if not ((time_major_minor is None or time_major_minor) and \
+                    (time_major_major is None or time_major_major)):
+                raise ValueError(error_message(order))
+            kwargs_minor.setdefault('time_major', True)
+            kwargs_major.setdefault('time_major', True)
+            expand = shape[1:3]
+            shape = [shape[0], shape[1] * shape[2]]
+        elif order == 'tbu':
+            if not ((time_major_minor is None or not time_major_minor) and \
+                    (time_major_major is None or time_major_major)):
+                raise ValueError(error_message(order))
+            kwargs_minor.setdefault('time_major', False)
+            kwargs_major.setdefault('time_major', True)
+            expand = shape[0:2]
+            shape = [shape[0] * shape[1], shape[2]]
+        elif order == 'ubt':
+            if not ((time_major_minor is None or time_major_minor) and \
+                    (time_major_major is None or not time_major_major)):
+                raise ValueError(error_message(order))
+            kwargs_minor.setdefault('time_major', True)
+            kwargs_major.setdefault('time_major', False)
+            expand = shape[1:3]
+            shape = [shape[0], shape[1] * shape[2]]
+
+        return expand, shape
+
+    @staticmethod
+    def depack_lstmtuple(x):
+        if isinstance(x, LSTMStateTuple):
+            return x.h
+        if isinstance(x, collections.Sequence):
+            return tf.concat(
+                [HierarchicalRNNEncoder.depack_lstmtuple(v) for v in x], -1)
+        else:
+            return x
+
+    @property
+    def encoder_major(self):
+        return self._encoder_major
+    
+    @property
+    def encoder_minor(self):
+        return self._encoder_minor
