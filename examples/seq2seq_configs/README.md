@@ -19,9 +19,11 @@ python [PATH_TEXAR]/examples/attn_seq2seq/prepare_data.py --data toy_copy
 Train the model with the following cmd:
 
 ```
-python [PATH_TEXAR]/bin/train.py --config_paths config_model_small,config_data_toy_copy 
+python [PATH_TEXAR]/bin/train.py --config_paths config_model_small.yml,config_data_toy_copy.yml 
 ```
 
 See [train.py](../../bin/train.py) for other available configurations.
+
+[config_model_small.yml](./config_model_small.yml) speicifies a small-size model with single-layer RNN encoder/decoder. [config_model_medium.yml](./config_model_medium.yml) specifies a medium-size one with 2-layer RNN encoder/decoder.
 
 The model will be trained/evaluated/checkpointed within the [Tensorflow Estimator](https://www.tensorflow.org/guide/estimators).

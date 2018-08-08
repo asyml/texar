@@ -1,0 +1,29 @@
+# Basic Seq2seq model of medium size. See 
+# `texar.models.BasicSeq2seq.default_hparams()` for possible hyperparameters 
+# default values. Hyperparameters not specified here will take the default 
+# values.
+model: BasicSeq2seq
+model_hparams:
+  source_embedder_hparams:
+    dim: 256
+  encoder_hparams:
+    rnn_cell:
+      type: GRUCell
+      kwargs:
+        num_units: 256 
+        num_layers: 2
+      dropout:
+        input_keep_prob: 0.8
+  decoder_hparams:
+    rnn_cell:
+      type: GRUCell
+      kwargs:
+        num_units: 256
+        num_layers: 2
+      dropout:
+        input_keep_prob: 0.8
+  optimization:
+    optimizer:
+      type: AdamOptimizer
+      kwargs:
+        learning_rate: 0.0001
