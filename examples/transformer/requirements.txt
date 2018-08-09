@@ -1,0 +1,4 @@
+matplotlib
+torchtext
+torch
+chainer

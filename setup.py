@@ -16,7 +16,9 @@ setuptools.setup(
     platforms='any',
 
     install_requires=[
-        'numpy'
+        'numpy',
+        'pyyaml',
+        'requests',
     ],
     extras_require={
         'tensorflow': ['tensorflow>=1.6.0'],

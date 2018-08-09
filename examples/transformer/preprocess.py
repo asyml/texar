@@ -9,6 +9,7 @@ import re
 import json
 import os
 import numpy as np
+import pickle
 
 #pylint:disable=invalid-name
 
@@ -105,8 +106,8 @@ if __name__ == "__main__":
                   if s and len(s) < args.max_seq_length
                   and t and len(t) < args.max_seq_length]
     train_npy = [(s, t) for s, t in zip(source_npy, target_npy)
-                 if s and len(s) < args.max_seq_length
-                 and t and len(t) < args.max_seq_length]
+                 if len(s) > 0 and len(s) < args.max_seq_length
+                 and len(t) > 0 and len(t) < args.max_seq_length]
     assert len(train_data) == len(train_npy)
 
     # Display corpus statistics
@@ -124,7 +125,7 @@ if __name__ == "__main__":
     valid_data = [(s, t) for s, t in zip(source_data, target_data)
                   if s and t]
     valid_npy = [(s, t) for s, t in zip(source_npy, target_npy)
-                 if s and t]
+                 if len(s) > 0 and len(t) > 0]
     assert len(valid_data) == len(valid_npy)
 
     # Test Dataset
@@ -137,7 +138,7 @@ if __name__ == "__main__":
     test_data = [(s, t) for s, t in zip(source_data, target_data)
                  if s and t]
     test_npy = [(s, t) for s, t in zip(source_npy, target_npy)
-                if s and t]
+                if len(s)>0 and len(t)>0]
 
     id2w = {i: w for w, i in w2id.items()}
     # Save the dataset to numpy files
@@ -160,6 +161,9 @@ if __name__ == "__main__":
             valid_npy)
     np.save(os.path.join(args.input, args.save_data + 'test.npy'),
             test_npy)
+    with open(os.path.join(args.input, args.save_data + 'vocab.pickle'), 'wb')\
+        as f:
+        pickle.dump(id2w, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     with open(train_src_output, 'w+') as fsrc, \
         open(train_tgt_output, 'w+') as ftgt:
