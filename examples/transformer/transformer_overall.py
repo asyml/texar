@@ -8,6 +8,7 @@ from __future__ import print_function
 import pickle
 import random
 import logging
+#import codecs
 import codecs
 import os
 from importlib import reload
@@ -84,7 +85,6 @@ if __name__ == "__main__":
     encoder = TransformerEncoder(
         embedding=WordEmbedder._embedding,
         hparams=encoder_hparams)
-
     encoder_output, encoder_decoder_attention_bias = \
         encoder(encoder_input)
 
