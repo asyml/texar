@@ -60,7 +60,7 @@ def load_hyperparams():
                            default='/home/shr/t2t_data/')
     argparser.add_argument('--batch_size', type=int, default=4096)
     argparser.add_argument('--test_batch_size', type=int, default=32)
-    argparser.add_argument('--eval_steps', type=int, default=1000)
+    argparser.add_argument('--eval_steps', type=int, default=2000)
     argparser.add_argument('--min_length_bucket', type=int, default=9)
     argparser.add_argument('--length_bucket_step', type=float, default=1.1)
     argparser.add_argument('--max_training_steps', type=int, default=250000)
@@ -115,6 +115,7 @@ def load_hyperparams():
         args.src_language, args.tgt_language, args.batch_size, \
         args.max_train_epoch, args.lr_constant, args.warmup_steps)
     args.log_dir = os.path.join(args.log_disk_dir, log_params_dir)
+    #args.log_dir = './debug/run_en_nl_bpe/'
     batching_scheme = _batching_scheme(
         args.batch_size,
         args.max_seq_length,

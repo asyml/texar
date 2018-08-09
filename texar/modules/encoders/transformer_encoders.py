@@ -128,14 +128,13 @@ class TransformerEncoder(EncoderBase):
             'target_space_id': None,
             'num_units': 512,
         }
+
     #pylint:disable=arguments-differ
     def _build(self, inputs, mode=None):
         """Encodes the inputs with transformer encoder.
 
         Args:
             inputs: A 2D Tensor of shape `[batch_size, max_time]`
-            encoder_padding: A 2D Tensor of shape `[batch_size, max_time]`,
-                indicating whether the corresponding posision is padding.
             mode(optional): A tensor taking value in
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`
         """

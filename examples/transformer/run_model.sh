@@ -13,7 +13,6 @@ fi
 encoder=spm
 DATA_DIR="./temp/run_${src_language}_${tgt_language}_${encoder}/data/"
 hparams_set=$1
-#LOG_DISK_DIR='/home2/shr/transformeLOG_DISK_DIR=/space/shr/transformer_${ENCODER}/
 LOG_DISK_DIR=/space/hzt/shr/transformer_${encoder}/
 running_mode=$2
 echo "mode:${running_mode}"
@@ -40,7 +39,7 @@ case ${hparams_set} in
         --beam_width=5 --alpha=0.6 \
         --log_disk_dir=/space/hzt/shr/transformer_${encoder}/ \
         --draw_for_debug=0 --affine_bias=0 --eval_interval_epoch=1 \
-        --zero_pad=1 --bos_pad=0 \
+        --zero_pad=1 --bos_pad=0 --eval_steps=2000 \
         --filename_prefix=processed. &> ${logging_filename};;
 
     2)
@@ -60,7 +59,7 @@ case ${hparams_set} in
             --zero_pad=1 --bos_pad=1 \
             --filename_prefix=processed. &> ${logging_filename};;
     4)
-    echo 'load from pytorch model. This feature is not mature.'
+    echo 'load from pytorch model, this feature is not mature.'
     src_language=en
     tgt_language=vi
     encoder=bpe
@@ -71,5 +70,5 @@ case ${hparams_set} in
         --load_from_pytorch=1 \
         --model_dir=/home/hzt/shr/transformer_pytorch/temp/run_en_vi/models/ \
         --model_filename=ckpt_from_pytorch.p \
-        --log_disk_dir=${LOG_DISK_DIR} --debug=1 &> test_debug.txt ;;
+        --log_disk_dir=${LOG_DISK_DIR} --debug=1 &> test_debug.txt;;
 esac

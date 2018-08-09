@@ -1,3 +1,8 @@
+# Prerequisites
+
+In addition to installing the dependency for texar library, you need to
+run `pip install -r requirements` to install the dependencies for transformer translation model.
+
 # for en-vi task
 
 The task is IWSLT'15 English-Vietnamese dataset. For more information, please refer to https://nlp.stanford.edu/projects/nmt/
@@ -16,11 +21,16 @@ bash preprocess_data.sh en vi
 
 ## training and evaluating the model
 ```
+#train
 bash run_model.sh 1 train_and_evaluate en vi
+
+#test
 bash run_model 1 test en vi
+
+#evaluate with BLEU score
 bash test_output.sh en vi
 ```
-The `1` indicates one hparams set for en-vi task: `max_train_epoch=70 max_training_steps=125000 batch_size=2048 test_batch_size=64 beam_width=5 alpha=0.6 ...`. Read the `run_model.sh` for more details.
+The `1` indicates one hparams set for en-vi task: `max_train_epoch=70 max_training_steps=125000 batch_size=2048 test_batch_size=64 beam_width=5 alpha=0.6 ...`. You need to manually set the `log_disk_dir` parameter to control the output path of the tensorflow logging file. Read the `run_model.sh` for more details.
 
 
 # we also give a sample script for wmt14 en-de task here.
@@ -43,7 +53,8 @@ You will obtain the processed dataset in `./temp/data/run_en_de_wpm/data/` direc
 ```
 bash run_en_vi.sh 2 train_and_evaluate en de
 ```
-Here `2` denotes one hparams set for wmt14 en-de task.
+Here `2` denotes one hparams set for wmt14 en-de task (model with more
+parameters compared to `1` hparams set.
 
 ## test and evaluation
 ```

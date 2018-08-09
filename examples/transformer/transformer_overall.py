@@ -1,5 +1,5 @@
 """
-Example pipeline. This is a minimal example of transfomrer model.
+Example pipeline. This is a minimal example of transformer model.
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -84,8 +84,10 @@ if __name__ == "__main__":
     encoder = TransformerEncoder(
         embedding=WordEmbedder._embedding,
         hparams=encoder_hparams)
+
     encoder_output, encoder_decoder_attention_bias = \
         encoder(encoder_input)
+
     decoder = TransformerDecoder(
         embedding=encoder._embedding,
         hparams=decoder_hparams)
@@ -175,7 +177,7 @@ if __name__ == "__main__":
                     _fetches = sess.run(fetches, feed_dict=_feed_dict)
                     step, loss, mgd, source, target = _fetches['step'], _fetches['loss'], \
                         _fetches['mgd'], _fetches['source'], _fetches['target']
-                    if step % 100 == 0:
+                    if step % 500 == 0:
                         logging.info('step:%s source:%s targets:%s loss:%s', \
                             step, source.shape, target.shape, loss)
                     writer.add_summary(mgd, global_step=step)
