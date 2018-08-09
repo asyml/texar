@@ -114,8 +114,7 @@ def load_hyperparams():
     log_params_dir = 'log_dir/{}_{}.bsize{}.epoch{}.lr_c{}warm{}/'.format(\
         args.src_language, args.tgt_language, args.batch_size, \
         args.max_train_epoch, args.lr_constant, args.warmup_steps)
-    #args.log_dir = os.path.join(args.log_disk_dir, log_params_dir)
-    args.log_dir = './debug/run_en_nl_bpe/'
+    args.log_dir = os.path.join(args.log_disk_dir, log_params_dir)
     batching_scheme = _batching_scheme(
         args.batch_size,
         args.max_seq_length,

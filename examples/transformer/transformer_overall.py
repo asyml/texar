@@ -8,7 +8,6 @@ from __future__ import print_function
 import pickle
 import random
 import logging
-#import codecs
 import codecs
 import os
 from importlib import reload
