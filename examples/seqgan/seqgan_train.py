@@ -1,3 +1,6 @@
+#
+"""SeqGAN for Text Generation.
+"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -8,7 +11,7 @@ import importlib
 import numpy as np
 import tensorflow as tf
 import texar as tx
-from data_utils import prepare_data, calculate_bleu
+from data_utils import calculate_bleu
 
 flags = tf.flags
 flags.DEFINE_string("dataset", "ptb",
@@ -115,8 +118,9 @@ def _main(_):
                                         hparams=config.d_opt_hparams)
 
     # ------------Adeversarial---------------
-    infer_logits = tf.clip_by_value(tf.nn.softmax(infer_logits) *
-                         tf.one_hot(infer_sample_ids, vocab_size), 1e-20, 1)
+    infer_logits = tf.clip_by_value(
+        tf.nn.softmax(infer_logits) *
+        tf.one_hot(infer_sample_ids, vocab_size), 1e-20, 1)
 
     expected_reward = tf.Variable(tf.zeros((config.max_num_steps,)))
     reward = tf.squeeze(f_logits) - expected_reward[:tf.shape(f_logits)[1]]
@@ -126,9 +130,8 @@ def _main(_):
     exp_op = tx.core.get_train_op(exp_reward_loss, global_step=global_step,
                                   increment_global_step=False,
                                   hparams=config.update_opt_hparams)
-    reward = tx.losses.discount_reward(reward,
-                                  sequence_length=tf.squeeze(sequence_length),
-                                  tensor_rank=2)
+    reward = tx.losses.discount_reward(
+        reward, sequence_length=tf.squeeze(sequence_length), tensor_rank=2)
     update_loss = tf.reduce_mean(tf.log(infer_logits) *
                                  tf.expand_dims(reward, -1))
     update_loss.set_shape(())
@@ -157,8 +160,9 @@ def _main(_):
                         'train_op': gen_train_op
                     }
                 else:
-                    raise ValueError("Expect mode_string to be one of "
-                                  "['train', 'update'], got %s" % mode_string)
+                    raise ValueError(
+                        "Expect mode_string to be one of ['train', 'update'], "
+                        "got %s" % mode_string)
                 rtns = sess.run(fetches)
                 step += 1
                 if step % 200 == 1:
@@ -169,10 +173,11 @@ def _main(_):
                                                           epoch, step, ppl)
                     else:
                         rst = "G {0:6s} epoch {1:3d}, step {2:3d}: " \
-                              "mean_reward: {3:6f}, expect_reward_loss:{4:6f}, " \
-                              "update_loss: {5:6f}".format(mode_string, epoch,
-                                   step, rtns['mean_rwd'], rtns['exp_rwd_loss'],
-                                   rtns['update_loss'])
+                              "mean_reward: {3:6f}, " \
+                              "expect_reward_loss:{4:6f}, " \
+                              "update_loss: {5:6f}".format(
+                                  mode_string, epoch, step, rtns['mean_rwd'],
+                                  rtns['exp_rwd_loss'], rtns['update_loss'])
                     log.write(rst + '\n')
                     log.flush()
                     print(rst)
@@ -184,7 +189,7 @@ def _main(_):
 
     def _g_test_epoch(sess, epoch, mode_string):
         def _id2word_map(id_arrays):
-            return [' '.join([train_data.vocab._id_to_token_map_py[i]
+            return [' '.join([train_data.vocab.id_to_token_map_py[i]
                               for i in sent]) for sent in id_arrays]
 
         if mode_string == 'valid':
@@ -244,8 +249,9 @@ def _main(_):
                 if step % 200 == 0:
                     rst = "D {0:6s} epoch {1:3d}, step {2:3d}: " \
                           "dis_total_loss: {3:6f}, r_loss: {4:6f}, " \
-                          "f_loss: {5:6f}".format(mode_string, epoch, step,
-                          rtns['mle_loss'], rtns['r_loss'], rtns['f_loss'])
+                          "f_loss: {5:6f}".format(
+                              mode_string, epoch, step, rtns['mle_loss'],
+                              rtns['r_loss'], rtns['f_loss'])
                     log.write(rst + '\n')
                     log.flush()
                     print(rst)
@@ -261,7 +267,7 @@ def _main(_):
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
-        
+
         for g_epoch in range(config.generator_pretrain_epoch):
             _g_train_epoch(sess, g_epoch, 'train')
             if g_epoch % 10 == 0 or \

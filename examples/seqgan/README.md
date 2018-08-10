@@ -1,18 +1,19 @@
 # SeqGAN for Text Generation
 
-This example is an implementation of [SeqGAN: Sequence Generative Adversarial Nets with Policy Gradient](https://arxiv.org/pdf/1609.05473.pdf), with a language model as the generator and an RNN-based classifier as the discriminator.
+This example is an implementation of [(Yu et al.) SeqGAN: Sequence Generative Adversarial Nets with Policy Gradient](https://arxiv.org/pdf/1609.05473.pdf), with a language model as the generator and an RNN-based classifier as the discriminator.
 
-Model structure and parameter settings are in line with SeqGAN in [Texygen](https://github.com/geek-ai/Texygen), except that we did not implement the rollout strategy in discriminator for the consideration of simplicity.
+Model structure and parameter settings are in line with the [official implementation](https://github.com/geek-ai/Texygen) of SeqGAN, except that we replace the MC-Tree rollout strategy with token-level reward by the RNN discriminator, which is simpler and provides competitive performance.
 
-Experiments are performed on [COCO Captions dataset](http://cocodataset.org/#download), with 2k vocabularies and an average sentence length of 25. We use the [data](https://github.com/geek-ai/Texygen/tree/master/data) provided by Texygen, where training and testing datasets contain 10k sentences.
-
-We also run experiments on [PTB dataset](https://corochann.com/penn-tree-bank-ptb-dataset-introduction-1456.html) with three configs.
+Experiments are performed on two datasets:
+* The standard [PTB dataset](https://corochann.com/penn-tree-bank-ptb-dataset-introduction-1456.html)
+* The [COCO Captions dataset](http://cocodataset.org/#download): with 2K vocabularies and an average sentence length of 25. We use the [data](https://github.com/geek-ai/Texygen/tree/master/data) provided in the official implementation, where train/test datasets contain 10K sentences, respectively.
 
 ## Usage
 
 ### Dataset
 ```shell
-python data_utils.py --config config_coco_small --data_path ./ --dataset coco
+python data_utils.py --config config_ptb_small --data_path ./ --dataset ptb
+python data_utils.py --config config_coco --data_path ./ --dataset coco
 ```
 
 Here:
@@ -30,7 +31,7 @@ python seqgan_train.py --config config_coco --data_path ./ --dataset coco
 
 Here:
 
-`--config`, `--data_path` and `dataset` shall be the same with the flags settings used to download the dataset.
+`--config`, `--data_path` and `--dataset` should be the same with the flags settings used to download the dataset.
 
 The model will start training and will evaluate perplexity and BLEU score every 10 epochs.
 
@@ -38,26 +39,24 @@ The model will start training and will evaluate perplexity and BLEU score every 
 
 ### PTB
 
-|config|train|valid|test|
-|---|---|---|---|
-|small|26.8470|55.6829|53.3579|
-|medium|8.4457|15.7546|15.4920|
-|large||||
+|config|train|valid|test| official - test |
+|---|---|---|---|---|
+|small|26.8470|55.6829|53.3579||
+|medium|8.4457|15.7546|15.4920||
+|large|||||
 
 ### COCO Caption
 
-We compare the results with SeqGAN and MLE provided by Texygen. Applying its default parameter settings in Texygen, BLEU on image COCO caption test dataset and train dataset are as shown below:
+We compare the results of SeqGAN and MLE (maximum likelihood training) provided by our and official implemantations, using the default official parameter settings. Each cell below presents the BLEU scores on both the test set and the training set (in the parentheses). 
 
-|    |Texar - SeqGAN   | TexyGen - SeqGAN | Texar - MLE | Texygen - MLE |
+|    |Texar - SeqGAN   | Official - SeqGAN | Texar - MLE | Official - MLE |
 |---------------|-------------|----------------|-------------|----------------|
-|BLEU1 | 0.5663 (0.7446) | 0.5709 (0.7192) | 0.6066 (0.8274) | 0.5730 (0.7450) |
-|BLEU2 | 0.2887 (0.5322) | 0.2657 (0.4465) | 0.2941 (0.5791) | 0.2856 (0.5242) |
-|BLEU3 | 0.1209 (0.2979) | 0.0981 (0.2202) | 0.1194 (0.3099) | 0.1190 (0.2810) |
-|BLEU4 | 0.0424 (0.1324) | 0.0287 (0.0828) | 0.0414 (0.1330) | 0.0417 (0.1212)|
+|BLEU-1 | 0.5663 (0.7446) | 0.5709 (0.7192) | 0.6066 (0.8274) | 0.5730 (0.7450) |
+|BLEU-2 | 0.2887 (0.5322) | 0.2657 (0.4465) | 0.2941 (0.5791) | 0.2856 (0.5242) |
+|BLEU-3 | 0.1209 (0.2979) | 0.0981 (0.2202) | 0.1194 (0.3099) | 0.1190 (0.2810) |
+|BLEU-4 | 0.0424 (0.1324) | 0.0287 (0.0828) | 0.0414 (0.1330) | 0.0417 (0.1212)|
 
-The first value in each cell stands for the BLEU score on the test dataset, while the other value indicates the BLEU score on train dataset.
-
-## Log
+## Training Log
 
 During training, loss and BLEU score are recorded in the log directory. Here, we provide sample log output when training on the  `coco` dataset.
 
