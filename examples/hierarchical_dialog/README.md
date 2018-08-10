@@ -22,10 +22,6 @@ where evaluation will be done after each epoch.
 Here:
 + `--config_model` specifies the model config. Note not to include the `.py` suffix. This example provides two configs `biminor` and `uniminor`, in which a bidirectional/unidirectional RNN is used as the utterance-level encoder respectively. 
 
-## Configurations
-
-The context of each data point contains at most 9 utterances, and finally 136,179 training samples are extracted.
-
 ## Results
 
 The form shows results of perplexity and BLEU-1 after 10 epochs
