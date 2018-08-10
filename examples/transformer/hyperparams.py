@@ -26,8 +26,21 @@ def load_hyperparams():
     # pylint: disable=too-many-statements
     args = Hyperparams()
     argparser = argparse.ArgumentParser()
+    """
+    For devendra data loader
+    """
+    argparser.add_argument('--input', type=str, default='temp/run_en_nl_bpe/data')
+    argparser.add_argument('--data', type=str, default='processed')
+    argparser.add_argument('--wbatchsize', type=int, default=3000)
+    argparser.add_argument('--epoch', type=int, default=40)
+    argparser.add_argument('--start_epoch', type=int, default=0)
+    #argparser.add_argument('--max_train_size', type=int, default=60)
+    #argparser.add_argument('--max_eval_size', type=int, default=30)
+    #argparser.add_argument('--max_test_size', type=int, default=10)
+
+    # -------------------------------------------------#
     argparser.add_argument('--max_seq_length', type=int, default=256)
-    argparser.add_argument('--running_mode', type=str,
+    argparser.add_argument('--mode', type=str,
                            default='train_and_evaluate',
                            help='can also be test mode')
     argparser.add_argument('--src_language', type=str, default='en')
@@ -46,7 +59,8 @@ def load_hyperparams():
     argparser.add_argument('--data_dir', type=str,
                            default='/home/shr/t2t_data/')
     argparser.add_argument('--batch_size', type=int, default=4096)
-    argparser.add_argument('--test_batch_size', type=int, default=10)
+    argparser.add_argument('--test_batch_size', type=int, default=32)
+    argparser.add_argument('--eval_steps', type=int, default=2000)
     argparser.add_argument('--min_length_bucket', type=int, default=9)
     argparser.add_argument('--length_bucket_step', type=float, default=1.1)
     argparser.add_argument('--max_training_steps', type=int, default=250000)
@@ -62,7 +76,8 @@ def load_hyperparams():
         help='save the eval output to file')
     argparser.add_argument('--eval_interval_epoch', type=int, default=1)
     argparser.add_argument('--load_from_pytorch', type=str, default='')
-    argparser.add_argument('--affine_bias', type=int, default=0)
+    argparser.add_argument('--affine_bias', type=int, default=1,
+        help="for devendra, it's 1; fot t2t , it's 0")
     argparser.add_argument('--eval_criteria', type=str, default='bleu')
     argparser.add_argument('--pre_encoding', type=str, default='spm')
     argparser.add_argument('--max_decode_len', type=int, default=256)
@@ -100,6 +115,7 @@ def load_hyperparams():
         args.src_language, args.tgt_language, args.batch_size, \
         args.max_train_epoch, args.lr_constant, args.warmup_steps)
     args.log_dir = os.path.join(args.log_disk_dir, log_params_dir)
+    #args.log_dir = './debug/run_en_nl_bpe/'
     batching_scheme = _batching_scheme(
         args.batch_size,
         args.max_seq_length,
@@ -107,8 +123,8 @@ def load_hyperparams():
         args.length_bucket_step,
         drop_long_sequences=True,
     )
-    print('train_src:{}'.format(args.train_src))
-    print('dev src:{}'.format(args.dev_src))
+    #print('train_src:{}'.format(args.train_src))
+    #print('dev src:{}'.format(args.dev_src))
     train_dataset_hparams = {
         "num_epochs": args.eval_interval_epoch,
         #"num_epochs": args.max_train_epoch,

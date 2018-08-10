@@ -34,5 +34,5 @@ Here:
 
 ## Results ##
 
-On the IWSLT14 dataset, the model achieves `BLEU=21.66` within `10` epochs. 
+On the IWSLT14 dataset, using original target texts as reference(no  `<UNK>`  in the reference), the model achieves `BLEU=21.66` within `10` epochs.
 

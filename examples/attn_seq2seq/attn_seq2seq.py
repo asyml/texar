@@ -20,6 +20,7 @@ FLAGS = flags.FLAGS
 config_model = importlib.import_module(FLAGS.config_model)
 config_data = importlib.import_module(FLAGS.config_data)
 
+
 def build_model(data_batch, source_vocab_size, target_vocab_size,
                 target_bos_token_id, target_eos_token_id):
     """Assembles the seq2seq model.
@@ -52,9 +53,8 @@ def build_model(data_batch, source_vocab_size, target_vocab_size,
             logits=training_outputs.logits,
             sequence_length=data_batch['target_length'] - 1))
 
-
-    start_tokens = tf.ones_like(data_batch['target_length']) * \
-            target_bos_token_id
+    start_tokens = \
+        tf.ones_like(data_batch['target_length']) * target_bos_token_id
     beam_search_outputs, _, _ = \
         tx.modules.beam_search_decode(
             decoder_or_cell=decoder,
@@ -110,17 +110,17 @@ def main():
         while True:
             try:
                 fetches = [
-                    data_batch['target_text_ids'][:, 1:],
+                    data_batch['target_text'][:, 1:],
                     infer_outputs.predicted_ids[:, :, 0]
                 ]
                 feed_dict = {
                     tx.global_mode(): tf.estimator.ModeKeys.PREDICT
                 }
-                target_ids, output_ids = sess.run(fetches,
-                                                  feed_dict=feed_dict)
+                target_texts_ori, output_ids = \
+                    sess.run(fetches, feed_dict=feed_dict)
 
-                target_texts = tx.utils.map_ids_to_strs(
-                    ids=target_ids, vocab=valid_data.target_vocab)
+                target_texts = \
+                    [s[:s.index('<EOS>')]for s in target_texts_ori.tolist()]
                 output_texts = tx.utils.map_ids_to_strs(
                     ids=output_ids, vocab=valid_data.target_vocab)
 
@@ -149,6 +149,7 @@ def main():
                 i, valid_bleu, best_valid_bleu))
             print('test epoch={}, BLEU={}'.format(i, test_bleu))
             print('=' * 50)
+
 
 if __name__ == '__main__':
     main()
