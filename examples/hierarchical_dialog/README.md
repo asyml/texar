@@ -22,7 +22,7 @@ where evaluation will be done after each epoch.
 Here:
 + `--config_model` specifies the model config. Note not to include the `.py` suffix. 
 
-This example provides two configs `biminor` and `uniminor`, in which a bidirectional/unidirectional RNN is used as the utterance-level encoder respectively. 
+This example provides two configs `biminor` and `uniminor`, in which a bidirectional/unidirectional RNN is used as the utterance-level encoder respectively, while other configurations remain the same. 
 
 ## Results
 
