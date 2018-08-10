@@ -7,6 +7,7 @@ The basic HRED structure is described in [(Serban et al.) Building End-To-End Di
 This example shows:
 + Construct data for seq-to-seq dialogue model with extra meta.
 + Seq-to-seq model and MLP connector.
++ Usage of BLEU evaluation.
 
 ## Usage
 
@@ -20,7 +21,6 @@ where evaluation will be done after each epoch.
 
 Here:
 + `--config_model` specifies the model config. Note not to include the `.py` suffix.
-
 
 ## Results
 
