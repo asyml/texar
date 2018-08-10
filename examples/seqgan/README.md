@@ -11,6 +11,7 @@ Experiments are performed on two datasets:
 ## Usage
 
 ### Dataset
+Download datasets with the following cmds respectively:
 ```shell
 python data_utils.py --config config_ptb_small --data_path ./ --dataset ptb
 python data_utils.py --config config_coco --data_path ./ --dataset coco
@@ -37,14 +38,6 @@ The model will start training and will evaluate perplexity and BLEU score every 
 
 ## Results
 
-### PTB
-
-|config|train|valid|test| official - test |
-|---|---|---|---|---|
-|small|26.8470|55.6829|53.3579||
-|medium|8.4457|15.7546|15.4920||
-|large|||||
-
 ### COCO Caption
 
 We compare the results of SeqGAN and MLE (maximum likelihood training) provided by our and official implemantations, using the default official parameter settings. Each cell below presents the BLEU scores on both the test set and the training set (in the parentheses). 
@@ -55,6 +48,14 @@ We compare the results of SeqGAN and MLE (maximum likelihood training) provided 
 |BLEU-2 | 0.2887 (0.5322) | 0.2657 (0.4465) | 0.2941 (0.5791) | 0.2856 (0.5242) |
 |BLEU-3 | 0.1209 (0.2979) | 0.0981 (0.2202) | 0.1194 (0.3099) | 0.1190 (0.2810) |
 |BLEU-4 | 0.0424 (0.1324) | 0.0287 (0.0828) | 0.0414 (0.1330) | 0.0417 (0.1212)|
+
+### PTB
+
+|config|train|valid|test| Official - test |
+|---|---|---|---|---|
+|small|26.8470|55.6829|53.3579||
+|medium|8.4457|15.7546|15.4920||
+|large|||||
 
 ## Training Log
 
