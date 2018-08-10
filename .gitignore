@@ -233,3 +233,5 @@ simple-examples.tgz
 /examples/text_style_transfer/samples/
 /examples/text_style_transfer/data/
 /examples/text_style_transfer/yelp.zip
+/examples/vae_text/simple-examples/
+/examples/vae_text/data/
