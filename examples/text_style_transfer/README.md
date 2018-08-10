@@ -2,20 +2,19 @@
 
 This example implements a simplified variant of the model from 
 
-[Toward Controlled Generation of Text](https://arxiv.org/pdf/1703.00955.pdf)
-Zhiting Hu, Zichao Yang, Xiaodan Liang, Ruslan Salakhutdinov, Eric Xing; ICML 2017
+[Toward Controlled Generation of Text](https://arxiv.org/pdf/1703.00955.pdf)  
+*Zhiting Hu, Zichao Yang, Xiaodan Liang, Ruslan Salakhutdinov, Eric Xing; ICML 2017*
 
-The model roughly has an architecture of `Encoder--Decoder--Classifier`. Compared to the paper, the following simplications are made:
+The model roughly has an architecture of `Encoder--Decoder--Classifier`. Compared to the paper, following simplications are made:
   
   * Replaces the base Variational Autoencoder (VAE) model with an attentional Autoencoder (AE) -- VAE is not necessary in the text style transfer setting since we do not need to interpolate the latent space as in the paper.
-  * Discriminator (i.e., attribute classifier) is pre-trained, and fixed throughout the full model training.
+  * Attribute classifier (i.e., discriminator) is pre-trained, and fixed throughout the full model training.
   * Independency constraint is omitted.
 
 ## Usage ##
 
 ### Dataset ###
 Download the yelp sentiment dataset with the following cmd:
-
 ```
 python prepare_data.py
 ```
@@ -23,7 +22,6 @@ python prepare_data.py
 ### Train the model ###
 
 Train the model on the above data to do sentiment transfer.
-
 ```
 python main.py --config config
 ```
