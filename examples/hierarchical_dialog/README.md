@@ -5,7 +5,7 @@ This example builds a HRED dialogue model, training with [switchboard-1 Release 
 The basic HRED structure is described in [(Serban et al.) Building End-To-End Dialogue Systems Using Generative Hierarchical Neural Network Models](https://arxiv.org/abs/1507.04808).
 
 This example shows:
-+ Construct data for seq-to-seq dialogue model with extra meta.
++ Construct data for seq-to-seq dialogue model with speaker token as extra meta.
 + Seq-to-seq model and MLP connector.
 + Usage of BLEU evaluation.
 
@@ -20,7 +20,7 @@ python hred.py --config config_model_biminor
 where evaluation will be done after each epoch. 
 
 Here:
-+ `--config_model` specifies the model config. Note not to include the `.py` suffix.
++ `--config_model` specifies the model config. Note not to include the `.py` suffix. This example provides two configs `biminor` and `uniminor`, in which a bidirectional/unidirectional RNN is used as the utterance-level encoder respectively.
 
 ## Results
 
