@@ -45,18 +45,20 @@ class BatchFirstBPTTIterator(BPTTIterator):
     """
 
     def __len__(self):
-        return math.floor((len(self.dataset[0].text) / self.batch_size - 1)
-                          / self.bptt_len)
+        return math.floor(
+            (len(self.dataset[0].text) / self.batch_size - 1) / self.bptt_len)
 
     def __iter__(self):
         text = self.dataset[0].text
         TEXT = self.dataset.fields['text']
         TEXT.eos_token = None
-        text = text + ([TEXT.pad_token]
-                       * int(math.ceil(len(text) / self.batch_size) * self.batch_size - len(text)))
+        pad_num = int(math.ceil(len(text) / self.batch_size) * self.batch_size \
+                      - len(text))
+        text = text + ([TEXT.pad_token] * pad_num)
         data = TEXT.numericalize([text], device=self.device)
         data = data.view(self.batch_size, -1).contiguous()
-        dataset = Dataset(examples=self.dataset.examples, fields=[('text', TEXT), ('target', TEXT)])
+        dataset = Dataset(examples=self.dataset.examples,
+                          fields=[('text', TEXT), ('target', TEXT)])
         while True:
             for i in range(0, len(self) * self.bptt_len, self.bptt_len):
                 self.iterations += 1

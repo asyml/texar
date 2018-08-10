@@ -27,14 +27,14 @@ class HierarchicalRNNEncoder(EncoderBase):
     etc.
 
     Args:
-       encoder_major (optional): The context-level encoder receiving final 
+       encoder_major (optional): The context-level encoder receiving final
                                  states from utterance-level encoder as its
-                                 inputs. If it is not specified, an encoder 
-                                 is created as specified in 
+                                 inputs. If it is not specified, an encoder
+                                 is created as specified in
                                 :attr:`hparams["encoder_major"]`.
 
-       encoder_minor (optional): The utterance-level encoder. If it is not 
-                                 specified, an encoder is created as specified 
+       encoder_minor (optional): The utterance-level encoder. If it is not
+                                 specified, an encoder is created as specified
                                  in :attr:`hparams["encoder_minor"]`.
 
        hparams (optional): the hyperparameters.
@@ -96,9 +96,9 @@ class HierarchicalRNNEncoder(EncoderBase):
                 }
 
             Here:
-        
-            "encoder_major_type": 
-                The class name of major encoder which can be found in 
+
+            "encoder_major_type":
+                The class name of major encoder which can be found in
                 ~texar.modules.encoders or ~texar.custom.
 
             "encoder_major_hparams":
@@ -147,36 +147,36 @@ class HierarchicalRNNEncoder(EncoderBase):
                               'tbu': time_major=True for major encoder only.
                               'ubt': time_major=True for minor encoder only.
 
-            medium (optional): A list of callable successively rocess the 
-                               final states of minor encoder to be the input 
-                               for major encoder. Extra meta like speaker token 
+            medium (optional): A list of callable successively rocess the
+                               final states of minor encoder to be the input
+                               for major encoder. Extra meta like speaker token
                                can be added using this function.
-                               If not specified, a final state will be flatten 
-                               into a vector while hidden part of LSTMTuple is 
+                               If not specified, a final state will be flatten
+                               into a vector while hidden part of LSTMTuple is
                                skipped, see :meth:`flatten` for details.
 
-                               Use :attr:`states_minor_before_medium` and 
+                               Use :attr:`states_minor_before_medium` and
                                :attr:`states_minor_after_medium` to see its input
                                and output respectively.
 
             **kwargs: Optional keyword arguments of `tensorflow.nn.dynamic_rnn`,
                       such as `sequence_length`, `initial_state`, etc.
 
-                      By default, arguments except `initial_state` and 
-                      `sequence_length` will be sent to both major and minor 
-                      encoders. To specify the encoder that arguments sent to, add 
-                      '_minor'/'_major' as its suffix. 
+                      By default, arguments except `initial_state` and
+                      `sequence_length` will be sent to both major and minor
+                      encoders. To specify the encoder that arguments sent to, add
+                      '_minor'/'_major' as its suffix.
 
                       `initial_state` and `sequence_length` will be sent to minor
                       encoder only if not specifing its encoder.
 
-                      `initial_state` and `sequence_length` sent to minor encoder 
+                      `initial_state` and `sequence_length` sent to minor encoder
                       can be either 1-D tensor or 2-D tensor, with BxT units following
                       correct order.
 
         Returns:
             Outputs and final state of the major encoder.
-        
+
         """
 
         def kwargs_split(kwargs):
@@ -214,7 +214,7 @@ class HierarchicalRNNEncoder(EncoderBase):
             states_minor = self.flatten(states_minor)
         else:
             if not isinstance(medium, collections.Sequence):
-                raise ValueError('medium is not iterable.').
+                raise ValueError('medium is not iterable.')
             for fn in medium:
                 if isinstance(fn, str) and fn == 'flatten':
                     states_minor = self.flatten(states_minor)
@@ -286,8 +286,8 @@ class HierarchicalRNNEncoder(EncoderBase):
 
     @staticmethod
     def flatten(x):
-        """Flatten a state into tf vector while hidden part of LSTMTuple are 
-        skipped. 
+        """Flatten a state into tf vector while hidden part of LSTMTuple are
+        skipped.
         :arg:`medium` supports 'flatten' str item to recoginize this function.
         """
         if isinstance(x, LSTMStateTuple):
@@ -301,7 +301,7 @@ class HierarchicalRNNEncoder(EncoderBase):
     @property
     def encoder_major(self):
         return self._encoder_major
-    
+
     @property
     def encoder_minor(self):
         return self._encoder_minor

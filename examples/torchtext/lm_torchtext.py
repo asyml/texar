@@ -27,7 +27,9 @@ import texar as tx
 from torchtext import data
 from torchtext import datasets
 
-from examples.torchtext.batchfirst_bptt import BatchFirstBPTTIterator
+from batchfirst_bptt import BatchFirstBPTTIterator
+
+# pylint: disable=invalid-name, too-many-locals, no-member
 
 flags = tf.flags
 
@@ -59,7 +61,8 @@ def _main(_):
 
     # make iterator for splits
     train_iter, valid_iter, test_iter = BatchFirstBPTTIterator.splits(
-        (train, valid, test), batch_size=batch_size, bptt_len=num_steps, repeat=False)
+        (train, valid, test), batch_size=batch_size, bptt_len=num_steps,
+        repeat=False)
 
     inputs = tf.placeholder(tf.int32, [batch_size, num_steps])
     targets = tf.placeholder(tf.int32, [batch_size, num_steps])
@@ -116,7 +119,9 @@ def _main(_):
         epoch_size = (len(train) // batch_size - 1) // num_steps
         for step, data_batch in enumerate(data_iter):
             feed_dict = {
-                inputs: data_batch.text, targets: data_batch.target, global_step: epoch,
+                inputs: data_batch.text,
+                targets: data_batch.target,
+                global_step: epoch,
                 tx.global_mode(): mode,
             }
             for i, (c, h) in enumerate(initial_state):
