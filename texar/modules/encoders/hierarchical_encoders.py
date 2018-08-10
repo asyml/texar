@@ -14,8 +14,7 @@ from texar.modules.encoders import UnidirectionalRNNEncoder
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.utils import utils
 
-from collections import Sequence
-
+import collections
 __all__ = [
     "HierarchicalRNNEncoder"
 ]
@@ -294,7 +293,7 @@ class HierarchicalRNNEncoder(EncoderBase):
             return x.h
         if isinstance(x, collections.Sequence):
             return tf.concat(
-                [HierarchicalRNNEncoder.depack_lstmtuple(v) for v in x], -1)
+                [HierarchicalRNNEncoder.flatten(v) for v in x], -1)
         else:
             return x
 
