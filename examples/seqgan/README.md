@@ -1,10 +1,12 @@
 # SeqGAN for Text Generation
 
-This example is an implementation of [SeqGAN: Sequence Generative Adversarial Nets with Policy Gradient](https://arxiv.org/pdf/1609.05473.pdf), with a language model as generator and a RNN-based classifier as discriminator.
+This example is an implementation of [SeqGAN: Sequence Generative Adversarial Nets with Policy Gradient](https://arxiv.org/pdf/1609.05473.pdf), with a language model as the generator and an RNN-based classifier as the discriminator.
 
-Model structure and parameter settings are in line with SeqGAN in [Texygen](https://github.com/geek-ai/Texygen), except that we did not implement rollout strategy in discriminator for the consideration of simplicity.
+Model structure and parameter settings are in line with SeqGAN in [Texygen](https://github.com/geek-ai/Texygen), except that we did not implement the rollout strategy in discriminator for the consideration of simplicity.
 
-Experiments are performed on COCO Captions, with 2k vocabularies and an average sentence length of 25. Both training and testing datasets contain 10k sentences.
+Experiments are performed on [COCO Captions dataset](http://cocodataset.org/#download), with 2k vocabularies and an average sentence length of 25. We use the [data](https://github.com/geek-ai/Texygen/tree/master/data) provided by Texygen, where training and testing datasets contain 10k sentences.
+
+We also run experiments on [PTB dataset](https://corochann.com/penn-tree-bank-ptb-dataset-introduction-1456.html) with three configs.
 
 ## Usage
 
@@ -30,7 +32,7 @@ Here:
 
 `--config`, `--data_path` and `dataset` shall be the same with the flags settings used to download the dataset.
 
-The model will begin training, and will evaluate perplexity and BLEU score every 10 epochs
+The model will start training and will evaluate perplexity and BLEU score every 10 epochs.
 
 ## Results
 
@@ -53,14 +55,14 @@ We compare the results with SeqGAN and MLE provided by Texygen. Applying its def
 |BLEU3 | 0.1209 (0.2979) | 0.0981 (0.2202) | 0.1194 (0.3099) | 0.1190 (0.2810) |
 |BLEU4 | 0.0424 (0.1324) | 0.0287 (0.0828) | 0.0414 (0.1330) | 0.0417 (0.1212)|
 
-The first value in each cell stands for the BLEU score on test dataset, while the other value indicates BLEU score on train dataset.
+The first value in each cell stands for the BLEU score on the test dataset, while the other value indicates the BLEU score on train dataset.
 
 ## Log
 
-During training, loss and BLEU score are recorded in log directory. Here, we provide sample log output when training on `coco` dataset.
+During training, loss and BLEU score are recorded in the log directory. Here, we provide sample log output when training on the  `coco` dataset.
 
 ### Training loss
-Training loss will be recoreded in coco_log/log.txt.
+Training loss will be recorded in coco_log/log.txt.
 ```text
 G pretrain epoch   0, step 1: train_ppl: 81.639235
 G pretrain epoch   1, step 1: train_ppl: 9.845531
@@ -86,7 +88,7 @@ D update   epoch 179, step 0: dis_total_loss: 0.000019, r_loss: 0.000003, f_loss
 ```
 
 ### BLEU
-BLEU1~BLEU4 scores will calculated every 10 epochs, the results are written to log_dir/bleu.txt.
+BLEU1~BLEU4 scores will be calculated every 10 epochs, the results are written to log_dir/bleu.txt.
 ```text
 ...
 epoch 170 BLEU1~4 on train dataset:
@@ -103,4 +105,3 @@ epoch 170 BLEU1~4 on train dataset:
 ...
 
 ```
-
