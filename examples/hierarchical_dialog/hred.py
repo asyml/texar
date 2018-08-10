@@ -25,7 +25,14 @@ from sw_loader import download_and_process
 from config_data import data_root, max_utterance_cnt, data_hparams
 download_and_process(data_root)
 
-from config_model import encoder_hparams, decoder_hparams, opt_hparams 
+flags = tf.flags
+flags.DEFINE_string('config_model', 'config_model', 'The model config')
+FLAGS = flags.FLAGS
+config_model = importlib.import_module(FLAGS.config_model)
+
+encoder_hparams = config_model.encoder_hparams
+decoder_hparams = config_model.decoder_hparams
+opt_hparams = config_model.opt_hparams
 
 def main():
     # model part: data

@@ -13,18 +13,22 @@ This example shows:
 To train the model, run
 
 ```
-python hred.py
+python hred.py --config config_model_biminor
 ```
 
 where evaluation will be done after each epoch. 
+
+Here:
++ `--config_model` specifies the model config. Note not to include the `.py` suffix.
+
 
 ## Results
 
 The form shows results of perplexity and BLEU-1 after 10 epochs
 
-| perplexity | BLEU-1 recall | BLEU-1 prec |
-| -----------| --------------| ------------|
-| 22.73      | 0.414         | 0.376       |
-
+| config  | perplexity | BLEU-1 recall | BLEU-1 prec |
+| --------| -----------| --------------| ------------|
+| biminor | 22.73      | 0.414         | 0.376       |
+| uniminor| 23.51      | 0.409         | 0.368       |  
 
 
