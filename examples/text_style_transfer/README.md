@@ -70,5 +70,32 @@ The implementation here gives the following performance after 10 epochs of pre-t
 
 | Accuracy (by the `Classifier` part)  | BLEU (with the original sentence) |
 | -------------------------------------| ----------------------------------|
-|  |  |
+| 0.54 | 0.92  |
 
+### Samples ###
+Here are some randomly-picked samples. In each pair, the first sentence is the original sentence and the second is the generated.
+```
+go to place for client visits with gorgeous views .
+go to place for client visits with lacking views .
+
+there was lots of people but they still managed to provide great service .
+there was lots of people but they still managed to provide careless service .
+
+this was the best dining experience i have ever had .
+this was the worst dining experience i have ever had .
+
+needless to say , we skipped desert .
+gentle to say , we edgy desert . 
+
+the first time i was missing an entire sandwich and a side of fries .
+the first time i was beautifully an entire sandwich and a side of fries .
+
+her boutique has a fabulous selection of designer brands !
+her annoying has a sketchy selection of bland warned !
+
+service is pretty good .
+service is trashy rude .
+
+ok nothing new .
+exceptional impressed new .
+```
