@@ -208,7 +208,7 @@ flycheck_*.el
 .idea
 .vscode
 
-doc/_build
+docs/_build
 
 
 ### IntelliJ ###

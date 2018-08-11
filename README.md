@@ -47,12 +47,12 @@ Install Sphinx:
 
 Generate HTML:
 
-    cd ./doc
+    cd ./docs
     make html
 
 View HTML
 
-    open ./doc/_build/index.html
+    open ./docs/_build/index.html
 
 # Reference libraries
 
