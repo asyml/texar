@@ -1,21 +1,27 @@
 # Hierarchical Recurrent Encoder-Decoder (HRED) Dialogue Model
 
-This example builds a HRED dialogue model described in [(Serban et al.) Building End-To-End Dialogue Systems Using Generative Hierarchical Neural Network Models](https://arxiv.org/abs/1507.04808). The model here is trained on the [switchboard-1 Release 2](https://catalog.ldc.upenn.edu/ldc97s62) dataset, following the setting of baseline from [(Zhao et al. ) Learning Discourse-level Diversity for Neural Dialog Models using Conditional Variational Autoencoders](https://arxiv.org/abs/1703.10960).
+This example builds a HRED dialogue model described in [(Serban et al.) Building End-To-End Dialogue Systems Using Generative Hierarchical Neural Network Models](https://arxiv.org/abs/1507.04808). 
+
+The dataset used here is provided by [(Zhao et al. ) Learning Discourse-level Diversity for Neural Dialog Models using Conditional Variational Autoencoders](https://arxiv.org/abs/1703.10960), which adapts [switchboard-1 Release 2](https://catalog.ldc.upenn.edu/ldc97s62). In particular, for evaluation purpose, multiple reference responses for each dialog context in the test set are collected through manual annotations. 
 
 This example demonstrates:
-* Use of the `variable_utterance` hyperparameter in TextData to read dialog history data.
 * Use of `MultiAlignedData` to read parallel data with multiple fields, e.g., (source, target, meta, ...)
-* Use of `HierarchicalRNNEncoder` to encode dialog history.
+* Use of the `'variable_utterance'` hyperparameter in TextData to read dialog history data.
+* Use of the `'embedding_init'` hyperparameter in TextData to read pre-trained word embedding as initialization. 
+* Use of `HierarchicalRNNEncoder` to encode dialog history with utterance-level and word-level encoding.
 * Addition of speaker meta-data in the encoder-decoder model.
 
 ## Usage
 
 ### Dataset
 
-Download and preprocess the data with the following cmd
+Download and preprocess the data with the following cmd:
 ```
 python sw_loader.py
 ```
+* Train/dev/test sets contain 200K, 5K, 5K examples, respectively.
+* Vocab size is 10,000.
+* `embedding.txt` contains word embeddings extracted from [glove.twitter.27B.200d](https://nlp.stanford.edu/projects/glove). You can also directly use the original glove.twitter.27B.200d file, and the Texar TextData module will automatically extract relevant embeddings for the vocabulary. 
 
 ### Train the model
 
