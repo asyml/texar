@@ -26,11 +26,17 @@ This example provides two configs `biminor` and `uniminor`, in which a bidirecti
 
 ## Results
 
-The form shows results of perplexity and BLEU-1 after 10 epochs
+The form shows results of perplexity and BLEU after 10 epochs, comparing to the implementation of Zhao et al.
 
-| config  | perplexity | BLEU-1 recall | BLEU-1 prec |
-| --------| -----------| --------------| ------------|
-| biminor | 22.73      | 0.414         | 0.376       |
-| uniminor| 23.51      | 0.409         | 0.368       |  
-
+|               | biminor | uniminor | Zhao's |
+| --------------| --------| ---------| -------|
+| perlexity     | 22.73   | 23.51    | 35.4   |
+| BLEU-1 recall | 0.414   | 0.409    | 0.405  |
+| BLEU-1 prec   | 0.376   | 0.368    | 0.336  |
+| BLEU-2 recall | 0.328   | 0.317    | 0.300  |
+| BLEU-2 prec   | 0.295   | 0.289    | 0.281  |
+| BLEU-3 recall | 0.281   | 0.283    | 0.272  |
+| BLEU-3 prec   | 0.256   | 0.251    | 0.254  |
+| BLEU-4 recall | 0.228   | 0.223    | 0.226  |
+| BLEU-4 prec   | 0.205   | 0.211    | 0.215  |
 
