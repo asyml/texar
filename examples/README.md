@@ -2,6 +2,8 @@
 
 Rich examples are included to demonstrate the use of Texar. The implementations of cutting-edge models/algorithms also provide references for reproducibility and comparisons. 
 
+More examples are continuously added...
+
 ## Examples by Models/Algorithms ##
 
 ### RNN / Seq2seq ###
@@ -33,11 +35,11 @@ Rich examples are included to demonstrate the use of Texar. The implementations 
 
 ### Memory Network ###
 
-* [memory_network_lm](./memory_network_lm): Memory network for language modeling
+* [memory_network_lm](./memory_network_lm): End-to-end memory network for language modeling
 
 ### Classifier / Predictions ##  
 
-* [sentence_classifier](./sentence_classifier)
+* [sentence_classifier](./sentence_classifier): Basic CNN-based sentence classifier
 
 ---
 
