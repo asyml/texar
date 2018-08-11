@@ -25,8 +25,9 @@ __all__ = [
 ]
 
 class SpecialTokens(object):
-    """Special tokens, including :attr:`PAD`, :attr:`BOS`, :attr:`BOS`,
-    :attr:`UNK`.
+    """Special tokens, including :attr:`PAD`, :attr:`BOS`, :attr:`EOS`,
+    :attr:`UNK`. These tokens will by default have token ids 0, 1, 3, 4,
+    respectively.
     """
     PAD = "<PAD>"
     BOS = "<BOS>"

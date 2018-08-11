@@ -7,6 +7,6 @@
 
 /* TODO(zhiting): it looks the nav-bar still does not display the text */
 nav .hidden {
-    display: inherit;
+    display: block; 
 }
 

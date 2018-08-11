@@ -5,9 +5,15 @@ Data
 *******
 
 Vocabulary
-=========
+==========
 
-.. automodule:: texar.data.vocabulary
+.. autoclass:: texar.data.SpecialTokens
+    :members:
+
+Vocab
+------------------------
+
+.. autoclass:: texar.data.Vocab
     :members:
 
 Tokenizer

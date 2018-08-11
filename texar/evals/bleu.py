@@ -30,7 +30,19 @@ def _maybe_list_to_str(list_or_str):
         return ' '.join(list_or_str)
     return list_or_str
 
-def sentence_bleu(references, hypothesis, lowercase=False):
+def _parse_multi_bleu_ret(bleu_str, return_all=False):
+    bleu_score = re.search(r"BLEU = (.+?),", bleu_str).group(1)
+    bleu_score = np.float32(bleu_score)
+
+    if return_all:
+        bleus = re.search(r", (.+?)/(.+?)/(.+?)/(.+?) ", bleu_str)
+        bleus = [bleus.group(group_idx) for group_idx in range(1, 5)]
+        bleus = [np.float32(b) for b in bleus]
+        bleu_score = [bleu_score] + bleus
+
+    return bleu_score
+
+def sentence_bleu(references, hypothesis, lowercase=False, return_all=False):
     """Calculates BLEU score of a hypothesis sentence using the MOSES
     multi-bleu.perl script.
 
@@ -41,14 +53,22 @@ def sentence_bleu(references, hypothesis, lowercase=False):
         hypotheses: A hypothesis sentence.
             A sentence can be either a string, or a list of string tokens.
             List can also be numpy array.
-        lowercase (bool): If true, pass the "-lc" flag to the multi-bleu script
+        lowercase (bool): If `True`, pass the "-lc" flag to the multi-bleu
+            script.
+        return_all (bool): If `True`, returns all 1-4 gram BLEU scores.
 
     Returns:
-        float32: the BLEU score.
-    """
-    return corpus_bleu([references], [hypothesis], lowercase=lowercase)
+        If :attr:`return_all` is `False` (default), returns a float32
+        BLEU score.
 
-def corpus_bleu(list_of_references, hypotheses, lowercase=False):
+        If :attr:`return_all` is `True`, returns a list of 5 float32 scores:
+        `[BLEU, BLEU-1, BLEU-2, BLEU-3, BLEU-4]`.
+    """
+    return corpus_bleu(
+        [references], [hypothesis], lowercase=lowercase, return_all=return_all)
+
+def corpus_bleu(list_of_references, hypotheses, lowercase=False,
+                return_all=False):
     """Calculates corpus-level BLEU score using the MOSES
     multi-bleu.perl script.
 
@@ -61,10 +81,16 @@ def corpus_bleu(list_of_references, hypotheses, lowercase=False):
             Each sentence is a single hypothesis example.
             A sentence can be either a string, or a list of string tokens.
             List can also be numpy array.
-        lowercase (bool): If true, pass the "-lc" flag to the multi-bleu script
+        lowercase (bool): If `True`, pass the "-lc" flag to the multi-bleu
+            script.
+        return_all (bool): If `True`, returns all 1-4 gram BLEU scores.
 
     Returns:
-        float32: the BLEU score.
+        If :attr:`return_all` is `False` (default), returns a float32
+        BLEU score.
+
+        If :attr:`return_all` is `True`, returns a list of 5 float32 scores:
+        `[BLEU, BLEU-1, BLEU-2, BLEU-3, BLEU-4]`.
     """
 
     if np.size(hypotheses) == 0:
@@ -73,7 +99,7 @@ def corpus_bleu(list_of_references, hypotheses, lowercase=False):
     # Get multi-bleu.perl
     cur_dir = os.path.dirname(os.path.realpath(__file__))
     multi_bleu_path = os.path.abspath(
-        os.path.join(cur_dir, "..", "..", "bin", "multi-bleu.perl"))
+        os.path.join(cur_dir, "..", "..", "bin", "utils", "multi-bleu.perl"))
 
     # Create a temporary folder containing hyperthesis and reference files
     result_path = tempfile.mkdtemp()
@@ -107,14 +133,16 @@ def corpus_bleu(list_of_references, hypotheses, lowercase=False):
             multi_bleu_ret = subprocess.check_output(
                 multi_bleu_cmd, stdin=hyp_input, stderr=subprocess.STDOUT)
             multi_bleu_ret = multi_bleu_ret.decode("utf-8")
-            bleu_score = re.search(r"BLEU = (.+?),", multi_bleu_ret).group(1)
-            bleu_score = np.float32(bleu_score)
+            bleu_score = _parse_multi_bleu_ret(multi_bleu_ret, return_all)
         except subprocess.CalledProcessError as error:
             if error.output is not None:
                 tf.logging.warning(
                     "multi-bleu.perl returned non-zero exit code")
                 tf.logging.warning(error.output)
-            bleu_score = np.float32(0.0)
+            if return_all:
+                bleu_score = [np.float32(0.0)] * 5
+            else:
+                bleu_score = np.float32(0.0)
 
     shutil.rmtree(result_path)
 
