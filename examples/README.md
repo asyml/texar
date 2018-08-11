@@ -15,16 +15,16 @@ Rich examples are included to demonstrate the use of Texar. The implementations 
 ### Transformer (Self-attention) ###
 
 * [transformer](./transformer): Transformer for machine translation
-* [vae_text](./vae_text): VAE with a transformer decoder for improved performance 
+* [vae_text](./vae_text): VAE with a transformer decoder for improved language modeling 
 
 ### Variational Autoencoder (VAE) ###
 
-* [vae_text](./vae_text)
+* [vae_text](./vae_text): VAE language model
 
 ### GANs / Discriminiator-supervision ###
 
-* [seqGAN](./seqgan)
-* [text_style_transfer](./text_style_transfer)
+* [seqGAN](./seqgan): GANs for text generation
+* [text_style_transfer](./text_style_transfer): Discriminator supervision for controlled text generation
 
 ### Reinforcement Learning ###
 
@@ -39,6 +39,7 @@ Rich examples are included to demonstrate the use of Texar. The implementations 
 
 * [sentence_classifier](./sentence_classifier)
 
+---
 
 ## Examples by Tasks
 
@@ -51,13 +52,13 @@ Rich examples are included to demonstrate the use of Texar. The implementations 
 
 ### Machine Translation ###
 
-* [attn_seq2seq](./attn_seq2seq): Attentional seq2seq
-* [seq2seq_configs](./seq2seq_configs): Seq2seq implemented with Texar model template.
-* [transformer](./transformer): Transformer for machine translation
+* [attn_seq2seq](./attn_seq2seq)
+* [seq2seq_configs](./seq2seq_configs)
+* [transformer](./transformer)
 
 ### Dialog ###
 
-* [hierarchical_dialog](./hierarchical_dialog): Hierarchical-encoder decoder model for conversation response generation.
+* [hierarchical_dialog](./hierarchical_dialog)
 
 ### Text Style Transfer ###
 
@@ -69,4 +70,4 @@ Rich examples are included to demonstrate the use of Texar. The implementations 
 
 ### Games ###
 
-* [rl_gym](./rl_gym): Various RL algoritms for games
+* [rl_gym](./rl_gym)
