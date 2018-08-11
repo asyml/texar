@@ -10,7 +10,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 import texar as tx
 
-url = 'https://raw.githubusercontent.com/shyaoni/sw1c2r/master/sw1c2r.tar.gz'
+from config_data import data_root
+
 wnd_sz = 10
 
 class Dataset():
@@ -180,10 +181,16 @@ def download_and_process(data_root):
         os.makedirs(data_root)
         os.makedirs(os.path.join(data_root, 'raw'))
 
-        tx.data.maybe_download([url], data_root, extract=True)
+        tx.data.maybe_download(
+            urls='https://drive.google.com/file/d/1Gytd-SSetUkIY6aVVKNrBOxkHjAlSGeU/view?usp=sharing', 
+            path='./',
+            filenames=os.path.join(data_root, 'sw1c2r.tar.gz'),
+            extract=True)
 
         os.system('mv {} {}'.format(os.path.join(data_root, 'sw1c2r.tar.gz'),
                                     os.path.join(data_root, 'raw/sw1c2r.tar.gz')))
+        os.system('mv {}/* {}'.format(
+            os.path.join(data_root, 'switchboard'), data_root))
 
         datasets = sw1c2r(os.path.join(data_root, 'json_data'))
 
@@ -213,4 +220,4 @@ def download_and_process(data_root):
                 f.write('\n'.join(['|||'.join(v) for v in dts.refs]))
 
 if __name__ == '__main__':
-    download_and_process('test')
+    download_and_process(data_root)
