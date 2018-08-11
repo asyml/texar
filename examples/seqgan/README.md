@@ -55,7 +55,7 @@ We compare the results of SeqGAN and MLE (maximum likelihood training) provided 
 |---|---|---|---|---|
 |small|26.8470|55.6829|53.3579||
 |medium|8.4457|15.7546|15.4920||
-|large|||||
+|large|6.633471|16.559490|16.190385||
 
 ## Training Log
 
