@@ -40,3 +40,5 @@ The form shows results of perplexity and BLEU after 10 epochs, comparing to the 
 | BLEU-4 recall | 0.228   | 0.223    | 0.226  |
 | BLEU-4 prec   | 0.205   | 0.211    | 0.215  |
 
+in which BLEU score is computed with 5 sampling.
+
