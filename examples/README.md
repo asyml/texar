@@ -11,7 +11,7 @@ More examples are continuously added...
 * [language_model_ptb](./language_model_ptb): Basic RNN language model
 * [attn_seq2seq](./attn_seq2seq): Attentional seq2seq
 * [seq2seq_configs](./seq2seq_configs): Seq2seq implemented with Texar model template.
-* [hierarchical_dialog](./hierarchical_dialog): Hierarchical-encoder decoder model for conversation response generation.
+* [hierarchical_dialog](./hierarchical_dialog): Hierarchical recurrent encoder-decoder model for conversation response generation.
 * [torchtext](./torchtext): Use of torchtext data loader
 
 ### Transformer (Self-attention) ###
