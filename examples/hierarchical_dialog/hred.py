@@ -169,8 +169,6 @@ def main():
                 references = [[ref[:ref.index('<EOS>')] for ref in refs[:cnt]]
                     for refs, cnt in zip(references.tolist(), refs_cnt)]
 
-                # to py2
-
                 for beam, refs in zip(beam_samples, references):
                     bleu_scores = np.array([[tx.evals.sentence_bleu(
                         beam, ref, return_all=True)
@@ -185,8 +183,6 @@ def main():
 
                         bleu_prec[i-1].append(bleu_i_precision)
                         bleu_recall[i-1].append(bleu_i_recall)
-
-                print('haha')
 
             except tf.errors.OutOfRangeError:
                 break
