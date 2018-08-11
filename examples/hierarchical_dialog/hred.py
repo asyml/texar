@@ -204,9 +204,10 @@ def main():
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
         for epoch in range(10):
-            #_train_epochs(sess, epoch)
-            #_test_epochs_ppl(sess, epoch)
-            _test_epochs_bleu(sess, epoch)
+            _train_epochs(sess, epoch)
+            _test_epochs_ppl(sess, epoch)
+
+        _test_epochs_bleu(sess, epoch)
 
 if __name__ == "__main__":
     main()
