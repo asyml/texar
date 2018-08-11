@@ -14,8 +14,10 @@ Contents:
    :maxdepth: 2
 
    tutorial.rst
-   code/hyperparams.rst
-   code/core.rst
    code/data.rst
+   code/core.rst
    code/modules.rst
+   code/models.rst
    code/losses.rst
+   code/hyperparams.rst
+
