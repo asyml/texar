@@ -21,7 +21,7 @@ python sw_loader.py
 ```
 * Train/dev/test sets contain 200K, 5K, 5K examples, respectively.
 * Vocab size is 10,000.
-* `embedding.txt` contains word embeddings extracted from [glove.twitter.27B.200d](https://nlp.stanford.edu/projects/glove). You can also directly use the original glove.twitter.27B.200d file, and the Texar TextData module will automatically extract relevant embeddings for the vocabulary. 
+* `./data/switchboard/embedding.txt` contains word embeddings extracted from [glove.twitter.27B.200d](https://nlp.stanford.edu/projects/glove). You can also directly use the original glove.twitter.27B.200d file, and the Texar TextData module will automatically extract relevant embeddings for the vocabulary. 
 
 ### Train the model
 
