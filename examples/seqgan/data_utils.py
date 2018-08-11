@@ -21,7 +21,7 @@ config = importlib.import_module(args.config)
 
 
 def prepare_data(args, config, train_path):
-    """Downloads the PTB or Yahoo dataset
+    """Downloads the PTB or COCO dataset
     """
     if not os.path.exists(config.log_dir):
         os.mkdir(config.log_dir)
