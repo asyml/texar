@@ -34,52 +34,52 @@ Encoders
 Decoders
 ========
 
-:hidden:`RNNDecoderBase`
+RNNDecoderBase
 ------------------------
 
 .. autoclass:: texar.modules.RNNDecoderBase
     :members:
 
-:hidden:`BasicRNNDecoderOutput`
+BasicRNNDecoderOutput
 -------------------------------
 
 .. autoclass:: texar.modules.BasicRNNDecoderOutput
     :members:
 
-:hidden:`BasicRNNDecoder`
+BasicRNNDecoder
 -------------------------
 
 .. autoclass:: texar.modules.BasicRNNDecoder
     :members:
 
-:hidden:`AttentionRNNDecoderOutput`
+AttentionRNNDecoderOutput
 -----------------------------------
 
 .. autoclass:: texar.modules.AttentionRNNDecoderOutput
     :members:
 
-:hidden:`AttentionRNNDecoder`
+AttentionRNNDecoder
 -----------------------------
 
 .. autoclass:: texar.modules.AttentionRNNDecoder
     :members:
 
-:hidden:`default_helper_train_hparams`
+default_helper_train_hparams
 --------------------------------------
 
 .. autofunction:: texar.modules.default_helper_train_hparams
 
-:hidden:`default_helper_infer_hparams`
+default_helper_infer_hparams
 --------------------------------------
 
 .. autofunction:: texar.modules.default_helper_infer_hparams
 
-:hidden:`get_helper`
+get_helper
 ------------------------
 
 .. autofunction:: texar.modules.get_helper
 
-:hidden:`EmbeddingTrainingHelper`
+EmbeddingTrainingHelper
 ----------------------------------
 
 .. autoclass:: texar.modules.EmbeddingTrainingHelper
@@ -88,43 +88,43 @@ Decoders
 Connectors
 ==========
 
-:hidden:`ConnectorBase`
+ConnectorBase
 --------------------------------------
 
 .. autoclass:: texar.modules.ConnectorBase
     :members:
 
-:hidden:`ConstantConnector`
+ConstantConnector
 --------------------------------------
 
 .. autoclass:: texar.modules.ConstantConnector
     :members:
 
-:hidden:`ForwardConnector`
+ForwardConnector
 --------------------------------------
 
 .. autoclass:: texar.modules.ForwardConnector
     :members:
 
-:hidden:`MLPTransformConnector`
+MLPTransformConnector
 --------------------------------------
 
 .. autoclass:: texar.modules.MLPTransformConnector
     :members:
 
-:hidden:`ReparameterizedStochasticConnector`
+ReparameterizedStochasticConnector
 --------------------------------------------
 
 .. autoclass:: texar.modules.ReparameterizedStochasticConnector
     :members:
 
-:hidden:`StochasticConnector`
+StochasticConnector
 --------------------------------------
 
 .. autoclass:: texar.modules.StochasticConnector
     :members:
 
-:hidden:`ConcatConnector`
+ConcatConnector
 --------------------------------------
 
 .. autoclass:: texar.modules.ConcatConnector
@@ -133,7 +133,7 @@ Connectors
 Embedders
 =========
 
-:hidden:`WordEmbedder`
+WordEmbedder
 --------------------------------------
 
 .. autoclass:: texar.modules.embedders.WordEmbedder
@@ -146,25 +146,25 @@ Embedders
 Memory
 ======
 
-:hidden:`MemNetSingleLayer`
+MemNetSingleLayer
 --------------------------------------
 
 .. autoclass:: texar.modules.memory.MemNetSingleLayer
     :members:
 
-:hidden:`MemNetBase`
+MemNetBase
 --------------------------------------
 
 .. autoclass:: texar.modules.memory.MemNetBase
     :members:
 
-:hidden:`MemNetRNNLike`
+MemNetRNNLike
 --------------------------------------
 
 .. autoclass:: texar.modules.memory.MemNetRNNLike
     :members:
 
-:hidden:`default_embedder_fn`
+default_embedder_fn
 --------------------------------------
 
 .. autofunction:: texar.modules.memory.default_embedder_fn
