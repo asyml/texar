@@ -117,7 +117,8 @@ def main():
         output_samples.sample_id)
 
     # beam search
-    beam_search_samples, beam_states = beam_search_decode(
+    
+    beam_search_samples, beam_states, _ = beam_search_decode(
         decoder,
         initial_state=tile_batch(dcdr_states, 5),
         max_decoding_length=50,
@@ -128,6 +129,7 @@ def main():
         embedding=embedder,
         beam_width=5)
     beam_lengths = beam_states.lengths
+
 
     beam_sample_text = train_data.vocab(0).map_ids_to_tokens(
         beam_search_samples.predicted_ids)
