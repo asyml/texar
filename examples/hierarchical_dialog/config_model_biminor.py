@@ -1,3 +1,5 @@
+beam_width = 5
+
 encoder_hparams = {
     "encoder_minor_type": "BidirectionalRNNEncoder",
     "encoder_minor_hparams": {
