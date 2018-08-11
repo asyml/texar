@@ -74,7 +74,7 @@ def _main(_):
     global_step = tf.Variable(0, trainable=False)
     gen_train_op = tx.core.get_train_op(mle_loss,
                                         global_step=global_step,
-                                        increment_global_step=False,
+                                        increment_global_step=True,
                                         hparams=config.g_opt_hparams)
 
     # -------------Generator Infer-------------------
@@ -127,7 +127,8 @@ def _main(_):
     mean_reward = tf.reduce_mean(reward)
     exp_reward_loss = -tf.reduce_mean(tf.abs(reward))
     exp_reward_loss.set_shape(())
-    exp_op = tx.core.get_train_op(exp_reward_loss, global_step=global_step,
+    exp_op = tx.core.get_train_op(exp_reward_loss, 
+                                  global_step=global_step,
                                   increment_global_step=False,
                                   hparams=config.update_opt_hparams)
     reward = tx.losses.discount_reward(
@@ -135,36 +136,38 @@ def _main(_):
     update_loss = tf.reduce_mean(tf.log(infer_logits) *
                                  tf.expand_dims(reward, -1))
     update_loss.set_shape(())
-    gen_op = tx.core.get_train_op(update_loss, global_step=global_step,
-                                  increment_global_step=False,
+    gen_op = tx.core.get_train_op(update_loss, 
+                                  global_step=global_step,
+                                  increment_global_step=True,
                                   hparams=config.update_opt_hparams)
     update_op = tf.group(gen_op, exp_op)
 
     def _g_train_epoch(sess, epoch, mode_string):
         iterator.switch_to_train_data(sess)
-        step = 0
         while True:
             try:
                 if mode_string == 'update':
                     fetches = {
-                        "mean_rwd": mean_reward,
-                        "exp_rwd_loss": exp_reward_loss,
-                        "update_loss": update_loss,
-                        "update_op": update_op,
-                        "exp_rwd": expected_reward,
+                        'mean_rwd': mean_reward,
+                        'exp_rwd_loss': exp_reward_loss,
+                        'update_loss': update_loss,
+                        'update_op': update_op,
+                        'exp_rwd': expected_reward,
+                        'step': global_step
                     }
                 elif mode_string == 'train':
                     fetches = {
-                        "mle_loss": mle_loss,
-                        "num_steps": num_steps,
-                        'train_op': gen_train_op
+                        'mle_loss': mle_loss,
+                        'num_steps': num_steps,
+                        'train_op': gen_train_op,
+                        'step': global_step
                     }
                 else:
                     raise ValueError(
                         "Expect mode_string to be one of ['train', 'update'], "
                         "got %s" % mode_string)
                 rtns = sess.run(fetches)
-                step += 1
+                step = rtns['step']
                 if step % 200 == 1:
                     if mode_string == 'train':
                         ppl = np.exp(rtns['mle_loss'] / rtns["num_steps"])
