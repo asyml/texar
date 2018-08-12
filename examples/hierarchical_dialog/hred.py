@@ -158,8 +158,14 @@ def main():
 
         def bleus(ref, sample):
             res = []
-            for weight in [[1, 0, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]:
-                res.append(sentence_bleu([ref], sample, smoothing_function=SmoothingFunction().method7, weights=weight))
+            for weight in [[1, 0, 0, 0], 
+                           [1, 0, 0, 0], 
+                           [0, 1, 0, 0], 
+                           [0, 0, 1, 0], 
+                           [0, 0, 0, 1]]:
+                res.append(sentence_bleu([ref], sample, 
+                    smoothing_function=SmoothingFunction().method7, 
+                    weights=weight))
             return res
 
         while True:
