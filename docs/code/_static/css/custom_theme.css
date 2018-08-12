@@ -1,12 +1,17 @@
 
 /* For hidden headers that appear in TOC tree */
 /* see http://stackoverflow.com/a/32363545/3343043 */
-.rst-content .hidden {
-    display: none;
+.rst-content .hidden-section {
+    display: none; 
 }
 
 /* TODO(zhiting): it looks the nav-bar still does not display the text */
-nav .hidden {
+nav .hidden-section {
     display: block; 
 }
 
+/* 
+span .hidden-section {
+    display: block; 
+}
+*/

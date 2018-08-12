@@ -1,0 +1,48 @@
+
+/* Literal color */
+.rst-content tt.literal, .rst-content tt.literal, .rst-content code.literal {
+    color: #DB2407;
+}
+
+/* Docs top-left background color */
+.wy-side-nav-search {
+    background-color: #fff;
+}
+
+/* Fixes for mobile */
+.wy-nav-top {
+    background-color: #fff;
+    background-image: url('../img/logo_h.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    padding: 0;
+    margin: 0.6em 1em;
+}
+
+.wy-nav-top > a { 
+    display: none;
+}
+
+@media screen and (max-width: 768px) {
+    .wy-side-nav-search>a img.logo {
+        height: 60px;
+    }   
+}
+
+/* This is needed to ensure that logo above search scales properly */
+.wy-side-nav-search a {
+    display: block;
+}
+
+.wy-side-nav-search>div.version {
+    color: #000;
+}
+
+/* For hidden headers that appear in TOC tree */
+/* see http://stackoverflow.com/a/32363545/3343043 */
+.rst-content .hidden-section {
+    display: none;
+}
+
+nav .hidden-section {
+    display: inherit;

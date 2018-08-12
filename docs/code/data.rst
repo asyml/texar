@@ -1,5 +1,5 @@
 .. role:: hidden
-    :class: hidden
+    :class: hidden-section
 
 Data
 *******
@@ -7,11 +7,14 @@ Data
 Vocabulary
 ==========
 
+:hidden:`SpecialTokens`
+~~~~~~~~~~~~~~~~~~~~~~~~
+
 .. autoclass:: texar.data.SpecialTokens
     :members:
 
 Vocab
-------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: texar.data.Vocab
     :members:
