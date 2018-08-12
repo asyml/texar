@@ -23,6 +23,9 @@ from config_data import data_root, max_utterance_cnt, data_hparams
 
 import importlib
 
+from nltk.translate.bleu_score import sentence_bleu
+from nltk.translate.bleu_score import SmoothingFunction
+
 flags = tf.flags
 flags.DEFINE_string('config_model', 'config_model_biminor', 'The model config')
 FLAGS = flags.FLAGS
@@ -153,6 +156,12 @@ def main():
         bleu_prec = [[] for i in range(1, 5)]
         bleu_recall = [[] for i in range(1, 5)]
 
+        def bleus(ref, sample):
+            res = []
+            for weight in [[1, 0, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]:
+                res.append(sentence_bleu([ref], sample, smoothing_function=SmoothingFunction().method7, weights=weight))
+            return res
+
         while True:
             try:
                 feed = {tx.global_mode(): tf.estimator.ModeKeys.EVAL}
@@ -166,12 +175,12 @@ def main():
                 beam_samples = np.transpose(beam_samples, (0, 2, 1))
                 beam_samples = [[sample[:l] for sample, l in zip(beam, lens)]
                     for beam, lens in zip(beam_samples.tolist(), beam_length)]
-                references = [[ref[:ref.index('<EOS>')] for ref in refs[:cnt]]
+                references = [[ref[:ref.index(b'<EOS>')] for ref in refs[:cnt]]
                     for refs, cnt in zip(references.tolist(), refs_cnt)]
 
-                for beam, refs in zip(beam_samples, references):
-                    bleu_scores = np.array([[tx.evals.sentence_bleu(
-                        beam, ref, return_all=True)
+                from tqdm import tqdm
+                for beam, refs in tqdm(zip(beam_samples, references)):
+                    bleu_scores = np.array([[bleus(ref, sample)
                         for i, ref in enumerate(refs)]
                         for j, sample in enumerate(beam)])
                     bleu_scores = np.transpose(bleu_scores, (2, 0, 1))
@@ -183,6 +192,7 @@ def main():
 
                         bleu_prec[i-1].append(bleu_i_precision)
                         bleu_recall[i-1].append(bleu_i_recall)
+
 
             except tf.errors.OutOfRangeError:
                 break
