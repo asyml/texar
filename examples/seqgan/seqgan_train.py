@@ -73,7 +73,7 @@ def _main(_):
     global_step = tf.Variable(0, trainable=False)
     gen_train_op = tx.core.get_train_op(mle_loss,
                                         global_step=global_step,
-                                        increment_global_step=True,
+                                        increment_global_step=False,
                                         hparams=config.g_opt_hparams)
 
     # -------------Generator Infer-------------------
@@ -137,12 +137,13 @@ def _main(_):
     update_loss.set_shape(())
     gen_op = tx.core.get_train_op(update_loss, 
                                   global_step=global_step,
-                                  increment_global_step=True,
+                                  increment_global_step=False,
                                   hparams=config.update_opt_hparams)
     update_op = tf.group(gen_op, exp_op)
 
     def _g_train_epoch(sess, epoch, mode_string):
         iterator.switch_to_train_data(sess)
+        step = 0
         while True:
             try:
                 if mode_string == 'update':
@@ -166,7 +167,7 @@ def _main(_):
                         "Expect mode_string to be one of ['train', 'update'], "
                         "got %s" % mode_string)
                 rtns = sess.run(fetches)
-                step = rtns['step']
+                step += 1
                 if step % 200 == 1:
                     if mode_string == 'train':
                         ppl = np.exp(rtns['mle_loss'] / rtns["num_steps"])
@@ -219,11 +220,11 @@ def _main(_):
                 steps += rtns['num_steps']
                 if mode_string == 'test':
                     targets = _id2word_map(rtns['target_sample_id'].tolist())
-                    target_list.extend([tgt.split('<EOS>')[0].strip().split()
-                                       for tgt in targets])
+                    for tgt in targets:
+                        target_list.extend(tgt.split('<EOS>')[0].strip().split())
                     inferences = _id2word_map(rtns['infer_sample_id'].tolist())
-                    inference_list.extend([inf.split('<EOS>')[0].strip().split()
-                                           for inf in inferences])
+                    for inf in inferences:
+                        inference_list.extend(inf.split('<EOS>')[0].strip().split()[1:])  # remove <BOS>
             except tf.errors.OutOfRangeError:
                 break
         ppl = np.exp(loss / steps)
@@ -235,9 +236,9 @@ def _main(_):
         print(rst)
         if mode_string == 'test':
             bleu_test = \
-                tx.evals.corpus_bleu(list_of_references=[target_list],
-                                     hypotheses=inference_list,
-                                     lowercase=True, return_all=True)
+                tx.evals.sentence_bleu(references=[target_list],
+                                       hypothesis=inference_list,
+                                       lowercase=True, return_all=True)
             rst_test = "epoch %d BLEU1~4 on test dataset:\n" \
                        "%f\n%f\n%f\n%f\n\n" % \
                        (epoch, bleu_test[1], bleu_test[2],
