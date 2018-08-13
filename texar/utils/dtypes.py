@@ -18,7 +18,8 @@ __all__ = [
     "get_tf_dtype",
     "is_callable",
     "is_str",
-    "maybe_hparams_to_dict"
+    "maybe_hparams_to_dict",
+    "compat_as_text"
 ]
 
 def get_tf_dtype(dtype): # pylint: disable=too-many-return-statements
@@ -82,3 +83,33 @@ def maybe_hparams_to_dict(hparams):
     if isinstance(hparams, dict):
         return hparams
     return hparams.todict()
+
+def _maybe_list_to_array(str_list, dtype_as):
+    if isinstance(dtype_as, (list, tuple)):
+        return type(dtype_as)(str_list)
+    else:
+        return np.array(str_list)
+
+def compat_as_text(str_):
+    """Converts strings into `unicode` (Python 2) or `str` (Python 3).
+
+    Applies :tf_main:`tf.compat.as_text <compat/as_text>` to each element
+    of :attr:`str_`.
+
+    Args:
+        str_: A `str`, or an `n`-D numpy array or (possibly nested)
+            list of `str`.
+
+    Returns:
+        The converted strings of the same structure/shape as :attr:`str_`.
+    """
+    def _recur_convert(s):
+        if isinstance(s, (list, tuple, np.ndarray)):
+            s_ = [_recur_convert(si) for si in s]
+            return _maybe_list_to_array(s_, s)
+        else:
+            return tf.compat.as_text(s)
+
+    text = _recur_convert(str_)
+
+    return text

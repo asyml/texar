@@ -13,31 +13,36 @@ Vocabulary
 .. autoclass:: texar.data.SpecialTokens
     :members:
 
-Vocab
+:hidden:`Vocab`
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: texar.data.Vocab
     :members:
 
-Tokenizer
-==========
-
-.. automodule:: texar.data.tokenizers
-    :members:
-
-
 Embedding
 ==========
 
+:hidden:`Embedding`
+~~~~~~~~~~~~~~~~~~~~~~~~
+
 .. automodule:: texar.data.embedding
     :members:
+
+:hidden:`load_word2vec`
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autofunction:: texar.data.load_word2vec
+
+:hidden:`load_glove`
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autofunction:: texar.data.load_glove
 
 Data Utils
 ==========
 
 .. automodule:: texar.data.data_utils
     :members:
-
 
 Data Decoders
 ==========

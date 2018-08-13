@@ -8,6 +8,7 @@ from __future__ import print_function
 from __future__ import division
 
 # pylint: disable=invalid-name, no-member, no-name-in-module, protected-access
+# pylint: disable=redefined-outer-name, too-many-arguments
 
 import inspect
 from pydoc import locate
@@ -18,7 +19,8 @@ import numpy as np
 import tensorflow as tf
 
 from texar.hyperparams import HParams
-from texar.utils.dtypes import is_str, is_callable
+from texar.utils.dtypes import is_str, is_callable, compat_as_text, \
+        _maybe_list_to_array
 
 MAX_SEQ_LENGTH = np.iinfo(np.int32).max
 
@@ -48,6 +50,7 @@ __all__ = [
     "flatten_dict",
     "strip_token",
     "strip_eos",
+    "strip_special_tokens",
     "str_join",
     "map_ids_to_strs",
     "default_str",
@@ -519,7 +522,7 @@ def flatten_dict(dict_, parent_key="", sep="."):
             dict_items = collections.OrderedDict(zip(value._fields, value))
             items.extend(flatten_dict(dict_items, key_, sep=sep).items())
         else:
-          items.append((key_, value))
+            items.append((key_, value))
     return dict(items)
 
 def default_str(str_, default_str):
@@ -563,7 +566,7 @@ def uniquify_str(str_, str_set):
                 return unique_str
     raise ValueError("Fails to uniquify string: " + str_)
 
-def strip_token(str_, token):
+def strip_token(str_, token, compat=True):
     """Returns a copy of the strings with leading and trailing tokens
     removed.
 
@@ -574,6 +577,8 @@ def strip_token(str_, token):
             list of `str`.
         token (str): The token to strip, e.g., the '<PAD>' token defined in
             :class:`~texar.data.vocabulary.SpecialTokens`.PAD
+        compat (bool): Whether to convert tokens into `unicode` (Python 2)
+            or `str` (Python 3).
 
     Returns:
         The stripped strings of the same structure/shape as :attr:`str_`.
@@ -583,16 +588,21 @@ def strip_token(str_, token):
             return ' '.join(s.strip().split()).\
                 replace(' '+token, '').replace(token+' ', '')
         else:
-            return [_recur_strip(si) for si in s]
+            s_ = [_recur_strip(si) for si in s]
+            return _maybe_list_to_array(s_, s)
+
+    if compat:
+        str_ = compat_as_text(str_)
 
     strp_str = _recur_strip(str_)
 
-    if isinstance(str_, (list, tuple)):
-        return type(str_)(strp_str)
-    else:
-        return np.asarray(strp_str)
+    #if isinstance(str_, (list, tuple)):
+    #    return type(str_)(strp_str)
+    #else:
+    #    return np.asarray(strp_str)
+    return strp_str
 
-def strip_eos(str_, eos_token='<EOS>'):
+def strip_eos(str_, eos_token='<EOS>', compat=True):
     """Remove the EOS token and all subsequent tokens.
 
     Assumes tokens in the strings are separated with the space character.
@@ -602,6 +612,8 @@ def strip_eos(str_, eos_token='<EOS>'):
             list of `str`.
         eos_token (str): The EOS token. Default is '<EOS>' as defined in
             :class:`~texar.data.vocabulary.SpecialTokens`.`EOS`
+        compat (bool): Whether to convert tokens into `unicode` (Python 2)
+            or `str` (Python 3).
 
     Returns:
         Strings of the same structure/shape as :attr:`str_`.
@@ -614,17 +626,22 @@ def strip_eos(str_, eos_token='<EOS>'):
             else:
                 return s
         else:
-            return [_recur_strip(si) for si in s]
+            s_ = [_recur_strip(si) for si in s]
+            return _maybe_list_to_array(s_, s)
+
+    if compat:
+        str_ = compat_as_text(str_)
 
     strp_str = _recur_strip(str_)
 
-    if isinstance(str_, (list, tuple)):
-        return type(str_)(strp_str)
-    else:
-        return np.asarray(strp_str)
+    #if isinstance(str_, (list, tuple)):
+    #    return type(str_)(strp_str)
+    #else:
+    #    return np.asarray(strp_str)
+    return strp_str
 _strip_eos_ = strip_eos
 
-def strip_bos(str_, bos_token='<BOS>'):
+def strip_bos(str_, bos_token='<BOS>', compat=True):
     """Remove the leading BOS token.
 
     Assumes tokens in the strings are separated with the space character.
@@ -632,8 +649,10 @@ def strip_bos(str_, bos_token='<BOS>'):
     Args:
         str_: A `str`, or an `n`-D numpy array or (possibly nested)
             list of `str`.
-        bos_token (str): The BOS token. Default is '<EOS>' as defined in
+        bos_token (str): The BOS token. Default is '<BOS>' as defined in
             :class:`~texar.data.vocabulary.SpecialTokens`.`BOS`
+        compat (bool): Whether to convert tokens into `unicode` (Python 2)
+            or `str` (Python 3).
 
     Returns:
         Strings of the same structure/shape as :attr:`str_`.
@@ -642,23 +661,76 @@ def strip_bos(str_, bos_token='<BOS>'):
         if is_str(s):
             return ' '.join(s.strip().split()).replace(bos_token+' ', '')
         else:
-            return [_recur_strip(si) for si in s]
+            s_ = [_recur_strip(si) for si in s]
+            return _maybe_list_to_array(s_, s)
+
+    if compat:
+        str_ = compat_as_text(str_)
 
     strp_str = _recur_strip(str_)
 
-    if isinstance(str_, (list, tuple)):
-        return type(str_)(strp_str)
-    else:
-        return np.asarray(strp_str)
+    #if isinstance(str_, (list, tuple)):
+    #    return type(str_)(strp_str)
+    #else:
+    #    return np.asarray(strp_str)
+    return strp_str
 _strip_bos_ = strip_bos
 
-def str_join(tokens, sep=' '):
+def strip_special_tokens(str_, strip_pad='<PAD>', strip_bos='<BOS>',
+                         strip_eos='<EOS>', compat=True):
+    """Removes special tokens of strings, including:
+
+        - Removes EOS and all subsequent tokens
+        - Removes leading and and trailing PAD tokens
+        - Removes leading BOS tokens
+
+    Args:
+        str_: A `str`, or an `n`-D numpy array or (possibly nested)
+            list of `str`.
+        strip_pad (str): The PAD token to strip from the strings (i.e., remove
+            the leading and trailing PAD tokens of the strings). Default
+            is '<PAD>' as defined in
+            :class:`~texar.data.vocabulary.SpecialTokens`.`PAD`.
+            Set to `None` to disable the stripping.
+        strip_bos (str): The BOS token to strip from the strings (i.e., remove
+            the leading BOS tokens of the strings).
+            Default is '<BOS>' as defined in
+            :class:`~texar.data.vocabulary.SpecialTokens`.`BOS`.
+            Set to `None` to disable the stripping.
+        strip_eos (str): The EOS token to strip from the strings (i.e., remove
+            the EOS tokens and all subsequent tokens of the strings).
+            Default is '<EOS>' as defined in
+            :class:`~texar.data.vocabulary.SpecialTokens`.`EOS`.
+            Set to `None` to disable the stripping.
+        compat (bool): Whether to convert tokens into `unicode` (Python 2)
+            or `str` (Python 3).
+
+    Returns:
+        Strings of the same shape of :attr:`str_` with special tokens stripped.
+    """
+    if compat:
+        str_ = compat_as_text(str_)
+
+    if strip_eos is not None:
+        str_ = _strip_eos_(str_, strip_eos, compat=False)
+
+    if strip_pad is not None:
+        str_ = strip_token(str_, strip_pad, compat=False)
+
+    if strip_bos is not None:
+        str_ = _strip_bos_(str_, strip_bos, compat=False)
+
+    return str_
+
+def str_join(tokens, sep=' ', compat=True):
     """Concats :attr:`tokens` along the last dimension with intervening
     occurrences of :attr:`sep`.
 
     Args:
         tokens: An `n`-D numpy array or (possibly nested) list of `str`.
         sep (str): The string intervening between the tokens.
+        compat (bool): Whether to convert tokens into `unicode` (Python 2)
+            or `str` (Python 3).
 
     Returns:
         An `(n-1)`-D numpy array (or list) of `str`.
@@ -669,17 +741,22 @@ def str_join(tokens, sep=' '):
         elif is_str(s[0]):
             return sep.join(s)
         else:
-            return [_recur_join(si) for si in s]
+            s_ = [_recur_join(si) for si in s]
+            return _maybe_list_to_array(s_, s)
+
+    if compat:
+        tokens = compat_as_text(tokens)
 
     str_ = _recur_join(tokens)
 
-    if isinstance(tokens, (list, tuple)):
-        return type(tokens)(str_)
-    else:
-        return np.asarray(str_)
+    #if isinstance(tokens, (list, tuple)):
+    #    return type(tokens)(str_)
+    #else:
+    #    return np.asarray(str_)
+    return str_
 
 def map_ids_to_strs(ids, vocab, join=True, strip_pad='<PAD>',
-                    strip_bos='<BOS>', strip_eos='<EOS>'):
+                    strip_bos='<BOS>', strip_eos='<EOS>', compat=True):
     """Transforms indexes to strings by id-token mapping, token concat, token
     stripping, etc.
 
@@ -688,15 +765,21 @@ def map_ids_to_strs(ids, vocab, join=True, strip_pad='<PAD>',
         vocab: An instance of :class:`~texar.data.Vocab`.
         join (bool): Whether concat along the last dimension of :attr:`ids`
             the tokens into a string with a space character.
-        strip_pad (str): The token to strip from the strings (i.e., remove the
-            leading and trailing tokens of the strings). The default is the
-            pad token `<PAD>` (defined in
-            :class:`~texar.data.vocabulary.SpecialTokens`.PAD). Set to `None`
-            to disable the stripping. Ignored if :attr:`join` is `False`.
-        strip_eos (str): The EOS token to strip from the strings. This is
-            different from stripping the pad token because here the EOS
-            token and all subsequent tokens in a string are removed. Set to
-            `None` to disable the stripping.
+        strip_pad (str): The PAD token to strip from the strings (i.e., remove
+            the leading and trailing PAD tokens of the strings). Default
+            is '<PAD>' as defined in
+            :class:`~texar.data.vocabulary.SpecialTokens`.`PAD`.
+            Set to `None` to disable the stripping.
+        strip_bos (str): The BOS token to strip from the strings (i.e., remove
+            the leading BOS tokens of the strings).
+            Default is '<BOS>' as defined in
+            :class:`~texar.data.vocabulary.SpecialTokens`.`BOS`.
+            Set to `None` to disable the stripping.
+        strip_eos (str): The EOS token to strip from the strings (i.e., remove
+            the EOS tokens and all subsequent tokens of the strings).
+            Default is '<EOS>' as defined in
+            :class:`~texar.data.vocabulary.SpecialTokens`.`EOS`.
+            Set to `None` to disable the stripping.
     Returns:
         If :attr:`join`=True, returns a (n-1)-D numpy array (or list) of
         concatenated strings. If :attr:`join`=False, returns an n-D numpy
@@ -704,24 +787,23 @@ def map_ids_to_strs(ids, vocab, join=True, strip_pad='<PAD>',
     """
     tokens = vocab.map_ids_to_tokens_py(ids)
 
-    str_ = str_join(tokens)
+    if compat:
+        compat_as_text(tokens)
 
-    if strip_eos is not None:
-        str_ = _strip_eos_(str_, strip_eos)
+    str_ = str_join(tokens, compat=False)
 
-    if strip_pad is not None:
-        str_ = strip_token(str_, strip_pad)
-
-    if strip_bos is not None:
-        str_ = _strip_bos_(str_, strip_bos)
+    str_ = strip_special_tokens(
+        str_, strip_pad=strip_pad, strip_bos=strip_bos, strip_eos=strip_eos,
+        compat=False)
 
     def _recur_split(s):
-        if isinstance(s, str):
+        if is_str(s):
             return s.split()
         else:
-            return [_recur_split(ss) for ss in s]
+            s_ = [_recur_split(si) for si in s]
+            return _maybe_list_to_array(s_, s)
 
-    if join == True:
+    if join:
         return str_
     else:
         return _recur_split(str_)
