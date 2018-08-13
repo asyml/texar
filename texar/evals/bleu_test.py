@@ -15,7 +15,7 @@ import tensorflow as tf
 
 from texar.evals.bleu import sentence_bleu, corpus_bleu
 
-# pylint: disable=too-many-locals
+# pylint: disable=too-many-locals, too-many-arguments
 
 class BLEUTest(tf.test.TestCase):
     """Tests the bleu functions.
@@ -72,11 +72,16 @@ class BLEUTest(tf.test.TestCase):
 
 
     def _test_corpus_bleu(self, list_of_references, hypotheses, lowercase,
-                          true_bleu):
+                          return_all, true_bleu):
         bleu = corpus_bleu(list_of_references=list_of_references,
                            hypotheses=hypotheses,
-                           lowercase=lowercase)
-        self.assertAlmostEqual(bleu, true_bleu, places=2)
+                           lowercase=lowercase,
+                           return_all=return_all)
+        if not return_all:
+            self.assertAlmostEqual(bleu, true_bleu, places=2)
+        else:
+            for ret, true in zip(bleu, true_bleu):
+                self.assertAlmostEqual(ret, true, places=2)
 
     def test_corpus_strings(self):
         """Tests corpus level BLEU.
@@ -91,8 +96,10 @@ class BLEUTest(tf.test.TestCase):
             ["i believe that the script is perfectly correct .".split()]
         ]
         self._test_corpus_bleu(list_of_references, hypotheses,
-                               False, 63.02)
+                               False, False, 63.02)
 
+        self._test_corpus_bleu(list_of_references, hypotheses,
+                               False, True, [63.02, 87.5, 77.3, 60.0, 38.9])
 
 if __name__ == "__main__":
     tf.test.main()

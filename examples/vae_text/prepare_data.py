@@ -46,12 +46,12 @@ def prepare_data(data_name):
         data_path = "./data/yahoo"
         train_path = os.path.join(data_path, "yahoo.train.txt")
         if not tf.gfile.Exists(train_path):
-            url = 'https://drive.google.com/file/d/13IsiffVjcQ-wrrbBGMwiG3sYf-DFxtXH/view?usp=sharing'
-            tx.data.maybe_download(url, path='./', filenames='yahoo.zip', extract=True)
+            url = 'https://drive.google.com/file/d/'\
+                  '13IsiffVjcQ-wrrbBGMwiG3sYf-DFxtXH/view?usp=sharing'
+            tx.data.maybe_download(url, path='./', filenames='yahoo.zip',
+                                   extract=True)
     else:
-        raise ValueError("the %s dataset is not currently supported, \
-                          try \'ptb\' or \'yahoo\'")
-
+        raise ValueError('Unknown data: {}'.format(data_name))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='prepare data')

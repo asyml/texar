@@ -30,7 +30,9 @@ Here:
   * `--config_model` specifies the model config. Note not to include the `.py` suffix.
   * `--config_data` specifies the data config.
 
-[config_model.py](./config_model.py) specifies a single-layer seq2seq model with Luong attention.
+[config_model.py](./config_model.py) specifies a single-layer seq2seq model with Luong attention and bi-directional RNN encoder. Hyperparameters taking default values can be omitted from the config file. 
+
+For demonstration purpose, [config_model_full.py](./config_model_full.py) gives all possible hyperparameters for the model. The two config files will lead to the same model.
 
 ## Results ##
 

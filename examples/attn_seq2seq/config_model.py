@@ -1,3 +1,6 @@
+# Attentional Seq2seq model.
+# Hyperparameters not specified here will take the default values.
+
 num_units = 256
 beam_width = 10
 
