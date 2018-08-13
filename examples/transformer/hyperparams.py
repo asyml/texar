@@ -29,7 +29,6 @@ def load_hyperparams():
     """
     For devendra data loader
     """
-    argparser.add_argument('--input', type=str, default='temp/run_en_nl_bpe/data')
     argparser.add_argument('--data', type=str, default='processed')
     argparser.add_argument('--wbatchsize', type=int, default=3000)
     argparser.add_argument('--epoch', type=int, default=40)
@@ -82,7 +81,8 @@ def load_hyperparams():
     argparser.add_argument('--pre_encoding', type=str, default='spm')
     argparser.add_argument('--max_decode_len', type=int, default=256)
     argparser.parse_args(namespace=args)
-
+    args.input = 'temp/run_{}_{}_{}/data'.format(
+        args.src_language, args.tgt_language, args.pre_encoding)
     # pylint: disable=attribute-defined-outside-init
     args.data_dir = os.path.abspath(args.data_dir)
     # pylint: disable=no-member

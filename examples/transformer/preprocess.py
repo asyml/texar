@@ -127,6 +127,8 @@ if __name__ == "__main__":
     valid_npy = [(s, t) for s, t in zip(source_npy, target_npy)
                  if len(s) > 0 and len(t) > 0]
     assert len(valid_data) == len(valid_npy)
+    print('Original dev data size: %d' % len(source_data))
+    print('Filtered dev data size: %d' % len(valid_data))
 
     # Test Dataset
     source_path = os.path.join(args.input_dir, args.source_test)
@@ -139,7 +141,8 @@ if __name__ == "__main__":
                  if s and t]
     test_npy = [(s, t) for s, t in zip(source_npy, target_npy)
                 if len(s)>0 and len(t)>0]
-
+    print('Original test data size: %d' % len(source_data))
+    print('Filtered test data size: %d' % len(test_data))
     id2w = {i: w for w, i in w2id.items()}
     # Save the dataset to numpy files
     train_src_output = os.path.join(args.input_dir, \

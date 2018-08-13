@@ -12,7 +12,7 @@
 
 TF=$(pwd)
 
-export PATH=$PATH:$TF/../../bin/
+export PATH=$PATH:$TF/../../bin/utils/
 encoder=spm
 
 if [ -z $1 ]; then
@@ -22,10 +22,11 @@ else
 fi
 
 if  [ -z $2 ]; then
-    tgt_language=nl
+    tgt_language=vi
 else
     tgt_language=$2
 fi
+
 # update these variables
 data=${TF}"/data/${src_language}_${tgt_language}"
 name="run_${src_language}_${tgt_language}_${encoder}"
