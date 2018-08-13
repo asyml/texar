@@ -63,8 +63,15 @@ if __name__ == "__main__":
     train_data = train_data.tolist()
     dev_data = np.load(os.path.join(args.input, args.data + '.valid.npy'))
     dev_data = dev_data.tolist()
-    test_data = np.load(os.path.join(args.input, args.data + '.test.npy'))
+
+    test_data_path = os.path.join(args.input, args.data + '.test.npy')
+    test_data = np.load(test_data_path)
     test_data = test_data.tolist()
+
+    logging.info('train_data size:{}'.format(len(train_data)))
+    logging.info('dev_data size:{}'.format(len(dev_data)))
+    logging.info('test_data size:{} path:{}'.format(len(test_data),
+        test_data_path))
 
     with open(os.path.join(args.input, args.data + '.vocab.pickle'),
         'rb') as f:

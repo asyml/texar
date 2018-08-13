@@ -18,6 +18,7 @@ Feel free to try on different datasets as long as they are parallel text corpora
 ```
 bash preprocess_data.sh en vi
 ```
+By default, we use SentencePiece encoder to keep consistent with tensor2tensor, you could also change the `encoder` variable in `preprocess_data.sh` to `bpe` to use BytePairwise Encoding.
 
 ## training and evaluating the model
 ```
@@ -31,6 +32,8 @@ bash run_model 1 test en vi
 bash test_output.sh en vi
 ```
 The `1` indicates one hparams set for en-vi task: `max_train_epoch=70 max_training_steps=125000 batch_size=2048 test_batch_size=64 beam_width=5 alpha=0.6 ...`. You need to manually set the `log_disk_dir` parameter to control the output path of the tensorflow logging file. Read the `run_model.sh` for more details.
+
+You could get ~28.4 BLEU_cased with our implementation. With tensor2tensor, the result is 28.12 claimed in https://github.com/tensorflow/tensor2tensor/pull/611.
 
 
 # we also give a sample script for wmt14 en-de task here.

@@ -22,10 +22,11 @@ else
 fi
 
 if  [ -z $2 ]; then
-    tgt_language=nl
+    tgt_language=vi
 else
     tgt_language=$2
 fi
+
 # update these variables
 data=${TF}"/data/${src_language}_${tgt_language}"
 name="run_${src_language}_${tgt_language}_${encoder}"
