@@ -2,9 +2,11 @@
 
 TF=$(pwd)
 
-export PATH=$PATH:$TF/../../bin/
+export PATH=$PATH:$TF/../../bin/utils/
 
-encoder=bpe
+#encoder=bpe
+encoder=spm
+
 if [ -z $1 ]; then
     src_language=en
 else
@@ -34,8 +36,8 @@ model_filename="my-model-highest_bleu.ckpt"
 beam_size=5
 alpha=0.6
 decodes_file=${model_filename}.test.beam${beam_size}alpha${alpha}.outputs.decodes
-#model_dir="/space/shr/transformer_${encoder}/log_dir/${src_language}_${tgt_language}.bsize${batch_size}.epoch${max_epoch}.lr_c${lr_constant}warm${warmup_steps}/"
-model_dir="./debug/"
+model_dir="/space/hzt/shr/transformer_${encoder}/log_dir/${src_language}_${tgt_language}.bsize${batch_size}.epoch${max_epoch}.lr_c${lr_constant}warm${warmup_steps}/"
+#model_dir="./debug/"
 if [ "$3"x == "max"x ]; then
     model_dir=${model_dir}max/
 fi
