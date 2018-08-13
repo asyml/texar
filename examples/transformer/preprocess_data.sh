@@ -12,7 +12,7 @@
 
 TF=$(pwd)
 
-export PATH=$PATH:$TF/../../bin/
+export PATH=$PATH:$TF/../../bin/utils/
 encoder=spm
 
 if [ -z $1 ]; then

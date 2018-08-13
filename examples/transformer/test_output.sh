@@ -2,7 +2,7 @@
 
 TF=$(pwd)
 
-export PATH=$PATH:$TF/../../bin/
+export PATH=$PATH:$TF/../../bin/utils/
 
 #encoder=bpe
 encoder=spm
