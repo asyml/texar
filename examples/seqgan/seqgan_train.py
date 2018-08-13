@@ -73,7 +73,7 @@ def _main(_):
     global_step = tf.Variable(0, trainable=False)
     gen_train_op = tx.core.get_train_op(mle_loss,
                                         global_step=global_step,
-                                        increment_global_step=False,
+                                        increment_global_step=True,
                                         hparams=config.g_opt_hparams)
 
     # -------------Generator Infer-------------------
@@ -137,13 +137,12 @@ def _main(_):
     update_loss.set_shape(())
     gen_op = tx.core.get_train_op(update_loss, 
                                   global_step=global_step,
-                                  increment_global_step=False,
+                                  increment_global_step=True,
                                   hparams=config.update_opt_hparams)
     update_op = tf.group(gen_op, exp_op)
 
     def _g_train_epoch(sess, epoch, mode_string):
         iterator.switch_to_train_data(sess)
-        step = 0
         while True:
             try:
                 if mode_string == 'update':
@@ -167,7 +166,7 @@ def _main(_):
                         "Expect mode_string to be one of ['train', 'update'], "
                         "got %s" % mode_string)
                 rtns = sess.run(fetches)
-                step += 1
+                step = rtns['step']
                 if step % 200 == 1:
                     if mode_string == 'train':
                         ppl = np.exp(rtns['mle_loss'] / rtns["num_steps"])
