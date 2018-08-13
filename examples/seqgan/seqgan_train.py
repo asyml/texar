@@ -11,7 +11,6 @@ import importlib
 import numpy as np
 import tensorflow as tf
 import texar as tx
-from data_utils import calculate_bleu
 
 flags = tf.flags
 flags.DEFINE_string("dataset", "ptb",
@@ -203,7 +202,7 @@ def _main(_):
             raise ValueError("Expect mode_string to be one of "
                              "['valid', 'test'], got %s" % mode_string)
 
-        inference_list = []
+        target_list, inference_list = [], []
         loss, steps = 0., 0
         while True:
             try:
@@ -212,12 +211,16 @@ def _main(_):
                     "num_steps": num_steps
                 }
                 if mode_string == 'test':
+                    fetches['target_sample_id'] = data_batch["text_ids"]
                     fetches['infer_sample_id'] = infer_sample_ids
                 feed_dict = {tx.global_mode(): tf.estimator.ModeKeys.EVAL}
                 rtns = sess.run(fetches, feed_dict)
                 loss += rtns['mle_loss']
                 steps += rtns['num_steps']
                 if mode_string == 'test':
+                    targets = _id2word_map(rtns['target_sample_id'].tolist())
+                    target_list.extend([tgt.split('<EOS>')[0].strip().split()
+                                       for tgt in targets])
                     inferences = _id2word_map(rtns['infer_sample_id'].tolist())
                     inference_list.extend([inf.split('<EOS>')[0].strip().split()
                                            for inf in inferences])
@@ -231,9 +234,16 @@ def _main(_):
         log.flush()
         print(rst)
         if mode_string == 'test':
-            rst_train, rst_test = calculate_bleu(config, epoch, inference_list)
-            print(rst_train, rst_test)
-            bleu_log.write(rst_train + rst_test + '\n')
+            bleu_test = \
+                tx.evals.corpus_bleu(list_of_references=[target_list],
+                                     hypotheses=inference_list,
+                                     lowercase=True, return_all=True)
+            rst_test = "epoch %d BLEU1~4 on test dataset:\n" \
+                       "%f\n%f\n%f\n%f\n\n" % \
+                       (epoch, bleu_test[1], bleu_test[2],
+                        bleu_test[3], bleu_test[4])
+            print(rst_test)
+            bleu_log.write(rst_test)
             bleu_log.flush()
         return
 
