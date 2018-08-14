@@ -18,6 +18,8 @@ import numpy as np
 
 import tensorflow as tf
 
+from texar.utils import compat_as_text
+
 # pylint: disable=too-many-locals, no-member, redefined-variable-type
 
 __all__ = [
@@ -26,6 +28,7 @@ __all__ = [
 ]
 
 def _maybe_list_to_str(list_or_str):
+    list_or_str = compat_as_text(list_or_str)
     if isinstance(list_or_str, (tuple, list, np.ndarray)):
         return ' '.join(list_or_str)
     return list_or_str

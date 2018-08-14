@@ -226,9 +226,13 @@ simple-examples.tgz
 /examples/sentence_classifier/data/
 /examples/attn_seq2seq/data/
 /examples/attn_seq2seq/data.zip
+/examples/attn_seq2seq/iwslt14.zip
+/examples/attn_seq2seq/toy_copy.zip
+/examples/attn_seq2seq/training_log/
 /examples/seq2seq_configs/data/
 /examples/seq2seq_configs/data.zip
-/examples/seq2seq/training_log/
+/examples/seq2seq_config/iwslt14.zip
+/examples/seq2seq_config/toy_copy.zip
 /examples/text_style_transfer/checkpoints/
 /examples/text_style_transfer/samples/
 /examples/text_style_transfer/data/

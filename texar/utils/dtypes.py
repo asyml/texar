@@ -6,8 +6,9 @@ Utility functions related to data types.
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
+from __future__ import unicode_literals
 
-# pylint: disable=invalid-name, no-member
+# pylint: disable=invalid-name, no-member, protected-access
 
 import six
 import numpy as np
@@ -18,6 +19,7 @@ __all__ = [
     "get_tf_dtype",
     "is_callable",
     "is_str",
+    "is_placeholder",
     "maybe_hparams_to_dict",
     "compat_as_text"
 ]
@@ -72,6 +74,15 @@ def is_str(x):
     otherwise.
     """
     return isinstance(x, six.string_types)
+
+def is_placeholder(x):
+    """Returns `True` if :attr:`x` is a :tf_main:`tf.placeholder <placeholder>`
+    or :tf_main:`tf.placeholder_with_default <placeholder_with_default>`.
+    """
+    try:
+        return x._ops.type in ['Placeholder', 'PlaceholderWithDefault']
+    except: # pylint: disable=bare-except
+        return False
 
 def maybe_hparams_to_dict(hparams):
     """If :attr:`hparams` is an instance of :class:`~texar.hyperparams.HParams`,
