@@ -129,7 +129,8 @@ def main():
             except tf.errors.OutOfRangeError:
                 break
 
-        return tx.evals.corpus_bleu(list_of_references=refs, hypotheses=hypos)
+        return tx.evals.corpus_bleu_moses(list_of_references=refs,
+                                          hypotheses=hypos)
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
