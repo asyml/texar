@@ -41,10 +41,11 @@ def batch_size_fn(new, count, sofar):
     return max(src_elements, tgt_elements)
 
 if __name__ == "__main__":
+    hparams = hyperparams.load_hyperparams()
+
     tf.set_random_seed(1234)
     np.random.seed(1234)
     random.seed(1234)
-    hparams = hyperparams.load_hyperparams()
     encoder_hparams, decoder_hparams, opt_hparams, loss_hparams, args = \
         hparams['encoder_hparams'], hparams['decoder_hparams'], \
         hparams['opt_hparams'], hparams['loss_hparams'], hparams['args']
