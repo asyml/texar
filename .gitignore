@@ -224,11 +224,11 @@ simple-examples.tgz
 /examples/sequence_tagging/data/
 /examples/sequence_tagging/tmp/
 /examples/sentence_classifier/data/
-/examples/attn_seq2seq/data/
-/examples/attn_seq2seq/data.zip
-/examples/attn_seq2seq/iwslt14.zip
-/examples/attn_seq2seq/toy_copy.zip
-/examples/attn_seq2seq/training_log/
+/examples/seq2seq_attn/data/
+/examples/seq2seq_attn/data.zip
+/examples/seq2seq_attn/iwslt14.zip
+/examples/seq2seq_attn/toy_copy.zip
+/examples/seq2seq_attn/training_log/
 /examples/seq2seq_configs/data/
 /examples/seq2seq_configs/data.zip
 /examples/seq2seq_config/iwslt14.zip

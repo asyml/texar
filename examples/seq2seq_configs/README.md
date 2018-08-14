@@ -11,7 +11,7 @@ Download the example dataset:
   * toy_copy: A small toy autoencoding dataset from [TF Seq2seq toolkit](https://github.com/google/seq2seq/tree/2500c26add91b079ca00cf1f091db5a99ddab9ae).
 
 ```
-python [PATH_TEXAR]/examples/attn_seq2seq/prepare_data.py --data toy_copy
+python [PATH_TEXAR]/examples/seq2seq_attn/prepare_data.py --data toy_copy
 ```
 
 ### Train the model ###
