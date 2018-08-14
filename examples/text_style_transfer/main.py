@@ -116,7 +116,7 @@ def _main(_):
                 refs = tx.utils.map_ids_to_strs(samples['original'], vocab)
                 refs = np.expand_dims(refs, axis=1)
 
-                bleu = tx.evals.corpus_bleu(refs, hyps)
+                bleu = tx.evals.corpus_bleu_moses(refs, hyps)
                 vals['bleu'] = bleu
 
                 avg_meters.add(vals, weight=batch_size)

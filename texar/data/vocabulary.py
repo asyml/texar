@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 """
 Helper functions and classes for vocabulary processing.
@@ -8,6 +9,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import warnings
 from collections import defaultdict
 
 import tensorflow as tf
@@ -102,7 +104,10 @@ class Vocab(object):
             :attr:`token_to_id_map_py` are python `defaultdict` instances.
         """
         with gfile.GFile(filename) as vocab_file:
-            vocab = list(line.strip() for line in vocab_file)
+            # Converts to 'unicode' (Python 2) or 'str' (Python 3)
+            vocab = list(tf.compat.as_text(line.strip()) for line in vocab_file)
+
+        warnings.simplefilter("ignore", UnicodeWarning)
 
         if self._bos_token in vocab:
             raise ValueError("Special begin-of-seq token already exists in the "
@@ -116,6 +121,8 @@ class Vocab(object):
         if self._pad_token in vocab:
             raise ValueError("Special padding token already exists in the "
                              "vocabulary: '%s'" % self._pad_token)
+
+        warnings.simplefilter("default", UnicodeWarning)
 
         # Places _pad_token at the beginning to make sure it take index 0.
         vocab = [self._pad_token, self._bos_token, self._eos_token,

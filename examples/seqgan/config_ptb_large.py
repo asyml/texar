@@ -76,15 +76,6 @@ g_opt_hparams = {
     "gradient_clip": {
         "type": "clip_by_global_norm",
         "kwargs": {"clip_norm": 10.}
-    },
-    "learning_rate_decay": {
-        "type": "exponential_decay",
-        "kwargs": {
-            "decay_steps": 1,
-            "decay_rate": 1. / 1.15,
-            "staircase": True
-        },
-        "start_decay_step": 14
     }
 }
 

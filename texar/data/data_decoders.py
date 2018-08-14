@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 """
 Helper functions and classes for decoding text data which are used after

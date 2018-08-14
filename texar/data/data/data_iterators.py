@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 import tensorflow as tf
 
 import texar as tx
+from texar.utils.variables import get_unique_named_variable_scope
 
 __all__ = [
     "DataIteratorBase",
@@ -90,13 +91,15 @@ class DataIterator(DataIteratorBase):
     def __init__(self, datasets):
         DataIteratorBase.__init__(self, datasets)
 
-        arb_dataset = self._datasets[next(iter(self._datasets))]
-        self._iterator = tf.data.Iterator.from_structure(
-            arb_dataset.output_types, arb_dataset.output_shapes)
-        self._iterator_init_ops = {
-            name: self._iterator.make_initializer(d)
-            for name, d in self._datasets.items()
-        }
+        self._variable_scope = get_unique_named_variable_scope('data_iterator')
+        with tf.variable_scope(self._variable_scope):
+            arb_dataset = self._datasets[next(iter(self._datasets))]
+            self._iterator = tf.data.Iterator.from_structure(
+                arb_dataset.output_types, arb_dataset.output_shapes)
+            self._iterator_init_ops = {
+                name: self._iterator.make_initializer(d)
+                for name, d in self._datasets.items()
+            }
 
     def switch_to_dataset(self, sess, dataset_name=None):
         """Re-initializes the iterator of a given dataset and starts iterating
@@ -206,10 +209,14 @@ class FeedableDataIterator(DataIteratorBase):
     def __init__(self, datasets):
         DataIteratorBase.__init__(self, datasets)
 
-        self._handle = tf.placeholder(tf.string, shape=[])
+        #self._variable_scope = get_unique_named_variable_scope(
+        #    'feedable_data_iterator')
+        #with tf.variable_scope(self._variable_scope):
+        self._handle = tf.placeholder(tf.string, shape=[], name='handle')
         arb_dataset = self._datasets[next(iter(self._datasets))]
         self._iterator = tf.data.Iterator.from_string_handle(
-            self._handle, arb_dataset.output_types, arb_dataset.output_shapes)
+            self._handle, arb_dataset.output_types,
+            arb_dataset.output_shapes)
 
         self._dataset_iterators = {
             name: dataset.make_initializable_iterator()

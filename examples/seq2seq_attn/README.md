@@ -23,7 +23,7 @@ python prepare_data.py --data iwslt14
 Train the model with the following cmd:
 
 ```
-python attn_seq2seq.py --config_model config_model --config_data config_toy_copy
+python seq2seq_attn.py --config_model config_model --config_data config_toy_copy
 ```
 
 Here:

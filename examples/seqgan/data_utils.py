@@ -1,10 +1,8 @@
 import os
 import argparse
-import codecs
 import importlib
 import tensorflow as tf
 import texar as tx
-from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 
 parser = argparse.ArgumentParser(description='prepare data')
 parser.add_argument('--dataset', type=str, default='ptb',

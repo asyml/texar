@@ -126,7 +126,7 @@ def _main(_):
     mean_reward = tf.reduce_mean(reward)
     exp_reward_loss = -tf.reduce_mean(tf.abs(reward))
     exp_reward_loss.set_shape(())
-    exp_op = tx.core.get_train_op(exp_reward_loss, 
+    exp_op = tx.core.get_train_op(exp_reward_loss,
                                   global_step=global_step,
                                   increment_global_step=False,
                                   hparams=config.update_opt_hparams)
@@ -135,7 +135,7 @@ def _main(_):
     update_loss = tf.reduce_mean(tf.log(infer_logits) *
                                  tf.expand_dims(reward, -1))
     update_loss.set_shape(())
-    gen_op = tx.core.get_train_op(update_loss, 
+    gen_op = tx.core.get_train_op(update_loss,
                                   global_step=global_step,
                                   increment_global_step=True,
                                   hparams=config.update_opt_hparams)
@@ -219,11 +219,11 @@ def _main(_):
                 steps += rtns['num_steps']
                 if mode_string == 'test':
                     targets = _id2word_map(rtns['target_sample_id'].tolist())
-                    target_list.extend([tgt.split('<EOS>')[0].strip().split()
-                                       for tgt in targets])
+                    for tgt in targets:
+                        target_list.extend(tgt.split('<EOS>')[0].strip().split())
                     inferences = _id2word_map(rtns['infer_sample_id'].tolist())
-                    inference_list.extend([inf.split('<EOS>')[0].strip().split()
-                                           for inf in inferences])
+                    for inf in inferences:
+                        inference_list.extend(inf.split('<EOS>')[0].strip().split()[1:])  # remove <BOS>
             except tf.errors.OutOfRangeError:
                 break
         ppl = np.exp(loss / steps)
@@ -235,9 +235,9 @@ def _main(_):
         print(rst)
         if mode_string == 'test':
             bleu_test = \
-                tx.evals.corpus_bleu(list_of_references=[target_list],
-                                     hypotheses=inference_list,
-                                     lowercase=True, return_all=True)
+                tx.evals.sentence_bleu_moses(references=[target_list],
+                                             hypothesis=inference_list,
+                                             lowercase=True, return_all=True)
             rst_test = "epoch %d BLEU1~4 on test dataset:\n" \
                        "%f\n%f\n%f\n%f\n\n" % \
                        (epoch, bleu_test[1], bleu_test[2],

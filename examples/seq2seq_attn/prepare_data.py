@@ -25,7 +25,7 @@ def prepare_data():
     elif FLAGS.data == 'toy_copy':
         tx.data.maybe_download(
             urls='https://drive.google.com/file/d/'
-                 '1mhnQYXXEQPk7RG_VtL9R-9aL3dpS0kJp/view?usp=sharing',
+                 '1fENE2rakm8vJ8d3voWBgW4hGlS6-KORW/view?usp=sharing',
             path='./',
             filenames='toy_copy.zip',
             extract=True)

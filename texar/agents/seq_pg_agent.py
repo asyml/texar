@@ -34,17 +34,24 @@ class SeqPGAgent(SeqAgentBase):
                  hparams=None):
         SeqAgentBase.__init__(self, hparams)
 
-        self._sess = sess
         self._lr = learning_rate
 
+        # Tensors
         self._samples = samples
         self._logits = logits
         self._sequence_length = sequence_length
         self._trainable_variables = trainable_variables
 
+        # Python values
         self._samples_py = None
         self._sequence_length_py = None
         self._rewards = None
+
+        self._sess = sess
+
+        # For session partial run
+        self._partial_run_handle = None
+        self._qvalue_inputs_fed = False
 
         self._build_graph()
 
@@ -54,9 +61,7 @@ class SeqPGAgent(SeqAgentBase):
                 dtype=tf.float32,
                 shape=[None, None],
                 name='qvalue_inputs')
-
             self._pg_loss = self._get_pg_loss()
-
             self._train_op = self._get_train_op()
 
     def _get_pg_loss(self):
@@ -98,28 +103,85 @@ class SeqPGAgent(SeqAgentBase):
             'name': 'pg_agent',
         }
 
-    def get_samples(self, feed_dict):
+    def _get_partial_run_feeds(self, feeds=None):
+        if feeds is None:
+            feeds = []
+        feeds += [self._qvalue_inputs]
+        return feeds
+
+    def _setup_partial_run(self, fetches=None, feeds=None):
+        fetches_ = [self._samples, self._sequence_length, self._pg_loss,
+                    self._train_op]
+        if fetches is not None:
+            for fet in fetches:
+                if fet not in fetches_:
+                    fetches_.append(fet)
+
+        feeds = self._get_partial_run_feeds(feeds)
+
+        self._partial_run_handle = self._sess.partial_run_setup(
+            fetches_, feeds=feeds)
+
+        self._qvalue_inputs_fed = False
+
+    def _check_extra_fetches(self, extra_fetches):
+        fetch_values = None
+        if extra_fetches is not None:
+            fetch_values = list(extra_fetches.values())
+        if fetch_values is not None:
+            if self._samples in fetch_values:
+                raise ValueError(
+                    "`samples` must not be included in `extra_fetches`. "
+                    "It is added automatically.")
+            if self._sequence_length in fetch_values:
+                raise ValueError(
+                    "`sequence_length` must not be included in `extra_fetches`."
+                    " It is added automatically.")
+            if "samples" in extra_fetches:
+                raise ValueError(
+                    "Key 'samples' is preserved and must not be used "
+                    "in `extra_fetches`.")
+            if "sequence_length" in extra_fetches:
+                raise ValueError(
+                    "Key 'sequence_length' is preserved and must not be used "
+                    "in `extra_fetches`.")
+
+    def get_samples(self, extra_fetches=None, feed_dict=None):
         """TODO
         """
         if self._sess is None:
-            raise ValueError('`sess` must be specified before sampling.')
+            raise ValueError("`sess` must be specified before sampling.")
 
-        fetches = dict(
-            samples=self._samples,
-            sequence_length=self._sequence_length)
+        self._check_extra_fetches(extra_fetches)
+
+        # Sets up partial_run
+        fetch_values = None
+        if extra_fetches is not None:
+            fetch_values = list(extra_fetches.values())
+        feeds = None
+        if feed_dict is not None:
+            feeds = list(feed_dict.keys())
+        self._setup_partial_run(fetches=fetch_values, feeds=feeds)
+
+        # Runs the sampling
+        fetches = {
+            "samples": self._samples,
+            "sequence_length": self._sequence_length
+        }
+        if extra_fetches is not None:
+            fetches.update(extra_fetches)
+
         feed_dict_ = feed_dict
 
-        vals = self._sess.run(fetches, feed_dict=feed_dict_)
-        samples = vals['samples']
-        sequence_length = vals['sequence_length']
+        vals = self._sess.partial_run(
+            self._partial_run_handle, fetches, feed_dict=feed_dict_)
 
-        self._samples_py = samples
-        self._sequence_length_py = sequence_length
+        self._samples_py = vals['samples']
+        self._sequence_length_py = vals['sequence_length']
 
-        return samples, sequence_length
+        return vals
 
-    def observe(self, reward, train_policy=True,
-                return_loss=True, feed_dict=None):
+    def observe(self, reward, train_policy=True, return_loss=True):
         """
 
         Args:
@@ -129,9 +191,9 @@ class SeqPGAgent(SeqAgentBase):
         self._rewards = reward
 
         if train_policy:
-            return self._train_policy(feed_dict=feed_dict)
+            return self._train_policy()
         elif return_loss:
-            return self._evaluate_pg_loss(feed_dict=feed_dict)
+            return self._evaluate_pg_loss()
         else:
             return None
 
@@ -143,34 +205,42 @@ class SeqPGAgent(SeqAgentBase):
             normalize=self._hparams.normalize_reward)
         return qvalues
 
-    def _evaluate_pg_loss(self, feed_dict=None):
-        qvalues = self._get_qvalues()
-
-        fetches = dict(loss=self._pg_loss)
-        feed_dict_ = {
-            self._qvalue_inputs: qvalues
+    def _evaluate_pg_loss(self):
+        fetches = {
+            "loss": self._pg_loss
         }
-        feed_dict_.update(feed_dict or {})
 
-        vals = self._sess.run(fetches, feed_dict=feed_dict_)
+        feed_dict_ = None
+        if not self._qvalue_inputs_fed:
+            qvalues = self._get_qvalues()
+            feed_dict_ = {self._qvalue_inputs: qvalues}
+
+        vals = self._sess.partial_run(
+            self._partial_run_handle, fetches, feed_dict=feed_dict_)
+
+        self._qvalue_inputs_fed = True
 
         return vals['loss']
 
-    def _train_policy(self, feed_dict=None):
+    def _train_policy(self):
         """Updates the policy.
 
         Args:
             TODO
         """
-        qvalues = self._get_qvalues()
-
-        fetches = dict(loss=self._train_op)
-        feed_dict_ = {
-            self._qvalue_inputs: qvalues
+        fetches = {
+            "loss": self._train_op
         }
-        feed_dict_.update(feed_dict or {})
 
-        vals = self._sess.run(fetches, feed_dict=feed_dict_)
+        feed_dict_ = None
+        if not self._qvalue_inputs_fed:
+            qvalues = self._get_qvalues()
+            feed_dict_ = {self._qvalue_inputs: qvalues}
+
+        vals = self._sess.partial_run(
+            self._partial_run_handle, fetches, feed_dict=feed_dict_)
+
+        self._qvalue_inputs_fed = True
 
         return vals['loss']
 
@@ -181,8 +251,8 @@ class SeqPGAgent(SeqAgentBase):
         return self._sess
 
     @sess.setter
-    def sess(self, session):
-        self._sess = session
+    def sess(self, sess):
+        self._sess = sess
 
     @property
     def pg_loss(self):

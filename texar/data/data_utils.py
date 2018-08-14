@@ -255,7 +255,7 @@ def count_file_lines(filenames):
     """Counts the number of lines in the file(s).
     """
     def _count_lines(fn):
-        with open(fn) as f:
+        with open(fn, "rb") as f:
             i = -1
             for i, _ in enumerate(f):
                 pass

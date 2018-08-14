@@ -119,8 +119,7 @@ def main():
                 target_texts_ori, output_ids = \
                     sess.run(fetches, feed_dict=feed_dict)
 
-                target_texts = \
-                    [s[:s.index('<EOS>')]for s in target_texts_ori.tolist()]
+                target_texts = tx.utils.strip_special_tokens(target_texts_ori)
                 output_texts = tx.utils.map_ids_to_strs(
                     ids=output_ids, vocab=valid_data.target_vocab)
 
@@ -130,7 +129,8 @@ def main():
             except tf.errors.OutOfRangeError:
                 break
 
-        return tx.evals.corpus_bleu(list_of_references=refs, hypotheses=hypos)
+        return tx.evals.corpus_bleu_moses(list_of_references=refs,
+                                          hypotheses=hypos)
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -142,12 +142,13 @@ def main():
             _train_epoch(sess)
 
             valid_bleu = _eval_epoch(sess, 'valid')
-            test_bleu = _eval_epoch(sess, 'test')
-
             best_valid_bleu = max(best_valid_bleu, valid_bleu)
-            print('valid epoch={}, BLEU={}; best-ever={}'.format(
+            print('valid epoch={}, BLEU={:.4f}; best-ever={:.4f}'.format(
                 i, valid_bleu, best_valid_bleu))
-            print('test epoch={}, BLEU={}'.format(i, test_bleu))
+
+            test_bleu = _eval_epoch(sess, 'test')
+            print('test epoch={}, BLEU={:.4f}'.format(i, test_bleu))
+
             print('=' * 50)
 
 
