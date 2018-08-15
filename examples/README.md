@@ -11,6 +11,7 @@ More examples are continuously added...
 * [language_model_ptb](./language_model_ptb): Basic RNN language model
 * [seq2seq_attn](./seq2seq_attn): Attentional seq2seq
 * [seq2seq_configs](./seq2seq_configs): Seq2seq implemented with Texar model template.
+* [seq2seq_rl](./seq2seq_rl): Attentional seq2seq trained with policy gradient.
 * [hierarchical_dialog](./hierarchical_dialog): Hierarchical recurrent encoder-decoder model for conversation response generation.
 * [torchtext](./torchtext): Use of torchtext data loader
 
@@ -30,6 +31,7 @@ More examples are continuously added...
 
 ### Reinforcement Learning ###
 
+* [seq2seq_rl](./seq2seq_rl): Attentional seq2seq trained with policy gradient.
 * [seqGAN](./seqgan): Policy gradient for sequence generation
 * [rl_gym](./rl_gym): Various RL algoritms for games
 
@@ -56,6 +58,7 @@ More examples are continuously added...
 
 * [seq2seq_attn](./seq2seq_attn)
 * [seq2seq_configs](./seq2seq_configs)
+* [seq2seq_rl](./seq2seq_rl)
 * [transformer](./transformer)
 
 ### Dialog ###

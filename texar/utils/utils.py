@@ -691,17 +691,17 @@ def strip_special_tokens(str_, strip_pad='<PAD>', strip_bos='<BOS>',
             the leading and trailing PAD tokens of the strings). Default
             is '<PAD>' as defined in
             :class:`~texar.data.vocabulary.SpecialTokens`.`PAD`.
-            Set to `None` to disable the stripping.
+            Set to `None` or `False` to disable the stripping.
         strip_bos (str): The BOS token to strip from the strings (i.e., remove
             the leading BOS tokens of the strings).
             Default is '<BOS>' as defined in
             :class:`~texar.data.vocabulary.SpecialTokens`.`BOS`.
-            Set to `None` to disable the stripping.
+            Set to `None` or `False` to disable the stripping.
         strip_eos (str): The EOS token to strip from the strings (i.e., remove
             the EOS tokens and all subsequent tokens of the strings).
             Default is '<EOS>' as defined in
             :class:`~texar.data.vocabulary.SpecialTokens`.`EOS`.
-            Set to `None` to disable the stripping.
+            Set to `None` or `False` to disable the stripping.
         compat (bool): Whether to convert tokens into `unicode` (Python 2)
             or `str` (Python 3).
 
@@ -711,13 +711,13 @@ def strip_special_tokens(str_, strip_pad='<PAD>', strip_bos='<BOS>',
     if compat:
         str_ = compat_as_text(str_)
 
-    if strip_eos is not None:
+    if strip_eos is not None and strip_eos is not False:
         str_ = _strip_eos_(str_, strip_eos, compat=False)
 
-    if strip_pad is not None:
+    if strip_pad is not None and strip_pad is not False:
         str_ = strip_token(str_, strip_pad, compat=False)
 
-    if strip_bos is not None:
+    if strip_bos is not None and strip_bos is not False:
         str_ = _strip_bos_(str_, strip_bos, compat=False)
 
     return str_
@@ -769,17 +769,17 @@ def map_ids_to_strs(ids, vocab, join=True, strip_pad='<PAD>',
             the leading and trailing PAD tokens of the strings). Default
             is '<PAD>' as defined in
             :class:`~texar.data.vocabulary.SpecialTokens`.`PAD`.
-            Set to `None` to disable the stripping.
+            Set to `None` or `False` to disable the stripping.
         strip_bos (str): The BOS token to strip from the strings (i.e., remove
             the leading BOS tokens of the strings).
             Default is '<BOS>' as defined in
             :class:`~texar.data.vocabulary.SpecialTokens`.`BOS`.
-            Set to `None` to disable the stripping.
+            Set to `None` or `False` to disable the stripping.
         strip_eos (str): The EOS token to strip from the strings (i.e., remove
             the EOS tokens and all subsequent tokens of the strings).
             Default is '<EOS>' as defined in
             :class:`~texar.data.vocabulary.SpecialTokens`.`EOS`.
-            Set to `None` to disable the stripping.
+            Set to `None` or `False` to disable the stripping.
     Returns:
         If :attr:`join`=True, returns a (n-1)-D numpy array (or list) of
         concatenated strings. If :attr:`join`=False, returns an n-D numpy
