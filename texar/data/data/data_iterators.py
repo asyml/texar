@@ -209,19 +209,19 @@ class FeedableDataIterator(DataIteratorBase):
     def __init__(self, datasets):
         DataIteratorBase.__init__(self, datasets)
 
-        #self._variable_scope = get_unique_named_variable_scope(
-        #    'feedable_data_iterator')
-        #with tf.variable_scope(self._variable_scope):
-        self._handle = tf.placeholder(tf.string, shape=[], name='handle')
-        arb_dataset = self._datasets[next(iter(self._datasets))]
-        self._iterator = tf.data.Iterator.from_string_handle(
-            self._handle, arb_dataset.output_types,
-            arb_dataset.output_shapes)
+        self._variable_scope = get_unique_named_variable_scope(
+            'feedable_data_iterator')
+        with tf.variable_scope(self._variable_scope):
+            self._handle = tf.placeholder(tf.string, shape=[], name='handle')
+            arb_dataset = self._datasets[next(iter(self._datasets))]
+            self._iterator = tf.data.Iterator.from_string_handle(
+                self._handle, arb_dataset.output_types,
+                arb_dataset.output_shapes)
 
-        self._dataset_iterators = {
-            name: dataset.make_initializable_iterator()
-            for name, dataset in self._datasets.items()
-        }
+            self._dataset_iterators = {
+                name: dataset.make_initializable_iterator()
+                for name, dataset in self._datasets.items()
+            }
 
     def get_handle(self, sess, dataset_name=None):
         """Returns a dataset handle that can be used to feed the

@@ -28,7 +28,6 @@ __all__ = [
 ]
 
 def _maybe_list_to_str(list_or_str):
-    list_or_str = compat_as_text(list_or_str)
     if isinstance(list_or_str, (tuple, list, np.ndarray)):
         return ' '.join(list_or_str)
     return list_or_str
@@ -94,6 +93,8 @@ def corpus_bleu_moses(list_of_references, hypotheses, lowercase=False,
         If :attr:`return_all` is `True`, returns a list of 5 float32 scores:
         `[BLEU, 1-gram precision, ..., 4-gram precision]`.
     """
+    list_of_references = compat_as_text(list_of_references)
+    hypotheses = compat_as_text(hypotheses)
 
     if np.size(hypotheses) == 0:
         return np.float32(0.)   # pylint: disable=no-member
@@ -109,7 +110,7 @@ def corpus_bleu_moses(list_of_references, hypotheses, lowercase=False,
     hfile_path = os.path.join(result_path, 'hyp')
     hyps = [_maybe_list_to_str(h) for h in hypotheses]
     with open(hfile_path, 'w', encoding='utf-8') as hfile:
-        text = tf.compat.as_text("\n".join(hyps))
+        text = "\n".join(hyps)
         hfile.write(text)
         hfile.write("\n")
     # Create reference files
@@ -120,8 +121,7 @@ def corpus_bleu_moses(list_of_references, hypotheses, lowercase=False,
             for refs in list_of_references:
                 if rid < len(refs):
                     ref = _maybe_list_to_str(refs[rid])
-                    text = tf.compat.as_text(ref + "\n")
-                    rfile.write(text)
+                    rfile.write(ref + "\n")
                 else:
                     rfile.write("\n")
 

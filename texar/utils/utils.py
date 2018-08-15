@@ -788,7 +788,7 @@ def map_ids_to_strs(ids, vocab, join=True, strip_pad='<PAD>',
     tokens = vocab.map_ids_to_tokens_py(ids)
 
     if compat:
-        compat_as_text(tokens)
+        tokens = compat_as_text(tokens)
 
     str_ = str_join(tokens, compat=False)
 
@@ -798,7 +798,7 @@ def map_ids_to_strs(ids, vocab, join=True, strip_pad='<PAD>',
 
     def _recur_split(s):
         if is_str(s):
-            return s.split()
+            return _maybe_list_to_array(s.split(), str_)
         else:
             s_ = [_recur_split(si) for si in s]
             return _maybe_list_to_array(s_, s)

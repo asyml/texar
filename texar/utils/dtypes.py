@@ -104,12 +104,10 @@ def _maybe_list_to_array(str_list, dtype_as):
 def compat_as_text(str_):
     """Converts strings into `unicode` (Python 2) or `str` (Python 3).
 
-    Applies :tf_main:`tf.compat.as_text <compat/as_text>` to each element
-    of :attr:`str_`.
-
     Args:
-        str_: A `str`, or an `n`-D numpy array or (possibly nested)
-            list of `str`.
+        str_: A string or element of other types convertible to string. Or an
+            `n`-D numpy array or (possibly nested) list of elements of such
+            types.
 
     Returns:
         The converted strings of the same structure/shape as :attr:`str_`.
@@ -119,7 +117,10 @@ def compat_as_text(str_):
             s_ = [_recur_convert(si) for si in s]
             return _maybe_list_to_array(s_, s)
         else:
-            return tf.compat.as_text(s)
+            try:
+                return tf.compat.as_text(s)
+            except TypeError:
+                return tf.compat.as_text(str(s))
 
     text = _recur_convert(str_)
 

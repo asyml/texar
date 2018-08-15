@@ -10,6 +10,7 @@ from __future__ import print_function
 import tensorflow as tf
 
 from texar.losses.losses_utils import mask_and_reduce
+from texar.utils.shapes import get_rank
 
 # pylint: disable=too-many-arguments, protected-access
 
@@ -33,15 +34,15 @@ def pg_loss_with_logits(actions,
                         time_major=False):
     """Policy gradient loss with logits. Used for discrete actions.
 
-    pg_loss = mean( SG(advantages) * -log_prob( SG(actions) )  ),
-    where SG(.) is stop_gradient(.)
+    pg_loss = reduce( advantages * -log_prob( actions )  ),
+    where `advantages` and `actions` will not bprop gradients.
 
     All arguments except :attr:`logits` and :attr:`actions` are the same as
     :func:`pg_loss_with_log_probs`.
 
     Args:
         actions: Tensor of shape
-            `[(batch_size,) max_time, d_2, ..., d_rank]` and dtype
+            `[(batch_size,) max_time, d_3, ..., d_rank]` and of dtype
             `int32` or `int64`.
             The rank of the Tensor is specified with :attr:`rank`.
 
@@ -51,13 +52,21 @@ def pg_loss_with_logits(actions,
             are exchanged, i.e., `[max_time, batch_size, ...]` if
             :attr:`time_major` is `True`.
         logits: Unscaled log probabilities of shape
-            `[(batch_size,) max_time, d_2, ..., d_{rank+1}]`
+            `[(batch_size,) max_time, d_3, ..., d_{rank+1}]`
             and dtype `float32` or `float64`.
+
+            The batch and time dimensions are exchanged if :attr:`time_major`
+            is `True`.
         advantages: Tensor of shape
-            `[(batch_size,) max_time, d_2, ..., d_rank]` and
+            `[(batch_size,) max_time, d_3, ..., d_rank]` and
             dtype `float32` or `float64`.
+
+            The batch and time dimensions are exchanged if :attr:`time_major`
+            is `True`.
         rank (int, optional): The rank of :attr:`actions`.
-            If `None` (default), :attr:`rank`=1 if :attr:`batched` is `False`,
+            If `None` (default), rank is automatically inferred from
+            :attr:`actions` or :attr:`advantages`. If the inferred rank is
+            `None`, :attr:`rank` is set to 1 if :attr:`batched` is `False`,
             and :attr:`rank`=2 if :attr:`batched` is `True`.
         batched (bool): `True` if the inputs are batched.
         sequence_length (optional): A Tensor of shape `[batch_size]`.
@@ -128,8 +137,8 @@ def pg_loss_with_log_probs(log_probs,
                            time_major=False):
     """Policy gradient loss with log probs of actions.
 
-    pg_loss = mean( SG(advantages) * -log_probs ),
-    where SG(.) is stop_gradient(.)
+    pg_loss = reduce( advantages * -log_probs ),
+    where `advantages` will not bprop gradients.
 
     All arguments except :attr:`log_probs` are the same as
     :func:`pg_loss_with_logits`.
@@ -145,7 +154,7 @@ def pg_loss_with_log_probs(log_probs,
             The batch and time dimensions are exchanged, i.e.,
             `[max_time, batch_size, ...]` if :attr:`time_major` is `True`.
         advantages: Tensor of shape
-            `[(batch_size,) max_time, d_2, ..., d_rank]` and
+            `[(batch_size,) max_time, d_3, ..., d_rank]` and
             dtype `float32` or `float64`.
 
             The batch dimension exists only if
@@ -155,8 +164,10 @@ def pg_loss_with_log_probs(log_probs,
             are exchanged, i.e., `[max_time, batch_size, ...]` if
             :attr:`time_major` is `True`.
         rank (int, optional): The rank of :attr:`log_probs`.
-            If `None` (default), :attr:`rank`=1 if :attr:`batched`==`False`,
-            and :attr:`rank`=2 if :attr:`batched`==`True`.
+            If `None` (default), rank is automatically inferred from
+            :attr:`log_probs` or :attr:`advantages`. If the inferred rank is
+            `None`, :attr:`rank` is set to 1 if :attr:`batched``==False`,
+            and :attr:`rank`=2 if :attr:`batched``==True`.
         batched (bool): `True` if the inputs are batched.
         sequence_length (optional): A Tensor of shape `[batch_size]`.
             Time steps beyond the respective sequence lengths will have zero
@@ -200,7 +211,10 @@ def pg_loss_with_log_probs(log_probs,
     losses = -log_probs * advantages
 
     if rank is None:
+        rank = get_rank(log_probs) or get_rank(advantages)
+    if rank is None:
         rank = 2 if batched else 1
+
     if batched:
         losses = mask_and_reduce(
             losses,
@@ -222,12 +236,13 @@ def pg_loss_with_log_probs(log_probs,
         elif sum_over_remaining:
             losses = tf.reduce_sum(losses, axis=range(1, rank))
 
-    if average_across_timesteps and sum_over_timesteps:
-        raise ValueError("Only one of `average_across_timesteps` and "
-                         "`sum_over_timesteps` can be set.")
-    if average_across_timesteps:
-        losses = tf.reduce_mean(losses)
-    elif sum_over_timesteps:
-        losses = tf.reduce_mean(losses)
+    if not batched:
+        if average_across_timesteps and sum_over_timesteps:
+            raise ValueError("Only one of `average_across_timesteps` and "
+                             "`sum_over_timesteps` can be set.")
+        if average_across_timesteps:
+            losses = tf.reduce_mean(losses)
+        elif sum_over_timesteps:
+            losses = tf.reduce_mean(losses)
 
     return losses
