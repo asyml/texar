@@ -61,10 +61,15 @@ You will obtain the processed dataset in `./temp/data/run_en_de_wpm/data/` direc
 bash run_en_vi.sh 2 train_and_evaluate en de
 ```
 Here `2` denotes one hparams set for wmt14 en-de task (model with more
-parameters compared to `1` hparams set.
+parameters compared to `1` hparams set).
 
 ## Test and evaluation
 ```
 bash run_en_vi.sh 2 test en de
 bash test_output.sh en de
 ```
+
+## Result
+
+You could get ~25.51 BLEU_cased with our implementation. With tensor2tensor, the running result is 25.35 with the setting of base_single_gpu and 3072 batch size.
+

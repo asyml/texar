@@ -123,8 +123,6 @@ def load_hyperparams():
         args.length_bucket_step,
         drop_long_sequences=True,
     )
-    #print('train_src:{}'.format(args.train_src))
-    #print('dev src:{}'.format(args.dev_src))
     train_dataset_hparams = {
         "num_epochs": args.eval_interval_epoch,
         #"num_epochs": args.max_train_epoch,
