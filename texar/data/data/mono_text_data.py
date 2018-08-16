@@ -73,45 +73,67 @@ class MonoTextData(TextDataBase):
     """Text data processor that reads single set of text files. This can be
     used for, e.g., language models, auto-encoders, etc.
 
+    Args:
+        hparams: A `dict` or instance of :class:`~texar.HParams` containing
+            hyperparameters. See :meth:`default_hparams` for the defaults.
+
     By default, the processor reads raw data files, performs tokenization,
     batching and other pre-processing steps, and results in a TF dataset
     whose element is a data batch including three fields:
 
-        - "text": A string Tensor of shape `[batch_size, max_time]` containing
+        - "text":
+            A string Tensor of shape `[batch_size, max_time]` containing
             the **raw** text toknes. `max_time` is the length of the longest
             sequence in the batch.
             Short sequences in the batch are padded with **empty string**.
             BOS and EOS tokens are added as per
             :attr:`hparams`. Out-of-vocabulary tokens are **NOT** replaced
             with UNK.
-        - "text_ids": An `int64` Tensor of shape `[batch_size, max_time]`
+        - "text_ids":
+            An `int64` Tensor of shape `[batch_size, max_time]`
             containing the token indexes.
-        - "length": An `int` Tensor of shape `[batch_size]` containing the
+        - "length":
+            An `int` Tensor of shape `[batch_size]` containing the
             length of each sequence in the batch (including BOS and
             EOS if added).
 
     If :attr:`'variable_utterance'` is set to `True` in :attr:`hparams`, the
     resulting dataset has elements with four fields:
 
-        - "text": A string Tensor of shape
-            `[batch_size, max_utterance, max_time]`. `max_utterance` is the
+        - "text":
+            A string Tensor of shape
+            `[batch_size, max_utterance, max_time]`, where *max_utterance* is
             either the maximum number of utterances in each elements of the
             batch, or :attr:`max_utterance_cnt` as specified in :attr:`hparams`.
-        - "text_ids": An `int64` Tensor of shape
+        - "text_ids":
+            An `int64` Tensor of shape
             `[batch_size, max_utterance, max_time]` containing the token
             indexes.
-        - "length": An `int` Tensor of shape `[batch_size, max_utterance]`
+        - "length":
+            An `int` Tensor of shape `[batch_size, max_utterance]`
             containing the length of each sequence in the batch.
-        - "utterance_cnt": An `int` Tensor of shape `[batch_size]` containing
+        - "utterance_cnt":
+            An `int` Tensor of shape `[batch_size]` containing
             the number of utterances of each element in the batch.
 
-    The above field names can be accessed through :attr:`text_tensor_name`,
-    :attr:`text_id_tensor_name`, :attr:`length_tensor_name`, and
-    :attr:`utterance_cnt_tensor_name`, respectively.
+    The above field names can be accessed through :attr:`text_name`,
+    :attr:`text_id_name`, :attr:`length_name`, and
+    :attr:`utterance_cnt_name`, respectively.
 
-    Args:
-        hparams: A `dict` or instance of :class:`~texar.HParams` containing
-            hyperparameters. See :meth:`default_hparams` for the defaults.
+    Example:
+
+        .. code-block:: python
+
+            hparams={'files': 'data.txt', 'vocab': 'vocab.txt', 'batch_size': 1}
+            data = MonoTextData(hparams)
+            iterator = DataIterator(data)
+            batch = iterator.get_next()
+            batch_ = sess.run(batch)
+            # batch_ == {
+            #    'text': [['<BOS>', 'example', 'sequence', '<EOS>']],
+            #    'text_id': [['1', '5', '10', '2']],
+            #    'length': [4]
+            # }
     """
 
     def __init__(self, hparams):

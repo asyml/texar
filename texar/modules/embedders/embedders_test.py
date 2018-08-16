@@ -56,6 +56,16 @@ class EmbedderTest(tf.test.TestCase):
             self.assertEqual(outputs_.shape, (64, 16) + tuple(emb_dim))
             self.assertEqual(outputs_soft_.shape, (64, 16) + tuple(emb_dim))
 
+        # Tests unknown input shapes
+        inputs = tf.placeholder(dtype=tf.int64, shape=[None, None])
+        outputs = embedder(inputs)
+        self.assertEqual(len(outputs.get_shape()), 2 + len(hparams_dim))
+
+        inputs_soft = tf.placeholder(dtype=tf.int64, shape=[None, None, None])
+        outputs_soft = embedder(soft_ids=inputs_soft)
+        self.assertEqual(len(outputs_soft.get_shape()), 2 + len(hparams_dim))
+
+
     def _test_position_embedder(self, hparams):
         """Tests :class:`texar.modules.PositionEmbedder`.
         """

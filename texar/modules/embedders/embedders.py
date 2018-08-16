@@ -144,21 +144,24 @@ class WordEmbedder(EmbedderBase):
 
         embedding = self._embedding
 
-        dropout_layer = self._get_dropout_layer(self._hparams, ids_rank)
-        if dropout_layer:
-            is_training = is_train_mode(mode)
-            if self._hparams.dropout_strategy == 'item_type':
-                embedding = dropout_layer.apply(
-                    inputs=embedding, training=is_training)
+        is_training = is_train_mode(mode)
+        if self._hparams.dropout_strategy == 'item_type':
+            dropout_layer = self._get_dropout_layer(self._hparams)
+            if dropout_layer:
+                embedding = dropout_layer.apply(inputs=embedding,
+                                                training=is_training)
 
         if ids is not None:
             outputs = tf.nn.embedding_lookup(embedding, ids, **kwargs)
         else:
             outputs = embedder_utils.soft_embedding_lookup(embedding, soft_ids)
 
-        if dropout_layer and self._hparams.dropout_strategy != 'item_type':
-            outputs = dropout_layer.apply(
-                inputs=outputs, training=is_training)
+        if self._hparams.dropout_strategy != 'item_type':
+            dropout_layer = self._get_dropout_layer(
+                self._hparams, ids_rank=ids_rank, dropout_input=outputs)
+            if dropout_layer:
+                outputs = dropout_layer.apply(
+                    inputs=outputs, training=is_training)
 
         return outputs
 

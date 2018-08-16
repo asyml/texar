@@ -134,6 +134,7 @@ class PositionEmbedder(EmbedderBase):
         Returns:
             A `Tensor` of shape `shape(inputs) + embedding dimension`.
         """
+        # Gets embedder inputs
         inputs = positions
         if positions is None:
             if sequence_length is None:
@@ -144,7 +145,13 @@ class PositionEmbedder(EmbedderBase):
             # Expands `single_inputs` to have shape [batch_size, max_length]
             expander = tf.expand_dims(tf.ones_like(sequence_length), -1)
             inputs = expander * tf.expand_dims(single_inputs, 0)
+        ids_rank = len(inputs.shape.dims)
 
+        embedding = self._embedding
+
+        is_training = is_train_mode(mode)
+
+        # Gets dropout strategy
         st = self._hparams.dropout_strategy
         if positions is None and st == 'item':
             # If `inputs` is based on `sequence_length`, then dropout
@@ -152,22 +159,28 @@ class PositionEmbedder(EmbedderBase):
             # use 'item_type' to avoid unknown noise_shape in the 'item'
             # strategy
             st = 'item_type'
-        ids_rank = len(inputs.shape.dims)
-        dropout_layer = self._get_dropout_layer(self._hparams, ids_rank, st)
 
-        embedding = self._embedding
-        if dropout_layer:
-            is_training = is_train_mode(mode)
-            if st == 'item_type':
-                embedding = dropout_layer.apply(
-                    inputs=embedding, training=is_training)
+        # Dropouts as 'item_type' before embedding
+        if st == 'item_type':
+            dropout_layer = self._get_dropout_layer(
+                self._hparams, dropout_strategy=st)
+            if dropout_layer:
+                embedding = dropout_layer.apply(inputs=embedding,
+                                                training=is_training)
 
+        # Embeds
         outputs = tf.nn.embedding_lookup(embedding, inputs, **kwargs)
 
-        if dropout_layer and st != 'item_type':
-            outputs = dropout_layer.apply(
-                inputs=outputs, training=is_training)
+        # Dropouts as 'item' or 'elements' after embedding
+        if st != 'item_type':
+            dropout_layer = self._get_dropout_layer(
+                self._hparams, ids_rank=ids_rank, dropout_input=outputs,
+                dropout_strategy=st)
+            if dropout_layer:
+                outputs = dropout_layer.apply(inputs=outputs,
+                                              training=is_training)
 
+        # Optionally masks
         if sequence_length is not None:
             outputs = mask_sequences(
                 outputs, sequence_length,

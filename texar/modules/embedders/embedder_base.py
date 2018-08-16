@@ -41,7 +41,8 @@ class EmbedderBase(ModuleBase):
         if self._dim_rank == 1:
             self._dim = self._dim[0]
 
-    def _get_dropout_layer(self, hparams, ids_rank, dropout_strategy=None):
+    def _get_dropout_layer(self, hparams, ids_rank=None, dropout_input=None,
+                           dropout_strategy=None):
         """Creates dropout layer according to dropout strategy.
 
         Called in :meth:`_build()`.
@@ -55,7 +56,9 @@ class EmbedderBase(ModuleBase):
             if st == 'element':
                 noise_shape = None
             elif st == 'item':
-                noise_shape = [None] * ids_rank + [1] * self._dim_rank
+                noise_shape = tf.concat([tf.shape(dropout_input)[:ids_rank],
+                                         tf.ones([self._dim_rank], tf.int32)],
+                                        axis=0)
             elif st == 'item_type':
                 noise_shape = [None] + [1] * self._dim_rank
             else:
