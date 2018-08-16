@@ -36,8 +36,9 @@ PAD_WORD, PAD_CHAR, PAD_NER = 1, 1, 1
 DIGIT_RE = re.compile(r"\d")
 
 
-def create_vocabs(train_path, normalize_digits=True):
+def create_vocabs(train_path, normalize_digits=True, min_occur=1):
     word_vocab = defaultdict(lambda: len(word_vocab))
+    word_count = defaultdict(lambda: 0)
     char_vocab = defaultdict(lambda: len(char_vocab))
     ner_vocab = defaultdict(lambda: len(ner_vocab))
 
@@ -63,10 +64,15 @@ def create_vocabs(train_path, normalize_digits=True):
             word = DIGIT_RE.sub("0", tokens[1]) if normalize_digits else tokens[1]
             ner = tokens[4]
 
-            wid = word_vocab[word]
+            word_count[word] += 1
             nid = ner_vocab[ner]
 
-    print("Total Vocabulary Size: %d" % len(word_vocab))
+        print("Total Vocabulary Size: %d" % len(word_count))
+        for word in word_count:
+            if word_count[word] > min_occur:
+                wid = word_vocab[word]
+
+    print("Word Vocabulary Size: %d" % len(word_vocab))
     print("Character Alphabet Size: %d" % len(char_vocab))
     print("NER Alphabet Size: %d" % len(ner_vocab))
 
