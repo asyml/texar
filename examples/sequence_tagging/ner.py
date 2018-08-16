@@ -26,7 +26,7 @@ import tensorflow as tf
 import texar as tx
 from texar.modules.encoders.conv_encoders import Conv1DEncoder
 
-from examples.sequence_tagging.conll_reader import create_vocabs, read_data, iterate_batch
+from examples.sequence_tagging.conll_reader import create_vocabs, read_data, iterate_batch, load_glove
 from examples.sequence_tagging.conll_writer import CoNLLWriter
 from examples.sequence_tagging import scores
 
@@ -65,7 +65,7 @@ scale = np.sqrt(3.0 / EMBEDD_DIM)
 word_vecs = np.random.uniform(-scale, scale, [len(word_vocab), EMBEDD_DIM]).astype(np.float32)
 if config.load_glove:
     print('loading GloVe embedding...')
-    word_vecs = tx.data.load_glove(embedding_path, word_vocab, word_vecs)
+    word_vecs = load_glove(embedding_path, word_vocab, word_vecs)
 
 scale = np.sqrt(3.0 / CHAR_DIM)
 char_vecs = np.random.uniform(-scale, scale, [len(char_vocab), CHAR_DIM]).astype(np.float32)
