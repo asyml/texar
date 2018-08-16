@@ -16,7 +16,7 @@ import numpy as np
 
 from texar.utils import utils
 
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name, too-many-arguments
 
 __all__ = [
     "_DataSpec",
@@ -28,7 +28,7 @@ __all__ = [
     "random_shard_dataset",
 ]
 
-class _DataSpec(object): # pylint: disable=too-few-public-methods
+class _DataSpec(object):
     """Dataset specification. Used to pass necessary info to
     user-defined tranformation functions.
 
@@ -36,11 +36,10 @@ class _DataSpec(object): # pylint: disable=too-few-public-methods
         dataset: Instance of :tf_main:`tf.data.Dataset <data/Dataset>`.
         dataset_size (int): Number of data samples.
         decoder: A (list of) data decoder.
-        vocab: A (list of) :class:`texar.data.Vocab` instance.
-        embeddidng: A (list of) :class:`texar.data.Embedding` instance.
+        vocab: A (list of) :class:`~texar.data.Vocab` instance.
+        embeddidng: A (list of) :class:`~texar.data.Embedding` instance.
         **kwargs: Any remaining dataset-specific fields.
     """
-    # pylint: disable=too-many-arguments
     def __init__(self, dataset=None, dataset_size=None, decoder=None,
                  vocab=None, embedding=None, **kwargs):
         kwargs['dataset'] = dataset
@@ -51,13 +50,13 @@ class _DataSpec(object): # pylint: disable=too-few-public-methods
         self.__dict__.update(kwargs)
 
     def add_spec(self, **kwargs):
-        """Adds new field.
+        """Adds new field(s).
         """
         self.__dict__.update(kwargs)
 
     def get_ith_data_spec(self, i):
-        """Returns an instance of :class:`DataSpec` that contains the
-        :attr:`i`-th specifications.
+        """Returns an instance of :class:`_DataSpec` that contains the
+        `i`-th specifications.
         """
         kwargs = {}
         for k, v in six.iteritems(self.__dict__):
@@ -65,7 +64,7 @@ class _DataSpec(object): # pylint: disable=too-few-public-methods
         return _DataSpec(**kwargs)
 
     def set_ith_data_spec(self, i, data_spec, total_count):
-        """Sets the i-th specification to respective values in
+        """Sets the `i`-th specification to respective values in
         :attr:`data_spec`.
         """
         for k, v in six.iteritems(data_spec.__dict__):
