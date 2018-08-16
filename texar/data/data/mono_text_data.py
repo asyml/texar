@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Mono text data class that define data reading, parsing, batching, and other
 preprocessing operations.
@@ -27,7 +39,7 @@ __all__ = [
     "MonoTextData"
 ]
 
-class _LengthFilterMode: # pylint: disable=old-style-class, no-init, too-few-public-methods
+class _LengthFilterMode(object): # pylint: disable=no-init, too-few-public-methods
     """Options of length filter mode.
     """
     TRUNC = "truncate"
@@ -35,30 +47,7 @@ class _LengthFilterMode: # pylint: disable=old-style-class, no-init, too-few-pub
 
 def _default_mono_text_dataset_hparams():
     """Returns hyperparameters of a mono text dataset with default values.
-
-    Returns:
-        .. code-block:: python
-
-            {
-            }
-
-        Here:
-
-        "max_seq_length" : int, optional
-            Maximum length of output sequences. Data samples exceeding the
-            length will be truncated or discarded according to
-            `"length_filter_mode"`. The length does not include any added
-            `"bos_token"` or `"eos_token"`. If `None` (default), no filtering
-            is performed.
-
-        "length_filter_mode" : str
-            Either `"truncate"` or `"discard"`. If `"truncate"` (default),
-            tokens exceeding the `"max_seq_length"` will be truncated.
-            If `"discard"`, data samples longer than the `"max_seq_length"`
-            will be discarded.
-
     """
-    # TODO(zhiting): add more docs
     return {
         "files": [],
         "compression_type": None,
@@ -72,6 +61,7 @@ def _default_mono_text_dataset_hparams():
         "eos_token": SpecialTokens.EOS,
         "other_transformations": [],
         "variable_utterance": False,
+        "utterance_delimiter": "|||",
         "max_utterance_cnt": 5,
         "data_name": None,
         "@no_typecheck": ["files"]
@@ -80,15 +70,20 @@ def _default_mono_text_dataset_hparams():
 # pylint: disable=no-member
 
 class MonoTextData(TextDataBase):
-    """Text data base that reads single set of text files.
+    """Text data processor that reads single set of text files. This can be
+    used for, e.g., language models, auto-encoders, etc.
 
-    This is for the use of, e.g., language models, auto-encoders, etc. For
-    models that involve two sets of text files (`source` and `target`), use
-    :class:`~texar.data.database.PairedTextDataBase`.
+    By default, the processor reads raw data files, performs tokenization,
+    batching and other pre-processing steps, and results in a TF dataset
+    where element is a data batch including three fields:
+
+        - "text": A string Tensor of shape `[batch_size, max_time]`
+        - "text_ids": An `int` Tensor of shape `[batch_size, max_time]`
+          containing the token index
 
     Args:
-        hparams (dict): Hyperparameters. See :meth:`default_hparams` for the
-            defaults.
+        hparams: A `dict` or instance of :class:`~texar.HParams` containing
+            hyperparameters. See :meth:`default_hparams` for the defaults.
     """
 
     def __init__(self, hparams):
@@ -98,7 +93,108 @@ class MonoTextData(TextDataBase):
 
     @staticmethod
     def default_hparams():
-        """Returns a dicitionary of default hyperparameters.
+        """Returns a dicitionary of default hyperparameters:
+
+        .. code-block:: python
+
+            {
+                "files": [],
+                "compression_type": None,
+                "vocab_file": "",
+                "embedding_init": {},
+                "delimiter": " ",
+                "max_seq_length": None,
+                "length_filter_mode": "truncate",
+                "pad_to_max_seq_length": False,
+                "bos_token": SpecialTokens.BOS,
+                "eos_token": SpecialTokens.EOS,
+                "other_transformations": [],
+                "variable_utterance": False,
+                "utterance_delimiter": "|||",
+                "max_utterance_cnt": 5,
+                "data_name": None,
+            }
+
+        Here:
+
+        "files" : str or list
+            A (list of) text file path(s).
+
+            Each line contains a single text sequence.
+
+        "compression_type" : str, optional
+            One of "" (no compression), "ZLIB", or "GZIP".
+
+        "vocab_file": str
+            Path to vocabulary file. Each line of the file should contain
+            one vocabulary token.
+
+            Used to create an instance of :class:`~texar.data.Vocab`.
+
+        "embedding_init" : dict
+            The hyperparameters for pre-trained embedding loading and
+            initialization.
+
+            The structure and default values are defined in
+            :meth:`texar.data.Embedding.default_hparams`.
+
+        "delimiter" : str
+            The delimiter to split each line of the text files into tokens.
+
+        "max_seq_length" : int, optional
+            Maximum length of output sequences. Data samples exceeding the
+            length will be truncated or discarded according to
+            :attr:`"length_filter_mode"`. The length does not include any added
+            :attr:`"bos_token"` or :attr:`"eos_token"`. If `None` (default),
+            no filtering is performed.
+
+        "length_filter_mode" : str
+            Either "truncate" or "discard". If "truncate" (default),
+            tokens exceeding the :attr:`"max_seq_length"` will be truncated.
+            If "discard", data samples longer than the :attr:`"max_seq_length"`
+            will be discarded.
+
+        "pad_to_max_seq_length" : bool
+            If `True`, pad all data instances to length
+            :attr:`"max_seq_length"`.
+            Raises error if :attr:`"max_seq_length"` is not provided.
+
+        "bos_token" : str
+            The Begin-Of-Sequence token prepended to each sequence.
+
+            Set to an empty string to avoid prepending.
+
+        "eos_token" : str
+            The End-Of-Sequence token appended to each sequence.
+
+            Set to an empty string to avoid appending.
+
+        "other_transformations" : list
+            A list of transformation functions or function names/paths to
+            further transform the data instances.
+
+            (More documentations to be added.)
+
+        "variable_utterance" : bool
+            If `True`, each line of the text file is considered to contain
+            multiple sequences (utterances) separated by
+            :attr:`"utterance_delimiter"`.
+
+            For example, in dialog data, each line can contain a series of
+            dialog history utterances. See the example in
+            `examples/hierarchical_dialog` for a use case.
+
+        "utterance_delimiter" : str
+            The delimiter to split over utterance level. Should not be the
+            same with :attr:`"delimiter"`. Used only when
+            :attr:`"variable_utterance"``==True`.
+
+        "max_utterance_cnt" : int
+            Maximally allowed number of utterances in a data instance.
+            Extra utterances are truncated out.
+
+        "data_name" : str
+            Name of the data.
         """
         hparams = TextDataBase.default_hparams()
         hparams["name"] = "mono_text_data"
@@ -175,6 +271,7 @@ class MonoTextData(TextDataBase):
                 token_to_id_map=data_spec.vocab.token_to_id_map)
         else:
             decoder = VarUttTextDataDecoder( # pylint: disable=redefined-variable-type
+                sentence_delimiter=dataset_hparams["utterance_delimiter"],
                 delimiter=dataset_hparams["delimiter"],
                 bos_token=dataset_hparams["bos_token"],
                 eos_token=dataset_hparams["eos_token"],
@@ -334,7 +431,8 @@ class MonoTextData(TextDataBase):
 
     @property
     def dataset(self):
-        """The dataset.
+        """The dataset, an instance of
+        :tf_main:`TF dataset <data/TextLineDataset>`.
         """
         return self._dataset
 
@@ -352,7 +450,7 @@ class MonoTextData(TextDataBase):
 
     @property
     def vocab(self):
-        """The vocabulary defined in :class:`~texar.data.Vocab`.
+        """The vocabulary, an instance of :class:`~texar.data.Vocab`.
         """
         return self._vocab
 
