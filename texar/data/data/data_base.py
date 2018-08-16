@@ -53,19 +53,21 @@ class DataBase(object):
         }
 
     @staticmethod
-    def _make_batch(dataset, hparams, padded_batch=False):
+    def _make_batch(dataset, hparams, padded_batch=False, padding_values=None):
         dataset = dataset.repeat(hparams.num_epochs)
         batch_size = hparams["batch_size"]
         if hparams["allow_smaller_final_batch"]:
             if padded_batch:
                 dataset = dataset.padded_batch(
-                    batch_size, dataset.output_shapes)
+                    batch_size, dataset.output_shapes,
+                    padding_values=padding_values)
             else:
                 dataset = dataset.batch(batch_size)
         else:
             dataset = dataset.apply(
                 tf.contrib.data.padded_batch_and_drop_remainder(
-                    batch_size, dataset.output_shapes))
+                    batch_size, dataset.output_shapes,
+                    padding_values=padding_values))
         return dataset
 
     @staticmethod
