@@ -19,8 +19,6 @@ from __future__ import print_function
 import os
 import sys
 
-sys.path.append(".")
-
 import time
 import importlib
 import numpy as np
@@ -28,9 +26,9 @@ import tensorflow as tf
 import texar as tx
 from texar.modules.encoders.conv_encoders import Conv1DEncoder
 
-from conll_reader import create_vocabs, read_data, iterate_batch
-from conll_writer import CoNLLWriter
-from scores import scores
+from examples.sequence_tagging.conll_reader import create_vocabs, read_data, iterate_batch
+from examples.sequence_tagging.conll_writer import CoNLLWriter
+from examples.sequence_tagging import scores
 
 flags = tf.flags
 
@@ -79,11 +77,11 @@ masks = tf.placeholder(tf.float32, [None, None])
 seq_lengths = tf.placeholder(tf.int64, [None])
 
 vocab_size = len(word_vecs)
-embedder = tx.modules.WordEmbedder(vocab_size=vocab_size, init_value=word_vecs)#, hparams=config.emb)
+embedder = tx.modules.WordEmbedder(vocab_size=vocab_size, init_value=word_vecs, hparams=config.emb)
 emb_inputs = embedder(inputs)
 
 char_size = len(char_vecs)
-char_embedder = tx.modules.WordEmbedder(vocab_size=char_size, init_value=char_vecs)#, hparams=config.char_emb)
+char_embedder = tx.modules.WordEmbedder(vocab_size=char_size, init_value=char_vecs, hparams=config.char_emb)
 emb_chars = char_embedder(chars)
 # [batch, length, char_length, char_dim]
 char_shape = tf.shape(emb_chars)
@@ -95,18 +93,18 @@ char_outputs = tf.reshape(char_outputs, (char_shape[0], char_shape[1], config.co
 emb_inputs = tf.concat([emb_inputs, char_outputs], axis=2)
 emb_inputs = tf.nn.dropout(emb_inputs, keep_prob=0.67)
 
-if config.encoder=='transformer':
+if config.encoder == 'transformer':
     print('here we use transformer encoder')
     encoder = tx.modules.TransformerEncoder(
         embedding=embedder._embedding,
         hparams=config.encoder_hparams)
     print('the encoder has been initialized')
     # 1 is pad idx
-    #_inputs = tf.Print(inputs, [inputs],
+    # _inputs = tf.Print(inputs, [inputs],
     #    message='inputs', summarize=1024)
-    #_masks = tf.Print(masks, [masks],
+    # _masks = tf.Print(masks, [masks],
     #    message='mask', summarize=1024)
-    #enc_padding = tf.to_float(tf.equal(inputs, 1))
+    # enc_padding = tf.to_float(tf.equal(inputs, 1))
     enc_padding = 1 - masks
     outputs, _ = encoder(inputs, encoder_padding=enc_padding)
 elif config.encoder:
@@ -142,6 +140,7 @@ global_step = tf.placeholder(tf.int32)
 train_op = tx.core.get_train_op(
     mle_loss, global_step=global_step, increment_global_step=False,
     hparams=config.opt)
+
 
 def _train_epoch(sess, epoch):
     start_time = time.time()
@@ -180,7 +179,7 @@ def _eval(sess, epoch, data_tag):
         "predicts": predicts,
     }
     mode = tf.estimator.ModeKeys.EVAL
-    file_name = 'tmp/ner%d' % epoch
+    file_name = 'tmp/%s%d' % (data_tag, epoch)
     writer = CoNLLWriter(i2w, i2n)
     writer.start(file_name)
     data = data_dev if data_tag == 'dev' else data_test
@@ -194,7 +193,7 @@ def _eval(sess, epoch, data_tag):
         predictions = rets['predicts']
         writer.write(word, predictions, ner, length)
     writer.close()
-    acc, precision, recall, f1 = scores(file_name)
+    acc, precision, recall, f1 = scores.scores(file_name)
     print('%s acc: %.2f%%, precision: %.2f%%, recall: %.2f%%, F1: %.2f%%' % (data_tag, acc, precision, recall, f1))
     return acc, precision, recall, f1
 
@@ -212,7 +211,7 @@ with tf.Session() as sess:
 
     test_f1 = 0.0
     test_acc = 0.0
-    test_prec= 0.0
+    test_prec = 0.0
     test_recall = 0.0
 
     for epoch in range(config.num_epochs):
@@ -225,7 +224,6 @@ with tf.Session() as sess:
             dev_recall = recall
             best_epoch = epoch
             test_acc, test_prec, test_recall, test_f1 = _eval(sess, epoch, 'test')
-        print('best acc: %.2f%%, precision: %.2f%%, recall: %.2f%%, F1: %.2f%%, epoch: %d' % (acc, precision, recall, f1, best_epoch))
+        print('best acc: %.2f%%, precision: %.2f%%, recall: %.2f%%, F1: %.2f%%, epoch: %d' % (dev_acc, dev_precision, dev_recall, dev_f1, best_epoch))
         print('test acc: %.2f%%, precision: %.2f%%, recall: %.2f%%, F1: %.2f%%, epoch: %d' % (test_acc, test_prec, test_recall, test_f1, best_epoch))
         print('---------------------------------------------------')
-

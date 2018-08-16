@@ -34,7 +34,7 @@ emb = {
 }
 
 char_emb = {
-    "name": "char embedding",
+    "name": "char_embedding",
     "dim": char_dim
 }
 

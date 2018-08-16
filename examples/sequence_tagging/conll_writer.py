@@ -8,7 +8,7 @@ class CoNLLWriter(object):
         self.__i2n = i2n
 
     def start(self, file_path):
-        self.__source_file = open(file_path, 'w+')
+        self.__source_file = open(file_path, 'w', encoding='utf-8')
 
     def close(self):
         self.__source_file.close()
@@ -17,8 +17,8 @@ class CoNLLWriter(object):
         batch_size, _ = word.shape
         for i in range(batch_size):
             for j in range(lengths[i]):
-                w = self.__i2w[word[i, j]].encode('utf-8')
-                tgt = self.__i2n[targets[i, j]].encode('utf-8')
-                pred = self.__i2n[predictions[i, j]].encode('utf-8')
+                w = self.__i2w[word[i, j]]
+                tgt = self.__i2n[targets[i, j]]
+                pred = self.__i2n[predictions[i, j]]
                 self.__source_file.write('%d %s %s %s %s %s\n' % (j + 1, w, "_", "_", tgt, pred))
             self.__source_file.write('\n')

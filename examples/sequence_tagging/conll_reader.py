@@ -20,22 +20,23 @@ from __future__ import print_function
 # pylint: disable=invalid-name, too-many-locals
 import sys
 from collections import defaultdict
+import tensorflow as tf
+from tensorflow.gfile import Open
 import numpy as np
 
-
 import re
+
 MAX_CHAR_LENGTH = 45
 NUM_CHAR_PAD = 2
 
 UNK_WORD, UNK_CHAR, UNK_NER = 0, 0, 0
 PAD_WORD, PAD_CHAR, PAD_NER = 1, 1, 1
 
-
 # Regular expressions used to normalize digits.
-DIGIT_RE = re.compile(br"\d")
+DIGIT_RE = re.compile(r"\d")
+
 
 def create_vocabs(train_path, normalize_digits=True):
-
     word_vocab = defaultdict(lambda: len(word_vocab))
     char_vocab = defaultdict(lambda: len(char_vocab))
     ner_vocab = defaultdict(lambda: len(ner_vocab))
@@ -47,13 +48,10 @@ def create_vocabs(train_path, normalize_digits=True):
     UNK_NER = ner_vocab["<unk>"]
     PAD_NER = ner_vocab["<pad>"]
 
-
     print("Creating Vocabularies:")
 
     with open(train_path, 'r') as file:
         for line in file:
-            if sys.version[0] =='2':
-                line = line.decode('utf-8')
             line = line.strip()
             if len(line) == 0:
                 continue
@@ -62,12 +60,11 @@ def create_vocabs(train_path, normalize_digits=True):
             for char in tokens[1]:
                 cid = char_vocab[char]
 
-            word = DIGIT_RE.sub(b"0", tokens[1]) if normalize_digits else tokens[1]
+            word = DIGIT_RE.sub("0", tokens[1]) if normalize_digits else tokens[1]
             ner = tokens[4]
 
             wid = word_vocab[word]
             nid = ner_vocab[ner]
-
 
     print("Total Vocabulary Size: %d" % len(word_vocab))
     print("Character Alphabet Size: %d" % len(char_vocab))
@@ -134,9 +131,50 @@ def iterate_batch(data, batch_size, shuffle=False):
         yield wid_inputs, cid_inputs, nid_inputs, masks, lengths
 
 
+def load_glove(filename, vocab, word_vecs, normalize_digits=True):
+    """Loads embeddings in the glove text format in which each line is
+    '<word-string> <embedding-vector>'. Dimensions of the embedding vector
+    are separated with whitespace characters.
+
+    Args:
+        filename (str): Path to the embedding file.
+        vocab (dict): A dictionary that maps token strings to integer index.
+            Tokens not in :attr:`vocab` are not read.
+        word_vecs: A 2D numpy array of shape `[vocab_size, embed_dim]`
+            which is updated as reading from the file.
+
+    Returns:
+        The updated :attr:`word_vecs`.
+    """
+    glove_dict = dict()
+    with Open(filename) as fin:
+        for line in fin:
+            vec = line.strip().split()
+            if len(vec) == 0:
+                continue
+            word, vec = vec[0], vec[1:]
+            word = tf.compat.as_text(word)
+            word = DIGIT_RE.sub("0", word) if normalize_digits else word
+            glove_dict[word] = np.array([float(v) for v in vec])
+            if len(vec) != word_vecs.shape[1]:
+                raise ValueError("Inconsistent word vector sizes: %d vs %d" %
+                                 (len(vec), word_vecs.shape[1]))
+
+    for word, index in vocab.items():
+        if word in glove_dict:
+            embedding = glove_dict[word]
+        elif word.lower() in glove_dict:
+            embedding = glove_dict[word.lower()]
+        else: embedding = None
+
+        if embedding is not None:
+            word_vecs[index] = embedding
+    return word_vecs
+
+
 class CoNLLReader(object):
     def __init__(self, file_path, word_vocab, char_vocab, ner_vocab):
-        self.__source_file = open(file_path, 'r')
+        self.__source_file = open(file_path, 'r', encoding='utf-8')
         self.__word_vocab = word_vocab
         self.__char_vocab = char_vocab
         self.__ner_vocab = ner_vocab
@@ -155,7 +193,6 @@ class CoNLLReader(object):
         lines = []
         while len(line.strip()) > 0:
             line = line.strip()
-            line = line.decode('utf-8')
             lines.append(line.split(' '))
             line = self.__source_file.readline()
 
@@ -182,7 +219,7 @@ class CoNLLReader(object):
             char_seqs.append(chars)
             char_id_seqs.append(char_ids)
 
-            word = DIGIT_RE.sub(b"0", tokens[1]) if normalize_digits else tokens[1]
+            word = DIGIT_RE.sub("0", tokens[1]) if normalize_digits else tokens[1]
             ner = tokens[4]
 
             words.append(word)
