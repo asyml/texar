@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Helper functions and classes for vocabulary processing.
 """
@@ -62,15 +74,14 @@ class Vocab(object):
 
     Args:
         filename (str): Path to the vocabulary file where each line contains
-            one word. Each word is indexed with its line number (starting
-            from 0).
+            one token.
         bos_token (str): A special token that will be added to the beginning of
             sequences.
         eos_token (str): A special token that will be added to the end of
             sequences.
-        unk_token (str): A special token that will replace all unknown tokens.
-        pad_token (str): A special token that is used to do padding,
-                                default to be a empty string.
+        unk_token (str): A special token that will replace all unknown tokens
+            (tokens not included in the vocabulary).
+        pad_token (str): A special token that is used to do padding.
     """
 
     def __init__(self,
@@ -100,7 +111,8 @@ class Vocab(object):
             index, (:attr:`id_to_token_map`, :attr:`token_to_id_map`,
             :attr:`id_to_token_map_py`, :attr:`token_to_id_map_py`), where
             :attr:`id_to_token_map` and :attr:`token_to_id_map` are
-            TF `HashTable` instances, and :attr:`id_to_token_map_py` and
+            TF :tf_main:`HashTable <contrib/lookup/HashTable>` instances,
+            and :attr:`id_to_token_map_py` and
             :attr:`token_to_id_map_py` are python `defaultdict` instances.
         """
         with gfile.GFile(filename) as vocab_file:
@@ -208,28 +220,28 @@ class Vocab(object):
 
     @property
     def id_to_token_map(self):
-        """The `HashTable` instance that maps from token index to the
-        string form.
+        """The :tf_main:`HashTable <contrib/lookup/HashTable>`instance that
+        maps from token index to the string form.
         """
         return self._id_to_token_map
 
     @property
     def token_to_id_map(self):
-        """The `HashTable` instance that maps from token string to the
-        index.
+        """The :tf_main:`HashTable <contrib/lookup/HashTable>` instance
+        that maps from token string to the index.
         """
         return self._token_to_id_map
 
     @property
     def id_to_token_map_py(self):
-        """The `defaultdict` instance that maps from token index to the
+        """The python `defaultdict` instance that maps from token index to the
         string form.
         """
         return self._id_to_token_map_py
 
     @property
     def token_to_id_map_py(self):
-        """The `defaultdict` instance that maps from token string to the
+        """The python `defaultdict` instance that maps from token string to the
         index.
         """
         return self._token_to_id_map_py
@@ -248,7 +260,7 @@ class Vocab(object):
 
     @property
     def bos_token_id(self):
-        """The int index of the special token indicating the beginning
+        """The `int` index of the special token indicating the beginning
         of sequence.
         """
         return self.token_to_id_map_py[self._bos_token]
@@ -261,7 +273,7 @@ class Vocab(object):
 
     @property
     def eos_token_id(self):
-        """The int index of the special token indicating the end
+        """The `int` index of the special token indicating the end
         of sequence.
         """
         return self.token_to_id_map_py[self._eos_token]
@@ -274,7 +286,7 @@ class Vocab(object):
 
     @property
     def unk_token_id(self):
-        """The int index of the special token indicating unknown token.
+        """The `int` index of the special token indicating unknown token.
         """
         return self.token_to_id_map_py[self._unk_token]
 
@@ -287,14 +299,15 @@ class Vocab(object):
 
     @property
     def pad_token_id(self):
-        """The int index of the special token indicating padding token.
+        """The `int` index of the special token indicating padding token.
         """
         return self.token_to_id_map_py[self._pad_token]
 
     @property
     def special_tokens(self):
         """The list of special tokens
-        :attr:`[pad_token, bos_token, eos_token, unk_token]`.
+        [:attr:`pad_token`, :attr:`bos_token`, :attr:`eos_token`,
+        :attr:`unk_token`].
         """
         return [self._pad_token, self._bos_token, self._eos_token,
                 self._unk_token]

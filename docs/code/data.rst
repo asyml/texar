@@ -25,7 +25,7 @@ Embedding
 :hidden:`Embedding`
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: texar.data.embedding
+.. autoclass:: texar.data.Embedding
     :members:
 
 :hidden:`load_word2vec`
@@ -38,50 +38,91 @@ Embedding
 
 .. autofunction:: texar.data.load_glove
 
-Data Utils
+Data
 ==========
 
-.. automodule:: texar.data.data_utils
+:hidden:`MonoTextData`
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: texar.data.MonoTextData
+    :members:
+
+:hidden:`PairedTextData`
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: texar.data.PairedTextData
+    :members:
+
+:hidden:`ScalarData`
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: texar.data.ScalarData
+    :members:
+
+:hidden:`MultiAlignedData`
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: texar.data.MultiAlignedData
+    :members:
+
+:hidden:`DataBase`
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: texar.data.DataBase
+    :members:
+
+:hidden:`TextDataBase`
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: texar.data.TextDataBase
+    :members:
+
+
+Data Iterators
+===============
+
+:hidden:`DataIterator`
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: texar.data.DataIterator
+    :members:
+
+:hidden:`TrainTestDataIterator`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: texar.data.TrainTestDataIterator
+    :members:
+
+
+:hidden:`FeedableDataIterator`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: texar.data.FeedableDataIterator
+    :members:
+
+
+:hidden:`TrainTestFeedableDataIterator`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: texar.data.TrainTestFeedableDataIterator
     :members:
 
 Data Decoders
-==========
+================
 
 .. automodule:: texar.data.decoders
     :members:
 
-
-Data
+Data Utils
 ==========
 
-Data Base
------------------------------------
-.. automodule:: texar.data.data.data_base
-    :members:
+.. autofunction:: texar.data.make_chained_transformation
 
-Data Iterators
------------------------------------
-.. automodule:: texar.data.data.data_iterators
-    :members:
+.. autofunction:: texar.data.make_chained_transformation
 
-Mono Text
------------------------------------
-.. automodule:: texar.data.data.mono_text_data
-    :members:
+.. autofunction:: texar.data.random_shard_dataset
 
-Multi Aligned Text Data
------------------------------------
-.. automodule:: texar.data.data.multi_aligned_data
-    :members:
+.. autofunction:: texar.data.maybe_tuple
 
+.. autofunction:: texar.data.make_partial
 
-Paired Text Data
------------------------------------
-.. automodule:: texar.data.data.paired_text_data
-    :members:
-
-
-Scalar Data
------------------------------------
-.. automodule:: texar.data.data.scalar_data
-    :members:

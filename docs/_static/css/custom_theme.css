@@ -1,3 +1,13 @@
+/* This style sheet is heavily inspired by PyTorch docs . */
+/* https://github.com/pytorch/pytorch/blob/master/docs/source/_static/css/pytorch_theme.css */
+
+body {
+    font-family: "Lato","proxima-nova","Helvetica Neue",Arial,sans-serif;
+}
+
+h1, h2, .rst-content .toctree-wrapper p.caption, h3, h4, h5, h6, legend, p.caption {
+    font-family: "Lato","proxima-nova","Helvetica Neue",Arial,sans-serif;
+}
 
 /* Literal color */
 .rst-content tt.literal, .rst-content tt.literal, .rst-content code.literal {

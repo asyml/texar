@@ -285,7 +285,6 @@ def get_instance_with_redundant_kwargs(
 
     return class_(**selected_kwargs)
 
-
 def get_function(fn_or_name, module_paths=None):
     """Returns the function of specified name and module.
 
