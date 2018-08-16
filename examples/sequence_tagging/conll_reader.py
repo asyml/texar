@@ -66,7 +66,7 @@ def create_vocabs(train_path, dev_path, test_path, normalize_digits=True, min_oc
                 ner = tokens[4]
 
                 if glove_dict is not None and (word in glove_dict or word.lower() in glove_dict):
-                    word_count[word] += min_occur
+                    word_count[word] += min_occur + 1
                 elif file_path == train_path:
                     word_count[word] += 1
 
