@@ -72,10 +72,10 @@ def create_vocabs(train_path, dev_path, test_path, normalize_digits=True, min_oc
 
                 nid = ner_vocab[ner]
 
-        print("Total Vocabulary Size: %d" % len(word_count))
-        for word in word_count:
-            if word_count[word] > min_occur:
-                wid = word_vocab[word]
+    print("Total Vocabulary Size: %d" % len(word_count))
+    for word in word_count:
+        if word_count[word] > min_occur:
+            wid = word_vocab[word]
 
     print("Word Vocabulary Size: %d" % len(word_vocab))
     print("Character Alphabet Size: %d" % len(char_vocab))
