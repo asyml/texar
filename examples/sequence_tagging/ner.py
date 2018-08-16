@@ -26,7 +26,7 @@ import tensorflow as tf
 import texar as tx
 from texar.modules.encoders.conv_encoders import Conv1DEncoder
 
-from examples.sequence_tagging.conll_reader import create_vocabs, read_data, iterate_batch, load_glove
+from examples.sequence_tagging.conll_reader import create_vocabs, read_data, iterate_batch, load_glove, construct_init_word_vecs
 from examples.sequence_tagging.conll_writer import CoNLLWriter
 from examples.sequence_tagging import scores
 
@@ -55,7 +55,13 @@ embedding_path = os.path.join(FLAGS.data_path, FLAGS.embedding)
 EMBEDD_DIM = config.embed_dim
 CHAR_DIM = config.char_dim
 
-(word_vocab, char_vocab, ner_vocab), (i2w, i2n) = create_vocabs(train_path)
+if config.load_glove:
+    print('loading GloVe embedding...')
+    glove_dict = load_glove(embedding_path, EMBEDD_DIM)
+else:
+    glove_dict = None
+
+(word_vocab, char_vocab, ner_vocab), (i2w, i2n) = create_vocabs(train_path, dev_path, test_path, glove_dict=glove_dict)
 
 data_train = read_data(train_path, word_vocab, char_vocab, ner_vocab)
 data_dev = read_data(dev_path, word_vocab, char_vocab, ner_vocab)
@@ -64,8 +70,7 @@ data_test = read_data(test_path, word_vocab, char_vocab, ner_vocab)
 scale = np.sqrt(3.0 / EMBEDD_DIM)
 word_vecs = np.random.uniform(-scale, scale, [len(word_vocab), EMBEDD_DIM]).astype(np.float32)
 if config.load_glove:
-    print('loading GloVe embedding...')
-    word_vecs = load_glove(embedding_path, word_vocab, word_vecs)
+    word_vecs = construct_init_word_vecs(word_vocab, word_vecs, glove_dict)
 
 scale = np.sqrt(3.0 / CHAR_DIM)
 char_vecs = np.random.uniform(-scale, scale, [len(char_vocab), CHAR_DIM]).astype(np.float32)
