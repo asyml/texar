@@ -32,7 +32,7 @@ from texar.data.data_decoders import TextDataDecoder, VarUttTextDataDecoder
 from texar.data.vocabulary import Vocab, SpecialTokens
 from texar.data.embedding import Embedding
 
-# pylint: disable=invalid-name, arguments-differ, protected-access
+# pylint: disable=invalid-name, arguments-differ, protected-access, no-member
 
 __all__ = [
     "_default_mono_text_dataset_hparams",
@@ -47,6 +47,8 @@ class _LengthFilterMode(object): # pylint: disable=no-init, too-few-public-metho
 
 def _default_mono_text_dataset_hparams():
     """Returns hyperparameters of a mono text dataset with default values.
+
+    See :meth:`texar.MonoTextData.default_hparams` for details.
     """
     return {
         "files": [],
@@ -67,8 +69,6 @@ def _default_mono_text_dataset_hparams():
         "@no_typecheck": ["files"]
     }
 
-# pylint: disable=no-member
-
 class MonoTextData(TextDataBase):
     """Text data processor that reads single set of text files. This can be
     used for, e.g., language models, auto-encoders, etc.
@@ -79,7 +79,7 @@ class MonoTextData(TextDataBase):
 
     By default, the processor reads raw data files, performs tokenization,
     batching and other pre-processing steps, and results in a TF dataset
-    whose element is a data batch including three fields:
+    whose element is a python `dict` including three fields:
 
         - "text":
             A string Tensor of shape `[batch_size, max_time]` containing
@@ -148,103 +148,160 @@ class MonoTextData(TextDataBase):
         .. code-block:: python
 
             {
-                "files": [],
-                "compression_type": None,
-                "vocab_file": "",
-                "embedding_init": {},
-                "delimiter": " ",
-                "max_seq_length": None,
-                "length_filter_mode": "truncate",
-                "pad_to_max_seq_length": False,
-                "bos_token": SpecialTokens.BOS,
-                "eos_token": SpecialTokens.EOS,
-                "other_transformations": [],
-                "variable_utterance": False,
-                "utterance_delimiter": "|||",
-                "max_utterance_cnt": 5,
-                "data_name": None,
+                # (1) Hyperparams specific to text dataset
+                "dataset": {
+                    "files": [],
+                    "compression_type": None,
+                    "vocab_file": "",
+                    "embedding_init": {},
+                    "delimiter": " ",
+                    "max_seq_length": None,
+                    "length_filter_mode": "truncate",
+                    "pad_to_max_seq_length": False,
+                    "bos_token": "<BOS>"
+                    "eos_token": "<EOS>"
+                    "other_transformations": [],
+                    "variable_utterance": False,
+                    "utterance_delimiter": "|||",
+                    "max_utterance_cnt": 5,
+                    "data_name": None,
+                }
+                # (2) General hyperparams
+                "num_epochs": 1,
+                "batch_size": 64,
+                "allow_smaller_final_batch": True,
+                "shuffle": True,
+                "shuffle_buffer_size": None,
+                "shard_and_shuffle": False,
+                "num_parallel_calls": 1,
+                "prefetch_buffer_size": 0,
+                "max_dataset_size": -1,
+                "seed": None,
+                "name": "mono_text_data",
+                # (3) Bucketing
+                "bucket_boundaries": [],
+                "bucket_batch_sizes": None,
+                "bucket_length_fn": None,
             }
 
         Here:
 
-        "files" : str or list
-            A (list of) text file path(s).
+        1. For the hyperparameters in the :attr:`"dataset"` field:
 
-            Each line contains a single text sequence.
+            "files" : str or list
+                A (list of) text file path(s).
 
-        "compression_type" : str, optional
-            One of "" (no compression), "ZLIB", or "GZIP".
+                Each line contains a single text sequence.
 
-        "vocab_file": str
-            Path to vocabulary file. Each line of the file should contain
-            one vocabulary token.
+            "compression_type" : str, optional
+                One of "" (no compression), "ZLIB", or "GZIP".
 
-            Used to create an instance of :class:`~texar.data.Vocab`.
+            "vocab_file": str
+                Path to vocabulary file. Each line of the file should contain
+                one vocabulary token.
 
-        "embedding_init" : dict
-            The hyperparameters for pre-trained embedding loading and
-            initialization.
+                Used to create an instance of :class:`~texar.data.Vocab`.
 
-            The structure and default values are defined in
-            :meth:`texar.data.Embedding.default_hparams`.
+            "embedding_init" : dict
+                The hyperparameters for pre-trained embedding loading and
+                initialization.
 
-        "delimiter" : str
-            The delimiter to split each line of the text files into tokens.
+                The structure and default values are defined in
+                :meth:`texar.data.Embedding.default_hparams`.
 
-        "max_seq_length" : int, optional
-            Maximum length of output sequences. Data samples exceeding the
-            length will be truncated or discarded according to
-            :attr:`"length_filter_mode"`. The length does not include any added
-            :attr:`"bos_token"` or :attr:`"eos_token"`. If `None` (default),
-            no filtering is performed.
+            "delimiter" : str
+                The delimiter to split each line of the text files into tokens.
 
-        "length_filter_mode" : str
-            Either "truncate" or "discard". If "truncate" (default),
-            tokens exceeding the :attr:`"max_seq_length"` will be truncated.
-            If "discard", data samples longer than the :attr:`"max_seq_length"`
-            will be discarded.
+            "max_seq_length" : int, optional
+                Maximum length of output sequences. Data samples exceeding the
+                length will be truncated or discarded according to
+                :attr:`"length_filter_mode"`. The length does not include
+                any added
+                :attr:`"bos_token"` or :attr:`"eos_token"`. If `None` (default),
+                no filtering is performed.
 
-        "pad_to_max_seq_length" : bool
-            If `True`, pad all data instances to length
-            :attr:`"max_seq_length"`.
-            Raises error if :attr:`"max_seq_length"` is not provided.
+            "length_filter_mode" : str
+                Either "truncate" or "discard". If "truncate" (default),
+                tokens exceeding the :attr:`"max_seq_length"` will be truncated.
+                If "discard", data samples longer than the
+                :attr:`"max_seq_length"`
+                will be discarded.
 
-        "bos_token" : str
-            The Begin-Of-Sequence token prepended to each sequence.
+            "pad_to_max_seq_length" : bool
+                If `True`, pad all data instances to length
+                :attr:`"max_seq_length"`.
+                Raises error if :attr:`"max_seq_length"` is not provided.
 
-            Set to an empty string to avoid prepending.
+            "bos_token" : str
+                The Begin-Of-Sequence token prepended to each sequence.
 
-        "eos_token" : str
-            The End-Of-Sequence token appended to each sequence.
+                Set to an empty string to avoid prepending.
 
-            Set to an empty string to avoid appending.
+            "eos_token" : str
+                The End-Of-Sequence token appended to each sequence.
 
-        "other_transformations" : list
-            A list of transformation functions or function names/paths to
-            further transform the data instances.
+                Set to an empty string to avoid appending.
 
-            (More documentations to be added.)
+            "other_transformations" : list
+                A list of transformation functions or function names/paths to
+                further transform the data instances.
 
-        "variable_utterance" : bool
-            If `True`, each line of the text file is considered to contain
-            multiple sequences (utterances) separated by
-            :attr:`"utterance_delimiter"`.
+                (More documentations to be added.)
 
-            For example, in dialog data, each line can contain a series of
-            dialog history utterances. See the example in
-            `examples/hierarchical_dialog` for a use case.
+            "variable_utterance" : bool
+                If `True`, each line of the text file is considered to contain
+                multiple sequences (utterances) separated by
+                :attr:`"utterance_delimiter"`.
 
-        "utterance_delimiter" : str
-            The delimiter to split over utterance level. Should not be the
-            same with :attr:`"delimiter"`. Used only when
-            :attr:`"variable_utterance"``==True`.
+                For example, in dialog data, each line can contain a series of
+                dialog history utterances. See the example in
+                `examples/hierarchical_dialog` for a use case.
 
-        "max_utterance_cnt" : int
-            Maximally allowed number of utterances in a data instance.
-            Extra utterances are truncated out.
+            "utterance_delimiter" : str
+                The delimiter to split over utterance level. Should not be the
+                same with :attr:`"delimiter"`. Used only when
+                :attr:`"variable_utterance"``==True`.
 
-        "data_name" : str
-            Name of the data.
+            "max_utterance_cnt" : int
+                Maximally allowed number of utterances in a data instance.
+                Extra utterances are truncated out.
+
+            "data_name" : str
+                Name of the dataset.
+
+        2. For the **general** hyperparameters, see
+        :meth:`texar.data.DataBase.default_hparams` for details.
+
+        3. **Bucketing** is to group elements of the dataset together by length
+        and then pad and batch. (See more at
+        :tf_main:`bucket_by_sequence_length
+        <contrib/data/bucket_by_sequence_length>`). For bucketing
+        hyperparameters:
+
+            "bucket_boundaries" : list
+                An int list containing the upper length boundaries of the
+                buckets.
+
+                Set to an empty list (default) to disable bucketing.
+
+            "bucket_batch_sizes" : list
+                An int list containing batch size per bucket. Length should be
+                `len(bucket_boundaries) + 1`.
+
+                If `None`, every bucket whill have the same batch size specified
+                in :attr:`batch_size`.
+
+            "bucket_length_fn" : str or callable
+                Function maps dataset element to `tf.int32` scalar, determines
+                the length of the element.
+
+                This can be a function, or the name or full module path to the
+                function. If function name is given, the function must be in the
+                :mod:`texar.custom` module.
+
+                If `None` (default), length is determined by the number of
+                tokens (including BOS and EOS if added) of the element.
+
         """
         hparams = TextDataBase.default_hparams()
         hparams["name"] = "mono_text_data"

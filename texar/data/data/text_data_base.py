@@ -30,6 +30,7 @@ class TextDataBase(DataBase): # pylint: disable=too-few-public-methods
     @staticmethod
     def default_hparams():
         """Returns a dictionary of default hyperparameters.
+
         """
         hparams = DataBase.default_hparams()
         hparams.update({
@@ -62,7 +63,8 @@ class TextDataBase(DataBase): # pylint: disable=too-few-public-methods
             if bucket_batch_size is None:
                 bucket_batch_size = [batch_size] * (len(bucket_boundaries) + 1)
             dataset = dataset.apply(tf.contrib.data.bucket_by_sequence_length(
-                element_length_func, bucket_boundaries, bucket_batch_size))
+                element_length_func, bucket_boundaries, bucket_batch_size,
+                padded_shapes=padded_shapes, padding_values=padding_values))
             if not hparams["allow_smaller_final_batch"]:
                 if len(set(bucket_batch_size)) > 1:
                     raise ValueError(
