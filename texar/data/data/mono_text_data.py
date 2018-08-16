@@ -75,11 +75,39 @@ class MonoTextData(TextDataBase):
 
     By default, the processor reads raw data files, performs tokenization,
     batching and other pre-processing steps, and results in a TF dataset
-    where element is a data batch including three fields:
+    whose element is a data batch including three fields:
 
-        - "text": A string Tensor of shape `[batch_size, max_time]`
-        - "text_ids": An `int` Tensor of shape `[batch_size, max_time]`
-          containing the token index
+        - "text": A string Tensor of shape `[batch_size, max_time]` containing
+            the **raw** text toknes. `max_time` is the length of the longest
+            sequence in the batch.
+            Short sequences in the batch are padded with **empty string**.
+            BOS and EOS tokens are added as per
+            :attr:`hparams`. Out-of-vocabulary tokens are **NOT** replaced
+            with UNK.
+        - "text_ids": An `int64` Tensor of shape `[batch_size, max_time]`
+            containing the token indexes.
+        - "length": An `int` Tensor of shape `[batch_size]` containing the
+            length of each sequence in the batch (including BOS and
+            EOS if added).
+
+    If :attr:`'variable_utterance'` is set to `True` in :attr:`hparams`, the
+    resulting dataset has elements with four fields:
+
+        - "text": A string Tensor of shape
+            `[batch_size, max_utterance, max_time]`. `max_utterance` is the
+            either the maximum number of utterances in each elements of the
+            batch, or :attr:`max_utterance_cnt` as specified in :attr:`hparams`.
+        - "text_ids": An `int64` Tensor of shape
+            `[batch_size, max_utterance, max_time]` containing the token
+            indexes.
+        - "length": An `int` Tensor of shape `[batch_size, max_utterance]`
+            containing the length of each sequence in the batch.
+        - "utterance_cnt": An `int` Tensor of shape `[batch_size]` containing
+            the number of utterances of each element in the batch.
+
+    The above field names can be accessed through :attr:`text_tensor_name`,
+    :attr:`text_id_tensor_name`, :attr:`length_tensor_name`, and
+    :attr:`utterance_cnt_tensor_name`, respectively.
 
     Args:
         hparams: A `dict` or instance of :class:`~texar.HParams` containing
@@ -465,7 +493,7 @@ class MonoTextData(TextDataBase):
 
     @property
     def text_name(self):
-        """The name of text tensor.
+        """The name of text tensor, "text" by default.
         """
         name = dsutils._connect_name(
             self._data_spec.name_prefix,
@@ -474,7 +502,7 @@ class MonoTextData(TextDataBase):
 
     @property
     def length_name(self):
-        """The name of length tensor.
+        """The name of length tensor, "length" by default.
         """
         name = dsutils._connect_name(
             self._data_spec.name_prefix,
@@ -483,7 +511,7 @@ class MonoTextData(TextDataBase):
 
     @property
     def text_id_name(self):
-        """The name of text index tensor.
+        """The name of text index tensor, "text_ids" by default.
         """
         name = dsutils._connect_name(
             self._data_spec.name_prefix,
@@ -492,7 +520,7 @@ class MonoTextData(TextDataBase):
 
     @property
     def utterance_cnt_name(self):
-        """The name of utterance count tensor.
+        """The name of utterance count tensor, "utterance_cnt" by default.
         """
         if not self._hparams.dataset.variable_utterance:
             raise ValueError("`utterance_cnt_name` is not defined.")

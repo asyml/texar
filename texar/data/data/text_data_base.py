@@ -39,7 +39,8 @@ class TextDataBase(DataBase): # pylint: disable=too-few-public-methods
         return hparams
 
     @staticmethod
-    def _make_batch(dataset, hparams, element_length_func, padded_shapes=None):
+    def _make_batch(dataset, hparams, element_length_func,
+                    padded_shapes=None, padding_values=None):
         dataset = dataset.repeat(hparams.num_epochs)
 
         batch_size = hparams["batch_size"]
@@ -49,11 +50,13 @@ class TextDataBase(DataBase): # pylint: disable=too-few-public-methods
 
         if len(bucket_boundaries) == 0:
             if hparams["allow_smaller_final_batch"]:
-                dataset = dataset.padded_batch(batch_size, padded_shapes)
+                dataset = dataset.padded_batch(
+                    batch_size, padded_shapes, padding_values=padding_values)
             else:
                 dataset = dataset.apply(
                     tf.contrib.data.padded_batch_and_drop_remainder(
-                        batch_size, padded_shapes))
+                        batch_size, padded_shapes,
+                        padding_values=padding_values))
         else:
             bucket_batch_size = hparams["bucket_batch_sizes"]
             if bucket_batch_size is None:
