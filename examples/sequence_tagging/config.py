@@ -30,13 +30,14 @@ emb = {
     "name": "embedding",
     "dim": embed_dim,
     "dropout_rate": 0.33,
-    "dropout_strategy": 'item',
+    "dropout_strategy": 'item'
 }
 
 char_emb = {
     "name": "char embedding",
-    "dim": char_dim,
+    "dim": char_dim
 }
+
 conv = {
     "filters": 30,
     "kernel_size": [3],
