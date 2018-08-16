@@ -26,12 +26,24 @@ batch_size = 16
 encoder = None
 load_glove = True
 
+emb = {
+    "name": "embedding",
+    "dim": embed_dim,
+    "dropout_rate": 0.33,
+    "dropout_strategy": 'item'
+}
+
+char_emb = {
+    "name": "char embedding",
+    "dim": char_dim
+}
+
 conv = {
     "filters": 30,
     "kernel_size": [3],
     "conv_activation": "tanh",
     "num_dense_layers": 0,
-    "dropout_rate": 0.5
+    "dropout_rate": 0.
 }
 
 cell = {
