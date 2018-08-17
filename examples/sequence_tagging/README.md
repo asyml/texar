@@ -22,11 +22,10 @@ The model will begin training, and will evaluate on the validation data periodic
 
 ## Results ##
 
-As per the TensorFlow official PTB example, the perplexity of different configs is:
+The results on validation and test data is:
 
 |       |   prec   |  recall  |    F1    |
 |-------|----------|----------|----------|
 | valid |  88.94   |  91.11   |  90.02   |
-| test  |          |          |          |
-
+| test  |  84.15   |  87.52   |  85.80   |
 
