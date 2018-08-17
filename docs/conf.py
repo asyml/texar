@@ -322,3 +322,6 @@ extlinks = {'tf_main': (
             'tf_r0.12': (
                 'https://www.tensorflow.org/versions/r0.12/api_docs/python/%s',
                 None)}
+
+# Customize
+autodoc_member_order = 'bysource'

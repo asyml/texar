@@ -1,11 +1,12 @@
 
-num_epochs = 15
-display = 500
+display = 100
+display_eval = 5500
 
 source_vocab_file = './data/iwslt14/vocab.de'
 target_vocab_file = './data/iwslt14/vocab.en'
 
 train = {
+    'num_epochs': 10,
     'batch_size': 32,
     'allow_smaller_final_batch': False,
     'source_dataset': {

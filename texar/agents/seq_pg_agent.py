@@ -11,8 +11,9 @@ import tensorflow as tf
 
 from texar.agents.seq_agent_base import SeqAgentBase
 from texar.core import optimization as opt
-from texar.losses import pg_losses as losses
+from texar.losses.pg_losses import pg_loss_with_logits
 from texar.losses.rewards import discount_reward
+from texar.losses.entropy import sequence_entropy_with_logits
 
 __all__ = [
     "SeqPGAgent"
@@ -66,7 +67,7 @@ class SeqPGAgent(SeqAgentBase):
 
     def _get_pg_loss(self):
         loss_hparams = self._hparams.loss
-        pg_loss = losses.pg_loss_with_logits(
+        pg_loss = pg_loss_with_logits(
             actions=self._samples,
             logits=self._logits,
             sequence_length=self._sequence_length,
@@ -77,7 +78,23 @@ class SeqPGAgent(SeqAgentBase):
             sum_over_batch=loss_hparams.sum_over_batch,
             sum_over_timesteps=loss_hparams.sum_over_timesteps,
             time_major=loss_hparams.time_major)
+
+        if self._hparams.entropy_weight > 0:
+            entropy = self._get_entropy()
+            pg_loss -= self._hparams.entropy_weight * entropy
+
         return pg_loss
+
+    def _get_entropy(self):
+        loss_hparams = self._hparams.loss
+        return sequence_entropy_with_logits(
+            self._logits,
+            sequence_length=self._sequence_length,
+            average_across_batch=loss_hparams.average_across_batch,
+            average_across_timesteps=loss_hparams.average_across_timesteps,
+            sum_over_batch=loss_hparams.sum_over_batch,
+            sum_over_timesteps=loss_hparams.sum_over_timesteps,
+            time_major=loss_hparams.time_major)
 
     def _get_train_op(self):
         train_op = opt.get_train_op(
@@ -92,6 +109,7 @@ class SeqPGAgent(SeqAgentBase):
         return {
             'discount_factor': 0.95,
             'normalize_reward': False,
+            'entropy_weight': 0.,
             'loss': {
                 'average_across_batch': True,
                 'average_across_timesteps': False,
@@ -229,7 +247,7 @@ class SeqPGAgent(SeqAgentBase):
             TODO
         """
         fetches = {
-            "loss": self._train_op
+            "loss": self._train_op,
         }
 
         feed_dict_ = None

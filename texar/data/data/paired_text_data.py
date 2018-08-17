@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Paired text data that consists of source text and target text.
 """
@@ -31,9 +43,8 @@ __all__ = [
 ]
 
 def _default_paired_text_dataset_hparams():
-    """Returns hyperparameters of a mono text dataset with default values.
+    """Returns hyperparameters of a paired text dataset with default values.
     """
-    # TODO(zhiting): add more docs
     source_hparams = _default_mono_text_dataset_hparams()
     source_hparams["bos_token"] = None
     source_hparams["data_name"] = "source"
@@ -53,13 +64,45 @@ def _default_paired_text_dataset_hparams():
 
 # pylint: disable=too-many-instance-attributes, too-many-public-methods
 class PairedTextData(TextDataBase):
-    """Text data base that reads source and target text.
-
-    This is for the use of, e.g., seq2seq models.
+    """Text data processor that reads parallel source and target text.
+    This can be used in, e.g., seq2seq models.
 
     Args:
         hparams (dict): Hyperparameters. See :meth:`default_hparams` for the
             defaults.
+
+
+    By default, the processor reads raw data files, performs tokenization,
+    batching and other pre-processing steps, and results in a TF dataset
+    whose element is a python `dict` including six fields:
+
+        - "source_text":
+            A string Tensor of shape `[batch_size, max_time]` containing
+            the **raw** text toknes of source sequences. `max_time` is the
+            length of the longest sequence in the batch.
+            Short sequences in the batch are padded with **empty string**.
+            By default only EOS token is appended to each sequence.
+            Out-of-vocabulary tokens are **NOT** replaced with UNK.
+        - "source_text_ids":
+            An `int64` Tensor of shape `[batch_size, max_time]`
+            containing the token indexes of source sequences.
+        - "source_length":
+            An `int` Tensor of shape `[batch_size]` containing the
+            length of each source sequence in the batch (including BOS and/or
+            EOS if added).
+        - "target_text":
+            A string Tensor as "source_text" but for target sequences. By
+            default both BOS and EOS are added.
+        - "target_text_ids":
+            An `int64` Tensor as "source_text_ids" but for target sequences.
+        - "target_length":
+            An `int` Tensor of shape `[batch_size]` as "source_length" but for
+            target sequences.
+
+    If :attr:`'variable_utterance'` is set to `True` in :attr:`'source_dataset'`
+    and/or :attr:`'target_dataset'` of :attr:`hparams`, the corresponding
+    fields "source_*" and/or "target_*" are respectively changed to contain
+    variable utterance text data, as in :class:`~texar.data.MonoTextData`.
     """
     def __init__(self, hparams):
         TextDataBase.__init__(self, hparams)
@@ -69,6 +112,91 @@ class PairedTextData(TextDataBase):
     @staticmethod
     def default_hparams():
         """Returns a dicitionary of default hyperparameters.
+
+        .. code-block:: python
+
+            {
+                # (1) Hyperparams specific to text dataset
+                "source_dataset": {
+                    "files": [],
+                    "compression_type": None,
+                    "vocab_file": "",
+                    "embedding_init": {},
+                    "delimiter": " ",
+                    "max_seq_length": None,
+                    "length_filter_mode": "truncate",
+                    "pad_to_max_seq_length": False,
+                    "bos_token": None,
+                    "eos_token": "<EOS>",
+                    "other_transformations": [],
+                    "variable_utterance": False,
+                    "utterance_delimiter": "|||",
+                    "max_utterance_cnt": 5,
+                    "data_name": "source",
+                },
+                "target_dataset": {
+                    # ...
+                    # Same fields are allowed as in "source_dataset" with the
+                    # same default values, except the
+                    # following new fields/values:
+                    "bos_token": "<BOS>"
+                    "vocab_share": False,
+                    "embedding_init_share": False,
+                    "processing_share": False,
+                    "data_name": "target"
+                }
+                # (2) General hyperparams
+                "num_epochs": 1,
+                "batch_size": 64,
+                "allow_smaller_final_batch": True,
+                "shuffle": True,
+                "shuffle_buffer_size": None,
+                "shard_and_shuffle": False,
+                "num_parallel_calls": 1,
+                "prefetch_buffer_size": 0,
+                "max_dataset_size": -1,
+                "seed": None,
+                "name": "paired_text_data",
+                # (3) Bucketing
+                "bucket_boundaries": [],
+                "bucket_batch_sizes": None,
+                "bucket_length_fn": None,
+            }
+
+        Here:
+
+        1. Hyperparameters in the :attr:`"source_dataset"` and
+        attr:`"target_dataset"` fields have the same definition as those
+        in :meth:`texar.data.MonoTextData.default_hparams`, for source and
+        target text, respectively.
+
+        For the new hyperparameters in "target_dataset":
+
+            "vocab_share" : bool
+                Whether to share the vocabulary of source. If `True`, the vocab
+                file of target is ignored.
+
+            "embedding_init_share" : bool
+                Whether to share the embedding initial value of source. If
+                `True`, :attr:`"embedding_init"` of target is ignored.
+
+                :attr:`"vocab_share"` must be true to share the embedding
+                initial value.
+
+            "processing_share" : bool
+                Whether to share the processing configurations of source,
+                including
+                "delimiter", "bos_token", "eos_token", and
+                "other_transformations".
+
+        2. For the **general** hyperparameters, see
+        :meth:`texar.data.DataBase.default_hparams` for details.
+
+        3. For **bucketing** hyperparameters, see
+        :meth:`texar.data.MonoTextData.default_hparams` for details, except
+        that the default bucket_length_fn is the maximum sequence length
+        of source and target sequences.
+
         """
         hparams = TextDataBase.default_hparams()
         hparams["name"] = "paired_text_data"
@@ -380,7 +508,7 @@ class PairedTextData(TextDataBase):
 
     @property
     def source_text_name(self):
-        """The name of the source text tensor.
+        """The name of the source text tensor, "source_text" by default.
         """
         name = dsutils._connect_name(
             self._data_spec.name_prefix[0],
@@ -389,7 +517,7 @@ class PairedTextData(TextDataBase):
 
     @property
     def source_length_name(self):
-        """The name of the source length tensor.
+        """The name of the source length tensor, "source_length" by default.
         """
         name = dsutils._connect_name(
             self._data_spec.name_prefix[0],
@@ -398,7 +526,8 @@ class PairedTextData(TextDataBase):
 
     @property
     def source_text_id_name(self):
-        """The name of the source text index tensor.
+        """The name of the source text index tensor, "source_text_ids" by
+        default.
         """
         name = dsutils._connect_name(
             self._data_spec.name_prefix[0],
@@ -407,7 +536,8 @@ class PairedTextData(TextDataBase):
 
     @property
     def source_utterance_cnt_name(self):
-        """The name of the source text utterance count tensor.
+        """The name of the source text utterance count tensor,
+        "source_utterance_cnt" by default.
         """
         if not self._hparams.source_dataset.variable_utterance:
             raise ValueError(
@@ -419,7 +549,7 @@ class PairedTextData(TextDataBase):
 
     @property
     def target_text_name(self):
-        """The name of the target text tensor.
+        """The name of the target text tensor, "target_text" bt default.
         """
         name = dsutils._connect_name(
             self._data_spec.name_prefix[1],
@@ -428,7 +558,7 @@ class PairedTextData(TextDataBase):
 
     @property
     def target_length_name(self):
-        """The name of the target length tensor.
+        """The name of the target length tensor, "target_length" by default.
         """
         name = dsutils._connect_name(
             self._data_spec.name_prefix[1],
@@ -437,7 +567,8 @@ class PairedTextData(TextDataBase):
 
     @property
     def target_text_id_name(self):
-        """The name of the target text index tensor.
+        """The name of the target text index tensor, "target_text_ids" by
+        default.
         """
         name = dsutils._connect_name(
             self._data_spec.name_prefix[1],
@@ -446,7 +577,8 @@ class PairedTextData(TextDataBase):
 
     @property
     def target_utterance_cnt_name(self):
-        """The name of the target text utterance count tensor.
+        """The name of the target text utterance count tensor,
+        "target_utterance_cnt" by default.
         """
         if not self._hparams.target_dataset.variable_utterance:
             raise ValueError(
@@ -458,25 +590,26 @@ class PairedTextData(TextDataBase):
 
     @property
     def text_name(self):
-        """The name of text tensor.
+        """The name of text tensor, "text" by default.
         """
         return self._src_decoder.text_tensor_name
 
     @property
     def length_name(self):
-        """The name of length tensor.
+        """The name of length tensor, "length" by default.
         """
         return self._src_decoder.length_tensor_name
 
     @property
     def text_id_name(self):
-        """The name of text index tensor.
+        """The name of text index tensor, "text_ids" by default.
         """
         return self._src_decoder.text_id_tensor_name
 
     @property
     def utterance_cnt_name(self):
-        """The name of the target text utterance count tensor.
+        """The name of the text utterance count tensor, "utterance_cnt" by
+        default.
         """
         if self._hparams.source_dataset.variable_utterance:
             return self._src_decoder.utterance_cnt_tensor_name

@@ -44,10 +44,10 @@ class VocabularyTest(tf.test.TestCase):
 
         vocab = vocabulary.Vocab(vocab_file.name)
 
-        self.assertEqual(vocab.vocab_size, len(vocab_list) + 4)
+        self.assertEqual(vocab.size, len(vocab_list) + 4)
         self.assertEqual(
             set(vocab.token_to_id_map_py.keys()),
-            set(['word', '词'.encode('utf8')] + vocab.special_tokens))
+            set(['word', '词'] + vocab.special_tokens))
 
         # Tests UNK token
         unk_token_id = vocab.token_to_id_map_py['new']

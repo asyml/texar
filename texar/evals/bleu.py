@@ -180,7 +180,10 @@ def corpus_bleu(list_of_references, hypotheses, max_order=4, lowercase=False,
     if ratio > 1.0:
         bp = 1.
     else:
-        bp = math.exp(1 - 1. / ratio)
+        try:
+            bp = math.exp(1 - 1. / ratio)
+        except ZeroDivisionError:
+            bp = math.exp(1 - 1. / (ratio + 1e-8))
 
     bleu = geo_mean * bp
 

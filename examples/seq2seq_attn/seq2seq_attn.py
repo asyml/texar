@@ -21,46 +21,45 @@ config_model = importlib.import_module(FLAGS.config_model)
 config_data = importlib.import_module(FLAGS.config_data)
 
 
-def build_model(data_batch, source_vocab_size, target_vocab_size,
-                target_bos_token_id, target_eos_token_id):
+def build_model(batch, train_data):
     """Assembles the seq2seq model.
     """
     source_embedder = tx.modules.WordEmbedder(
-        vocab_size=source_vocab_size, hparams=config_model.embedder)
+        vocab_size=train_data.source_vocab.size, hparams=config_model.embedder)
 
     encoder = tx.modules.BidirectionalRNNEncoder(
         hparams=config_model.encoder)
 
-    enc_outputs, _ = encoder(source_embedder(data_batch['source_text_ids']))
+    enc_outputs, _ = encoder(source_embedder(batch['source_text_ids']))
 
-    embedder = tx.modules.WordEmbedder(
-        vocab_size=target_vocab_size, hparams=config_model.embedder)
+    target_embedder = tx.modules.WordEmbedder(
+        vocab_size=train_data.target_vocab.size, hparams=config_model.embedder)
 
     decoder = tx.modules.AttentionRNNDecoder(
         memory=tx.modules.BidirectionalRNNEncoder.concat_outputs(enc_outputs),
-        memory_sequence_length=data_batch['source_length'],
-        vocab_size=target_vocab_size,
+        memory_sequence_length=batch['source_length'],
+        vocab_size=train_data.target_vocab.size,
         hparams=config_model.decoder)
 
     training_outputs, _, _ = decoder(
         decoding_strategy='train_greedy',
-        inputs=embedder(data_batch['target_text_ids'][:, :-1]),
-        sequence_length=data_batch['target_length'] - 1)
+        inputs=target_embedder(batch['target_text_ids'][:, :-1]),
+        sequence_length=batch['target_length'] - 1)
 
     train_op = tx.core.get_train_op(
         tx.losses.sequence_sparse_softmax_cross_entropy(
-            labels=data_batch['target_text_ids'][:, 1:],
+            labels=batch['target_text_ids'][:, 1:],
             logits=training_outputs.logits,
-            sequence_length=data_batch['target_length'] - 1))
+            sequence_length=batch['target_length'] - 1))
 
-    start_tokens = \
-        tf.ones_like(data_batch['target_length']) * target_bos_token_id
+    start_tokens = tf.ones_like(batch['target_length']) * \
+            train_data.target_vocab.bos_token_id
     beam_search_outputs, _, _ = \
         tx.modules.beam_search_decode(
             decoder_or_cell=decoder,
-            embedding=embedder,
+            embedding=target_embedder,
             start_tokens=start_tokens,
-            end_token=target_eos_token_id,
+            end_token=train_data.target_vocab.eos_token_id,
             beam_width=config_model.beam_width,
             max_decoding_length=60)
 
@@ -70,22 +69,15 @@ def build_model(data_batch, source_vocab_size, target_vocab_size,
 def main():
     """Entrypoint.
     """
-    training_data = tx.data.PairedTextData(hparams=config_data.train)
-    valid_data = tx.data.PairedTextData(hparams=config_data.valid)
+    train_data = tx.data.PairedTextData(hparams=config_data.train)
+    val_data = tx.data.PairedTextData(hparams=config_data.val)
     test_data = tx.data.PairedTextData(hparams=config_data.test)
     data_iterator = tx.data.TrainTestDataIterator(
-        train=training_data, val=valid_data, test=test_data)
+        train=train_data, val=val_data, test=test_data)
 
-    source_vocab_size = training_data.source_vocab.size
-    target_vocab_size = training_data.target_vocab.size
-    target_bos_token_id = training_data.target_vocab.bos_token_id
-    target_eos_token_id = training_data.target_vocab.eos_token_id
+    batch = data_iterator.get_next()
 
-    data_batch = data_iterator.get_next()
-
-    train_op, infer_outputs = build_model(
-        data_batch, source_vocab_size, target_vocab_size,
-        target_bos_token_id, target_eos_token_id)
+    train_op, infer_outputs = build_model(batch, train_data)
 
     def _train_epoch(sess):
         data_iterator.switch_to_train_data(sess)
@@ -101,7 +93,7 @@ def main():
                 break
 
     def _eval_epoch(sess, mode):
-        if mode == 'valid':
+        if mode == 'val':
             data_iterator.switch_to_val_data(sess)
         else:
             data_iterator.switch_to_test_data(sess)
@@ -110,18 +102,18 @@ def main():
         while True:
             try:
                 fetches = [
-                    data_batch['target_text'][:, 1:],
+                    batch['target_text'][:, 1:],
                     infer_outputs.predicted_ids[:, :, 0]
                 ]
                 feed_dict = {
-                    tx.global_mode(): tf.estimator.ModeKeys.PREDICT
+                    tx.global_mode(): tf.estimator.ModeKeys.EVAL
                 }
                 target_texts_ori, output_ids = \
                     sess.run(fetches, feed_dict=feed_dict)
 
                 target_texts = tx.utils.strip_special_tokens(target_texts_ori)
                 output_texts = tx.utils.map_ids_to_strs(
-                    ids=output_ids, vocab=valid_data.target_vocab)
+                    ids=output_ids, vocab=val_data.target_vocab)
 
                 for hypo, ref in zip(output_texts, target_texts):
                     hypos.append(hypo)
@@ -137,14 +129,14 @@ def main():
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
 
-        best_valid_bleu = -1.
+        best_val_bleu = -1.
         for i in range(config_data.num_epochs):
             _train_epoch(sess)
 
-            valid_bleu = _eval_epoch(sess, 'valid')
-            best_valid_bleu = max(best_valid_bleu, valid_bleu)
-            print('valid epoch={}, BLEU={:.4f}; best-ever={:.4f}'.format(
-                i, valid_bleu, best_valid_bleu))
+            val_bleu = _eval_epoch(sess, 'val')
+            best_val_bleu = max(best_val_bleu, val_bleu)
+            print('val epoch={}, BLEU={:.4f}; best-ever={:.4f}'.format(
+                i, val_bleu, best_val_bleu))
 
             test_bleu = _eval_epoch(sess, 'test')
             print('test epoch={}, BLEU={:.4f}'.format(i, test_bleu))

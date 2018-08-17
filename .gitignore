@@ -228,7 +228,10 @@ simple-examples.tgz
 /examples/seq2seq_attn/data.zip
 /examples/seq2seq_attn/iwslt14.zip
 /examples/seq2seq_attn/toy_copy.zip
-/examples/seq2seq_attn/training_log/
+/examples/seq2seq_rl/data/
+/examples/seq2seq_rl/data.zip
+/examples/seq2seq_rl/iwslt14.zip
+/examples/seq2seq_rl/toy_copy.zip
 /examples/seq2seq_configs/data/
 /examples/seq2seq_configs/data.zip
 /examples/seq2seq_config/iwslt14.zip
