@@ -44,6 +44,8 @@ __all__ = [
 
 def _default_paired_text_dataset_hparams():
     """Returns hyperparameters of a paired text dataset with default values.
+
+    See :meth:`texar.data.PairedTextData.default_hparams` for details.
     """
     source_hparams = _default_mono_text_dataset_hparams()
     source_hparams["bos_token"] = None
@@ -71,9 +73,8 @@ class PairedTextData(TextDataBase):
         hparams (dict): Hyperparameters. See :meth:`default_hparams` for the
             defaults.
 
-
     By default, the processor reads raw data files, performs tokenization,
-    batching and other pre-processing steps, and results in a TF dataset
+    batching and other pre-processing steps, and results in a TF Dataset
     whose element is a python `dict` including six fields:
 
         - "source_text":
@@ -103,6 +104,34 @@ class PairedTextData(TextDataBase):
     and/or :attr:`'target_dataset'` of :attr:`hparams`, the corresponding
     fields "source_*" and/or "target_*" are respectively changed to contain
     variable utterance text data, as in :class:`~texar.data.MonoTextData`.
+
+    The above field names can be accessed through :attr:`source_text_name`,
+    :attr:`source_text_id_name`, :attr:`source_length_name`,
+    :attr:`source_utterance_cnt_name`, and those prefixed with `target_`,
+    respectively.
+
+    Example:
+
+        .. code-block:: python
+
+            hparams={
+                'source_dataset': {'files': './s', 'vocab': './vs'},
+                'source_dataset': {'files': ['./t1', './t2'], 'vocab': './vt'},
+                'batch_size': 1
+            }
+            data = PairedTextData(hparams)
+            iterator = DataIterator(data)
+            batch = iterator.get_next()
+            batch_ = sess.run(batch)
+            # batch_ == {
+            #    'source_text': [['source', 'sequence', '<EOS>']],
+            #    'source_text_ids': [['5', '10', '2']],
+            #    'source_length': [3]
+            #    'target_text': [['<BOS>', 'target', 'sequence', '1', '<EOS>']],
+            #    'target_text_ids': [['1', '6', '10', '20', '2']],
+            #    'target_length': [4]
+            # }
+
     """
     def __init__(self, hparams):
         TextDataBase.__init__(self, hparams)
@@ -173,8 +202,8 @@ class PairedTextData(TextDataBase):
         For the new hyperparameters in "target_dataset":
 
             "vocab_share" : bool
-                Whether to share the vocabulary of source. If `True`, the vocab
-                file of target is ignored.
+                Whether to share the vocabulary of source.
+                If `True`, the vocab file of target is ignored.
 
             "embedding_init_share" : bool
                 Whether to share the embedding initial value of source. If

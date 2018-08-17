@@ -41,6 +41,12 @@ Embedding
 Data
 ==========
 
+:hidden:`DataBase`
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: texar.data.DataBase
+    :members:
+
 :hidden:`MonoTextData`
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -63,12 +69,6 @@ Data
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: texar.data.MultiAlignedData
-    :members:
-
-:hidden:`DataBase`
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: texar.data.DataBase
     :members:
 
 :hidden:`TextDataBase`

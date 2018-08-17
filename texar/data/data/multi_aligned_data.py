@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Paired text data that consists of source text and target text.
 """
@@ -25,8 +37,8 @@ from texar.data.data import dataset_utils as dsutils
 from texar.data.vocabulary import Vocab, SpecialTokens
 from texar.data.embedding import Embedding
 
-# pylint: disable=invalid-name, arguments-differ, not-context-manager
-# pylint: disable=protected-access
+# pylint: disable=invalid-name, arguments-differ
+# pylint: disable=protected-access, too-many-instance-attributes
 
 __all__ = [
     "_default_dataset_hparams",
@@ -47,8 +59,9 @@ def _is_scalar_data(data_type):
 
 def _default_dataset_hparams(data_type=None):
     """Returns hyperparameters of a dataset with default values.
+
+    See :meth:`texar.data.MultiAlignedData.default_hparams` for details.
     """
-    # TODO(zhiting): add more docs
     if not data_type or _is_text_data(data_type):
         hparams = _default_mono_text_dataset_hparams()
         hparams.update({
@@ -61,13 +74,46 @@ def _default_dataset_hparams(data_type=None):
         hparams = _default_scalar_dataset_hparams()
     return hparams
 
-# pylint: disable=too-many-instance-attributes
 class MultiAlignedData(TextDataBase):
-    """Data consists of multiple aligned parts.
+    """Data consisting of multiple aligned parts.
 
     Args:
         hparams (dict): Hyperparameters. See :meth:`default_hparams` for the
             defaults.
+
+    The processor can read any number of parallel fields as specified in
+    the "datasets" list of :attr:`hparams`, and result in a TF Dataset whose
+    element is a python `dict` containing data fields from each of the
+    specified datasets. Fields from a text dataset have names prefixed by
+    its "data_name". Fields from a scalar dataset are specified by its
+    "data_name".
+
+    Example:
+
+        .. code-block:: python
+
+            hparams={
+                'datasets': [
+                    {'files': 'a.txt', 'vocab': 'va.txt', 'data_name': 'x'},
+                    {'files': 'b.txt', 'vocab': 'vb.txt', 'data_name': 'y'},
+                    {'files': 'c.txt', 'data_type': 'int', 'data_name': 'z'}
+                ]
+                'batch_size': 1
+            }
+            data = MultiAlignedData(hparams)
+            iterator = DataIterator(data)
+            batch = iterator.get_next()
+            batch_ = sess.run(batch)
+            # batch_ == {
+            #    'x_text': [['<BOS>', 'x', 'sequence', '<EOS>']],
+            #    'x_text_ids': [['1', '5', '10', '2']],
+            #    'x_length': [3]
+            #    'y_text': [['<BOS>', 'y', 'sequence', '1', '<EOS>']],
+            #    'y_text_ids': [['1', '6', '10', '20', '2']],
+            #    'y_length': [4],
+            #    'z': [1000]
+            # }
+
     """
     def __init__(self, hparams):
         TextDataBase.__init__(self, hparams)
@@ -87,10 +133,89 @@ class MultiAlignedData(TextDataBase):
     @staticmethod
     def default_hparams():
         """Returns a dicitionary of default hyperparameters.
+
+        .. code-block:: python
+
+            {
+                # (1) Hyperparams specific to text dataset
+                "datasets": []
+                # (2) General hyperparams
+                "num_epochs": 1,
+                "batch_size": 64,
+                "allow_smaller_final_batch": True,
+                "shuffle": True,
+                "shuffle_buffer_size": None,
+                "shard_and_shuffle": False,
+                "num_parallel_calls": 1,
+                "prefetch_buffer_size": 0,
+                "max_dataset_size": -1,
+                "seed": None,
+                "name": "multi_aligned_data",
+            }
+
+        Here:
+
+        1. "datasets" is a list of `dict` each of which specifies a
+        text or scalar dataset. The :attr:`"data_name"` field of each dataset
+        is used as the name prefix of the data fields from the respective
+        dataset. The :attr:`"data_name"` field of each dataset should not
+        be the same.
+
+            - For scalar dataset, the allowed hyperparameters and default \
+            values are the same as the "dataset" field of \
+            :meth:`texar.data.ScalarData.default_hparams`. Note that \
+            :attr:`"data_type"` must be explicily specified \
+            (either "int" or "float"). \
+
+            - For text dataset, the allowed hyperparameters and default values\
+            are the same as the "dataset" filed of \
+            :meth:`texar.data.MonoTextData.default_hparams`, with several \
+            extra hyperparameters:
+
+                "data_type" : str
+                    The type of the dataset, one of {"text", "int", "float"}.
+                    If set to "int" or "float", the dataset is considered to be
+                    a scalar dataset. If not specified or set to "text", the
+                    dataset is considered to be a text dataset.
+
+                "vocab_share_with" : int, optional
+                    Share the vocabulary of a preceding text dataset with the
+                    specified index in the list (starting from 0). The
+                    specified dataset must be a text dataset, and must have
+                    an index smaller than the current dataset.
+
+                    If specified, the vocab file of current dataset is ignored.
+                    Default is `None` which disables the vocab sharing.
+
+                "embedding_init_share_with": int, optional
+                    Share the embedding initial value of a preceding text
+                    dataset with the specified index in the list (starting
+                    from 0).
+                    The specified dataset must be a text dataset, and must have
+                    an index smaller than the current dataset.
+
+                    If specified, the :attr:`"embedding_init"` field of
+                    the current dataset is ignored. Default is `None` which
+                    disables the initial value sharing.
+
+                "processing_share_with" : int, optional
+                    Share the processing configurations of a preceding text
+                    dataset with the specified index in the list (starting
+                    from 0).
+                    The specified dataset must be a text dataset, and must have
+                    an index smaller than the current dataset.
+
+                    If specified, relevant field of the current dataset are
+                    ignored, including "delimiter", "bos_token", "eos_token",
+                    and "other_transformations". Default is `None` which
+                    disables the processing sharing.
+
+        2. For the **general** hyperparameters, see
+        :meth:`texar.data.DataBase.default_hparams` for details.
         """
         hparams = TextDataBase.default_hparams()
         hparams["name"] = "multi_aligned_data"
-        hparams["datasets"] = [_default_dataset_hparams()]
+        hparams["datasets"] = []
         return hparams
 
     @staticmethod
