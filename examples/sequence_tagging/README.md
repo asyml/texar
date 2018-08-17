@@ -24,9 +24,9 @@ The model will begin training, and will evaluate on the validation data periodic
 
 As per the TensorFlow official PTB example, the perplexity of different configs is:
 
-|       |precision |  recall  |    F1    |
+|       |   prec   |  recall  |    F1    |
 |-------|----------|----------|----------|
-| valid |   88.94  |  91.11   |  90.02   |
+| valid |  88.94   |  91.11   |  90.02   |
 | test  |          |          |          |
 
 
