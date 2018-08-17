@@ -20,6 +20,7 @@ from texar.module_base import ModuleBase
 from texar.modules.networks.networks import FeedForwardNetwork
 from texar.modules.embedders import embedder_utils
 from texar.modules.embedders import position_embedders
+from texar import utils
 from texar.utils import beam_search
 from texar.utils.shapes import shape_list
 
@@ -220,7 +221,7 @@ class TransformerDecoder(ModuleBase):
         """
         inputs = tf.layers.dropout(inputs,
                                    rate=self._hparams.embedding_dropout,
-                                   training=utils.is_train_mode(mode))
+                                   training=utils.mode.is_train_mode(mode))
         if cache is not None:
             encoder_decoder_attention_bias = \
                 cache['encoder_decoder_attention_bias']
@@ -246,7 +247,7 @@ class TransformerDecoder(ModuleBase):
                     x = x + tf.layers.dropout(
                         selfatt_output,
                         rate=self._hparams.residual_dropout,
-                        training=utils.is_train_mode(mode),
+                        training=utils.mode.is_train_mode(mode),
                     )
                 if encoder_output is not None:
                     with tf.variable_scope('encdec_attention'):
@@ -261,7 +262,7 @@ class TransformerDecoder(ModuleBase):
                         )
                         x = x + tf.layers.dropout(encdec_output, \
                             rate=self._hparams.residual_dropout, \
-                            training=utils.is_train_mode(mode),
+                            training=utils.mode.is_train_mode(mode),
                         )
                 poswise_network = FeedForwardNetwork( \
                     hparams=self._hparams['poswise_feedforward'])
@@ -269,7 +270,7 @@ class TransformerDecoder(ModuleBase):
                     sub_output = tf.layers.dropout(
                         poswise_network(layers.layer_normalize(x)),
                         rate=self._hparams.residual_dropout,
-                        training=utils.is_train_mode(mode),
+                        training=utils.mode.is_train_mode(mode),
                     )
                     x = x + sub_output
 

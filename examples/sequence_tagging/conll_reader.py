@@ -36,7 +36,7 @@ PAD_WORD, PAD_CHAR, PAD_NER = 1, 1, 1
 DIGIT_RE = re.compile(r"\d")
 
 
-def create_vocabs(train_path, normalize_digits=True, min_occur=1):
+def create_vocabs(train_path, dev_path, test_path, normalize_digits=True, min_occur=1, glove_dict=None):
     word_vocab = defaultdict(lambda: len(word_vocab))
     word_count = defaultdict(lambda: 0)
     char_vocab = defaultdict(lambda: len(char_vocab))
@@ -51,26 +51,31 @@ def create_vocabs(train_path, normalize_digits=True, min_occur=1):
 
     print("Creating Vocabularies:")
 
-    with open(train_path, 'r') as file:
-        for line in file:
-            line = line.strip()
-            if len(line) == 0:
-                continue
+    for file_path in [train_path, dev_path, test_path]:
+        with open(file_path, 'r') as file:
+            for line in file:
+                line = line.strip()
+                if len(line) == 0:
+                    continue
 
-            tokens = line.split(' ')
-            for char in tokens[1]:
-                cid = char_vocab[char]
+                tokens = line.split(' ')
+                for char in tokens[1]:
+                    cid = char_vocab[char]
 
-            word = DIGIT_RE.sub("0", tokens[1]) if normalize_digits else tokens[1]
-            ner = tokens[4]
+                word = DIGIT_RE.sub("0", tokens[1]) if normalize_digits else tokens[1]
+                ner = tokens[4]
 
-            word_count[word] += 1
-            nid = ner_vocab[ner]
+                if glove_dict is not None and (word in glove_dict or word.lower() in glove_dict):
+                    word_count[word] += min_occur + 1
+                elif file_path == train_path:
+                    word_count[word] += 1
 
-        print("Total Vocabulary Size: %d" % len(word_count))
-        for word in word_count:
-            if word_count[word] > min_occur:
-                wid = word_vocab[word]
+                nid = ner_vocab[ner]
+
+    print("Total Vocabulary Size: %d" % len(word_count))
+    for word in word_count:
+        if word_count[word] > min_occur:
+            wid = word_vocab[word]
 
     print("Word Vocabulary Size: %d" % len(word_vocab))
     print("Character Alphabet Size: %d" % len(char_vocab))
@@ -137,7 +142,7 @@ def iterate_batch(data, batch_size, shuffle=False):
         yield wid_inputs, cid_inputs, nid_inputs, masks, lengths
 
 
-def load_glove(filename, vocab, word_vecs, normalize_digits=True):
+def load_glove(filename, emb_dim, normalize_digits=True):
     """Loads embeddings in the glove text format in which each line is
     '<word-string> <embedding-vector>'. Dimensions of the embedding vector
     are separated with whitespace characters.
@@ -162,10 +167,13 @@ def load_glove(filename, vocab, word_vecs, normalize_digits=True):
             word = tf.compat.as_text(word)
             word = DIGIT_RE.sub("0", word) if normalize_digits else word
             glove_dict[word] = np.array([float(v) for v in vec])
-            if len(vec) != word_vecs.shape[1]:
+            if len(vec) != emb_dim:
                 raise ValueError("Inconsistent word vector sizes: %d vs %d" %
-                                 (len(vec), word_vecs.shape[1]))
+                                 (len(vec), emb_dim))
+    return glove_dict
 
+
+def construct_init_word_vecs(vocab, word_vecs, glove_dict):
     for word, index in vocab.items():
         if word in glove_dict:
             embedding = glove_dict[word]
