@@ -27,6 +27,6 @@ As per the TensorFlow official PTB example, the perplexity of different configs 
 |  epochs |               valid             |               test              |
 |---------|:-------------------------------:|:-------------------------------:|
 |         | precision |  recall  |    F1    | precision |  recall  |    F1    |
-|---------|-----------|----------|----------|-----------|----------|----------|
+|   100   |           |          |          |           |          |          |
 
 
