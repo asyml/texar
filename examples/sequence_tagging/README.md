@@ -26,6 +26,6 @@ The results on validation and test data is:
 
 |       |   prec   |  recall  |    F1    |
 |-------|----------|----------|----------|
-| valid |  88.94   |  91.11   |  90.02   |
-| test  |  84.15   |  87.52   |  85.80   |
+| valid |  91.18   |  92.41   |  91.79   |
+| test  |  86.13   |  88.31   |  87.21   |
 
