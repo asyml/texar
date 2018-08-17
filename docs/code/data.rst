@@ -81,6 +81,12 @@ Data
 Data Iterators
 ===============
 
+:hidden:`DataIteratorBase`
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: texar.data.DataIteratorBase
+    :members:
+
 :hidden:`DataIterator`
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
