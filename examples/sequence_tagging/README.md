@@ -1,4 +1,4 @@
-# Language Model on PTB #
+# Sequence tagging on CoNLL-2003 #
 
 This example builds a bi-directional LSTM-CNN model for NER task and trains on CoNLL-2003 data. Model and training are described in   
 >[End-to-end Sequence Labeling via Bi-directional LSTM-CNNs-CRF](http://www.cs.cmu.edu/~xuezhem/publications/P16-1101.pdf)
@@ -25,7 +25,8 @@ The model will begin training, and will evaluate on the validation data periodic
 As per the TensorFlow official PTB example, the perplexity of different configs is:
 
 |  epochs |               valid             |               test              |
+|---------|:-------------------------------:|:-------------------------------:|
 |         | precision |  recall  |    F1    | precision |  recall  |    F1    |
-|  -------| ----------| ---------| ---------| ----------| ---------| ---------|
+|---------|-----------|----------|----------|-----------|----------|----------|
 
 
