@@ -40,7 +40,7 @@ The `1` indicates one hparams set for en-vi task: `max_train_epoch=70 max_traini
 You could get ~28.4 BLEU_cased and ~28.97 BLEU_uncased with our implementation. With tensor2tensor, the results are 28.12 and 28.97 claimed in https://github.com/tensorflow/tensor2tensor/pull/611.
 
 
-# We also give a sample script for wmt14 en-de task here.
+# We also give a sample script for wmt14 en-de task with Byte Pairwise Encoding here.
 
 ## Obtain the dataset
 ```
@@ -51,25 +51,30 @@ You will obtain the dataset in the `./data/en_de/` directory
 
 ## Preprocessing the dataset and generate encoded vocabulary
 ```
+#Modify the `encoder` in `preprocess_data.sh` to `bpe` to use Byte Pairwise Encoding.
 bash preprocess_data.sh en de
 ```
-You will obtain the processed dataset in `./temp/data/run_en_de_wpm/data/` directory
+You will obtain the processed dataset in `./temp/data/run_en_de_bpe/data/` directory
 
 ## Training the model
 
 ```
-bash run_en_vi.sh 2 train_and_evaluate en de
+#Modify the `encoder` in `run_model.sh` to `bpe`
+
+bash run_model 2 train_and_evaluate en de
 ```
 Here `2` denotes one hparams set for wmt14 en-de task (model with more
 parameters compared to `1` hparams set).
 
 ## Test and evaluation
 ```
-bash run_en_vi.sh 2 test en de
+bash run_model.sh 2 test en de
+
+#Modify the `encoder` in `test_output.sh` to `bpe`
 bash test_output.sh en de
 ```
 
 ## Result
 
-You could get ~25.51 BLEU_cased with our implementation. With tensor2tensor, the running result is 25.35 with the setting of base_single_gpu and 3072 batch size.
+You could get ~25.12 BLEU_cased with our implementation. With tensor2tensor, the running result is 25.35 with the setting of base_single_gpu and 3072 batch size.
 
