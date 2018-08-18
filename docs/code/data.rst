@@ -41,6 +41,12 @@ Embedding
 Data
 ==========
 
+:hidden:`DataBase`
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: texar.data.DataBase
+    :members:
+
 :hidden:`MonoTextData`
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -60,15 +66,9 @@ Data
     :members:
 
 :hidden:`MultiAlignedData`
-~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: texar.data.MultiAlignedData
-    :members:
-
-:hidden:`DataBase`
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: texar.data.DataBase
     :members:
 
 :hidden:`TextDataBase`
@@ -80,6 +80,12 @@ Data
 
 Data Iterators
 ===============
+
+:hidden:`DataIteratorBase`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: texar.data.DataIteratorBase
+    :members:
 
 :hidden:`DataIterator`
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -107,22 +113,41 @@ Data Iterators
 .. autoclass:: texar.data.TrainTestFeedableDataIterator
     :members:
 
-Data Decoders
-================
-
-.. automodule:: texar.data.decoders
-    :members:
-
 Data Utils
 ==========
 
-.. autofunction:: texar.data.make_chained_transformation
-
-.. autofunction:: texar.data.make_chained_transformation
-
+:hidden:`random_shard_dataset`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.data.random_shard_dataset
 
+:hidden:`maybe_tuple`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.data.maybe_tuple
 
+:hidden:`make_partial`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.data.make_partial
 
+:hidden:`maybe_download`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.data.maybe_download
+
+:hidden:`read_words`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.data.read_words
+
+:hidden:`make_vocab`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.data.make_vocab
+
+:hidden:`count_file_lines`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.data.count_file_lines
+
+:hidden:`make_chained_transformation`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.data.make_chained_transformation
+
+:hidden:`make_combined_transformation`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.data.make_combined_transformation

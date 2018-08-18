@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Various data classes that define data reading, parsing, batching, and other
 preprocessing operations.
@@ -26,8 +38,9 @@ __all__ = [
 
 def _default_scalar_dataset_hparams():
     """Returns hyperparameters of a scalar dataset with default values.
+
+    See :meth:`texar.data.ScalarData.default_hparams` for details.
     """
-    # TODO(zhiting): add more docs
     return {
         "files": [],
         "compression_type": None,
@@ -44,6 +57,31 @@ class ScalarData(DataBase):
     Args:
         hparams (dict): Hyperparameters. See :meth:`default_hparams` for the
             defaults.
+
+    The processor reads and processes raw data and results in a TF dataset
+    whose element is a python `dict` including one field. The field name is
+    specified in :attr:`hparams["dataset"]["data_name"]`. If not specified,
+    the default name is `"data"`. The field name can be accessed through
+    :attr:`data_name`.
+
+    This field is a Tensor of shape `[batch_size]` containing a batch of
+    scalars, of either int or float type as specified in :attr:`hparams`.
+
+    Example:
+
+        .. code-block:: python
+
+            hparams={
+                'dataset': { 'files': 'data.txt', 'data_name': 'label' },
+                'batch_size': 2
+            }
+            data = ScalarData(hparams)
+            iterator = DataIterator(data)
+            batch = iterator.get_next()
+            batch_ = sess.run(batch)
+            # batch_ == {
+            #     'label': [2, 9]
+            # }
     """
 
     def __init__(self, hparams):
@@ -54,6 +92,59 @@ class ScalarData(DataBase):
     @staticmethod
     def default_hparams():
         """Returns a dicitionary of default hyperparameters.
+
+        .. code-block:: python
+
+            {
+                # (1) Hyperparams specific to scalar dataset
+                "dataset": {
+                    "files": [],
+                    "compression_type": None,
+                    "data_type": "int",
+                    "other_transformations": [],
+                    "data_name": None,
+                }
+                # (2) General hyperparams
+                "num_epochs": 1,
+                "batch_size": 64,
+                "allow_smaller_final_batch": True,
+                "shuffle": True,
+                "shuffle_buffer_size": None,
+                "shard_and_shuffle": False,
+                "num_parallel_calls": 1,
+                "prefetch_buffer_size": 0,
+                "max_dataset_size": -1,
+                "seed": None,
+                "name": "scalar_data",
+            }
+
+        Here:
+
+        1. For the hyperparameters in the :attr:`"dataset"` field:
+
+            "files" : str or list
+                A (list of) file path(s).
+
+                Each line contains a single scalar number.
+
+            "compression_type" : str, optional
+                One of "" (no compression), "ZLIB", or "GZIP".
+
+            "data_type" : str
+                The scalar type. Currently supports "int" and "float".
+
+            "other_transformations" : list
+                A list of transformation functions or function names/paths to
+                further transform each single data instance.
+
+                (More documentations to be added.)
+
+            "data_name" : str
+                Name of the dataset.
+
+        2. For the **general** hyperparameters, see
+        :meth:`texar.data.DataBase.default_hparams` for details.
+
         """
         hparams = DataBase.default_hparams()
         hparams["name"] = "scalar_data"
@@ -163,7 +254,8 @@ class ScalarData(DataBase):
 
     @property
     def data_name(self):
-        """The name of the data tensor.
+        """The name of the data tensor, "data" by default if not specified in
+        :attr:`hparams`.
         """
         return self._decoder.data_tensor_name
 

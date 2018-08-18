@@ -78,7 +78,7 @@ class MonoTextData(TextDataBase):
             hyperparameters. See :meth:`default_hparams` for the defaults.
 
     By default, the processor reads raw data files, performs tokenization,
-    batching and other pre-processing steps, and results in a TF dataset
+    batching and other pre-processing steps, and results in a TF Dataset
     whose element is a python `dict` including three fields:
 
         - "text":
@@ -124,14 +124,17 @@ class MonoTextData(TextDataBase):
 
         .. code-block:: python
 
-            hparams={'files': 'data.txt', 'vocab': 'vocab.txt', 'batch_size': 1}
+            hparams={
+                'dataset': { 'files': 'data.txt', 'vocab': 'vocab.txt' },
+                'batch_size': 1
+            }
             data = MonoTextData(hparams)
             iterator = DataIterator(data)
             batch = iterator.get_next()
             batch_ = sess.run(batch)
             # batch_ == {
             #    'text': [['<BOS>', 'example', 'sequence', '<EOS>']],
-            #    'text_id': [['1', '5', '10', '2']],
+            #    'text_ids': [['1', '5', '10', '2']],
             #    'length': [4]
             # }
     """
@@ -244,7 +247,7 @@ class MonoTextData(TextDataBase):
 
             "other_transformations" : list
                 A list of transformation functions or function names/paths to
-                further transform the data instances.
+                further transform each single data instance.
 
                 (More documentations to be added.)
 

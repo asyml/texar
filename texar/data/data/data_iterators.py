@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Various data iterator classes.
 """
@@ -23,19 +35,20 @@ __all__ = [
 
 class DataIteratorBase(object):
     """Base class for all data iterator classes to inherit. A data iterator
-    can switch and iterate through multiple datasets.
+    is a wrapper of :tf_main:`tf.data.Iterator <data/Iterator>`, and can
+    switch between and iterate through **multiple** datasets.
 
     Args:
         datasets: Datasets to iterates through. This can be:
 
-        - A single instance of :tf_main:`tf.data.Dataset <data/Dataset>` or \
-          :class:`~texar.data.DataBase`.
-        - A `dict` that maps dataset name to \
-          instance of :tf_main:`tf.data.Dataset <data/Dataset>` or \
-          :class:`~texar.data.DataBase`.
-        - A `list` of texar Data instances that inherit \
-          :class:`texar.data.DataBase`. The name of each \
-          of the instances must be unique.
+            - A single instance of :tf_main:`tf.data.Dataset <data/Dataset>` \
+            or instance of subclass of :class:`~texar.data.DataBase`.
+            - A `dict` that maps dataset name to \
+            instance of :tf_main:`tf.data.Dataset <data/Dataset>` or \
+            subclass of :class:`~texar.data.DataBase`.
+            - A `list` of instances of subclasses of \
+            :class:`texar.data.DataBase`. The name of instances \
+            (:attr:`texar.data.DataBase.name`) must be unique.
     """
 
     def __init__(self, datasets):
@@ -75,17 +88,46 @@ class DataIteratorBase(object):
 class DataIterator(DataIteratorBase):
     """Data iterator that switches and iterates through multiple datasets.
 
+    This is a wrapper of TF reinitializble :tf_main:`iterator <data/Iterator>`.
+
     Args:
         datasets: Datasets to iterates through. This can be:
 
-        - A single instance of :tf_main:`tf.data.Dataset <data/Dataset>` or \
-          :class:`~texar.data.DataBase`.
-        - A `dict` that maps dataset name to \
-          instance of :tf_main:`tf.data.Dataset <data/Dataset>` or \
-          :class:`~texar.data.DataBase`.
-        - A `list` of texar Data instances that inherit \
-          :class:`texar.data.DataBase`. The name of each \
-          of the instances must be unique.
+            - A single instance of :tf_main:`tf.data.Dataset <data/Dataset>` \
+            or instance of subclass of :class:`~texar.data.DataBase`.
+            - A `dict` that maps dataset name to \
+            instance of :tf_main:`tf.data.Dataset <data/Dataset>` or \
+            subclass of :class:`~texar.data.DataBase`.
+            - A `list` of instances of subclasses of \
+            :class:`texar.data.DataBase`. The name of instances \
+            (:attr:`texar.data.DataBase.name`) must be unique.
+
+    Example:
+
+        .. code-block:: python
+
+            train_data = MonoTextData(hparams_train)
+            test_data = MonoTextData(hparams_test)
+            iterator = DataIterator({'train': train_data, 'test': test_data})
+            batch = iterator.get_next()
+
+            sess = tf.Session()
+
+            for _ in range(200): # Run 200 epochs of train/test
+                # Starts iterating through training data from the beginning
+                iterator.switch_to_dataset(sess, 'train')
+                while True:
+                    try:
+                        train_batch_ = sess.run(batch)
+                    except tf.errors.OutOfRangeError:
+                        print("End of training epoch.")
+                # Starts iterating through test data from the beginning
+                iterator.switch_to_dataset(sess, 'test')
+                while True:
+                    try:
+                        test_batch_ = sess.run(batch)
+                    except tf.errors.OutOfRangeError:
+                        print("End of test epoch.")
     """
 
     def __init__(self, datasets):
@@ -128,13 +170,42 @@ class TrainTestDataIterator(DataIterator):
     """Data iterator that alternatives between train, val, and test datasets.
 
     :attr:`train`, :attr:`val`, and :attr:`test` can be instance of
-    :tf_main:`tf.data.Dataset <data/Dataset>` or :class:`~texar.data.DataBase`.
-    At least one of them must be provided.
+    either :tf_main:`tf.data.Dataset <data/Dataset>` or subclass of
+    :class:`~texar.data.DataBase`. At least one of them must be provided.
+
+    This is a wrapper of :class:`~texar.data.DataIterator`.
 
     Args:
         train (optional): Training data.
         val (optional): Validation data.
         test (optional): Test data.
+
+    Example:
+
+        .. code-block:: python
+
+            train_data = MonoTextData(hparams_train)
+            val_data = MonoTextData(hparams_val)
+            iterator = TrainTestDataIterator(train=train_data, val=val_data)
+            batch = iterator.get_next()
+
+            sess = tf.Session()
+
+            for _ in range(200): # Run 200 epochs of train/val
+                # Starts iterating through training data from the beginning
+                iterator.switch_to_train_data(sess)
+                while True:
+                    try:
+                        train_batch_ = sess.run(batch)
+                    except tf.errors.OutOfRangeError:
+                        print("End of training epoch.")
+                # Starts iterating through val data from the beginning
+                iterator.switch_to_val_dataset(sess)
+                while True:
+                    try:
+                        val_batch_ = sess.run(batch)
+                    except tf.errors.OutOfRangeError:
+                        print("End of val epoch.")
     """
 
     def __init__(self, train=None, val=None, test=None):
@@ -156,7 +227,7 @@ class TrainTestDataIterator(DataIterator):
 
 
     def switch_to_train_data(self, sess):
-        """Starts to iterate through training data
+        """Starts to iterate through training data (from the beginning).
 
         Args:
             sess: The current tf session.
@@ -166,7 +237,7 @@ class TrainTestDataIterator(DataIterator):
         self.switch_to_dataset(sess, self._train_name)
 
     def switch_to_val_data(self, sess):
-        """Starts to iterate through val data
+        """Starts to iterate through val data (from the beginning).
 
         Args:
             sess: The current tf session.
@@ -176,7 +247,7 @@ class TrainTestDataIterator(DataIterator):
         self.switch_to_dataset(sess, self._val_name)
 
     def switch_to_test_data(self, sess):
-        """Starts to iterate through test data
+        """Starts to iterate through test data (from the beginning).
 
         Args:
             sess: The current tf session.
@@ -186,24 +257,64 @@ class TrainTestDataIterator(DataIterator):
         self.switch_to_dataset(sess, self._test_name)
 
 class FeedableDataIterator(DataIteratorBase):
-    """Data iterator that iterates through multiple datasets and switches
-    between datasets with the `feed_dict` mechanism when calling
-    :tf_main:`tf.Session.run <InteractiveSession#run>`.
+    """Data iterator that iterates through **multiple** datasets and switches
+    between datasets.
 
-    The iterator can switch to a specified dataset and resume from where we
-    left off last time we visited the dataset.
+    The iterator can switch to a dataset and resume from where we
+    left off last time we visited the dataset. This is a wrapper of TF
+    feedable :tf_main:`iterator <data/Iterator>`.
 
     Args:
         datasets: Datasets to iterates through. This can be:
 
-        - A single instance of :tf_main:`tf.data.Dataset <data/Dataset>` or \
-          :class:`~texar.data.DataBase`.
-        - A `dict` that maps dataset name to \
-          instance of :tf_main:`tf.data.Dataset <data/Dataset>` or \
-          :class:`~texar.data.DataBase`.
-        - A `list` of texar Data instances that inherit \
-          :class:`texar.data.DataBase`. The name of each \
-          of the instances must be unique.
+            - A single instance of :tf_main:`tf.data.Dataset <data/Dataset>` \
+            or instance of subclass of :class:`~texar.data.DataBase`.
+            - A `dict` that maps dataset name to \
+            instance of :tf_main:`tf.data.Dataset <data/Dataset>` or \
+            subclass of :class:`~texar.data.DataBase`.
+            - A `list` of instances of subclasses of \
+            :class:`texar.data.DataBase`. The name of instances \
+            (:attr:`texar.data.DataBase.name`) must be unique.
+
+    Example:
+
+        .. code-block:: python
+
+            train_data = MonoTextData(hparams={'num_epochs': 200, ...})
+            test_data = MonoTextData(hparams_test)
+            iterator = FeedableDataIterator({'train': train_data,
+                                             'test': test_data})
+            batch = iterator.get_next()
+
+            sess = tf.Session()
+
+            def _eval_epoch(): # Iterate through test data for one epoch
+                # Initialize and start from beginning of test data
+                iterator.initialize_dataset(sess, 'test')
+                while True:
+                    try:
+                        fetch_dict = { # Read from test data
+                            iterator.handle: Iterator.get_handle(sess, 'test')
+                        }
+                        test_batch_ = sess.run(batch, feed_dict=feed_dict)
+                    except tf.errors.OutOfRangeError:
+                        print("End of val epoch.")
+
+            # Initialize and start from beginning of training data
+            iterator.initialize_dataset(sess, 'train')
+            step = 0
+            while True:
+                try:
+                    fetch_dict = { # Read from training data
+                        iterator.handle: Iterator.get_handle(sess, 'train')
+                    }
+                    train_batch_ = sess.run(batch, fetch_dict=fetch_dict)
+
+                    step +=1
+                    if step % 200 == 0: # Evaluate periodically
+                        _eval_epoch()
+                except tf.errors.OutOfRangeError:
+                    print("End of training.")
     """
 
     def __init__(self, datasets):
@@ -224,8 +335,8 @@ class FeedableDataIterator(DataIteratorBase):
             }
 
     def get_handle(self, sess, dataset_name=None):
-        """Returns a dataset handle that can be used to feed the
-        :meth:`handle` placeholder to fetch data from the dataset.
+        """Returns a dataset handle used to feed the
+        :attr:`handle` placeholder to fetch data from the dataset.
 
         Args:
             sess: The current tf session.
@@ -233,9 +344,10 @@ class FeedableDataIterator(DataIteratorBase):
                 there must be only one Dataset.
 
         Returns:
-            A string handle to be fed to the :meth:`handle` placeholder.
+            A string handle to be fed to the :attr:`handle` placeholder.
 
         Example:
+
             .. code-block:: python
 
                 next_element = iterator.get_next()
@@ -299,17 +411,58 @@ class TrainTestFeedableDataIterator(FeedableDataIterator):
     """Feedable data iterator that alternatives between train, val, and test
     datasets.
 
-    The iterator can switch to a specified dataset and resume from where we
-    left off last time we visited the dataset.
+    This is a wrapper of :class:`~texar.data.FeedableDataIterator`.
+    The iterator can switch to a dataset and resume from where it was
+    left off when it was visited last time.
 
     :attr:`train`, :attr:`val`, and :attr:`test` can be instance of
-    :tf_main:`tf.data.Dataset <data/Dataset>` or :class:`~texar.data.DataBase`.
-    At least one of them must be provided.
+    either :tf_main:`tf.data.Dataset <data/Dataset>` or subclass of
+    :class:`~texar.data.DataBase`. At least one of them must be provided.
 
     Args:
         train (optional): Training data.
         val (optional): Validation data.
         test (optional): Test data.
+
+    Example:
+
+        .. code-block:: python
+
+            train_data = MonoTextData(hparams={'num_epochs': 200, ...})
+            test_data = MonoTextData(hparams_test)
+            iterator = TrainTestFeedableDataIterator(train=train_data,
+                                                     test=test_data)
+            batch = iterator.get_next()
+
+            sess = tf.Session()
+
+            def _eval_epoch(): # Iterate through test data for one epoch
+                # Initialize and start from beginning of test data
+                iterator.initialize_test_dataset(sess)
+                while True:
+                    try:
+                        fetch_dict = { # Read from test data
+                            iterator.handle: Iterator.get_test_handle(sess)
+                        }
+                        test_batch_ = sess.run(batch, feed_dict=feed_dict)
+                    except tf.errors.OutOfRangeError:
+                        print("End of test epoch.")
+
+            # Initialize and start from beginning of training data
+            iterator.initialize_train_dataset(sess)
+            step = 0
+            while True:
+                try:
+                    fetch_dict = { # Read from training data
+                        iterator.handle: Iterator.get_train_handle(sess)
+                    }
+                    train_batch_ = sess.run(batch, fetch_dict=fetch_dict)
+
+                    step +=1
+                    if step % 200 == 0: # Evaluate periodically
+                        _eval_epoch()
+                except tf.errors.OutOfRangeError:
+                    print("End of training.")
     """
 
     def __init__(self, train=None, val=None, test=None):
@@ -331,15 +484,16 @@ class TrainTestFeedableDataIterator(FeedableDataIterator):
 
     def get_train_handle(self, sess):
         """Returns the handle of the training dataset. The handle can be used
-        to feed the :meth:`handle` placeholder to fetch training data.
+        to feed the :attr:`handle` placeholder to fetch training data.
 
         Args:
             sess: The current tf session.
 
         Returns:
-            A string handle to be fed to the :meth:`handle` placeholder.
+            A string handle to be fed to the :attr:`handle` placeholder.
 
         Example:
+
             .. code-block:: python
 
                 next_element = iterator.get_next()
@@ -354,13 +508,13 @@ class TrainTestFeedableDataIterator(FeedableDataIterator):
 
     def get_val_handle(self, sess):
         """Returns the handle of the validation dataset. The handle can be used
-        to feed the :meth:`handle` placeholder to fetch validation data.
+        to feed the :attr:`handle` placeholder to fetch validation data.
 
         Args:
             sess: The current tf session.
 
         Returns:
-            A string handle to be fed to the :meth:`handle` placeholder.
+            A string handle to be fed to the :attr:`handle` placeholder.
         """
         if self._val_name not in self._datasets:
             raise ValueError("Val data not provided.")
@@ -368,13 +522,13 @@ class TrainTestFeedableDataIterator(FeedableDataIterator):
 
     def get_test_handle(self, sess):
         """Returns the handle of the test dataset. The handle can be used
-        to feed the :meth:`handle` placeholder to fetch test data.
+        to feed the :attr:`handle` placeholder to fetch test data.
 
         Args:
             sess: The current tf session.
 
         Returns:
-            A string handle to be fed to the :meth:`handle` placeholder.
+            A string handle to be fed to the :attr:`handle` placeholder.
         """
         if self._test_name not in self._datasets:
             raise ValueError("Test data not provided.")
