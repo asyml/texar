@@ -11,6 +11,7 @@ class Config():
         self.input_dir = None
         self.src, self.tgt = None, None
         self.max_seq_length = None
+
 def get_preprocess_args():
     """Data preprocessing options."""
     config = Config()

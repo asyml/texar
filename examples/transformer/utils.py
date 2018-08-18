@@ -2,16 +2,12 @@ import numpy as np
 import preprocess
 from chainer.dataset import convert
 
-
-
 def to_cpu(x):
     try:
         y = x.data.cpu().tolist()[0]
     except:
         y = x.data.cpu().tolist()
     return y
-
-
 
 def seq2seq_pad_concat_convert(xy_batch, device=-1,
     eos_id=preprocess.Vocab_Pad.EOS,
@@ -41,27 +37,30 @@ def seq2seq_pad_concat_convert(xy_batch, device=-1,
     y_block = convert.concat_examples(y_seqs, device, padding=0)
 
     # Add EOS
-    x_block = np.pad(x_block, ((0, 0), (0, 1)), 'constant', constant_values=0)
+    x_block = np.pad(x_block, ((0, 0), (0, 1)), 'constant',
+        constant_values=0)
     for i_batch, seq in enumerate(x_seqs):
         x_block[i_batch, len(seq)] = eos_id
 
-    #x_block = np.pad(x_block, ((0, 0), (1, 0)), 'constant', constant_values=bos_id)
-    y_out_block = np.pad(y_block, ((0, 0), (0, 1)), 'constant', constant_values=0)
+    y_out_block = np.pad(y_block, ((0, 0), (0, 1)), 'constant',
+        constant_values=0)
     for i_batch, seq in enumerate(y_seqs):
         y_out_block[i_batch, len(seq)] = eos_id
 
-    y_in_block = np.pad(y_block, ((0, 0), (1, 0)), 'constant', constant_values=bos_id)
+    # Add BOS in target language
+    y_in_block = np.pad(y_block, ((0, 0), (1, 0)), 'constant',
+        constant_values=bos_id)
     return x_block, y_in_block, y_out_block
 
 def source_pad_concat_convert(x_seqs,
     eos_id=preprocess.Vocab_Pad.EOS,
     bos_id=preprocess.Vocab_Pad.BOS):
     x_block = convert.concat_examples(x_seqs, device=-1, padding=0)
-
+    """
+    This function is used when testing the model without target input.
+    """
     # add eos
     x_block = np.pad(x_block, ((0, 0), (0, 1)), 'constant', constant_values=0)
     for i_batch, seq in enumerate(x_seqs):
         x_block[i_batch, len(seq)] = eos_id
-    #x_block = np.pad(x_block, ((0, 0), (1, 0)), 'constant', constant_values=bos_id)
     return x_block
-

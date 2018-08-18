@@ -8,8 +8,9 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from texar.core import layers, attentions
 from texar import context
+from texar.core import layers
+from texar.utils import transformer_attentions as attentions
 from texar.modules.embedders import position_embedders
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.networks.networks import FeedForwardNetwork
@@ -19,17 +20,15 @@ from texar.utils.shapes import shape_list
 class TransformerEncoder(EncoderBase):
     """Base class for all encoder classes.
     Args:
-        embedding (optional): A `Variable` or a 2D `Tensor` (or `numpy array`)
-            of shape `[vocab_size, embedding_dim]` that contains the token
-            embeddings.
-            If a `Variable`, it is directly used in encoding, and
-            the hyperparameters in :attr:`hparams["embedding"]` is ignored.
-            If a `Tensor` or `numpy array`, a new `Variable` is created taking
-            :attr:`embedding` as initial value. The :attr:`"initializer"` and
-            :attr:`"dim"` hyperparameters in :attr:`hparams["embedding"]` are
-            ignored.
-            If not given, a new `Variable` is created as specified in
-            :attr:`hparams["embedding"]`.
+        embedding (optional): A `Variable` or a 2D `Tensor` (or `numpy
+        array`) of shape `[vocab_size, embedding_dim]` that contains the
+        token embeddings. If a `Variable`, it is directly used in
+        encoding, and the hyperparameters in :attr:`hparams["embedding"]`
+        is ignored. If a `Tensor` or `numpy array`, a new `Variable` is
+        created taking :attr:`embedding` as initial value. The :attr
+        `"initializer"` and :attr:`"dim"` hyperparameters in :attr
+        `hparams["embedding"]` are ignored. If not given, a new `Variable`
+        is created as specified in :attr:`hparams["embedding"]`.
         vocab_size (int, optional): The vocabulary size. Required if
             :attr:`embedding` is not provided.
         hparams (dict, optional): Encoder hyperparameters. If it is not
