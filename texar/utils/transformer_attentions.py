@@ -55,10 +55,10 @@ def attention_bias_local(length, max_backward, max_forward):
 
     Args:
         length: int
-        max_backward: int, maximum distance backward to attend. Negative values
-            indicate unlimited.
-        max_forward: int, maximum distance forward to attend. Negative values
-            indicate unlimited.
+        max_backward: int, maximum distance backward to attend. Negative
+        values indicate unlimited.
+        max_forward: int, maximum distance forward to attend. Negative
+        values indicate unlimited.
 
     Returns:
         a `Tensor` with shape [1, 1, length, length].

@@ -15,7 +15,7 @@ import tensorflow as tf
 from tensorflow.python.framework import tensor_shape, dtypes
 from tensorflow.python.util import nest
 
-from texar.core import layers, attentions
+from texar.core import layers
 from texar.module_base import ModuleBase
 from texar.modules.networks.networks import FeedForwardNetwork
 from texar.modules.embedders import embedder_utils
@@ -23,6 +23,7 @@ from texar.modules.embedders import position_embedders
 from texar import utils
 from texar.utils import beam_search
 from texar.utils.shapes import shape_list
+from texar.utils import transformer_attentions as attentions
 
 class TransformerDecoderOutput(
         collections.namedtuple("TransformerDecoderOutput",\

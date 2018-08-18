@@ -8,8 +8,9 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from texar.core import layers, attentions
 from texar import context
+from texar.core import layers
+from texar.utils import transformer_attentions as attentions
 from texar.modules.embedders import position_embedders
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.networks.networks import FeedForwardNetwork
