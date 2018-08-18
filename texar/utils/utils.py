@@ -155,7 +155,7 @@ def check_or_get_instance(ins_or_class_or_name, kwargs, module_paths=None,
             search for the class. This is used if the class cannot be
             located solely based on :attr:`class_name`. The first module
             in the list that contains the class is used.
-        classtype (optional): A (list of) classes of which the instance must
+        classtype (optional): A (list of) class of which the instance must
             be an instantiation.
 
     Raises:
