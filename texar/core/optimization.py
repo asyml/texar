@@ -37,8 +37,11 @@ __all__ = [
 ]
 
 def default_optimization_hparams():
-    """Returns a `dict` of default hyperparameters of training operator
+    """Returns a `dict` of default hyperparameters of training op
     and their default values
+
+    .. role:: python(code)
+       :language: python
 
     .. code-block:: python
 
@@ -54,7 +57,7 @@ def default_optimization_hparams():
                 "kwargs": {},
                 "min_learning_rate": 0.,
                 "start_decay_step": 0,
-                "end_decay_step": utils.MAX_SEQ_LENGTH,
+                "end_decay_step": inf
             },
             "gradient_clip": {
                 "type": "",
@@ -66,8 +69,78 @@ def default_optimization_hparams():
 
     Here:
 
-    "optimizer" :
+    "optimizer" : dict
+        Hyperparameters of a :tf_main:`tf.train.Optimizer <train/Optimizer>`.
 
+        - **"type"** specifies the optimizer class. This can be
+
+            - The string name or full module path of an optimizer class. \
+            If the class name is provided, the class must be in module \
+            :tf_main:`tf.train <train>`, \
+            :tf_main:`tf.contrib.opt <contrib/opt>` or :mod:`texar.custom`.
+            - An optimizer class.
+            - An instance of an optimizer class.
+
+            For example
+
+            .. code-block:: python
+
+                "type": "AdamOptimizer" # class name
+                "type": "my_module.MyOptimizer" # module path
+                "type": tf.contrib.opt.AdamWOptimizer # class
+                "type": my_module.MyOptimizer # class
+                "type": GradientDescentOptimizer(learning_rate=0.1) # instance
+                "type": MyOptimizer(...) # instance
+
+        - **"kwargs"** is a `dict` specifying keyword arguments for creating \
+        the optimizer class instance, with :python:`opt_class(**kwargs)`. \
+        Ignored if "type" is a class instance.
+
+    "learning_rate_decay" : dict
+        Hyperparameters of learning rate decay function. The learning rate
+        starts decay from :attr:`"start_decay_step"` and keeps unchanged after
+        :attr:`"end_decay_step"` or reaching :attr:`"min_learning_rate"`.
+
+        The decay function is specified in "type" and "kwargs".
+
+            - "type" can be a decay function or its name or module path. If \
+            function name is provided, it must be from module \
+            :tf_main:`tf.train <train>` or :mod:`texar.custom`.
+
+            - "kwargs" is a `dict` of keyword arguments for the function \
+            excluding arguments named "global_step" and "learning_rate".
+
+        The function is called with
+        :python:`lr = decay_fn(learning_rate=lr, global_step=offset_step,
+        **kwargs)`, where `offset_step` is the global step offset as above.
+        The only exception is :tf_main:`tf.train.piecewise_constant
+        <train/piecewise_constant>` which is called with
+        :python:`lr = piecewise_constant(x=offset_step, **kwargs)`.
+
+    "gradient_clip" : dict
+        Hyperparameters of gradient clipping. The gradient clipping function
+        takes a list of `(gradients, variables)` tuples and returns a list
+        of `(clipped_gradients, variables)` tuples. Typical examples include
+        :tf_main:`tf.clip_by_global_norm <clip_by_global_norm>`,
+        :tf_main:`tf.clip_by_value <clip_by_value>`,
+        :tf_main:`tf.clip_by_norm <clip_by_norm>`,
+        :tf_main:`tf.clip_by_average_norm <clip_by_average_norm>`, etc.
+
+        "type" specifies the gradient clip function, and can be a function,
+        or its name or mudule path. If function name is provided, the
+        function must be from module :tf_main:`tf < >` or :mod:`texar.custom`.
+
+        "kwargs" specifies keyword arguments to the function, except arguments
+        named "t" or "t_list".
+
+        The function is called with
+        :python:`clipped_grads(, _) = clip_fn(t_list=grads, **kwargs)`
+        (e.g., for :tf_main:`tf.clip_by_global_norm <clip_by_global_norm>`) or
+        :python:`clipped_grads = [clip_fn(t=grad, **kwargs) for grad in grads]`
+        (e.g., for :tf_main:`tf.clip_by_value <clip_by_value>`).
+
+    "gradient_noise_scale" : float, optional
+        Adds 0-mean normal noise scaled by this value to gradient.
     """
     return {
         "optimizer": {
@@ -99,11 +172,11 @@ def get_optimizer_fn(hparams=None):
     .. role:: python(code)
        :language: python
 
-    The function has the signiture:
-        :python:`optimizer_fn(learning_rate=None) -> optimizer class instance`
+    The function has the signiture
+    :python:`optimizer_fn(learning_rate=None) -> optimizer class instance`
 
     See the :attr:`"optimizer"` field of
-    :meth:`~texar.core.optimization.default_optimization_hparams` for all
+    :meth:`~texar.core.default_optimization_hparams` for all
     hyperparameters and default values.
 
     The optimizer class must be a subclass of
@@ -114,11 +187,11 @@ def get_optimizer_fn(hparams=None):
             hyperparameters are set to default values automatically.
 
     Returns:
-        If "type" in :attr:`hparams` is a string or optimizer class, returns
-        (`optimizer_fn`, optimizer class),
+        - If hparams["type"] is a string or optimizer class, returns\
+        `(optimizer_fn, optimizer class)`,
 
-        If "type" in :attr:`hparams` is an optimizer instance, returns
-        (the optimizer instance, optimizer class)
+        - If hparams["type"] is an optimizer instance, returns \
+        `(the optimizer instance, optimizer class)`
     """
     if hparams is None or isinstance(hparams, dict):
         hparams = HParams(
@@ -154,7 +227,7 @@ def get_learning_rate_decay_fn(hparams=None):
     """Creates learning rate decay function based on the hyperparameters.
 
     See the :attr:`learning_rate_decay` field in
-    :meth:`~texar.core.optimization.default_optimization_hparams` for all
+    :meth:`~texar.core.default_optimization_hparams` for all
     hyperparameters and default values.
 
     Args:
@@ -162,10 +235,10 @@ def get_learning_rate_decay_fn(hparams=None):
             hyperparameters are set to default values automatically.
 
     Returns:
-        function or None: If :attr:`hparams["type"]` is specified, returns a
-        function that takes :attr:`learning_rate` and :attr:`global_step` and
-        returns a scalar Tensor representing the decayed learning rate. If
-        :attr:`hparams["type"]` is empty, returns `None`.
+        function or None: If hparams["type"] is specified, returns a
+        function that takes `(learning_rate, step, **kwargs)` and
+        returns a decayed learning rate. If
+        hparams["type"] is empty, returns `None`.
     """
     if hparams is None or isinstance(hparams, dict):
         hparams = HParams(
@@ -217,7 +290,7 @@ def get_gradient_clip_fn(hparams=None):
     """Creates a gradient clipping function based on the hyperparameters.
 
     See the :attr:`gradient_clip` field in
-    :meth:`~texar.core.optimization.default_optimization_hparams` for all
+    :meth:`~texar.core.default_optimization_hparams` for all
     hyperparameters and default values.
 
     The gradient clipping function takes a list of `(gradients, variables)`
@@ -233,8 +306,8 @@ def get_gradient_clip_fn(hparams=None):
             hyperparameters are set to default values automatically.
 
     Returns:
-        function or `None`: If :attr:`hparams["type"]` is specified, returns
-        the respective function. If :attr:`hparams["type"]` is empty,
+        function or `None`: If hparams["type"] is specified, returns
+        the respective function. If hparams["type"] is empty,
         returns `None`.
     """
     if hparams is None or isinstance(hparams, dict):
@@ -277,8 +350,11 @@ def get_train_op(loss, variables=None, learning_rate=None,
                  global_step=None, increment_global_step=True, hparams=None):
     """Creates a training op.
 
+    This is a wrapper of :tf_main:`tf.contrib.layers.optimize_loss
+    <contrib/layers/optimize_loss>`.
+
     Args:
-        loss: A scalar Tensor representing the loss to optimize.
+        loss: A scalar Tensor representing the loss to minimize.
         variables (optional): A list of Variables to optimize. If
             `None`, all trainable variables are used.
         learning_rate (float or Tensor, optional): If `None`, learning rate
@@ -286,7 +362,11 @@ def get_train_op(loss, variables=None, learning_rate=None,
             of the optimizer will be used (if exists).
         global_step (optional): A scalar int Tensor. Step counter to update on
             each step unless :attr:`increment_global_step` is `False`.
-            Learning rate decay requires requires :attr:`global_step`.
+            Learning rate decay uses :attr:`global_step`.
+            If `None`, it will be fetched from the default graph (see
+            :tf_main:`tf.train.get_global_step <train/get_global_step>` for
+            more details). If it has not been created, no step will be
+            incremented with each weight update.
         increment_global_step (bool): Whether to increment
             :attr:`global_step`. This is useful if the :attr:`global_step` is
             used in multiple training ops per training step (e.g. to optimize
@@ -294,7 +374,7 @@ def get_train_op(loss, variables=None, learning_rate=None,
             :attr:`global_step` more times than necessary.
         hparams (dict or HParams, optional): hyperparameters. Missing
             hyperparameters are set to default values automatically. See
-            :meth:`~texar.core.optimization.default_optimization_hparams` for
+            :func:`~texar.core.default_optimization_hparams` for
             all hyperparameters and default values.
 
     Returns:

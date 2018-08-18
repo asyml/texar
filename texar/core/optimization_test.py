@@ -55,7 +55,7 @@ class OptimizationTest(tf.test.TestCase):
         hparams = {
             "type": tf.train.MomentumOptimizer(0.001, 0.9)
         }
-        momentum_optimizer = opt.get_optimizer_fn(hparams)
+        momentum_optimizer, _ = opt.get_optimizer_fn(hparams)
         self.assertIsInstance(momentum_optimizer, tf.train.MomentumOptimizer)
 
 
