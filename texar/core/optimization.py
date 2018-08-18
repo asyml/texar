@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Various optimization related utilities.
 """
@@ -25,15 +37,36 @@ __all__ = [
 ]
 
 def default_optimization_hparams():
-    """Returns default hyperparameters of optimization.
-
-    Returns:
-        dict: A dictionary with the following structure and values:
+    """Returns a `dict` of default hyperparameters of training operator
+    and their default values
 
     .. code-block:: python
 
         {
+            "optimizer": {
+                "type": "AdamOptimizer",
+                "kwargs": {
+                    "learning_rate": 0.001
+                }
+            },
+            "learning_rate_decay": {
+                "type": "",
+                "kwargs": {},
+                "min_learning_rate": 0.,
+                "start_decay_step": 0,
+                "end_decay_step": utils.MAX_SEQ_LENGTH,
+            },
+            "gradient_clip": {
+                "type": "",
+                "kwargs": {}
+            },
+            "gradient_noise_scale": None,
+            "name": None
         }
+
+    Here:
+
+    "optimizer" :
 
     """
     return {
@@ -60,28 +93,32 @@ def default_optimization_hparams():
     }
 
 def get_optimizer_fn(hparams=None):
-    """Returns a function of making optimizer instance, along with the
-    optimizer class.
+    """Returns a function `optimizer_fn` of making optimizer instance, along
+    with the optimizer class.
+
+    .. role:: python(code)
+       :language: python
 
     The function has the signiture:
-        (learning_rate=None) -> instance of the optimizer class,
+        :python:`optimizer_fn(learning_rate=None) -> optimizer class instance`
 
-    The optimizer class must be a subclass of :tf_main:`~tf.train.Optimizer`.
-
-    See the :attr:`"optimizer"` field in
+    See the :attr:`"optimizer"` field of
     :meth:`~texar.core.optimization.default_optimization_hparams` for all
     hyperparameters and default values.
 
-    If :attr:`hparams["type"]` is an optimier instance, returns the instance
-    directly.
+    The optimizer class must be a subclass of
+    :tf_main:`tf.train.Optimizer <train/Optimizer>`.
 
     Args:
         hparams (dict or HParams, optional): hyperparameters. Missing
             hyperparameters are set to default values automatically.
 
     Returns:
-        (function that creates optimizer instance, optimizer class),
-        or the optimizer instance.
+        If "type" in :attr:`hparams` is a string or optimizer class, returns
+        (`optimizer_fn`, optimizer class),
+
+        If "type" in :attr:`hparams` is an optimizer instance, returns
+        (the optimizer instance, optimizer class)
     """
     if hparams is None or isinstance(hparams, dict):
         hparams = HParams(
