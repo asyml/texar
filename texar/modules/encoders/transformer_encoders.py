@@ -19,17 +19,15 @@ from texar.utils.shapes import shape_list
 class TransformerEncoder(EncoderBase):
     """Base class for all encoder classes.
     Args:
-        embedding (optional): A `Variable` or a 2D `Tensor` (or `numpy array`)
-            of shape `[vocab_size, embedding_dim]` that contains the token
-            embeddings.
-            If a `Variable`, it is directly used in encoding, and
-            the hyperparameters in :attr:`hparams["embedding"]` is ignored.
-            If a `Tensor` or `numpy array`, a new `Variable` is created taking
-            :attr:`embedding` as initial value. The :attr:`"initializer"` and
-            :attr:`"dim"` hyperparameters in :attr:`hparams["embedding"]` are
-            ignored.
-            If not given, a new `Variable` is created as specified in
-            :attr:`hparams["embedding"]`.
+        embedding (optional): A `Variable` or a 2D `Tensor` (or `numpy
+        array`) of shape `[vocab_size, embedding_dim]` that contains the
+        token embeddings. If a `Variable`, it is directly used in
+        encoding, and the hyperparameters in :attr:`hparams["embedding"]`
+        is ignored. If a `Tensor` or `numpy array`, a new `Variable` is
+        created taking :attr:`embedding` as initial value. The :attr
+        `"initializer"` and :attr:`"dim"` hyperparameters in :attr
+        `hparams["embedding"]` are ignored. If not given, a new `Variable`
+        is created as specified in :attr:`hparams["embedding"]`.
         vocab_size (int, optional): The vocabulary size. Required if
             :attr:`embedding` is not provided.
         hparams (dict, optional): Encoder hyperparameters. If it is not

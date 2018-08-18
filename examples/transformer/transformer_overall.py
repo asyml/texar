@@ -60,7 +60,8 @@ if __name__ == "__main__":
     logging.info('begin logging, new running')
     # Construct the databas
 
-    train_data = np.load(os.path.join(args.input, args.data + '.train.npy'))
+    train_data = np.load(os.path.join(args.input, args.data +
+        '.train.npy'))
     train_data = train_data.tolist()
     dev_data = np.load(os.path.join(args.input, args.data + '.valid.npy'))
     dev_data = dev_data.tolist()

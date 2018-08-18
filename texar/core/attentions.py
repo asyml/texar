@@ -97,7 +97,8 @@ def multihead_attention(queries,
     """Applies multihead attention.
 
     Args:
-        queries: A 3d tensor with shape of [batch, length_query, depth_query].
+        queries: A 3d tensor with shape of [batch, length_query,
+            depth_query].
         keys: A 3d tensor with shape of [batch, length_key, depth_key].
         num_units: A scalar indicating the attention size,
             equals to depth_query if not given.
@@ -115,14 +116,17 @@ def multihead_attention(queries,
         if num_units is None:
             num_units = queries.get_shape().as_list()[-1]
         if num_units % num_heads != 0:
-            raise ValueError("Value depth (%d) must be divisible by the number"
-                             "of attention heads (%d)." % (\
+            raise ValueError("Value depth (%d) must be divisible by the"
+                             "number of attention heads (%d)." % (\
                             num_units, num_heads))
         if memory is None:
             #'self attention'
-            Q = tf.layers.dense(queries, num_units, use_bias=False, name='q')
-            K = tf.layers.dense(queries, num_units, use_bias=False, name='k')
-            V = tf.layers.dense(queries, num_units, use_bias=False, name='v')
+            Q = tf.layers.dense(queries, num_units, use_bias=False,
+                name='q')
+            K = tf.layers.dense(queries, num_units, use_bias=False,
+                name='k')
+            V = tf.layers.dense(queries, num_units, use_bias=False,
+                name='v')
             if cache is not None:
                 # 'decoder self attention when dynamic decoding'
                 K = tf.concat([cache['self_keys'], K], axis=1)
@@ -131,7 +135,8 @@ def multihead_attention(queries,
                 cache['self_values'] = V
         else:
             # 'encoder decoder attention'
-            Q = tf.layers.dense(queries, num_units, use_bias=False, name='q')
+            Q = tf.layers.dense(queries, num_units, use_bias=False,
+                name='q')
             if cache is not None:
                 K, V = tf.cond(
                     tf.equal(tf.shape(cache["memory_keys"])[1], 0),
@@ -170,8 +175,9 @@ def multihead_attention(queries,
     return outputs
 
 def _split_heads(x, num_heads):
-    """Split channels (dimension 2) into multiple heads, becomes dimension 1).
-    Must ensure `x.shape[-1]` can be deviced by num_heads.any
+    """Split channels (dimension 2) into multiple heads,
+        becomes dimension 1).
+    Must ensure `x.shape[-1]` can be deviced by num_heads
     """
     depth = x.get_shape()[-1]
     splitted_x = tf.reshape(x, [tf.shape(x)[0], tf.shape(x)[1], \
@@ -192,10 +198,12 @@ def _combine_heads(x):
     return tf.reshape(t, [tf.shape(t)[0], tf.shape(t)[1], num_heads*dim])
 
 
-def _ones_matrix_band_part(rows, cols, num_lower, num_upper, out_shape=None):
+def _ones_matrix_band_part(rows, cols, num_lower, num_upper,
+    out_shape=None):
     """Matrix band part of ones.
     """
-    if all([isinstance(el, int) for el in [rows, cols, num_lower, num_upper]]):
+    if all([isinstance(el, int) for el in [rows, cols, num_lower,
+        num_upper]]):
     # Needed info is constant, so we construct in numpy
         if num_lower < 0:
             num_lower = rows - 1
