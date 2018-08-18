@@ -103,6 +103,15 @@ Optimization
 Exploration
 ============
 
+:hidden:`EpsilonLinearDecayExploration`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.core.EpsilonLinearDecayExploration
+    :members:
+
 Replay Memories
 ================
 
+:hidden:`DequeReplayMemory`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.core.DequeReplayMemory
+    :members:
