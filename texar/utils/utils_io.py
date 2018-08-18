@@ -9,9 +9,10 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
-from io import open # pylint: disable=redefined-builtin
+# pylint: disable=invalid-name, redefined-builtin, too-many-arguments
+
+from io import open
 import os
-#import logging
 import importlib
 import yaml
 
@@ -21,9 +22,11 @@ from tensorflow import gfile
 as_text = tf.compat.as_text
 
 __all__ = [
-    "write_paired_text",
     "load_config_single",
-    "load_config"
+    "load_config",
+    "write_paired_text",
+    "maybe_create_dir",
+    "get_files"
 ]
 
 #def get_tf_logger(fname,
@@ -190,3 +193,40 @@ def write_paired_text(src, tgt, fname, append=False, mode='h', sep='\t'):
                 else:
                     raise ValueError('Unknown mode: {}'.format(mode))
         return fname
+
+def maybe_create_dir(dirname):
+    """Creates directory if doesn't exist
+    """
+    if not tf.gfile.IsDirectory(dirname):
+        tf.gfile.MakeDirs(dirname)
+        return True
+    return False
+
+
+def get_files(file_paths):
+    """Gets a list of file paths given possibly a pattern :attr:`file_paths`.
+
+    Adapted from `tf.contrib.slim.data.parallel_reader.get_data_files`.
+
+    Args:
+        file_paths: A (list of) path to the files. The path can be a pattern,
+            e.g., /path/to/train*, /path/to/train[12]
+
+    Returns:
+        A list of file paths.
+
+    Raises:
+        ValueError: If no files are not found
+    """
+    if isinstance(file_paths, (list, tuple)):
+        files = []
+        for f in file_paths:
+            files += get_files(f)
+    else:
+        if '*' in file_paths or '?' in file_paths or '[' in file_paths:
+            files = tf.gfile.Glob(file_paths)
+        else:
+            files = [file_paths]
+    if not files:
+        raise ValueError('No data files found in %s' % (file_paths,))
+    return files

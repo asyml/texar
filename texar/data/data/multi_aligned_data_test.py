@@ -56,7 +56,7 @@ class MultiAlignedDataTest(tf.test.TestCase):
 
         int_3 = [0, 1]
         int_3_file = tempfile.NamedTemporaryFile()
-        int_3_file.write('\n'.join([str(_) for _ in int_3]))
+        int_3_file.write(('\n'.join([str(_) for _ in int_3])).encode("utf-8"))
         int_3_file.flush()
         self._int_3_file = int_3_file
 

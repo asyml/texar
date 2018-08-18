@@ -93,7 +93,9 @@ class DataIteratorTest(tf.test.TestCase):
                 while True:
                     try:
                         data_batch_ = sess.run(data_batch)
-                        self.assertEqual(data_batch_['text'][0][0], str(i))
+                        self.assertEqual(
+                            tf.compat.as_text(data_batch_['text'][0][0]),
+                            str(i))
                         i += 1
                     except tf.errors.OutOfRangeError:
                         print('Done -- epoch limit reached')
@@ -122,7 +124,9 @@ class DataIteratorTest(tf.test.TestCase):
                 while True:
                     try:
                         data_batch_ = sess.run(data_batch)
-                        self.assertEqual(data_batch_['text'][0][0], str(i+1))
+                        self.assertEqual(
+                            tf.compat.as_text(data_batch_['text'][0][0]),
+                            str(i+1))
                         i = (i+1) % 1000
                     except tf.errors.OutOfRangeError:
                         print('Train data limit reached')
@@ -135,7 +139,9 @@ class DataIteratorTest(tf.test.TestCase):
                 while True:
                     try:
                         data_batch_ = sess.run(data_batch)
-                        self.assertEqual(data_batch_['text'][0][0], str(i))
+                        self.assertEqual(
+                            tf.compat.as_text(data_batch_['text'][0][0]),
+                            str(i))
                         i += 1
                     except tf.errors.OutOfRangeError:
                         print('Test data limit reached')
@@ -163,7 +169,9 @@ class DataIteratorTest(tf.test.TestCase):
                 while True:
                     try:
                         data_batch_ = sess.run(data_batch)
-                        self.assertEqual(data_batch_['text'][0][0], str(i+1))
+                        self.assertEqual(
+                            tf.compat.as_text(data_batch_['text'][0][0]),
+                            str(i+1))
                         i = (i+1) % 1000
                     except tf.errors.OutOfRangeError:
                         print('Train data limit reached')
@@ -175,7 +183,9 @@ class DataIteratorTest(tf.test.TestCase):
                 while True:
                     try:
                         data_batch_ = sess.run(data_batch)
-                        self.assertEqual(data_batch_['text'][0][0], str(i))
+                        self.assertEqual(
+                            tf.compat.as_text(data_batch_['text'][0][0]),
+                            str(i))
                         i += 1
                     except tf.errors.OutOfRangeError:
                         print('Test data limit reached')
@@ -208,7 +218,9 @@ class DataIteratorTest(tf.test.TestCase):
                     try:
                         feed_dict = {iterator.handle: data_handle}
                         data_batch_ = sess.run(data_batch, feed_dict=feed_dict)
-                        self.assertEqual(data_batch_['text'][0][0], str(i+1))
+                        self.assertEqual(
+                            tf.compat.as_text(data_batch_['text'][0][0]),
+                            str(i+1))
                         i = (i+1) % 1000
                     except tf.errors.OutOfRangeError:
                         print('Train data limit reached')
@@ -223,7 +235,9 @@ class DataIteratorTest(tf.test.TestCase):
                     try:
                         feed_dict = {iterator.handle: data_handle}
                         data_batch_ = sess.run(data_batch, feed_dict=feed_dict)
-                        self.assertEqual(data_batch_['text'][0][0], str(i))
+                        self.assertEqual(
+                            tf.compat.as_text(data_batch_['text'][0][0]),
+                            str(i))
                         i += 1
                     except tf.errors.OutOfRangeError:
                         print('Test data limit reached')
@@ -254,7 +268,9 @@ class DataIteratorTest(tf.test.TestCase):
                             iterator.handle: iterator.get_train_handle(sess)
                         }
                         data_batch_ = sess.run(data_batch, feed_dict=feed_dict)
-                        self.assertEqual(data_batch_['text'][0][0], str(i+1))
+                        self.assertEqual(
+                            tf.compat.as_text(data_batch_['text'][0][0]),
+                            str(i+1))
                         i = (i+1) % 1000
                     except tf.errors.OutOfRangeError:
                         print('Train data limit reached')
@@ -269,7 +285,9 @@ class DataIteratorTest(tf.test.TestCase):
                             iterator.handle: iterator.get_test_handle(sess)
                         }
                         data_batch_ = sess.run(data_batch, feed_dict=feed_dict)
-                        self.assertEqual(data_batch_['text'][0][0], str(i))
+                        self.assertEqual(
+                            tf.compat.as_text(data_batch_['text'][0][0]),
+                            str(i))
                         i += 1
                     except tf.errors.OutOfRangeError:
                         print('Test data limit reached')

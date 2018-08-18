@@ -171,7 +171,7 @@ def make_chained_transformation(tran_fns, *args, **kwargs):
     transformations sequentially.
 
     Args:
-        tran_fns (list): A list of dataset transformation.
+        tran_fns (list): A list of dataset transformation function.
         *args: Extra arguments for each of the transformation function.
         **kwargs: Extra keyword arguments for each of the transformation
             function.

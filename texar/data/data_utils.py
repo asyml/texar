@@ -19,26 +19,18 @@ import requests
 
 import tensorflow as tf
 
+from texar.utils import utils_io
+
 # pylint: disable=invalid-name, too-many-branches
 
 __all__ = [
-    "create_dir_if_needed",
     "maybe_download",
-    "get_files",
     "read_words",
     "make_vocab",
     "count_file_lines"
 ]
 
 Py3 = sys.version_info[0] == 3
-
-def create_dir_if_needed(dirname):
-    """Creates directory if doesn't exist
-    """
-    if not tf.gfile.IsDirectory(dirname):
-        tf.gfile.MakeDirs(dirname)
-        return True
-    return False
 
 def maybe_download(urls, path, filenames=None, extract=False):
     """Downloads a set of files.
@@ -54,7 +46,7 @@ def maybe_download(urls, path, filenames=None, extract=False):
     Returns:
         A list of paths to the downloaded files.
     """
-    create_dir_if_needed(path)
+    utils_io.maybe_create_dir(path)
 
     if not isinstance(urls, (list, tuple)):
         urls = [urls]
@@ -154,34 +146,6 @@ def _download_from_google_drive(url, filename, path):
 
     return filepath
 
-def get_files(file_paths):
-    """Gets a list of file paths given possibly a pattern :attr:`file_paths`.
-
-    Adapted from `tf.contrib.slim.data.parallel_reader.get_data_files`.
-
-    Args:
-        file_paths: A (list of) path to the files. The path can be a pattern,
-            e.g., /path/to/train*, /path/to/train[12]
-
-    Returns:
-        A list of file paths.
-
-    Raises:
-        ValueError: If no files are not found
-    """
-    if isinstance(file_paths, (list, tuple)):
-        files = []
-        for f in file_paths:
-            files += get_files(f)
-    else:
-        if '*' in file_paths or '?' in file_paths or '[' in file_paths:
-            files = tf.gfile.Glob(file_paths)
-        else:
-            files = [file_paths]
-    if not files:
-        raise ValueError('No data files found in %s' % (file_paths,))
-    return files
-
 def read_words(filename, newline_token=None):
     """Reads word from a file.
 
@@ -265,7 +229,4 @@ def count_file_lines(filenames):
         filenames = [filenames]
     num_lines = np.sum([_count_lines(fn) for fn in filenames])
     return num_lines
-
-
-
 

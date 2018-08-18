@@ -19,15 +19,3 @@ Networks
     :members:
 
 
-Attentions
-======
-
-.. automodule:: texar.core.attentions
-    :members:
-
-
-Distribuations
-======
-
-.. automodule:: texar.core.distributions
-    :members:

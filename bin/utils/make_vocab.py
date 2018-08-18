@@ -38,7 +38,7 @@ FLAGS = flags.FLAGS
 def main(_):
     """Makes vocab.
     """
-    filenames = tx.data.get_files(FLAGS.files)
+    filenames = tx.utils.get_files(FLAGS.files)
     vocab = tx.data.make_vocab(filenames,
                                max_vocab_size=FLAGS.max_vocab_size,
                                newline_token=FLAGS.newline_token)
