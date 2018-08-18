@@ -5,7 +5,11 @@
 # This file provides a script to preprocess raw text corpora to generate
 # vocabulary with sentence piece encoding or byte pairwise encoding.
 # You can provide customed source language and target language if the
-# correpsonding corpora are saved in the correct path. By default, the vocab_size is set to 32000.
+# correpsonding corpora are saved in the correct path.
+# By default, the vocab_size is set to 32000.
+#
+# Run it with `preprocess_data.sh source_language target_language`.
+# For example, `preprocess_data.sh en vi`
 
 ###########################################################################
 
@@ -14,18 +18,8 @@ TF=$(pwd)
 
 export PATH=$PATH:$TF/../../bin/utils/
 encoder=spm
-
-if [ -z $1 ]; then
-    src_language=en
-else
-    src_language=$1
-fi
-
-if  [ -z $2 ]; then
-    tgt_language=vi
-else
-    tgt_language=$2
-fi
+src_language=$1
+tgt_language=$2
 
 # update these variables
 data=${TF}"/data/${src_language}_${tgt_language}"
@@ -48,7 +42,7 @@ echo "Output dir = $out"
 
 echo "Step 1a: Preprocess inputs"
 
-echo "Learning Word Piece  or Byte Pairwise on source and target combined"
+echo "Learning Word Piece or Byte Pairwise on source and target combined"
 case ${encoder} in
     'spm')
         spm_train --input=${train_src},${train_tgt} --vocab_size ${vocab_size} --model_prefix=$out/data/spm-codes.${vocab_size}

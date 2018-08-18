@@ -26,25 +26,18 @@ def load_hyperparams():
     # pylint: disable=too-many-statements
     args = Hyperparams()
     argparser = argparse.ArgumentParser()
-    """
-    For devendra data loader
-    """
     argparser.add_argument('--data', type=str, default='processed')
     argparser.add_argument('--wbatchsize', type=int, default=3000)
     argparser.add_argument('--epoch', type=int, default=40)
     argparser.add_argument('--start_epoch', type=int, default=0)
-    #argparser.add_argument('--max_train_size', type=int, default=60)
-    #argparser.add_argument('--max_eval_size', type=int, default=30)
-    #argparser.add_argument('--max_test_size', type=int, default=10)
-
-    # -------------------------------------------------#
     argparser.add_argument('--max_seq_length', type=int, default=256)
     argparser.add_argument('--mode', type=str,
                            default='train_and_evaluate',
                            help='can also be test mode')
     argparser.add_argument('--src_language', type=str, default='en')
     argparser.add_argument('--tgt_language', type=str, default='de')
-    argparser.add_argument('--filename_prefix', type=str, default='processed.')
+    argparser.add_argument('--filename_prefix', type=str,
+        default='processed.')
     argparser.add_argument('--debug', type=int, default=0)
     argparser.add_argument('--draw_for_debug', type=int, default=0)
     argparser.add_argument('--average_model', type=int, default=0,
@@ -83,6 +76,7 @@ def load_hyperparams():
     argparser.parse_args(namespace=args)
     args.input = 'temp/run_{}_{}_{}/data'.format(
         args.src_language, args.tgt_language, args.pre_encoding)
+
     # pylint: disable=attribute-defined-outside-init
     args.data_dir = os.path.abspath(args.data_dir)
     # pylint: disable=no-member
@@ -105,17 +99,18 @@ def load_hyperparams():
     args.test_tgt = os.path.join(args.data_dir, \
         '{}test.{}{}'.format(args.filename_prefix,
                              args.tgt_language, args.filename_suffix))
+
     if args.load_from_pytorch:
         args.affine_bias = 1
         args.bos_pad = False
         args.zero_pad = False
+
     args.vocab_file = os.path.join(args.data_dir, \
         args.filename_prefix + args.pre_encoding + '.vocab.text')
     log_params_dir = 'log_dir/{}_{}.bsize{}.epoch{}.lr_c{}warm{}/'.format(\
         args.src_language, args.tgt_language, args.batch_size, \
         args.max_train_epoch, args.lr_constant, args.warmup_steps)
     args.log_dir = os.path.join(args.log_disk_dir, log_params_dir)
-    #args.log_dir = './debug/run_en_nl_bpe/'
     batching_scheme = _batching_scheme(
         args.batch_size,
         args.max_seq_length,

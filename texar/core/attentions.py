@@ -1,3 +1,7 @@
+"""
+Various attention functions.
+Adapted from [tensor2tensor](https://github.com/tensorflow/tensor2tensor/tensor2tensor/layers/common_attention.py) library.
+"""
 import tensorflow as tf
 
 from texar import context
@@ -134,34 +138,6 @@ def multihead_attention(queries,
             use_bias=False, name='output_transform')
         #(batch_size, length_query, attention_depth)
     return outputs
-
-def layer_normalize(inputs,
-                    epsilon=1e-8,
-                    scope='ln',
-                    reuse=None):
-    '''Applies layer normalization. averaging over the last dimension
-    Args:
-        inputs: A tensor with 2 or more dimensions, where the first
-            dimension has `batch_size`.
-        epsilon: A floating number. A very small number for preventing
-            ZeroDivision Error.
-        scope: Optional scope for `variable_scope`.
-        reuse: Boolean, whether to reuse the weights of a previous layer
-            by the same name.
-    Returns:
-        A tensor with the same shape and data dtype as `inputs`.
-    '''
-    with tf.variable_scope(scope, reuse=reuse):
-        filters = inputs.get_shape()[-1]
-        mean, variance = tf.nn.moments(inputs, [-1], keep_dims=True)
-        scale = tf.get_variable('layer_norm_scale',\
-            [filters], initializer=tf.ones_initializer())
-        bias = tf.get_variable('layer_norm_bias',\
-            [filters], initializer=tf.zeros_initializer())
-        norm_x = (inputs - mean) * tf.rsqrt(variance + epsilon)
-        outputs = norm_x * scale + bias
-    return outputs
-
 
 def _split_heads(x, num_heads):
     """Split channels (dimension 2) into multiple heads, becomes dimension 1).
