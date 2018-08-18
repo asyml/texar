@@ -23,12 +23,14 @@ import copy
 
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
+
 from texar.hyperparams import HParams
 from texar.utils import utils
 from texar.utils.dtypes import is_str
 from texar.utils.variables import add_variable
 from texar.utils.mode import is_train_mode, switch_dropout
-# pylint: disable=not-context-manager, redefined-variable-type, invalid-name
+
+# pylint: disable=redefined-variable-type, invalid-name
 # pylint: disable=too-many-branches, too-many-arguments, too-many-lines
 # pylint: disable=protected-access
 
@@ -68,59 +70,99 @@ __all__ = [
 ]
 
 def default_rnn_cell_hparams():
-    """Returns default hyperparameters of an RNN cell.
+    """Returns a `dict` of RNN cell hyperparameters and their default values.
 
-    Returns:
-        A dictionary with the following structure and values:
+    .. role:: python(code)
+       :language: python
+
+    .. code-block:: python
+
+        {
+            "type": "BasicLSTMCell",
+            "kwargs": {
+                "num_units": 256
+            }
+            "num_layers": 1
+            "dropout": {
+                "input_keep_prob": 1.0,
+                "output_keep_prob": 1.0,
+                "state_keep_prob": 1.0,
+                "variational_recurrent": False,
+                "input_size": []
+            },
+            "residual": False,
+            "highway": False,
+        }
+
+    Here:
+
+    "type" : str or cell class or cell instance
+        The RNN cell type. This can be
+
+        - The string name or full module path of a cell class. If the class \
+        name is provided, the class must be in module \
+        :tf_main:`tf.contrib.rnn <contrib/rnn>` or :mod:`texar.custom`.
+        - A cell class.
+        - An instance of a cell class. This is not valid if \
+        "num_layers" > 1.
+
+        For example
 
         .. code-block:: python
 
-            {
-                # Name or full path of the cell class. E.g., the classname
-                # of built-in cells in `tensorflow.contrib.rnn`, or the
-                # classname of user-defined cells in `texar.custom`, or a
-                # full path like "my_module.MyCell".
-                "type": "BasicLSTMCell",
+            "type": "BasicLSTMCell" # class name
+            "type": "tensorflow.contrib.rnn.Conv1DLSTMCell" # module path
+            "type": "my_module.MyCell" # module path
+            "type": tf.contrib.rnn.GRUCell # class
+            "type": BasicRNNCell(num_units=100) # cell instance
+            "type": MyCell(...) # cell instance
 
-                # A dictionary of arguments for constructor of the cell
-                # class. An RNN cell is created by calling the cell class
-                # named in `type` passing the arguments specified in
-                # `kwargs` as `cell_class(**kwargs)`
-                "kwargs": {
-                    "num_units": 256
-                }
+    "kwargs" : dict
+        Keyword arguments for the constructor of the cell class.
+        A cell is created by :python:`cell_class(**kwargs)`, where
+        `cell_class` is specified in "type" above.
 
-                # Number of cell layers
-                "num_layers": 1
+        Ignored if "type" is a cell instance.
 
-                # Dropout applied to the cell in each layer. See
-                # `tensorflow.contrib.rnn.DropoutWrapper` for each of the
-                # hyperparameters. If all keep probablities are 1.0, no dropout
-                # is applied.
-                "dropout": {
-                    "input_keep_prob": 1.0,
-                    "output_keep_prob": 1.0,
-                    "state_keep_prob": 1.0,
+    "num_layers" : int
+        Number of cell layers. Each layer is a cell created as above, with
+        the same hyperparameters specified in "kwargs".
 
-                    # If True, the same dropout mask is applied at every step,
-                    # and the list of input size of each layer is required
-                    # (in "input_size"). The input size of a layer is the size
-                    # of the last dimension of its input tensor. E.g., the
-                    # input size of the first layer is usually the dimension of
-                    # word embeddings, while the input size of followup layers
-                    # are usually the num_units of the cells.
-                    "variational_recurrent": False,
-                    "input_size": []
-                },
+    "dropout" : dict
+        Dropout applied to the cell in **each** layer. See
+        :tf_main:`DropoutWrapper <contrib/rnn/DropoutWrapper>` for details of
+        the hyperparameters. If all `*_keep_prob`=1, no dropout is applied.
 
-                # If True, apply residual connection on the inputs and
-                # outputs of cell in each layer except the first layer.
-                "residual": False,
+        Specifically, if "variational_recurrent"=`True`,
+        the same dropout mask is applied across all time steps per run call.
+        If `True`, :attr:`"input_size"` is required, which is a list of input
+        size of each cell layer. The input size of a cell layer is the last
+        dimension size of its input tensor. For example, the
+        input size of the first layer is usually the dimension of
+        word embeddings, while the input size of subsequent layers
+        are usually the `num_units` of the preceding-layer cell. E.g.,
 
-                # If True, apply highway connection on the inputs and
-                # outputs of cell in each layer except the first layer.
-                "highway": False,
+        .. code-block:: python
+
+            # Assume embedding_dim = 100
+            "type": "BasicLSTMCell",
+            "kwargs": { "num_units": 123 },
+            "num_layers": 3
+            "dropout": {
+                "output_keep_prob": 0.5,
+                "variational_recurrent": True,
+                "input_size": [100, 123, 123]
             }
+
+    "residule" : bool
+        If `True`, apply residual connection on the inputs and
+        outputs of cell in **each** layer except the first layer. Ignored
+        if "num_layers"==1.
+
+    "highway" : bool
+        If True, apply highway connection on the inputs and
+        outputs of cell in each layer except the first layer. Ignored if
+        "num_layers"==1.
     """
     return {
         "type": "BasicLSTMCell",
@@ -142,30 +184,26 @@ def default_rnn_cell_hparams():
         "highway": False,
     }
 
-
 def get_rnn_cell(hparams=None, mode=None):
     """Creates an RNN cell.
 
-    See :meth:`~texar.core.layers.default_rnn_cell_hparams` for all
+    See :func:`~texar.core.default_rnn_cell_hparams` for all
     hyperparameters and default values.
 
     Args:
         hparams (dict or HParams, optional): Cell hyperparameters. Missing
-            hyperparameters are set to default values. If
-            :attr:`hparams["type"]` is a cell instance (rather
-            than the name or path to the cell class), then
-            :attr:`hparams["num_layers"]` must be 1.
+            hyperparameters are set to default values.
         mode (optional): A Tensor taking value in
             :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
             `TRAIN`, `EVAL`, and `PREDICT`. If `None`, dropout will be
-            controlled by :func:`texar.context.global_mode`.
+            controlled by :func:`texar.global_mode`.
 
     Returns:
-        An instance of :tf_main:`RNNCell <contrib/rnn/RNNCell>`.
+        A cell instance.
 
     Raises:
-        ValueError: If :attr:`hparams["num_layers"]` > 1 and
-            :attr:`hparams["type"]` is not of type string.
+        ValueError: If hparams["num_layers"]>1 and hparams["type"] is a class
+            instance.
         ValueError: The cell is not an
             :tf_main:`RNNCell <contrib/rnn/RNNCell>` instance.
     """
@@ -186,18 +224,14 @@ def get_rnn_cell(hparams=None, mode=None):
     for layer_i in range(num_layers):
         # Create the basic cell
         cell_type = hparams["type"]
-        if is_str(cell_type):
-            cell_modules = ['tensorflow.contrib.rnn', 'texar.custom']
-            cell = utils.get_instance(cell_type, cell_kwargs, cell_modules)
-        else:
+        if not is_str(cell_type) and not isinstance(cell_type, type):
             if num_layers > 1:
                 raise ValueError(
-                    "If `hparams['num_layers']`>1, then "
-                    "`hparams['type']` must be a string name or path "
-                    "to the class.")
-            cell = cell_type
-        if not isinstance(cell, rnn.RNNCell):
-            raise ValueError("cell must be an instance of RNNCell.")
+                    "If 'num_layers'>1, then 'type' must be a cell class or "
+                    "its name/module path, rather than a cell instance.")
+        cell_modules = ['tensorflow.contrib.rnn', 'texar.custom']
+        cell = utils.check_or_get_instance(
+            cell_type, cell_kwargs, cell_modules, rnn.RNNCell)
 
         # Optionally add dropout
         if d_hp["input_keep_prob"] < 1.0 or \
@@ -205,15 +239,17 @@ def get_rnn_cell(hparams=None, mode=None):
                 d_hp["state_keep_prob"] < 1.0:
             vr_kwargs = {}
             if d_hp["variational_recurrent"]:
-                vr_kwargs = {"variational_recurrent": True,
-                             "input_size": d_hp["input_size"][layer_i],
-                             "dtype": tf.float32}
+                vr_kwargs = {
+                    "variational_recurrent": True,
+                    "input_size": d_hp["input_size"][layer_i],
+                    "dtype": tf.float32
+                }
             input_keep_prob = switch_dropout(d_hp["input_keep_prob"],
-                                                   mode)
+                                             mode)
             output_keep_prob = switch_dropout(d_hp["output_keep_prob"],
-                                                    mode)
+                                              mode)
             state_keep_prob = switch_dropout(d_hp["state_keep_prob"],
-                                                   mode)
+                                             mode)
             cell = rnn.DropoutWrapper(
                 cell=cell,
                 input_keep_prob=input_keep_prob,
@@ -241,7 +277,8 @@ def get_rnn_cell_trainable_variables(cell):
     """Returns the list of trainable variables of an RNN cell.
 
     Args:
-        cell: an instance of :class:`tensorflow.contrib.rnn.RNNCell`.
+        cell: an instance of
+            :tf_main:`tf.contrib.rnn.RNNCell <contrib/rnn/RNNCell>`.
 
     Returns:
         list: trainable variables of the cell.
@@ -284,8 +321,12 @@ def default_regularizer_hparams():
 def get_regularizer(hparams=None):
     """Returns a variable regularizer instance.
 
-    See :func:`~texar.core.layers.default_regularizer_hparams` for all
+    See :func:`~texar.core.default_regularizer_hparams` for all
     hyperparameters and default values.
+
+    The "type" field can be a subclass
+    of :tf_main:`Regularizer <keras/regularizers/Regularizer>`, its string name
+    or module path, or a class instance.
 
     Args:
         hparams (dict or HParams, optional): Hyperparameters. Missing
@@ -293,7 +334,7 @@ def get_regularizer(hparams=None):
 
     Returns:
         A :tf_main:`Regularizer <keras/regularizers/Regularizer>` instance.
-        `None` if :attr:`hparams` is `None` or takes the default
+        `None` if :attr:`hparams` is `None` or taking the default
         hyperparameter value.
 
     Raises:
@@ -305,25 +346,52 @@ def get_regularizer(hparams=None):
 
     if isinstance(hparams, dict):
         hparams = HParams(hparams, default_regularizer_hparams())
-    if is_str(hparams.type):
-        rgl = utils.get_instance(
-            hparams.type, hparams.kwargs.todict(),
-            ["tensorflow.keras.regularizers", "texar.custom"])
-    else:
-        rgl = hparams.type
+
+    rgl = utils.check_or_get_instance(
+        hparams.type, hparams.kwargs.todict(),
+        ["tensorflow.keras.regularizers", "texar.custom"])
+
     if not isinstance(rgl, tf.keras.regularizers.Regularizer):
         raise ValueError("The regularizer must be an instance of "
                          "tf.keras.regularizers.Regularizer.")
+
     if isinstance(rgl, tf.keras.regularizers.L1L2) and \
             rgl.l1 == 0. and rgl.l2 == 0.:
         return None
+
     return rgl
 
 def get_initializer(hparams=None):
     """Returns an initializer instance.
 
+    .. role:: python(code)
+       :language: python
+
     Args:
-        hparams (dict or HParams, optional): Hyperparameters.
+        hparams (dict or HParams, optional): Hyperparameters with the structure
+
+            .. code-block:: python
+
+                {
+                    "type": "initializer_class_or_function",
+                    "kwargs": {
+                        #...
+                    }
+                }
+
+            The "type" field can be a initializer class, its name or module
+            path, or class instance. If class name is provided, the class must
+            be from one the following modules:
+            :tf_main:`tf.initializers <initializers>`,
+            :tf_main:`tf.keras.initializers <keras/initializers>`,
+            :tf_main:`tf < >`, and :mod:`texar.custom`. The class is created
+            by :python:`initializer_class(**kwargs)`.
+
+            Besides, the "type" field can also be an initialization function
+            called with :python:`initialization_fn(**kwargs)`. In this case
+            "type" can be the function, or its name or module path. If
+            function name is provided, the function must be from one of the
+            above modules or module `tf.contrib.layers`.
 
     Returns:
         An initializer instance. `None` if :attr:`hparams` is `None`.
@@ -331,20 +399,19 @@ def get_initializer(hparams=None):
     if hparams is None:
         return None
 
-    if is_str(hparams["type"]):
-        kwargs = hparams["kwargs"]
-        if isinstance(kwargs, HParams):
-            kwargs = kwargs.todict()
-        modules = ["tensorflow.initializers", "tensorflow.keras.initializers",
-                   "tensorflow", "texar.custom"]
-        try:
-            initializer = utils.get_instance(hparams["type"], kwargs, modules)
-        except TypeError:
-            modules += ['tensorflow.contrib.layers']
-            initializer_fn = utils.get_function(hparams["type"], modules)
-            initializer = initializer_fn(**kwargs)
-    else:
-        initializer = hparams["type"]
+    kwargs = hparams["kwargs"]
+    if isinstance(kwargs, HParams):
+        kwargs = kwargs.todict()
+    modules = ["tensorflow.initializers", "tensorflow.keras.initializers",
+               "tensorflow", "texar.custom"]
+    try:
+        initializer = utils.check_or_get_instance(hparams["type"], kwargs,
+                                                  modules)
+    except TypeError:
+        modules += ['tensorflow.contrib.layers']
+        initializer_fn = utils.get_function(hparams["type"], modules)
+        initializer = initializer_fn(**kwargs)
+
     return initializer
 
 def get_activation_fn(fn_name="identity", kwargs=None):
@@ -355,7 +422,8 @@ def get_activation_fn(fn_name="identity", kwargs=None):
     without default values, then all these arguments except the input feature
     argument must be specified in :attr:`kwargs`. Arguments with default values
     can also be specified in :attr:`kwargs` to take values other than the
-    defaults.
+    defaults. In this case a partial function is returned with the above
+    signature.
 
     Args:
         fn_name (str or callable): The name or full path to an activation
@@ -363,19 +431,17 @@ def get_activation_fn(fn_name="identity", kwargs=None):
 
             The function can be:
 
-            - Built-in function defined in :mod:`tf` or \
-              :mod:`tf.nn`, e.g., :tf_main:`identity <identity>`.
-            - User-defined activation functions in `texar.custom`.
-            - External activation functions. Must provide the full path, \
+            - Built-in function defined in :tf_main:`tf < >` or \
+            :tf_main:`tf.nn <nn>`, e.g., :tf_main:`tf.identity <identity>`.
+            - User-defined activation functions in module :mod:`texar.custom`.
+            - External activation functions. Must provide the full module path,\
               e.g., "my_module.my_activation_fn".
-
-            If a callable is provided, then it is returned directly.
 
         kwargs (optional): A `dict` or instance of :class:`~texar.HParams`
             containing the keyword arguments of the activation function.
 
     Returns:
-        The activation function. `None` if :attr:`fn_name` is `None`.
+        An activation function. `None` if :attr:`fn_name` is `None`.
     """
     if fn_name is None:
         return None
@@ -396,7 +462,13 @@ def get_activation_fn(fn_name="identity", kwargs=None):
 
 
 def get_constraint_fn(fn_name="NonNeg"):
-    """Returns a constraint function based on its name or full path.
+    """Returns a constraint function.
+
+    .. role:: python(code)
+       :language: python
+
+    The function must follow the signature:
+    :python:`w_ = constraint_fn(w)`.
 
     Args:
         fn_name (str or callable): The name or full path to a
@@ -404,14 +476,14 @@ def get_constraint_fn(fn_name="NonNeg"):
 
             The function can be:
 
-            - Built-in constraint functions defined in \
+            - Built-in constraint functions defined in modules \
             :tf_main:`tf.keras.constraints <keras/constraints>` \
             (e.g., :tf_main:`NonNeg <keras/constraints/NonNeg>`) \
-            or :mod:`tf` or :mod:`tf.nn` (e.g., activation functions).
-            - User-defined function in :mod:`texar.custom`. The function \
-            must follow the signature `w' = constraint_fn(w)`.
+            or :tf_main:`tf < >` or :tf_main:`tf.nn <nn>` \
+            (e.g., activation functions).
+            - User-defined function in :mod:`texar.custom`.
             - Externally defined function. Must provide the full path, \
-            e.g., :attr:`"my_module.my_constraint_fn"`.
+            e.g., `"my_module.my_constraint_fn"`.
 
             If a callable is provided, then it is returned directly.
 
@@ -426,12 +498,10 @@ def get_constraint_fn(fn_name="NonNeg"):
     constraint_fn = utils.get_function(fn_name, fn_modules)
     return constraint_fn
 
-
-#TODO: allow flat `type` and `kwargs` arguments.
 def get_layer(hparams):
     """Makes a layer instance.
 
-    The layer must be an instance of :tf_main:`Layer <layers/Layer>`.
+    The layer must be an instance of :tf_main:`tf.layers.Layer <layers/Layer>`.
 
     Args:
         hparams (dict or HParams): Hyperparameters of the layer, with
@@ -449,52 +519,59 @@ def get_layer(hparams):
 
             Here:
 
-            "type" : str or layer instance
-                Name, full path, or instance of the layer class. The
-                class can be
+            "type" : str or layer class or layer instance
+                The layer type. This can be
 
-                - Built-in layer defined in \
-                  :tf_main:`tf.layers <layers>` (e.g., \
-                  :tf_main:`tf.layers.Conv2D <layers/Conv2D>`), or \
-                  :mod:`tx.core <texar.core>` (e.g., \
-                  :class:`tx.core.MergeLayer <texar.core.MergeLayer>`)
-                - User-defined layer class in :mod:`tx.custom <texar.custom>`.\
-                  The class must inherit :tf_main:`Layer <layers/Layer>`.
-                - External layer. If str, must provide the full path, \
-                  e.g., :attr:`"my_module.MyInitializer"`.
+                - The string name or full module path of a layer class. If \
+                the class name is provided, the class must be in module \
+                :tf_main:`tf.layers <layers>`, :mod:`texar.core`, \
+                or :mod:`texar.custom`.
+                - A layer class.
+                - An instance of a layer class.
+
+                For example
+
+                .. code-block:: python
+
+                    "type": "Conv1D" # class name
+                    "type": "texar.core.MaxReducePooling1D" # module path
+                    "type": "my_module.MyLayer" # module path
+                    "type": tf.layers.Conv2D # class
+                    "type": Conv1D(filters=10, kernel_size=2) # cell instance
+                    "type": MyLayer(...) # cell instance
 
             "kwargs" : dict
-                A dictionary of arguments for constructor of the
+                A dictionary of keyword arguments for constructor of the
                 layer class. Ignored if :attr:`"type"` is a layer instance.
 
                 - Arguments named "activation" can be a callable, \
                 or a `str` of \
-                the name or full path to the activation function. \
+                the name or module path to the activation function.
                 - Arguments named "*_regularizer" and "*_initializer" \
                 can be a class instance, or a `dict` of \
                 hyperparameters of \
-                respective regularizers and initializers.
+                respective regularizers and initializers. See
                 - Arguments named "*_constraint" can be a callable, or a `str` \
-                of the name or full path to the constraint function. \
+                of the name or full path to the constraint function.
 
     Returns:
-        A layer instance. If :attr:`hparams["type"]` is already a layer
-        instance, returns it directly.
+        A layer instance. If hparams["type"] is a layer instance, returns it
+        directly.
 
     Raises:
         ValueError: If :attr:`hparams` is `None`.
         ValueError: If the resulting layer is not an instance of
-            :tf_main:`Layer <layers/Layer>`.
+            :tf_main:`tf.layers.Layer <layers/Layer>`.
     """
     if hparams is None:
         raise ValueError("`hparams` must not be `None`.")
 
     layer_type = hparams["type"]
-    if not is_str(layer_type):
+    if not is_str(layer_type) and not isinstance(layer_type, type):
         layer = layer_type
     else:
         layer_modules = ["tensorflow.layers", "texar.core", "texar.costum"]
-        layer_class = utils.get_class(layer_type, layer_modules)
+        layer_class = utils.check_or_get_class(layer_type, layer_modules)
         if isinstance(hparams, dict):
             default_kwargs = _layer_class_to_default_kwargs_map.get(layer_class,
                                                                     {})
@@ -547,7 +624,7 @@ def _compute_concat_output_shape(input_shape, axis):
     return output_shape
 
 class _ReducePooling1D(tf.layers.Layer):
-    """Pooling layer for abirary pooling functions for 1D inputs.
+    """Pooling layer for arbitrary reduce functions for 1D inputs.
 
     The same as `tf.python.layers.pooling._Pooling1D` except that the pooling
     dimension is entirely reduced (i.e., `pool_size=length`).
@@ -577,22 +654,20 @@ class _ReducePooling1D(tf.layers.Layer):
             return self._reduce_function(inputs, axis=2)
 
 class MaxReducePooling1D(_ReducePooling1D):
-    """Max Pooling layer for 1D inputs. The same as
+    """A subclass of :tf_main:`tf.layers.Layer <layers/Layer>`.
+    Max Pooling layer for 1D inputs. The same as
     :tf_main:`MaxPooling1D <layers/MaxPooling1D>` except that the pooling
-    dimension is entirely reduced (i.e., `pool_size=length`).
-
-
+    dimension is entirely reduced (i.e., `pool_size=input_length`).
     """
     def __init__(self, data_format='channels_last', name=None, **kwargs):
         super(MaxReducePooling1D, self).__init__(
             tf.reduce_max, data_format=data_format, name=name, **kwargs)
 
 class AverageReducePooling1D(_ReducePooling1D):
-    """Average Pooling layer for 1D inputs. The same as
+    """A subclass of :tf_main:`tf.layers.Layer <layers/Layer>`.
+    Average Pooling layer for 1D inputs. The same as
     :tf_main:`AveragePooling1D <layers/AveragePooling1D>` except that the
-    pooling dimension is entirely reduced (i.e., `pool_size=length`).
-
-
+    pooling dimension is entirely reduced (i.e., `pool_size=input_length`).
     """
     def __init__(self, data_format='channels_last', name=None, **kwargs):
         super(AverageReducePooling1D, self).__init__(
@@ -606,10 +681,12 @@ _POOLING_TO_REDUCE = {
 }
 
 def get_pooling_layer_hparams(hparams):
-    """Creates pooling layer hparams dict usable for :func:`get_layer`.
+    """Creates pooling layer hparams `dict` usable for :func:`get_layer`.
 
     If the :attr:`hparams` sets `'pool_size'` to `None`, the layer will be
-    changed to the respective reduce-pooling layer.
+    changed to the respective reduce-pooling layer. For example,
+    :class:`tf.layers.MaxPooling1D <layers/MaxPooling1D>` is replaced with
+    :class:`~texar.core.MaxReducePooling1D`.
     """
     if isinstance(hparams, HParams):
         hparams = hparams.todict()
@@ -627,39 +704,42 @@ def get_pooling_layer_hparams(hparams):
     return new_hparams
 
 class MergeLayer(tf.layers.Layer):
-    """A layer that consists of multiple layers in parallel. Input is fed to
+    """A subclass of :tf_main:`tf.layers.Layer <layers/Layer>`.
+    A layer that consists of multiple layers in parallel. Input is fed to
     each of the parallel layers, and the outputs are merged with a
     specified mode.
 
     Args:
         layers (list, optional): A list of :tf_main:`tf.layers.Layer
             <layers/layer>` instances, or a list of hyperparameter dicts
-            each of which specifying type and kwargs of each layer (see
-            the :attr:`hparams` argument of :func:`get_layer`). If `None`,
-            inputs to the merge-layer directly merged.
+            each of which specifies type and kwargs of each layer (see
+            the `hparams` argument of :func:`get_layer`).
+
+            If `None`, this layer degenerates to a merging operator that merges
+            inputs directly.
         mode (str): Mode of the merge op. This can be:
 
             - :attr:`'concat'`: Concatenates layer outputs along one axis. \
               Tensors must have the same shape except for the dimension \
-              specified in axis, which can have different sizes.
+              specified in `axis`, which can have different sizes.
             - :attr:`'elemwise_sum'`: Outputs element-wise sum.
             - :attr:`'elemwise_mul'`: Outputs element-wise product.
             - :attr:`'sum'`: Computes the sum of layer outputs along the \
-              dimension given in :attr:`axis`. E.g., given `axis=1`, \
+              dimension given by `axis`. E.g., given `axis=1`, \
               two tensors of shape `[a, b]` and `[a, c]` respectively \
               will result in a merged tensor of shape `[a]`.
             - :attr:`'mean'`: Computes the mean of layer outputs along the \
-              dimension given in :attr:`axis`.
+              dimension given in `axis`.
             - :attr:`'prod'`: Computes the product of layer outputs along the \
-              dimension given in :attr:`axis`.
+              dimension given in `axis`.
             - :attr:`'max'`: Computes the maximum of layer outputs along the \
-              dimension given in :attr:`axis`.
+              dimension given in `axis`.
             - :attr:`'min'`: Computes the minimum of layer outputs along the \
-              dimension given in :attr:`axis`.
+              dimension given in `axis`.
             - :attr:`'and'`: Computes the `logical and` of layer outputs along \
-              the dimension given in :attr:`axis`.
+              the dimension given in `axis`.
             - :attr:`'or'`: Computes the `logical or` of layer outputs along \
-              the dimension given in :attr:`axis`.
+              the dimension given in `axis`.
             - :attr:`'logsumexp'`: Computes \
               log(sum(exp(elements across the dimension of layer outputs)))
         axis (int): The axis to use in merging. Ignored in modes
@@ -725,12 +805,6 @@ class MergeLayer(tf.layers.Layer):
             raise ValueError("Unknown merge mode: '%s'" % self._mode)
 
         return tf.TensorShape(output_shape)
-
-    def build(self, _):
-        """Dumb method.
-        """
-        # Does not set :attr:`self.built` as this point.
-        pass
 
     def _collect_weights(self):
         """Collects (non-)trainable weights of each of the parallel layers.
@@ -806,15 +880,21 @@ class MergeLayer(tf.layers.Layer):
         """
         return self._layers
 
+    def build(self, _):
+        """Dumb method.
+        """
+        # Does not set :attr:`self.built` as this point.
+        pass
 
 class SequentialLayer(tf.layers.Layer):
-    """A layer that consists of multiple layers connected sequentially.
+    """A subclass of :tf_main:`tf.layers.Layer <layers/Layer>`.
+    A layer that consists of multiple layers connected sequentially.
 
     Args:
         layers (list): A list of :tf_main:`tf.layers.Layer
             <layers/layer>` instances, or a list of hyperparameter dicts
             each of which specifying type and kwargs of each layer (see
-            the :attr:`hparams` argument of :func:`get_layer`). The layers are
+            the `hparams` argument of :func:`get_layer`). The layers are
             connected sequentially.
     """
     def __init__(self,
@@ -841,12 +921,6 @@ class SequentialLayer(tf.layers.Layer):
             input_shape = output_shape
         return output_shape
 
-    def build(self, _):
-        """Dumb method.
-        """
-        # Does not set :attr:`self.built` as this point.
-        pass
-
     def _collect_weights(self):
         """Collects (non-)trainable weights of each of the layers.
         """
@@ -861,8 +935,6 @@ class SequentialLayer(tf.layers.Layer):
                 layer._non_trainable_weights, self._non_trainable_weights)
 
     def call(self, inputs, mode=None): # pylint: disable=arguments-differ
-        """TODO
-        """
         training = is_train_mode(mode)
 
         outputs = inputs
@@ -885,6 +957,11 @@ class SequentialLayer(tf.layers.Layer):
         """
         return self._layers
 
+    def build(self, _):
+        """Dumb method.
+        """
+        # Does not set :attr:`self.built` as this point.
+        pass
 
 def _common_default_conv_dense_kwargs():
     """Returns the default keyword argument values that are common to
@@ -910,157 +987,50 @@ def _common_default_conv_dense_kwargs():
         "name": None
     }
 
-#TODO(zhiting): fix the docstring
 def default_conv1d_kwargs():
-    """Returns the default keyword argument values of 1D convolution layer
-    defined in :tf_main:`tf.layers.Conv1D <layers/Conv1D>`.
+    """Returns the default keyword argument values of the constructor
+    of 1D-convolution layer class
+    :tf_main:`tf.layers.Conv1D <layers/Conv1D>`.
 
-    Returns:
-        .. code-block:: python
+    .. code-block:: python
 
-            {
-                "filters": 100,
-                "kernel_size": 3,
-                "strides": 1,
-                "padding": 'valid',
-                "data_format": 'channels_last',
-                "dilation_rate": 1
-                "activation": "identity",
-                "use_bias": True,
-                "kernel_initializer": {
-                    "type": "glorot_uniform_initializer",
-                    "kwargs": {}
-                },
-                "bias_initializer": {
-                    "type": "zeros_initializer",
-                    "kwargs": {}
-                },
-                "kernel_regularizer": {
-                    "type": "L1L2",
-                    "kwargs": {
-                        "l1": 0.,
-                        "l2": 0.
-                    }
-                },
-                "bias_regularizer": {
-                    # same as in "kernel_regularizer"
-                    # ...
-                },
-                "activity_regularizer": {
-                    # same as in "kernel_regularizer"
-                    # ...
-                },
-                "kernel_constraint": None,
-                "bias_constraint": None,
-                "trainable": True,
-                "name": None
-            }
-
-        Here:
-
-        "filters" : int
-            The number of filters in the convolution.
-
-            The default value is `100`.
-
-        "kernel_size" : int
-            The length of 1D convolution window.
-
-            The default value is `3`.
-
-        "strides" : int
-            The stride length of the convolution.
-
-            The default value is `1`.
-
-        "padding" : str
-            One of `"valid"` or `"same"` (case-insensitive).
-
-            The default value is `"valid"`.
-
-        "data_format" : str
-            The ordering of the dimensions in the inputs. One of
-            `"channels_last"` or `"channels_first"`.
-            `"channels_last"` corresponds to inputs with shape
-            `(batch, length, channels)`; `"channels_first"` corresponds to
-            inputs with shape `(batch, channels, length)`.
-
-            The default value is `"channels_last"`.
-
-        "dilation_rate" : int
-            The dilation rate to use for dilated convolution.
-
-            The default value is `1`.
-
-        "activation" : str
-            The name or full path to the activation function applied to the
-            outputs of the layer.
-
-            The default value is "identity", which corr. to
-            :tf_main:`tf.identity <identity>`.
-
-        "kernel_initializer" : dict
-            Hyperparameters of the initializer for the filters, including
-            :attr:`"type"` (str or object) and :attr:`"kwargs"` (dict).
-
-            The default corr. to :tf_main:`tf.glorot_uniform_initializer
-            <glorot_uniform_initializer>`.
-
-        "bias_initializer" : dict
-            Hyperparameters of the initializer for the bias, including
-            :attr:`"type"` (str or object) and :attr:`"kwargs"` (dict).
-
-            The default corr. to
-            :tf_main:`tf.zeros_initializer <zeros_initializer>`.
-
-        "kernel_regularizer" : dict
-            Optional hyperparameters of the regularizer for the convolution
-            filters, including :attr:`"type"` (str or object) and
-            :attr:`"kwargs"` (dict).
-
-            The default value disables regularization.
-
-        "bias_regularizer" : dict
-            Optional hyperparameters of the regularizer for the bias,
-            including :attr:`"type"` (str or object) and
-            :attr:`"kwargs"` (dict).
-
-            The default value disables regularization.
-
-        "activity_regularizer" : dict
-            Optional hyperparameters of the regularizer for the layer output,
-            including :attr:`"type"` (str or object) and
-            :attr:`"kwargs"` (dict).
-
-            The default value disables regularization.
-
-        "kernel_constraint" : str
-            Optional name or full path to projection function to be applied to
-            the kernel after being updated by an `Optimizer`. Used to
-            implement norm constraints
-            or value constraints for layer weights. The function must take
-            as input the unprojected variable and return the projected variable
-            with the same shape. Constraints are not safe to use when doing
-            asynchronous distributed training.
-
-            The function can be:
-
-            - Built-in constraint functions defined in \
-            :tf_main:`tf.keras.constraints <keras/constraints>` \
-            (e.g., :tf_main:`NonNeg <keras/constraints/NonNeg>`) \
-            or :mod:`tf` or :mod:`tf.nn` (e.g., activation functions).
-            - User-defined function in :mod:`texar.custom`. The function \
-            must follow the signature `w' = constraint_fn(w)`.
-            - Externally defined function. Must provide the full path, \
-            e.g., :attr:`"my_module.my_function"`.
-
-            The default value is `None`.
-
-        "bias_constraint" : str
-            Optional name or full path to projection function to be applied to
-            the bias after being updated by an `Optimizer`.
-
-            The default value is `None`.
+        {
+            "filters": 100,
+            "kernel_size": 3,
+            "strides": 1,
+            "padding": 'valid',
+            "data_format": 'channels_last',
+            "dilation_rate": 1
+            "activation": "identity",
+            "use_bias": True,
+            "kernel_initializer": {
+                "type": "glorot_uniform_initializer",
+                "kwargs": {}
+            },
+            "bias_initializer": {
+                "type": "zeros_initializer",
+                "kwargs": {}
+            },
+            "kernel_regularizer": {
+                "type": "L1L2",
+                "kwargs": {
+                    "l1": 0.,
+                    "l2": 0.
+                }
+            },
+            "bias_regularizer": {
+                # same as in "kernel_regularizer"
+                # ...
+            },
+            "activity_regularizer": {
+                # same as in "kernel_regularizer"
+                # ...
+            },
+            "kernel_constraint": None,
+            "bias_constraint": None,
+            "trainable": True,
+            "name": None
+        }
     """
     kwargs = _common_default_conv_dense_kwargs()
     kwargs.update({
@@ -1090,8 +1060,43 @@ def default_conv3d_transpose_kwargs():
     return {}
 
 def default_dense_kwargs():
-    """Returns the default keyword argument values of dense layer
-    defined in :tf_main:`tf.layers.Dense <layers/Dense>`.
+    """Returns the default keyword argument values of the constructor
+    of the dense layer class :tf_main:`tf.layers.Dense <layers/Dense>`.
+
+    .. code-block:: python
+
+        {
+            "units": 256,
+            "activation": "identity",
+            "use_bias": True,
+            "kernel_initializer": {
+                "type": "glorot_uniform_initializer",
+                "kwargs": {}
+            },
+            "bias_initializer": {
+                "type": "zeros_initializer",
+                "kwargs": {}
+            },
+            "kernel_regularizer": {
+                "type": "L1L2",
+                "kwargs": {
+                    "l1": 0.,
+                    "l2": 0.
+                }
+            },
+            "bias_regularizer": {
+                # same as in "kernel_regularizer"
+                # ...
+            },
+            "activity_regularizer": {
+                # same as in "kernel_regularizer"
+                # ...
+            },
+            "kernel_constraint": None,
+            "bias_constraint": None,
+            "trainable": True,
+            "name": None
+        }
     """
     kwargs = _common_default_conv_dense_kwargs()
     kwargs.update({

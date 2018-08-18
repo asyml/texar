@@ -1,5 +1,5 @@
 .. role:: hidden
-    :class: hidden
+    :class: hidden-section
 
 Core
 ****
@@ -33,6 +33,10 @@ Layers
 .. autoclass:: texar.core.AverageReducePooling1D
     :members:
 
+:hidden:`get_pooling_layer_hparams`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.core.get_pooling_layer_hparams
+
 :hidden:`MergeLayer`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.core.MergeLayer
@@ -62,10 +66,6 @@ Layers
 :hidden:`get_constraint_fn`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.core.get_constraint_fn
-
-:hidden:`get_pooling_layer_hparams`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: texar.core.get_pooling_layer_hparams
 
 :hidden:`default_conv1d_kwargs`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

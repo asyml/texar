@@ -30,7 +30,6 @@ Embedding
 
 :hidden:`load_word2vec`
 ~~~~~~~~~~~~~~~~~~~~~~~~
-
 .. autofunction:: texar.data.load_word2vec
 
 :hidden:`load_glove`

@@ -19,6 +19,7 @@ from texar.hyperparams import HParams
 from texar.core import layers
 
 # pylint: disable=no-member, protected-access, invalid-name
+# pylint: disable=redefined-variable-type
 
 class GetRNNCellTest(tf.test.TestCase):
     """Tests RNN cell creator.
@@ -30,12 +31,22 @@ class GetRNNCellTest(tf.test.TestCase):
         emb_dim = 4
         num_units = 64
 
+        # Given instance
         hparams = {
             "type": rnn.BasicLSTMCell(num_units)
         }
         cell = layers.get_rnn_cell(hparams)
         self.assertTrue(isinstance(cell, rnn.BasicLSTMCell))
 
+        # Given class
+        hparams = {
+            "type": rnn.BasicLSTMCell,
+            "kwargs": { "num_units": 10 }
+        }
+        cell = layers.get_rnn_cell(hparams)
+        self.assertTrue(isinstance(cell, rnn.BasicLSTMCell))
+
+        # Given string, and complex hyperparameters
         keep_prob_x = tf.placeholder(
             name='keep_prob', shape=[], dtype=tf.float32)
         hparams = {
@@ -169,6 +180,19 @@ class GetLayerTest(tf.test.TestCase):
         }
         layer = layers.get_layer(hparams)
         self.assertTrue(isinstance(layer, tx.core.MergeLayer))
+
+        hparams = {
+            "type": tf.layers.Conv1D
+        }
+        layer = layers.get_layer(hparams)
+        self.assertTrue(isinstance(layer, tf.layers.Conv1D))
+
+        hparams = {
+            "type": tf.layers.Conv1D(filters=10, kernel_size=2)
+        }
+        layer = layers.get_layer(hparams)
+        self.assertTrue(isinstance(layer, tf.layers.Conv1D))
+
 
 class ReducePoolingLayerTest(tf.test.TestCase):
     """Tests reduce pooling layer.
