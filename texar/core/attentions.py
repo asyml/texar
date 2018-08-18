@@ -1,6 +1,6 @@
 """
 Various attention functions.
-Adapted from [tensor2tensor](https://github.com/tensorflow/tensor2tensor/tensor2tensor/layers/common_attention.py) library.
+Adapted from the tensor2tensor repositor.
 """
 import tensorflow as tf
 
