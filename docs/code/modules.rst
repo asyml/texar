@@ -52,6 +52,11 @@ Encoders
 .. autoclass:: texar.modules.HierarchicalRNNEncoder
     :members:
 
+:hidden:`TransformerEncoder`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.TransformerEncoder
+    :members:
+
 :hidden:`Conv1DEncoder`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.Conv1DEncoder

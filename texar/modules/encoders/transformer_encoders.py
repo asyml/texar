@@ -1,5 +1,18 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
-transformer encoders. Multihead-SelfAttention
+Transformer encoders with multihead self attention.
 """
 
 from __future__ import absolute_import
@@ -17,23 +30,31 @@ from texar.modules.networks.networks import FeedForwardNetwork
 from texar import utils
 from texar.utils.shapes import shape_list
 
+# pylint: disable=too-many-locals, invalid-name
+
+__all__ = [
+    "TransformerEncoder"
+]
+
 class TransformerEncoder(EncoderBase):
-    """Base class for all encoder classes.
+    """Transformer encoder.
+
     Args:
         embedding (optional): A `Variable` or a 2D `Tensor` (or `numpy
-        array`) of shape `[vocab_size, embedding_dim]` that contains the
-        token embeddings. If a `Variable`, it is directly used in
-        encoding, and the hyperparameters in :attr:`hparams["embedding"]`
-        is ignored. If a `Tensor` or `numpy array`, a new `Variable` is
-        created taking :attr:`embedding` as initial value. The :attr
-        `"initializer"` and :attr:`"dim"` hyperparameters in :attr
-        `hparams["embedding"]` are ignored. If not given, a new `Variable`
-        is created as specified in :attr:`hparams["embedding"]`.
+            array`) of shape `[vocab_size, embedding_dim]` that contains the
+            token embeddings. If a `Variable`, it is directly used in
+            encoding, and the hyperparameters in :attr:`hparams["embedding"]`
+            is ignored. If a `Tensor` or `numpy array`, a new `Variable` is
+            created taking :attr:`embedding` as initial value. The :attr
+            `"initializer"` and :attr:`"dim"` hyperparameters in :attr
+            `hparams["embedding"]` are ignored. If not given, a new `Variable`
+            is created as specified in :attr:`hparams["embedding"]`.
         vocab_size (int, optional): The vocabulary size. Required if
             :attr:`embedding` is not provided.
-        hparams (dict, optional): Encoder hyperparameters. If it is not
-            specified, the default hyperparameter setting is used. See
-            :attr:`default_hparams` for the sturcture and default values.
+        hparams (dict or HParams, optional): Hyperparameters. Missing
+            hyperparamerter will be set to default values. See
+            :meth:`default_hparams` for the hyperparameter sturcture and
+            default values.
     """
     def __init__(self,
                  embedding,
@@ -47,7 +68,7 @@ class TransformerEncoder(EncoderBase):
             if self._hparams.initializer:
                 tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
-            if self._hparams.position_embedder.name=='sinusoids':
+            if self._hparams.position_embedder.name == 'sinusoids':
                 self.position_embedder = \
                     position_embedders.SinusoidsPositionEmbedder(\
                     self._hparams.position_embedder.hparams)
@@ -76,69 +97,68 @@ class TransformerEncoder(EncoderBase):
             else:
                 self.target_symbol_embedding = None
         self.stack_output = None
+
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
-        The dictionary has the following structure and default values.
-        See :meth:`~texar.core.layers.default_rnn_cell_hparams` for the
-        default rnn cell hyperparameters, and
-        :meth:`~texar.core.layers.default_embedding_hparams` for the default
-        embedding hyperparameters.
-        .. code-block:: python
-            {
-                # (bool) Wether embedding is used in the encoder. If `True`
-                # (default), input to the encoder should contain integer
-                # indexes and will be used to look up the embedding vectors.
-                # If `False`, the input is directly fed into the RNN to encode.
-                "use_embedding": True,
 
-                # A dictionary of token embedding hyperparameters for embedding
-                # initialization.
-                #
-                # Ignored if "use_embedding" is `False`, or a tf.Variable
-                # is given to `embedding` in the encoder constructor. Note that
-                # in the second case, the embedding variable might be updated
-                # outside the encoder even if "embedding.trainable" is set to
-                # `False` and not updated by the encoder.
-                #
-                # If a Tensor or array is given to `embedding` in the
-                # constructor, "dim" and "initializer" in the configuration
-                # are ignored.
-                "embedding": texar.core.layers.default_embedding_hparams(),
-                # Name of the encoder.
+        .. code-block:: python
+
+            {
+                'initializer':None,
+                'multiply_embedding_mode': 'sqrt_depth',
+                "use_embedding": True,
+                "position_embedder": None,
+                "name":"encoder",
+                "zero_pad":False,
+                "bos_pad":False,
+                'sinusoid':True,
+                'embedding_dropout':0.1,
+                'attention_dropout':0.1,
+                'residual_dropout':0.1,
+                'num_blocks':6,
+                'num_heads':8,
+                'poswise_feedforward':None,
+                'target_space_id': None,
+                'num_units': 512,
                 "name": "transformer_encoder"
             }
+
+        Here:
+
+            TODO
         """
         return {
-            'initializer':None,
+            'initializer': None,
             'multiply_embedding_mode': 'sqrt_depth',
             "use_embedding": True,
             "position_embedder": None,
-            "name":"encoder",
-            "zero_pad":False,
-            "bos_pad":False,
-            'sinusoid':True,
-            'embedding_dropout':0.1,
-            'attention_dropout':0.1,
-            'residual_dropout':0.1,
-            'num_blocks':6,
-            'num_heads':8,
-            'poswise_feedforward':None,
+            "zero_pad": False,
+            "bos_pad": False,
+            'sinusoid': True,
+            'embedding_dropout': 0.1,
+            'attention_dropout': 0.1,
+            'residual_dropout': 0.1,
+            'num_blocks': 6,
+            'num_heads': 8,
+            'poswise_feedforward': None,
             'target_space_id': None,
             'num_units': 512,
+            "name": "transformer_encoder",
         }
 
-    #pylint:disable=arguments-differ
-    def _build(self, inputs, mode=None):
-        """Encodes the inputs with transformer encoder.
+    def _build(self, inputs, mode=None): # pylint: disable=arguments-differ
+        """Encodes the inputs.
 
         Args:
             inputs: A 2D Tensor of shape `[batch_size, max_time]`
             mode(optional): A tensor taking value in
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`
+
+        Returns:
+            TODO
         """
         encoder_padding = tf.to_float(tf.equal(inputs, 0))
-        #pylint:disable=too-many-locals
         self.enc = tf.nn.embedding_lookup(self._embedding, inputs)
         _, _, channels = shape_list(self.enc)
         if self._hparams.multiply_embedding_mode == 'sqrt_depth':
