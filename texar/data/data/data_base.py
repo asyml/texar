@@ -208,7 +208,7 @@ class DataBase(object):
 
     @property
     def name(self):
-        """The data name.
+        """Name of the module.
         """
         return self._hparams.name
 

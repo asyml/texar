@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Base class for modules.
 """
@@ -22,9 +34,37 @@ class ModuleBase(object):
     """Base class inherited by modules that create Variables and are
     configurable through hyperparameters.
 
+    A Texar module inheriting :class:`~texar.ModuleBase` has two key features:
+
+        - **Convenient variable re-use**: A module instance creates \
+        its own sets of variables, and automatically re-uses its variables on \
+        subsequent calls. Hence TF variable/name scope is \
+        transparent to users. For example:
+
+            .. code-block:: python
+
+                encoder = UnidirectionalRNNEncoder(hparams) # create instance
+                output_1 = encoder(inputs_1) # variables are created
+                output_2 = encoder(inputs_2) # variables are re-used
+
+                print(encoder.trainable_variables) # access trainable variables
+                # [ ... ]
+
+        - **Configurable through hyperparameters**: Each module defines \
+        allowed hyperparameters and default values. Hyperparameters not \
+        specified by users will take default values.
+
+        - **Callable**: As the above example, a module instance is "called" \
+        with input tensors and returns output tensors. Every call of a module \
+        will add ops to the Graph to perform the module's logic.
+
     Args:
         hparams (dict, optional): Hyperparameters of the module. See
             :meth:`default_hparams` for the structure and default values.
+
+
+    .. document private functions
+    .. automethod:: _build
     """
 
     def __init__(self, hparams=None):
@@ -37,9 +77,15 @@ class ModuleBase(object):
 
     @staticmethod
     def default_hparams():
-        """Returns a dictionary of hyperparameters of the module with default
-        values. Used to replace the missing values of input :attr:`hparams`
+        """Returns a `dict` of hyperparameters of the module with default
+        values. Used to replace the missing values of input `hparams`
         during module construction.
+
+        .. code-block:: python
+
+            {
+                "name": "module"
+            }
         """
         return {
             "name": "module"
@@ -125,7 +171,7 @@ class ModuleBase(object):
 
     @property
     def hparams(self):
-        """A :class:`~texar.hyperparams.HParams` instance. The hyperparameters
+        """A :class:`~texar.HParams` instance. The hyperparameters
         of the module.
         """
         return self._hparams

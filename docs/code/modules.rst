@@ -1,14 +1,38 @@
 .. role:: hidden
-    :class: hidden
+    :class: hidden-section
 
 Modules
 *******
 
-Module Base
+ModuleBase
 ===========
 
-.. autoclass:: texar.modules.ModuleBase
+.. autoclass:: texar.ModuleBase
     :members:
+
+Embedders
+=========
+
+:hidden:`WordEmbedder`
+~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.WordEmbedder
+    :members:
+
+:hidden:`PositionEmbedder`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.PositionEmbedder
+    :members:
+
+:hidden:`SinusoidsPositionEmbedder`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.SinusoidsPositionEmbedder
+    :members:
+
+:hidden:`EmbedderBase`
+~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.EmbedderBase
+    :members:
+
 
 Networks
 ========
@@ -129,19 +153,6 @@ ConcatConnector
 
 .. autoclass:: texar.modules.ConcatConnector
     :members:
-
-Embedders
-=========
-
-WordEmbedder
---------------------------------------
-
-.. autoclass:: texar.modules.embedders.WordEmbedder
-    :members:
-
-.. autofunction:: texar.modules.embedders.embedder_utils.get_embedding
-
-.. autofunction:: texar.modules.embedders.embedder_utils.default_embedding_hparams
 
 Memory
 ======

@@ -19,5 +19,5 @@ Contents:
    code/modules.rst
    code/models.rst
    code/losses.rst
+   code/context.rst
    code/hyperparams.rst
-

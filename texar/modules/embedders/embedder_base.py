@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 The base embedder class.
 """
@@ -20,6 +32,10 @@ __all__ = [
 
 class EmbedderBase(ModuleBase):
     """The base embedder class that all embedder classes inherit.
+
+    Args:
+        num_embeds (int, optional): The number of embedding elements, e.g.,
+            the vocabulary size of a word embedder.
     """
 
     def __init__(self, num_embeds=None, hparams=None):
@@ -72,6 +88,12 @@ class EmbedderBase(ModuleBase):
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
+
+        .. code-block:: python
+
+            {
+                "name": "embedder"
+            }
         """
         return {
             "name": "embedder"
@@ -82,6 +104,6 @@ class EmbedderBase(ModuleBase):
 
     @property
     def num_embeds(self):
-        """The number of embedding vectors.
+        """The number of embedding elements.
         """
         return self._num_embeds

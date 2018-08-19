@@ -18,11 +18,9 @@ __all__ = [
 ]
 
 def default_embedding_hparams():
-    """Returns default hyperparameters of token embedding used in encoders,
-    decoders, and other modules.
+    """Returns a `dict` of hyperparameters and default values of a embedder.
 
-    Returns:
-        A dictionary with the following structure and values.
+     See :meth:`~texar.modules.WordEmbedder.default_hparams` for details.
 
         .. code-block:: python
 

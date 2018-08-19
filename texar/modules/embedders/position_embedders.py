@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Various position embedders.
 """
@@ -28,7 +40,7 @@ class PositionEmbedder(EmbedderBase):
     via lookup.
 
     Either :attr:`init_value` or :attr:`position_size` is required. If both are
-    given, :attr:`init_value.shape[0]` must equal :attr:`position_size`.
+    given, there must be `init_value.shape[0]==position_size`.
 
     Args:
         init_value (optional): A `Tensor` or numpy array that contains the
@@ -45,6 +57,10 @@ class PositionEmbedder(EmbedderBase):
         hparams (dict, optional): Embedder hyperparameters. If it is not
             specified, the default hyperparameter setting is used. See
             :attr:`default_hparams` for the sturcture and default values.
+
+
+    .. document private functions
+    .. automethod:: _build
     """
 
     def __init__(self, init_value=None, position_size=None, hparams=None):
@@ -71,42 +87,39 @@ class PositionEmbedder(EmbedderBase):
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
-        Returns:
-            A dictionary with the following structure and values.
+        .. code-block:: python
 
-            .. code-block:: python
+            {
+                "dim": 100,
+                "initializer": {
+                    "type": "random_uniform_initializer",
+                    "kwargs": {
+                        "minval": -0.1,
+                        "maxval": 0.1,
+                        "seed": None
+                    }
+                },
+                "regularizer": {
+                    "type": "L1L2",
+                    "kwargs": {
+                        "l1": 0.,
+                        "l2": 0.
+                    }
+                },
+                "dropout_rate": 0,
+                "trainable": True,
+                "name": "position_embedder"
+            }
 
-                {
-                    "name": "position_embedder",
-                    "dim": 100,
-                    "initializer": {
-                        "type": "random_uniform_initializer",
-                        "kwargs": {
-                            "minval": -0.1,
-                            "maxval": 0.1,
-                            "seed": None
-                        }
-                    },
-                    "regularizer": {
-                        "type": "L1L2",
-                        "kwargs": {
-                            "l1": 0.,
-                            "l2": 0.
-                        }
-                    },
-                    "dropout_rate": 0,
-                    "trainable": True,
-                }
-
-            See :func:`~texar.modules.default_embedding_hparams` for more
-            details.
+        The hyperparameters have the same meaning as those in
+        :meth:`texar.modules.WordEmbedder.default_hparams`.
         """
         hparams = embedder_utils.default_embedding_hparams()
         hparams["name"] = "position_embedder"
         return hparams
 
     def _build(self, positions=None, sequence_length=None, mode=None, **kwargs):
-        """Embeds with look-up.
+        """Embeds the positions.
 
         Either :attr:`position` or :attr:`sequence_length` is required:
 
@@ -114,7 +127,7 @@ class PositionEmbedder(EmbedderBase):
             embeddings of those time steps beyond the respective sequence \
             lengths.
             - If only :attr:`sequence_length` is given, then positions \
-            from 0 to sequence length - 1 are embedded.
+            from `0` to `sequence_length-1` are embedded.
 
         Args:
             positions (optional): An integer tensor containing the position
@@ -126,7 +139,7 @@ class PositionEmbedder(EmbedderBase):
             mode (optional): A tensor taking value in
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
                 `TRAIN`, `EVAL`, and `PREDICT`. If `None`, dropout will be
-                controlled by :func:`texar.context.global_mode`.
+                controlled by :func:`texar.global_mode`.
             kwargs: Additional keyword arguments for
                 :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>` besides
                 :attr:`params` and :attr:`ids`.
@@ -209,10 +222,13 @@ class PositionEmbedder(EmbedderBase):
 
 class SinusoidsPositionEmbedder(EmbedderBase):
     """Sinusoid position embedder that maps position indexes into embeddings
-    via sinusoid calculation.
+    via sinusoid calculation. This module does not have trainable parameters.
+    Used in, e.g., :class:`~texar.modules.TransformerEncoder`.
+
     Each channel of the input Tensor is incremented by a sinusoid of a
     different frequency and phase.
     This allows attention to learn to use absolute and relative positions.
+
     Timing signals should be added to some precursors of both the query
     and thememory inputs to attention.
     The use of relative position is possible because sin(x+y) and
@@ -223,25 +239,42 @@ class SinusoidsPositionEmbedder(EmbedderBase):
     generate the two sinusoidal signals sin(timestep/timescale) and
     cos(timestep/timescale).  All of these sinusoids are concatenated in
     the channels dimension.
+
+
+    .. document private functions
+    .. automethod:: _build
     """
     def __init__(self, hparams=None):
         EmbedderBase.__init__(self, hparams=hparams)
 
     def default_hparams(self):
-        """returns a dictionary of hyperparameters with default values
+        """Returns a dictionary of hyperparameters with default values
         We use a geometric sequence of timescales starting with
         min_timescale and ending with max_timescale. The number of different
         timescales is equal to channels/2.
+
+        .. code-block:: python
+
+            {
+                'min_timescale': 1.0,
+                'max_timescale': 10000.0,
+                'name':'sinusoid_posisiton_embedder',
+            }
         """
         hparams = {
             'name':'sinusoid_posisiton_embedder',
             'min_timescale': 1.0,
             'max_timescale': 1.0e4,
-            'trainable': False,
         }
         return hparams
 
     def _build(self, length, channels):
+        """Embeds.
+
+        Args:
+            length:
+            channels:
+        """
         position = tf.to_float(tf.range(length))
         num_timescales = channels // 2
         min_timescale = self._hparams.min_timescale
