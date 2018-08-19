@@ -34,26 +34,39 @@ Embedders
     :members:
 
 
-Networks
-========
-
-.. autoclass:: texar.modules.FeedForwardNetwork
-    :members:
-
 Encoders
 ========
 
-.. autoclass:: texar.modules.EncoderBase
-    :members:
-
-.. autoclass:: texar.modules.RNNEncoderBase
-    :members:
-
+:hidden:`UnidirectionalRNNEncoder`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.UnidirectionalRNNEncoder
     :members:
 
+:hidden:`BidirectionalRNNEncoder`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.BidirectionalRNNEncoder
     :members:
+
+:hidden:`HierarchicalRNNEncoder`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.HierarchicalRNNEncoder
+    :members:
+
+:hidden:`Conv1DEncoder`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.Conv1DEncoder
+    :members:
+
+:hidden:`EncoderBase`
+~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.EncoderBase
+    :members:
+
+:hidden:`RNNEncoderBase`
+~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.RNNEncoderBase
+    :members:
+
 
 Decoders
 ========
@@ -152,6 +165,12 @@ ConcatConnector
 --------------------------------------
 
 .. autoclass:: texar.modules.ConcatConnector
+    :members:
+
+Networks
+========
+
+.. autoclass:: texar.modules.FeedForwardNetwork
     :members:
 
 Memory

@@ -36,6 +36,10 @@ class EmbedderBase(ModuleBase):
     Args:
         num_embeds (int, optional): The number of embedding elements, e.g.,
             the vocabulary size of a word embedder.
+        hparams (dict or HParams, optional): Embedder hyperparameters. Missing
+            hyperparamerter will be set to default values. See
+            :meth:`default_hparams` for the hyperparameter sturcture and
+            default values.
     """
 
     def __init__(self, num_embeds=None, hparams=None):

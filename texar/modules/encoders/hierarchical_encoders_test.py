@@ -26,7 +26,7 @@ class HierarchicalRNNEncoderTest(tf.test.TestCase):
         _, _ = encoder(inputs)
 
         self.assertEqual(
-            len(encoder.trainable_variables), 
+            len(encoder.trainable_variables),
             len(encoder.encoder_major.trainable_variables) + \
             len(encoder.encoder_minor.trainable_variables))
 
@@ -42,7 +42,7 @@ class HierarchicalRNNEncoderTest(tf.test.TestCase):
             maxval=1,
             minval=-1,
             dtype=tf.float32)
-        outputs, state = encoder(inputs) 
+        outputs, state = encoder(inputs)
 
         cell_dim = encoder.encoder_major.hparams.rnn_cell.kwargs.num_units
 
@@ -93,11 +93,48 @@ class HierarchicalRNNEncoderTest(tf.test.TestCase):
             minval=-1,
             dtype=tf.float32)
 
-        outputs, state = encoder(inputs)
+        _, _ = encoder(inputs)
 
         self.assertEqual(
-            encoder.states_minor_before_medium.h.shape[1], 
+            encoder.states_minor_before_medium.h.shape[1],
             encoder.states_minor_after_medium.shape[1])
+
+    def test_encoder_minor_as_birnn(self):
+        """Tests encoder_minor as a BidirectionalRNNEncoder
+        """
+        hparams = {
+            "encoder_minor_type": "BidirectionalRNNEncoder",
+            "encoder_minor_hparams": {
+                "rnn_cell_fw": {
+                    "type": "LSTMCell",
+                    "kwargs": {
+                        "num_units": 100
+                    }
+                }
+            },
+            "encoder_major_hparams": {
+                "rnn_cell": {
+                    "type": "BasicLSTMCell",
+                    "kwargs": {
+                        "num_units": 200
+                    }
+                }
+            }
+        }
+        encoder = HierarchicalRNNEncoder(hparams=hparams)
+
+        batch_size = 16
+        max_major_time = 8
+        max_minor_time = 6
+        dim = 10
+        inputs = tf.random_uniform(
+            [batch_size, max_major_time, max_minor_time, dim],
+            maxval=1,
+            minval=-1,
+            dtype=tf.float32)
+
+        outputs, _ = encoder(inputs)
+        self.assertEqual(list(outputs.shape), [16, 8, 200])
 
 if __name__ == "__main__":
     tf.test.main()

@@ -36,7 +36,7 @@ def build_model(batch, train_data):
         vocab_size=train_data.target_vocab.size, hparams=config_model.embedder)
 
     decoder = tx.modules.AttentionRNNDecoder(
-        memory=tx.modules.BidirectionalRNNEncoder.concat_outputs(enc_outputs),
+        memory=tf.concat(enc_outputs, axis=2),
         memory_sequence_length=batch['source_length'],
         vocab_size=train_data.target_vocab.size,
         hparams=config_model.decoder)

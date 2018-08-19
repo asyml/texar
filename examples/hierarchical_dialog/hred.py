@@ -72,7 +72,8 @@ def main():
         context_embed,
         medium=['flatten', add_source_speaker_token],
         sequence_length=data_batch['source_length'],
-        sequence_length_major=data_batch['source_utterance_cnt'])[1]
+        sequence_length_major=data_batch['source_utterance_cnt'])
+    ecdr_states = ecdr_states[1]
 
     ecdr_states = add_target_speaker_token(ecdr_states)
     dcdr_states = connector(ecdr_states)
@@ -158,13 +159,13 @@ def main():
 
         def bleus(ref, sample):
             res = []
-            for weight in [[1, 0, 0, 0], 
-                           [1, 0, 0, 0], 
-                           [0, 1, 0, 0], 
-                           [0, 0, 1, 0], 
+            for weight in [[1, 0, 0, 0],
+                           [1, 0, 0, 0],
+                           [0, 1, 0, 0],
+                           [0, 0, 1, 0],
                            [0, 0, 0, 1]]:
-                res.append(sentence_bleu([ref], sample, 
-                    smoothing_function=SmoothingFunction().method7, 
+                res.append(sentence_bleu([ref], sample,
+                    smoothing_function=SmoothingFunction().method7,
                     weights=weight))
             return res
 

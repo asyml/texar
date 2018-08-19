@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Various RNN encoders.
 """
@@ -187,12 +199,13 @@ def _apply_rnn_encoder_output_layer(output_layer, time_major, hparams, mode,
 
 
 class RNNEncoderBase(EncoderBase):
-    """Base class for all RNN encoder classes.
+    """Base class for all RNN encoder classes to inherit.
 
     Args:
-        hparams (dict, optional): Encoder hyperparameters. If it is not
-            specified, the default hyperparameter setting is used. See
-            :attr:`default_hparams` for the sturcture and default values.
+        hparams (dict or HParams, optional): Hyperparameters. Missing
+            hyperparamerter will be set to default values. See
+            :meth:`default_hparams` for the hyperparameter sturcture and
+            default values.
     """
 
     def __init__(self, hparams=None):
@@ -202,17 +215,11 @@ class RNNEncoderBase(EncoderBase):
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
-        Returns:
-            .. code-block:: python
+        .. code-block:: python
 
-                {
-                    "name": "rnn_encoder"
-                }
-
-            Here:
-
-            "name" : str
-                Name of the encoder.
+            {
+                "name": "rnn_encoder"
+            }
         """
         return {
             "name": "rnn_encoder"
@@ -222,12 +229,12 @@ class RNNEncoderBase(EncoderBase):
         """Encodes the inputs.
 
         Args:
-          inputs: Inputs to the encoder.
-          *args: Other arguments.
-          **kwargs: Keyword arguments.
+            inputs: Inputs to the encoder.
+            *args: Other arguments.
+            **kwargs: Keyword arguments.
 
         Returns:
-          Encoding results.
+            Encoding results.
         """
         raise NotImplementedError
 
@@ -236,21 +243,38 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
     """One directional RNN encoder.
 
     Args:
-        cell: (RNNCell, optional) If it is not specified,
+        cell: (RNNCell, optional) If not specified,
             a cell is created as specified in :attr:`hparams["rnn_cell"]`.
         cell_dropout_mode (optional): A Tensor taking value of
             :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, which
-            toggles dropout in the RNN cell (e.g., activates dropout in the
-            TRAIN mode). If `None`, :func:`~texar.context.global_mode` is used.
+            toggles dropout in the RNN cell (e.g., activates dropout in
+            TRAIN mode). If `None`, :func:`~texar.global_mode` is used.
             Ignored if :attr:`cell` is given.
         output_layer (optional): An instance of
-            :tf_main:`tf.layers.Layer <layers/Layer>`. Apply to the RNN cell
+            :tf_main:`tf.layers.Layer <layers/Layer>`. Applies to the RNN cell
             output of each step. If `None` (default), the output layer is
             created as specified in :attr:`hparams["output_layer"]`.
-        hparams (dict, optional): Encoder hyperparameters. If it is not
-            specified, the default hyperparameter setting is used. See
-            :attr:`default_hparams` for the sturcture and default values.
-            Missing values will take default.
+        hparams (dict or HParams, optional): Hyperparameters. Missing
+            hyperparamerter will be set to default values. See
+            :meth:`default_hparams` for the hyperparameter sturcture and
+            default values.
+
+    See :meth:`_build` for the inputs and outputs of the encoder.
+
+    Example:
+
+        .. code-block:: python
+
+            # Use with embedder
+            embedder = WordEmbedder(vocab_size, hparams=emb_hparams)
+            encoder = UnidirectionalRNNEncoder(hparams=enc_hparams)
+
+            outputs, final_state = encoder(
+                inputs=embedder(data_batch['text_ids']),
+                sequence_length=data_batch['length'])
+
+    .. document private functions
+    .. automethod:: _build
     """
 
     def __init__(self,
@@ -282,95 +306,97 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
-        Returns:
-            .. code-block:: python
+        .. code-block:: python
 
-                {
-                    "rnn_cell": default_rnn_cell_hparams(),
-                    "output_layer": {
-                        "num_layers": 0,
-                        "layer_size": 128,
-                        "activation": "identity",
-                        "final_layer_activation": None,
-                        "other_dense_kwargs": None,
-                        "dropout_layer_ids": [],
-                        "dropout_rate": 0.5,
-                        "variational_dropout": False
-                    },
-                    "name": "unidirectional_rnn_encoder"
-                }
+            {
+                "rnn_cell": default_rnn_cell_hparams(),
+                "output_layer": {
+                    "num_layers": 0,
+                    "layer_size": 128,
+                    "activation": "identity",
+                    "final_layer_activation": None,
+                    "other_dense_kwargs": None,
+                    "dropout_layer_ids": [],
+                    "dropout_rate": 0.5,
+                    "variational_dropout": False
+                },
+                "name": "unidirectional_rnn_encoder"
+            }
 
-            Here:
+        Here:
 
-            "rnn_cell" : dict
-                A dictionary of RNN cell hyperparameters. Ignored if
-                :attr:`cell` is given when constructing the encoder.
+        "rnn_cell" : dict
+            A dictionary of RNN cell hyperparameters. Ignored if
+            :attr:`cell` is given to the encoder constructor.
 
-                The default value is defined in
-                :func:`~texar.core.layers.default_rnn_cell_hparams`.
+            The default value is defined in
+            :func:`~texar.core.default_rnn_cell_hparams`.
 
-            "output_layer" : dict
-                Output layer hyperparameters. Ignored if :attr:`output_layer`
-                is given in the constructor. Includes:
+        "output_layer" : dict
+            Output layer hyperparameters. Ignored if :attr:`output_layer`
+            is given to the encoder constructor. Includes:
 
-                "num_layers" : int
-                    The number of output (dense) layers. Set to 0 to avoid any
-                    output layers applied to the cell outputs..
+            "num_layers" : int
+                The number of output (dense) layers. Set to 0 to avoid any
+                output layers applied to the cell outputs..
 
-                "layer_size" : int or list
-                    The size of each of the output (dense) layers.
+            "layer_size" : int or list
+                The size of each of the output (dense) layers.
 
-                    If an `int`, each output layer will have the same size. If
-                    a list, the length must equal to :attr:`num_layers`.
+                If an `int`, each output layer will have the same size. If
+                a list, the length must equal to :attr:`num_layers`.
 
-                "activation" : str or callable or None
-                    The activation function for each of the output (dense)
-                    layer except for the final layer. This can be
-                    the function itself, or its string name or full path.
+            "activation" : str or callable or None
+                Activation function for each of the output (dense)
+                layer except for the final layer. This can be
+                a function, or its string name or module path.
+                If function name is given, the function must be from
+                module :tf_main:`tf.nn <nn>` or :tf_main:`tf < >`.
+                For example
 
-                    E.g., `"activation": tensorflow.nn.relu`
-                    or `"activation": "relu"`
-                    or `"activation": "tensorflow.nn.relu"`
+                .. code-block:: python
 
-                    Default is `None` which maintains a linear activation.
+                    "activation": "relu" # function name
+                    "activation": "my_module.my_activation_fn" # module path
+                    "activation": my_module.my_activation_fn # function
 
-                "final_layer_activation" : str or callable or None
-                    The activation function for the final output layer.
+                Default is `None` which maintains a linear activation.
 
-                "other_dense_kwargs" : dict or None
-                    Other keyword arguments to construct each of the output
-                    dense layers, e.g., :attr:`use_bias`. See
-                    :tf_main:`Dense <layers/Dense>` for the arguments.
+            "final_layer_activation" : str or callable or None
+                The activation function for the final output layer.
 
-                    E.g., `"other_dense_kwargs": { "use_bias": False }`.
+            "other_dense_kwargs" : dict or None
+                Other keyword arguments to construct each of the output
+                dense layers, e.g., `use_bias`. See
+                :tf_main:`Dense <layers/Dense>` for the keyword arguments.
 
-                "dropout_layer_ids" : int or list
-                    The indexes of layers (starting from `0`) whose inputs
-                    are applied with dropout. The index = :attr:`num_layers`
-                    means dropout applies to the final layer output. E.g.,
+            "dropout_layer_ids" : int or list
+                The indexes of layers (starting from `0`) whose inputs
+                are applied with dropout. The index = :attr:`num_layers`
+                means dropout applies to the final layer output. E.g.,
 
-                    .. code-block:: python
+                .. code-block:: python
 
-                        {
-                            "num_layers": 2,
-                            "dropout_layer_ids": [0, 2]
-                        }
+                    {
+                        "num_layers": 2,
+                        "dropout_layer_ids": [0, 2]
+                    }
 
-                    will leads to a series of layers as
-                    `-dropout-layer0-layer1-dropout-`.
+                will leads to a series of layers as
+                `-dropout-layer0-layer1-dropout-`.
 
-                    The dropout mode (training or not) is controlled
-                    by the :attr:`mode` argument when calling the encoder.
+                The dropout mode (training or not) is controlled
+                by the :attr:`mode` argument when calling the encoder.
 
-                "dropout_rate" : float
-                    The dropout rate, between 0 and 1. E.g.,
-                    `"dropout_rate": 0.1` would drop out 10% of elements.
+            "dropout_rate" : float
+                The dropout rate, between 0 and 1. E.g.,
+                `"dropout_rate": 0.1` would drop out 10% of elements.
 
-                "variational_dropout": bool
-                    Whether the dropout mask is the same across all time steps.
+            "variational_dropout": bool
+                Whether the dropout mask is the same across all time steps.
 
-            "name" : str
-                Name of the encoder
+        "name" : str
+            Name of the encoder
         """
         hparams = RNNEncoderBase.default_hparams()
         hparams.update({
@@ -419,42 +445,46 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                 such as `swap_memory`, `dtype`, `parallel_iterations`, etc.
 
         Returns:
-            By default (both :attr:`return_cell_output` and
-            :attr:`return_output_size` are `False`), returns a pair
-            :attr:`(outputs, final_state)` where
+            - By default (both `return_cell_output` and \
+            `return_output_size` are False), returns a pair \
+            :attr:`(outputs, final_state)`
 
-            - :attr:`outputs`: The RNN output tensor by the output layer \
-              (if exists) or the RNN cell (otherwise). The tensor is of shape \
-              `[batch_size, max_time, output_size]` (if \
-              :attr:`time_major` == `False`) or \
-              `[max_time, batch_size, output_size]` (if \
-              :attr:`time_major` == `True`). \
+                - :attr:`outputs`: The RNN output tensor by the output layer \
+                (if exists) or the RNN cell (otherwise). The tensor is of \
+                shape `[batch_size, max_time, output_size]` if \
+                `time_major` is False, or \
+                `[max_time, batch_size, output_size]` if \
+                `time_major` is True. \
+                If RNN cell output is a (nested) tuple of Tensors, then the \
+                :attr:`outputs` will be a (nested) tuple having the same \
+                nest structure as the cell output.
 
-              If RNN cell output is a (nested) tuple of Tensors, then the \
-              :attr:`outputs` will be a (nested) tuple having the same \
-              nest structure as the cell output.
+                - :attr:`final_state`: The final state of the RNN, which is a \
+                Tensor of shape `[batch_size] + cell.state_size` or \
+                a (nested) tuple of Tensors if `cell.state_size` is a (nested)\
+                tuple.
 
-            - :attr:`final_state`: The final state of the RNN, which is a \
-              Tensor of shape `[batch_size] + cell.state_size` or \
-              a (nested) tuple of Tensors (if `cell.state_size` is a (nested) \
-              tuple).
+            - If `return_cell_output` is True, returns a triple \
+            :attr:`(outputs, final_state, cell_outputs)`
 
-            If :attr:`return_cell_output` is `True`, returns a triple
-            :attr:`(outputs, final_state, cell_outputs)` where
+                - :attr:`cell_outputs`: The outputs by the RNN cell prior to \
+                the \
+                output layer, having the same structure with :attr:`outputs` \
+                except for the `output_dim`.
 
-            - :attr:`cell_outputs`: The outputs by the RNN cell prior to the \
-              output layer, having the same structure with :attr:`outputs` \
-              except for the `output_dim`.
+            - If `return_output_size` is `True`, returns a tuple \
+            :attr:`(outputs, final_state, output_size)`
 
-            If :attr:`return_output_size` is also `True`, returns a tuple
-            :attr:`(outputs, final_state, cell_outputs, output_size)` where
+                - :attr:`output_size`: A (possibly nested tuple of) int \
+                representing the size of :attr:`outputs`. If a single int or \
+                an int array, then `outputs` has shape \
+                `[batch/time, time/batch] + output_size`. If \
+                a (nested) tuple, then `output_size` has the same \
+                structure as with `outputs`.
 
-            - :attr:`output_size`: A (possibly nested tuple of) `int` \
-              representing the size of :attr:`outputs`. If a single `int` or \
-              an `int` array, then :attr:`outputs` has shape \
-              `[batch/time, time/batch] + output_size`. If :attr:`output_size` \
-              is a (nested) tuple, then :attr:`output_size` has the same \
-              structure as with :attr:`outputs`.
+            - If both `return_cell_output` and \
+            `return_output_size` are True, returns \
+            :attr:`(outputs, final_state, cell_outputs, output_size)`.
         """
         if ('dtype' not in kwargs) and (initial_state is None):
             cell_outputs, state = tf.nn.dynamic_rnn(
@@ -497,31 +527,6 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
             rets += (output_size, )
         return rets
 
-    #def append_layer(self, layer):
-    #    """Appends a layer to the end of the output layer. The layer must take
-    #    as inputs a 2D Tensor and output another 2D Tensor (e.g., a
-    #    :tf_main:`Dense <layers/Dense>` layer).
-
-    #    The method is only feasible before :meth:`_build` is called.
-
-    #    Args:
-    #        layer: A :tf_main:`tf.layers.Layer <layers/Layer>` instance, or
-    #            a `dict` of layer hyperparameters.
-    #    """
-    #    if self._built:
-    #        raise TexarError("`UnidirectionalRNNEncoder.append_layer` can be "
-    #                         "called only before `_build` is called.")
-
-    #    with tf.variable_scope(self.variable_scope):
-    #        layer_ = layer
-    #        if not isinstance(layer_, tf.layers.Layer):
-    #            layer_ = layers.get_layer(hparams=layer_)
-    #        if self._output_layer is None:
-    #            self._output_layer = layer_
-    #        else:
-    #            self._output_layer = _to_list(self._output_layer)
-    #            self._output_layers.append(layer_)
-
     @property
     def cell(self):
         """The RNN cell.
@@ -552,8 +557,8 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
             a cell is created as specified in :attr:`hparams["rnn_cell_bw"]`.
         cell_dropout_mode (optional): A tensor taking value of
             :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, which
-            toggles dropout in the RNN cells (e.g., activates dropout in the
-            TRAIN mode). If `None`, :func:`~texar.context.global_mode()` is
+            toggles dropout in the RNN cells (e.g., activates dropout in
+            TRAIN mode). If `None`, :func:`~texar.global_mode()` is
             used. Ignored if respective cell is given.
         output_layer_fw (optional): An instance of
             :tf_main:`tf.layers.Layer <layers/Layer>`. Apply to the forward
@@ -563,10 +568,29 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
             :tf_main:`tf.layers.Layer <layers/Layer>`. Apply to the backward
             RNN cell output of each step. If `None` (default), the output
             layer is created as specified in :attr:`hparams["output_layer_bw"]`.
-        hparams (dict, optional): Encoder hyperparameters. If it is not
-            specified, the default hyperparameter setting is used. See
-            :attr:`default_hparams` for the sturcture and default values.
-            Missing values will take default.
+        hparams (dict or HParams, optional): Hyperparameters. Missing
+            hyperparamerter will be set to default values. See
+            :meth:`default_hparams` for the hyperparameter sturcture and
+            default values.
+
+    See :meth:`_build` for the inputs and outputs of the encoder.
+
+    Example:
+
+        .. code-block:: python
+
+            # Use with embedder
+            embedder = WordEmbedder(vocab_size, hparams=emb_hparams)
+            encoder = BidirectionalRNNEncoder(hparams=enc_hparams)
+
+            outputs, final_state = encoder(
+                inputs=embedder(data_batch['text_ids']),
+                sequence_length=data_batch['length'])
+            # outputs == (outputs_fw, outputs_bw)
+            # final_state == (final_state_fw, final_state_bw)
+
+    .. document private functions
+    .. automethod:: _build
     """
 
     def __init__(self,
@@ -622,129 +646,73 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
-        Returns:
-            .. code-block:: python
+        .. code-block:: python
 
-                {
-                    "rnn_cell_fw": default_rnn_cell_hparams(),
-                    "rnn_cell_bw": default_rnn_cell_hparams(),
-                    "rnn_cell_share_config": True,
-                    "output_layer_fw": {
-                        "num_layers": 0,
-                        "layer_size": 128,
-                        "activation": "identity",
-                        "final_layer_activation": None,
-                        "other_dense_kwargs": None,
-                        "dropout_layer_ids": [],
-                        "dropout_rate": 0.5,
-                        "variational_dropout": False
-                    },
-                    "output_layer_bw": {
-                        # Same as "output_layer_fw"
-                        # ...
-                    },
-                    "output_layer_share_config": True,
-                    "name": "bidirectional_rnn_encoder"
-                }
+            {
+                "rnn_cell_fw": default_rnn_cell_hparams(),
+                "rnn_cell_bw": default_rnn_cell_hparams(),
+                "rnn_cell_share_config": True,
+                "output_layer_fw": {
+                    "num_layers": 0,
+                    "layer_size": 128,
+                    "activation": "identity",
+                    "final_layer_activation": None,
+                    "other_dense_kwargs": None,
+                    "dropout_layer_ids": [],
+                    "dropout_rate": 0.5,
+                    "variational_dropout": False
+                },
+                "output_layer_bw": {
+                    # Same hyperparams and default values as "output_layer_fw"
+                    # ...
+                },
+                "output_layer_share_config": True,
+                "name": "bidirectional_rnn_encoder"
+            }
 
-            Here:
+        Here:
 
-            "rnn_cell_fw" : dict
-                Hyperparameters of the forward RNN cell.
-                Ignored if :attr:`cell_fw` is given when constructing
-                the encoder.
+        "rnn_cell_fw" : dict
+            Hyperparameters of the forward RNN cell.
+            Ignored if :attr:`cell_fw` is given to the encoder constructor.
 
-                The default value is defined in
-                :meth:`~texar.core.layers.default_rnn_cell_hparams`.
+            The default value is defined in
+            :func:`~texar.core.default_rnn_cell_hparams`.
 
-            "rnn_cell_bw" : dict
-                Hyperparameters of the backward RNN cell.
-                Ignored if :attr:`cell_bw` is given when constructing
-                the encoder, or if :attr:`"rnn_cell_share_config"` is `True`.
+        "rnn_cell_bw" : dict
+            Hyperparameters of the backward RNN cell.
+            Ignored if :attr:`cell_bw` is given to the encoder constructor
+            , or if :attr:`"rnn_cell_share_config"` is `True`.
 
-                The default value is defined in
-                :meth:`~texar.core.layers.default_rnn_cell_hparams`.
+            The default value is defined in
+            :meth:`~texar.core.default_rnn_cell_hparams`.
 
-            "rnn_cell_share_config" : bool
-                Whether share hyperparameters of the backward cell with the
-                forward cell. Note that the cell parameters are not shared.
+        "rnn_cell_share_config" : bool
+            Whether share hyperparameters of the backward cell with the
+            forward cell. Note that the cell parameters (variables) are not
+            shared.
 
-                If `True` (default), :attr:`"rnn_cell_bw"` is ignored.
+        "output_layer_fw" : dict
+            Hyperparameters of the forward output layer. Ignored if
+            :attr:`output_layer_fw` is given to the constructor.
+            See the "output_layer" field of
+            :meth:`~texar.modules.UnidirectionalRNNEncoder.default_hparams` for
+            details.
 
-            "output_layer_fw" : dict
-                Hyperparameters of the forward output layer. Ignored if
-                :attr:`output_layer_fw` is given in the constructor. Includes:
+        "output_layer_bw" : dict
+            Hyperparameters of the backward output layer. Ignored if
+            :attr:`output_layer_bw` is given to the constructor. Have the
+            same structure and defaults with :attr:`"output_layer_fw"`.
 
-                "num_layers" : int
-                    The number of output (dense) layers. Set to 0 to avoid any
-                    output layers applied to the cell outputs..
+            Ignored if :attr:`"output_layer_share_config"` is True.
 
-                "layer_size" : int or list
-                    The size of each of the output (dense) layers.
+        "output_layer_share_config" : bool
+            Whether share hyperparameters of the backward output layer
+            with the forward output layer. Note that the layer parameters
+            (variables) are not shared.
 
-                    If an `int`, each output layer will have the same size. If
-                    a list, the length must equal to :attr:`num_layers`.
-
-                "activation" : str or callable or None
-                    The activation function for each of the output (dense)
-                    layer except for the final layer. This can be
-                    the function itself, or its string name or full path.
-
-                    E.g., `"activation": tensorflow.nn.relu`
-                    or `"activation": "relu"`
-                    or `"activation": "tensorflow.nn.relu"`
-
-                    Default is `None` which maintains a linear activation.
-
-                "final_layer_activation" : str or callable or None
-                    The activation function for the final output layer.
-
-                "other_dense_kwargs" : dict or None
-                    Other keyword arguments to construct each of the output
-                    dense layers, e.g., :attr:`use_bias`. See
-                    :tf_main:`Dense <layers/Dense>` for the arguments.
-
-                    E.g., `"other_dense_kwargs": { "use_bias": False }`.
-
-                "dropout_layer_ids" : int or list
-                    The indexes of layers (starting from `0`) whose inputs
-                    are applied with dropout. The index = :attr:`num_layers`
-                    means dropout applies to the final layer output. E.g.,
-
-                    .. code-block:: python
-
-                        {
-                            "num_layers": 2,
-                            "dropout_layer_ids": [0, 2]
-                        }
-
-                    will leads to a series of layers as
-                    `-dropout-layer0-layer1-dropout-`.
-
-                    The dropout mode (training or not) is controlled
-                    by the :attr:`mode` argument when calling the encoder.
-
-                "dropout_rate" : float
-                    The dropout rate, between 0 and 1. E.g.,
-                    `"dropout_rate": 0.1` would drop out 10% of elements.
-
-                "variational_dropout": bool
-                    Whether the dropout mask is the same across all time steps.
-
-            "output_layer_bw" : dict
-                Hyperparameters of the backward output layer. Ignored if
-                :attr:`output_layer_bw` is given in the constructor. Have the
-                same structure and defaults with :attr:`"output_layer_fw"`.
-
-            "output_layer_share_config" : bool
-                Whether share hyperparameters of the backward output layer
-                with the forward output layer. Note that the layer parameters
-                are not shared.
-
-                If `True` (default), :attr:`"output_layer_bw"` is ignored.
-
-            "name" : str
-                Name of the encoder
+        "name" : str
+            Name of the encoder
         """
         hparams = RNNEncoderBase.default_hparams()
         hparams.update({
@@ -796,35 +764,54 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
                 such as `swap_memory`, `dtype`, `parallel_iterations`, etc.
 
         Returns:
-            If :attr:`return_cell_output` is `False` (default), returns a
-            pair :attr:`(outputs, final_state)` where
+            - By default (both `return_cell_output` and `return_output_size` \
+            are False), returns a pair :attr:`(outputs, final_state)`
 
-            - :attr:`outputs`: A tuple `(outputs_fw, outputs_bw)` containing \
-              the forward and the backward RNN outputs, each of which is of \
-              shape `[batch_size, max_time, output_dim]` (if \
-              :attr:`time_major` == `False`) or \
-              `[max_time, batch_size, output_dim]` (if \
-              :attr:`time_major` == `True`). \
+                - :attr:`outputs`: A tuple `(outputs_fw, outputs_bw)` \
+                containing \
+                the forward and the backward RNN outputs, each of which is of \
+                shape `[batch_size, max_time, output_dim]` if \
+                `time_major` is False, or \
+                `[max_time, batch_size, output_dim]` if \
+                `time_major` is True. \
+                If RNN cell output is a (nested) tuple of Tensors, then \
+                `outputs_fw` and `outputs_bw` will be a (nested) tuple having \
+                the same structure as the cell output.
 
-              If RNN cell output is a (nested) tuple of Tensors, then the \
-              `outputs_fw` and `outputs_bw` will be a (nested) tuple having \
-              the same structure as the cell output.
+                - :attr:`final_state`: A tuple \
+                `(final_state_fw, final_state_bw)` \
+                containing the final states of the forward and backward \
+                RNNs, each of which is a \
+                Tensor of shape `[batch_size] + cell.state_size`, or \
+                a (nested) tuple of Tensors if `cell.state_size` is a (nested)\
+                tuple.
 
-            - :attr:`final_state`: A tuple `(final_state_fw, final_state_bw)` \
-              containing the final states of the forward and the backward \
-              RNNs, each of which is a \
-              Tensor of shape `[batch_size] + cell.state_size` or \
-              a (nested) tuple of Tensors (if `cell.state_size` is a (nested) \
-              tuple).
-
-            If :attr:`return_cell_output` is `True`, returns a triple
+            - If `return_cell_output` is True, returns a triple \
             :attr:`(outputs, final_state, cell_outputs)` where
 
-            - :attr:`cell_outputs`: A tuple \
-              `(cell_outputs_fw, cell_outputs_bw)` containting the outputs \
-              by the forward and backward RNN cells prior to the \
-              output layers, having the same structure with :attr:`outputs` \
-              except for the `output_dim`.
+                - :attr:`cell_outputs`: A tuple \
+                `(cell_outputs_fw, cell_outputs_bw)` containting the outputs \
+                by the forward and backward RNN cells prior to the \
+                output layers, having the same structure with :attr:`outputs` \
+                except for the `output_dim`.
+
+            - If `return_output_size` is True, returns a tuple \
+            :attr:`(outputs, final_state, output_size)` where
+
+                - :attr:`output_size`: A tupple \
+                `(output_size_fw, output_size_bw)` containing the size of \
+                `outputs_fw` and `outputs_bw`, respectively. \
+                Take `*_fw` for example, \
+                `output_size_fw` is a (possibly nested tuple of) int. \
+                If a single int or an int array, then `outputs_fw` has shape \
+                `[batch/time, time/batch] + output_size_fw`. If \
+                a (nested) tuple, then `output_size_fw` has the same \
+                structure as with `outputs_fw`. The same applies to  \
+                `output_size_bw`.
+
+            - If both `return_cell_output` and \
+            `return_output_size` are True, returns \
+            :attr:`(outputs, final_state, cell_outputs, output_size)`.
         """
         no_initial_state = initial_state_fw is None and initial_state_bw is None
         if ('dtype' not in kwargs) and no_initial_state:
@@ -884,13 +871,6 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
         if return_output_size:
             returns += (output_size, )
         return returns
-
-    @staticmethod
-    def concat_outputs(outputs):
-        """Concats the outputs of the bidirectional encoder into a single
-        tensor.
-        """
-        return tf.concat(outputs, 2)
 
     @property
     def cell_fw(self):
