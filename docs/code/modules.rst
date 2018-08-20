@@ -129,47 +129,42 @@ Decoders
 Connectors
 ==========
 
-ConnectorBase
---------------------------------------
-
+:hidden:`ConnectorBase`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.ConnectorBase
     :members:
+    :inherited-members:
 
-ConstantConnector
---------------------------------------
-
+:hidden:`ConstantConnector`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.ConstantConnector
     :members:
+    :inherited-members:
 
-ForwardConnector
---------------------------------------
-
+:hidden:`ForwardConnector`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.ForwardConnector
     :members:
+    :inherited-members:
 
-MLPTransformConnector
---------------------------------------
-
+:hidden:`MLPTransformConnector`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.MLPTransformConnector
     :members:
+    :inherited-members:
 
-ReparameterizedStochasticConnector
---------------------------------------------
-
+:hidden:`ReparameterizedStochasticConnector`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.ReparameterizedStochasticConnector
     :members:
+    :inherited-members:
 
-StochasticConnector
---------------------------------------
-
+:hidden:`StochasticConnector`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.StochasticConnector
     :members:
+    :inherited-members:
 
-ConcatConnector
---------------------------------------
-
-.. autoclass:: texar.modules.ConcatConnector
-    :members:
 
 Networks
 ========
