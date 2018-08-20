@@ -170,8 +170,8 @@ class HierarchicalRNNEncoder(EncoderBase):
                inputs,
                order='btu',
                medium=None,
-               #sequence_length_major=None,
-               #sequence_length_minor=None,
+               sequence_length_major=None,
+               sequence_length_minor=None,
                **kwargs):
         """Encodes the inputs.
 
@@ -191,10 +191,10 @@ class HierarchicalRNNEncoder(EncoderBase):
                 that specifies the order of inputs dimension.
                 Following four can be accepted:
 
-                    - 'btu': time_major=False for both. (default)
-                    - 'utb': time_major=True for both.
-                    - 'tbu': time_major=True for major encoder only.
-                    - 'ubt': time_major=True for minor encoder only.
+                    - 'btu': set time_major=False for both. (default)
+                    - 'utb': set time_major=True for both.
+                    - 'tbu': set time_major=True for major encoder only.
+                    - 'ubt': set time_major=True for minor encoder only.
 
             medium (optional): A list of callables that subsequently process the
                 final states of minor encoder and obtain the inputs
@@ -203,20 +203,23 @@ class HierarchicalRNNEncoder(EncoderBase):
                 If not specified, :meth:`flatten` is used for processing
                 the minor's final states.
 
-            **kwargs: Other keyword arguments for the major and minor encoders,
-                such as `initial_state`, etc.
+            sequence_length_minor (optional): The `sequence_length` kwarg sent
+                to minor encoder. It can be either a 1-D tensor or 2-D tensor, 
+                with BxT units following correct order.
 
-                By default, arguments except `initial_state` and
-                `sequence_length` will be sent to both major and minor
+            sequence_length_major (optional): The `sequence_length` kwarg sent
+                to major encoder.
+
+            **kwargs: Other keyword arguments for the major and minor encoders,
+                such as `initial_state` and so on, except `time_major`, which 
+                will be automatically derived from `order` args.
+
+                By default, arguments will be sent to both major and minor
                 encoders. To specify the encoder that arguments sent to, add
                 '_minor'/'_major' as its suffix.
 
-                `initial_state` and `sequence_length` will be sent to minor
-                encoder only if not specifing its encoder.
-
-                `initial_state` and `sequence_length` sent to minor encoder
-                can be either 1-D tensor or 2-D tensor, with BxT units following
-                correct order.
+                `initial_state_minor` must be provided with B,T dims flatten
+                into one dim of length BxT.
 
         Returns:
             `(outputs, final_state)` by the major encoder.
@@ -225,20 +228,13 @@ class HierarchicalRNNEncoder(EncoderBase):
         def _kwargs_split(kwargs):
             kwargs_minor, kwargs_major = {}, {}
             for k, v in kwargs.items():
-                if len(k) < 5 or (k[-5:] not in ['major', 'minor']):
-                    kwargs_minor[k] = v
-                    if k not in ['sequence_length', 'initial_state']:
-                        kwargs_major[k] = v
-                    else: #TODO(zhiting): Why initial_state is reshaped ?
-                        kwargs_minor[k] = tf.reshape(v, [-1])
-            for k, v in kwargs.items():
                 if len(k) >= 6 and k[-6:] == ['_minor']:
                     kwargs_minor[k[:-6]] = v
                 if len(k) >= 6 and k[-6:] == ['_major']:
                     kwargs_major[k[:-6]] = v
 
-            #kwargs_minor['sequence_length'] = sequence_length_minor
-            #kwargs_major['sequence_length'] = sequence_length_major
+            kwargs_minor['sequence_length'] = sequence_length_minor
+            kwargs_major['sequence_length'] = sequence_length_major
 
             return kwargs_minor, kwargs_major
 
@@ -287,40 +283,22 @@ class HierarchicalRNNEncoder(EncoderBase):
 
     @staticmethod
     def _get_flatten_order(order, kwargs_minor, kwargs_major, shape):
-        def _error_message(order):
-            return ('Fail to match input order \'{}\'' \
-                    'with given `time_major` params.').format(order)
-
-        time_major_minor = kwargs_minor.get('time_major', None)
-        time_major_major = kwargs_major.get('time_major', None)
         if order == 'btu':
-            if not ((time_major_minor is None or not time_major_minor) and \
-                    (time_major_major is None or not time_major_major)):
-                raise ValueError(_error_message(order))
             kwargs_minor.setdefault('time_major', False)
             kwargs_major.setdefault('time_major', False)
             expand = shape[0:2]
             shape = [shape[0] * shape[1], shape[2]]
         elif order == 'utb':
-            if not ((time_major_minor is None or time_major_minor) and \
-                    (time_major_major is None or time_major_major)):
-                raise ValueError(_error_message(order))
             kwargs_minor.setdefault('time_major', True)
             kwargs_major.setdefault('time_major', True)
             expand = shape[1:3]
             shape = [shape[0], shape[1] * shape[2]]
         elif order == 'tbu':
-            if not ((time_major_minor is None or not time_major_minor) and \
-                    (time_major_major is None or time_major_major)):
-                raise ValueError(_error_message(order))
             kwargs_minor.setdefault('time_major', False)
             kwargs_major.setdefault('time_major', True)
             expand = shape[0:2]
             shape = [shape[0] * shape[1], shape[2]]
         elif order == 'ubt':
-            if not ((time_major_minor is None or time_major_minor) and \
-                    (time_major_major is None or not time_major_major)):
-                raise ValueError(_error_message(order))
             kwargs_minor.setdefault('time_major', True)
             kwargs_major.setdefault('time_major', False)
             expand = shape[1:3]
