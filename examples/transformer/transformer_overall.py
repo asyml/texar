@@ -8,29 +8,30 @@ from __future__ import print_function
 import pickle
 import random
 import logging
-#import codecs
 import codecs
 import os
 from importlib import reload
 import numpy as np
-from matplotlib import pyplot as plt
+import itertools
+
+from matplotlib import pyplot as plt  # TODO(zhiting): delete
 plt.switch_backend('agg')
 
-# pylint: disable=wrong-import-position
 import tensorflow as tf
 import texar as tx
-import itertools
-# pylint: disable=invalid-name, no-name-in-module
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.utils import transformer_utils
 import hyperparams
 import bleu_tool
 from torchtext import data
 import utils
+
 global max_src_in_batch, max_tgt_in_batch
 
+# pylint: disable=invalid-name, no-name-in-module
+
 def batch_size_fn(new, count, sofar):
-    global max_src_in_batch, max_tgt_in_batch
+    global max_src_in_batch, max_tgt_in_batch # TODO(zhiting): ?
     if count == 1:
         max_src_in_batch = 0
         max_tgt_in_batch = 0
@@ -50,7 +51,7 @@ if __name__ == "__main__":
         hparams['encoder_hparams'], hparams['decoder_hparams'], \
         hparams['opt_hparams'], hparams['loss_hparams'], hparams['args']
 
-    logging.shutdown()
+    logging.shutdown() # TODO(zhiting): ?
     reload(logging)
     logging_file = os.path.join(args.log_dir, 'logging.txt')
     print('logging file is saved in :{}'.format(logging_file))

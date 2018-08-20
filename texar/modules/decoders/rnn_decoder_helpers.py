@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Various helper classes and utilities for RNN decoders.
 """
@@ -13,6 +25,7 @@ from tensorflow.contrib.seq2seq import Helper as TFHelper
 from tensorflow.contrib.distributions import RelaxedOneHotCategorical \
     as GumbelSoftmax
 
+from texar.modules.embedders.embedder_base import EmbedderBase
 from texar.utils import utils
 
 # pylint: disable=not-context-manager, too-many-arguments
@@ -92,26 +105,25 @@ def get_helper(helper_type,
     """Creates a Helper instance.
 
     Args:
-        helper_type (str): The name or full path to the helper class.
-            E.g., the classname of the built-in helpers in
-            :mod:`texar.modules.decoders.rnn_decoder_helpers` or
-            :mod:`tensorflow.contrib.seq2seq`, or the classname of user-defined
-            helpers in :mod:`texar.custom`, or a full path like
-            "my_module.MyHelper".
-        inputs ((structure of) Tensors, optional): Inputs to the decoder.
-        sequence_length (1D integer array or Tensor, optional): Lengths of input
-            token sequences.
-        embedding (optional): A callable that takes a vector tensor of integer
-            indexes, or the `params` argument for `embedding_lookup` (e.g.,
-            the embedding Tensor).
-        start_tokens (int array or 1D int Tensor, optional): Of shape
-            `[batch_size]`. The start tokens.
-        end_token (int or int scalar Tensor, optional): The token that marks
-            end of decoding.
-        **kwargs: additional keyword arguments for constructing the helper.
+        helper_type: A :tf_main:`Helper <contrib/seq2seq/Helper>` class, its
+            name or module path, or a class instance. If a class instance
+            is given, it is returned directly.
+        inputs (optional): Inputs to the RNN decoder, e.g., ground truth
+            tokens for teacher forcing decoding.
+        sequence_length (optional): A 1D int Tensor containing the
+            sequence length of :attr:`inputs`.
+        embedding (optional): A callable that takes a vector tensor of
+            indexes (e.g., an instance of subclass of
+            :class:`~texar.modules.EmbedderBase`), or the `params` argument
+            for `embedding_lookup` (e.g., the embedding Tensor).
+        start_tokens (optional): A int Tensor of shape `[batch_size]`,
+            the start tokens.
+        end_token (optional): A int 0D Tensor, the token that marks end
+            of decoding.
+        **kwargs: Additional keyword arguments for constructing the helper.
 
     Returns:
-        An instance of specified helper.
+        A helper instance.
     """
     module_paths = [
         'texar.modules.decoders.rnn_decoder_helpers',
@@ -123,7 +135,7 @@ def get_helper(helper_type,
                     "start_tokens": start_tokens,
                     "end_token": end_token}
     class_kwargs.update(kwargs)
-    return utils.get_instance_with_redundant_kwargs(
+    return utils.check_or_get_instance_with_redundant_kwargs(
         helper_type, class_kwargs, module_paths)
 
 
@@ -138,9 +150,11 @@ def _get_training_helper( #pylint: disable=invalid-name
             TrainingHelper directly.
         sequence_length (1D Tensor): Lengths of input token sequences.
         embedding (optional): The `params` argument of
-        :tf_main:`tf.nn.embedding_lookup
-        <nn/embedding_lookup>` (e.g., the embedding Tensor); or a callable that
-        takes a vector of integer indexes and returns respective embedding.
+            :tf_main:`tf.nn.embedding_lookup
+            <nn/embedding_lookup>` (e.g., the embedding Tensor); or a callable
+            that takes a vector of integer indexes and returns respective
+            embedding (e.g., an instance of subclass of
+            :class:`~texar.modules.EmbedderBase`).
         time_major (bool): Whether the tensors in `inputs` are time major.
             If `False` (default), they are assumed to be batch major.
         name (str, optional): Name scope for any created operations.
@@ -172,30 +186,41 @@ def _get_training_helper( #pylint: disable=invalid-name
 
 
 class SoftmaxEmbeddingHelper(TFHelper):
-    """A helper that feed softmax to the next step.
+    """A helper that feeds softmax probabilities over vocabulary
+    to the next step.
+    Uses the softmax probability vector to pass through word embeddings to
+    get the next input (i.e., a mixed word embedding).
 
-    Use the softmax probability to pass through an embedding layer to get the
-    next input.
+    A subclass of
+    :tf_main:`Helper <contrib/seq2seq/Helper>`.
+    Used as a helper to :class:`~texar.modules.RNNDecoderBase` :meth:`_build`
+    in inference mode.
+
+    Args:
+        embedding: An embedding argument (:attr:`params`) for
+            :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`, or an
+            instance of subclass of :class:`texar.modules.EmbedderBase`.
+            Note that other callables are not acceptable here.
+        start_tokens: An int tensor shaped `[batch_size]`. The
+            start tokens.
+        end_token: An int scalar tensor. The token that marks end of
+            decoding.
+        tau: A float scalar tensor, the softmax temperature.
+        stop_gradient (bool): Whether to stop the gradient backpropagation
+            when feeding softmax vector to the next step.
+        use_finish (bool): Whether to stop decoding once `end_token` is
+            generated. If `False`, decoding will continue until
+            `max_decoding_length` of the decoder is reached.
     """
 
     def __init__(self, embedding, start_tokens, end_token, tau,
                  stop_gradient=False, use_finish=True):
-        """Initializer.
-
-        Args:
-            embedding: An embedding argument (:attr:`params`) for
-                :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`. Note
-                that a callable is not acceptable here.
-            start_tokens: An `int32` vector tensor  shaped `[batch_size]`. The
-                start tokens.
-            end_token: An `int32` scalar tensor. The token that marks end of
-                decoding.
-            tau: softmax anneal temperature.
-            stop_gradient: stop the gradient when feeding to the next step.
-        """
+        if isinstance(embedding, EmbedderBase):
+            embedding = embedding.embedding
 
         if callable(embedding):
-            raise ValueError("embedding must be an embedding matrix.")
+            raise ValueError("`embedding` must be an embedding tensor or an "
+                             "instance of subclass of `EmbedderBase`.")
         else:
             self._embedding = embedding
             self._embedding_fn = (
@@ -228,6 +253,9 @@ class SoftmaxEmbeddingHelper(TFHelper):
         return (finished, self._start_inputs)
 
     def sample(self, time, outputs, state, name=None):
+        """Returns `sample_id` which is softmax distributions over vocabulary
+        with temperature `tau`. Shape = `[batch_size, vocab_size]`
+        """
         sample_ids = tf.nn.softmax(outputs / self._tau)
         return sample_ids
 
@@ -244,33 +272,52 @@ class SoftmaxEmbeddingHelper(TFHelper):
 
 
 class GumbelSoftmaxEmbeddingHelper(SoftmaxEmbeddingHelper):
-    """A helper that use Gumbel Softmax sampling.
+    """A helper that feeds gumbel softmax sample to the next step.
+    Uses the gumbel softmax vector to pass through word embeddings to
+    get the next input (i.e., a mixed word embedding).
 
-    Use the Gumbel Softmax sample and pass the sample through an embedding
-    layer to get the next input.
+    A subclass of
+    :tf_main:`Helper <contrib/seq2seq/Helper>`.
+    Used as a helper to :class:`~texar.modules.RNNDecoderBase` :meth:`_build`
+    in inference mode.
+
+    Same as :class:`~texar.modules.SoftmaxEmbeddingHelper` except that here
+    gumbel softmax (instead of softmax) is used.
+
+    Args:
+        embedding: An embedding argument (:attr:`params`) for
+            :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`, or an
+            instance of subclass of :class:`texar.modules.EmbedderBase`.
+            Note that other callables are not acceptable here.
+        start_tokens: An int tensor shaped `[batch_size]`. The
+            start tokens.
+        end_token: An int scalar tensor. The token that marks end of
+            decoding.
+        tau: A float scalar tensor, the softmax temperature.
+        straight_through (bool): Whether to use straight through gradient
+            between time steps. If `True`, a single token with highest
+            probability (i.e., greedy sample) is fed to the next step and
+            gradient is computed using straight through. If `False` (default),
+            the soft gumbel-softmax distribution is fed to the next step.
+        stop_gradient (bool): Whether to stop the gradient backpropagation
+            when feeding softmax vector to the next step.
+        use_finish (bool): Whether to stop decoding once `end_token` is
+            generated. If `False`, decoding will continue until
+            `max_decoding_length` of the decoder is reached.
     """
-
     def __init__(self, embedding, start_tokens, end_token, tau,
                  straight_through=False, stop_gradient=False, use_finish=True):
-        """Initializer.
-
-        Args:
-            embedding: An embedding argument (:attr:`params`) for
-                :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`. Note
-                that a callable is not acceptable here.
-            start_tokens: An `int32` vector tensor shaped `[batch_size]`. The
-                start tokens.
-            end_token: An `int32` scalar tensor. The token that marks end of
-                decoding.
-            tau: anneal temperature for sampling.
-            straight_through: whether to use the straight through estimator.
-            stop_gradient: stop gradients when feeding to the next step.
-        """
         super(GumbelSoftmaxEmbeddingHelper, self).__init__(
             embedding, start_tokens, end_token, tau, stop_gradient, use_finish)
         self._straight_through = straight_through
 
     def sample(self, time, outputs, state, name=None):
+        """Returns `sample_id` of shape `[batch_size, vocab_size]`. If
+        `straight_through` is False, this is gumbel softmax distributions over
+        vocabulary with temperature `tau`. If `straight_through` is True,
+        this is one-hot vectors of the greedy samples.
+        """
+        sample_ids = tf.nn.softmax(outputs / self._tau)
         sample_ids = GumbelSoftmax(self._tau, logits=outputs).sample()
         if self._straight_through:
             size = tf.shape(sample_ids)[-1]

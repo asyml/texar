@@ -76,56 +76,55 @@ Encoders
 Decoders
 ========
 
-RNNDecoderBase
-------------------------
-
+:hidden:`RNNDecoderBase`
+~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.RNNDecoderBase
     :members:
+    :inherited-members:
+    :exclude-members: initialize,step,finalize,tracks_own_finished,output_size,output_dtype
 
-BasicRNNDecoderOutput
--------------------------------
+:hidden:`BasicRNNDecoder`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.BasicRNNDecoder
+    :members:
+    :inherited-members:
+    :exclude-members: initialize,step,finalize,tracks_own_finished,output_size,output_dtype
 
+:hidden:`BasicRNNDecoderOutput`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.BasicRNNDecoderOutput
     :members:
 
-BasicRNNDecoder
--------------------------
-
-.. autoclass:: texar.modules.BasicRNNDecoder
+:hidden:`AttentionRNNDecoder`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.AttentionRNNDecoder
     :members:
+    :inherited-members:
+    :exclude-members: initialize,step,finalize,tracks_own_finished,output_size,output_dtype
 
-AttentionRNNDecoderOutput
------------------------------------
-
+:hidden:`AttentionRNNDecoderOutput`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.AttentionRNNDecoderOutput
     :members:
 
-AttentionRNNDecoder
------------------------------
+:hidden:`beam_search_decode`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.modules.beam_search_decode
 
-.. autoclass:: texar.modules.AttentionRNNDecoder
+:hidden:`SoftmaxEmbeddingHelper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.SoftmaxEmbeddingHelper
     :members:
 
-default_helper_train_hparams
---------------------------------------
+:hidden:`GumbelSoftmaxEmbeddingHelper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.GumbelSoftmaxEmbeddingHelper
+    :members:
 
-.. autofunction:: texar.modules.default_helper_train_hparams
-
-default_helper_infer_hparams
---------------------------------------
-
-.. autofunction:: texar.modules.default_helper_infer_hparams
-
-get_helper
-------------------------
-
+:hidden:`get_helper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.modules.get_helper
 
-EmbeddingTrainingHelper
-----------------------------------
-
-.. autoclass:: texar.modules.EmbeddingTrainingHelper
-    :members:
 
 Connectors
 ==========
