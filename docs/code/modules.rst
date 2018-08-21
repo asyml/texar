@@ -169,7 +169,19 @@ Connectors
 Networks
 ========
 
+:hidden:`FeedForwardNetworkBase`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.FeedForwardNetworkBase
+    :members:
+
+:hidden:`FeedForwardNetwork`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.FeedForwardNetwork
+    :members:
+
+:hidden:`Conv1DNetwork`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.Conv1DNetwork
     :members:
 
 Memory

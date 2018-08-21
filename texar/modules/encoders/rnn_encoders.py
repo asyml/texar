@@ -386,7 +386,7 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                 `-dropout-layer0-layer1-dropout-`.
 
                 The dropout mode (training or not) is controlled
-                by the :attr:`mode` argument when calling the encoder.
+                by the :attr:`mode` argument of :meth:`_build`.
 
             "dropout_rate" : float
                 The dropout rate, between 0 and 1. E.g.,
