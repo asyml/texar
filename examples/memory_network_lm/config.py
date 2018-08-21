@@ -38,7 +38,7 @@ opt = {
 
 embedder = {
     "memory_size": memory_size,
-    "word_embedder": {
+    "embedding": {
         "dim": dim,
     },
     "temporal_embedding": {
