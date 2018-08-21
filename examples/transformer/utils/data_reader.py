@@ -1,17 +1,20 @@
 import numpy as np
-import preprocess
 from chainer.dataset import convert
+import os
 
-def to_cpu(x):
-    try:
-        y = x.data.cpu().tolist()[0]
-    except:
-        y = x.data.cpu().tolist()
-    return y
+def load_data_numpy(input_dir, prefix):
+    train_data = np.load(os.path.join(input_dir,\
+        prefix + 'train.npy')).tolist()
+    dev_data = np.load(os.path.join(input_dir,\
+        prefix + 'valid.npy')).tolist()
+    test_data = np.load(os.path.join(input_dir,\
+        prefix + 'test.npy')).tolist()
+    print('train data size:{}'.format(len(train_data)))
+    return train_data, dev_data, test_data
 
 def seq2seq_pad_concat_convert(xy_batch, device=-1,
-    eos_id=preprocess.Vocab_Pad.EOS,
-    bos_id=preprocess.Vocab_Pad.BOS):
+    eos_id=2,
+    bos_id=1):
     """
     Args:
         xy_batch (list of tuple of two numpy.ndarray-s or cupy.ndarray-s):
@@ -24,6 +27,8 @@ def seq2seq_pad_concat_convert(xy_batch, device=-1,
             negative value, an array is sent to CPU. If it is positive, an
             array is sent to GPU with the given ID. If it is ``None``, an
             array is left in the original device.
+        eos_id: The index of end-of-sentence special token in the
+            dictionary.
     Returns:
         Tuple of Converted array.
             (input_sent_batch_array, target_sent_batch_input_array,
@@ -53,8 +58,8 @@ def seq2seq_pad_concat_convert(xy_batch, device=-1,
     return x_block, y_in_block, y_out_block
 
 def source_pad_concat_convert(x_seqs,
-    eos_id=preprocess.Vocab_Pad.EOS,
-    bos_id=preprocess.Vocab_Pad.BOS):
+    eos_id=2,
+    bos_id=1):
     x_block = convert.concat_examples(x_seqs, device=-1, padding=0)
     """
     This function is used when testing the model without target input.
@@ -64,3 +69,6 @@ def source_pad_concat_convert(x_seqs,
     for i_batch, seq in enumerate(x_seqs):
         x_block[i_batch, len(seq)] = eos_id
     return x_block
+
+if __name__ == "__main__":
+    pass
