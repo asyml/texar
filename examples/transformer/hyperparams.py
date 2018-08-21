@@ -17,7 +17,6 @@ def load_hyperparams():
     argparser.add_argument('--wbatchsize', type=int, default=3000)
     argparser.add_argument('--epoch', type=int, default=40)
     argparser.add_argument('--start_epoch', type=int, default=0)
-    argparser.add_argument('--max_seq_length', type=int, default=256)
     argparser.add_argument('--mode', type=str,
                            default='train_and_evaluate',
                            help='can also be test mode')
@@ -145,6 +144,8 @@ def load_hyperparams():
         },
     }
     decoder_hparams = copy.deepcopy(encoder_hparams)
+    del decoder_hparams['bos_pad']
+    del decoder_hparams['zero_pad']
     decoder_hparams['share_embed_and_transform'] = True
     decoder_hparams['transform_with_bias'] = args.affine_bias
     decoder_hparams['maximum_decode_length'] = args.max_decode_len
@@ -165,6 +166,7 @@ def load_hyperparams():
         'Adam_beta2':0.997,
         'Adam_epsilon':1e-9,
     }
+
     print('logdir:{}'.format(args.log_dir))
     if not os.path.exists(args.log_dir):
         os.makedirs(args.log_dir)

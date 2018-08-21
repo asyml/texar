@@ -59,15 +59,6 @@ class TransformerDecoder(ModuleBase):
                     position_embedders.SinusoidsPositionEmbedder( \
                     self._hparams.position_embedder.hparams)
             self._embedding = embedding
-            if self._hparams.zero_pad:
-                if not self._hparams.bos_pad:
-                    self._embedding = tf.concat(\
-                        (tf.zeros(shape=[1, self._hparams.num_units]),
-                         self._embedding[1:, :]), 0)
-                else:
-                    self._embedding = tf.concat(\
-                        (tf.zeros(shape=[2, self._hparams.num_units]),
-                         self._embedding[2:, :]), 0)
             self._vocab_size = self._embedding.get_shape().as_list()[0]
         self.output_layer = \
             self._build_output_layer(shape_list(self._embedding)[-1])
@@ -84,6 +75,19 @@ class TransformerDecoder(ModuleBase):
             sampling_method: argmax or sample. To choose the function
                 transforming the logits to the sampled id in the next position
                 when inferencing.
+            share_embed_and_transform: Choose whether to share the projection
+                vector from hidden vector to logits and the word embeddings.
+            transform_with_bias: Whether to apply an additional bias vector
+                when projecting the hidden vector to logits.
+            alpha: for length penalty. Refer to
+                https://arxiv.org/abs/1609.08144.
+            maximum_decode_length: The maximum length when decoding.
+            beam_width: When setting as 1, use greedy decoding when testing,
+                when it's larger than 1, use beam search strategy.
+            bos_idx: The index of <BOS> token in the vocabulary.
+            eos_idx: The index of <EOS> token in the vocabulary, indicating
+                the sentence is completed.
+            The meaning of other parameters are similar to TransformerEncoder
         """
         return {
             'sampling_method': 'argmax',
@@ -96,12 +100,7 @@ class TransformerDecoder(ModuleBase):
             "name":"decoder",
             "num_heads":8,
             "num_blocks":6,
-            "zero_pad": False,
-            "bos_pad": False,
-            "max_seq_length":None,
             "maximum_decode_length":10,
-            "beam_width":1,
-            'alpha':0,
             "embedding_dropout":0.1,
             'attention_dropout':0.1,
             'residual_dropout':0.1,
@@ -109,6 +108,8 @@ class TransformerDecoder(ModuleBase):
             'num_units':512,
             'eos_idx': 2,
             'bos_idx': 1,
+            "beam_width":1,
+            'alpha':0,
         }
 
     def _prepare_tokens_to_embeds(self, tokens):
@@ -174,6 +175,9 @@ class TransformerDecoder(ModuleBase):
             preds: [batch_size, target_length]
         """
         if is_train_mode_py(mode):
+            """
+            Mask the attention on future positions
+            """
             decoder_self_attention_bias = (
                 attentions.attention_bias_lower_triangle(
                     shape_list(decoder_input)[1]))
@@ -186,6 +190,7 @@ class TransformerDecoder(ModuleBase):
             channels = shape_list(target_inputs)[2]
             pos_embeds = self.position_embedder(lengths, channels)
             inputs = target_inputs + pos_embeds
+
             decoder_output = self._self_attention_stack(
                 inputs,
                 encoder_output,
