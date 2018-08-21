@@ -13,7 +13,6 @@ from texar.modules.embedders import WordEmbedder
 from texar.utils.mode import switch_dropout
 
 __all__ = [
-    'MemNetSingleLayer',
     'MemNetBase',
     'MemNetRNNLike',
     'default_embedder_fn',
