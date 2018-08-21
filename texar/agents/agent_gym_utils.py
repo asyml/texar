@@ -14,12 +14,12 @@ __all__ = [
 ]
 
 def convert_gym_space(spc):
-    """Converts a gym Space instance to a
-    :class:`~texar.agents.agent_utils.Space` instance.
+    """Converts a :gym:`gym.Space <#spaces>` instance to a
+    :class:`~texar.agents.Space` instance.
 
     Args:
         spc: An instance of `gym.Space` or
-            :class:`~texar.agents.agent_utils.Space`.
+            :class:`~texar.agents.Space`.
     """
     from texar.agents.agent_utils import Space
     if isinstance(spc, Space):
@@ -31,14 +31,14 @@ def convert_gym_space(spc):
             shape=spc.shape, low=spc.low, high=spc.high, dtype=spc.dtype)
 
 def get_gym_env_config(env):
-    """Creates an instance of :class:`texar.agents.agent_utils.EnvConfig`
-    from a gym env.
+    """Creates an instance of :class:`~texar.agents.EnvConfig`
+    from a :gym:`gym env <#environments>`.
 
     Args:
         env: An instance of OpenAI gym Environment.
 
     Returns:
-        An instance of :class:`texar.agents.agent_utils.EnvConfig`.
+        An instance of :class:`~texar.agents.EnvConfig`.
     """
     from texar.agents.agent_utils import EnvConfig
     return EnvConfig(

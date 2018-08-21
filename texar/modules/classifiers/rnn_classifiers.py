@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Various RNN classifiers.
 """
@@ -36,26 +48,33 @@ __all__ = [
 
 class UnidirectionalRNNClassifier(ClassifierBase):
     """One directional RNN classifier.
+    This is a combination of the
+    :class:`~texar.modules.UnidirectionalRNNEncoder` with a classification
+    layer. Both step-wise classification and sequence-level classification
+    are supported, specified in :attr:`hparams`.
 
     Arguments are the same as in
     :class:`~texar.modules.UnidirectionalRNNEncoder`.
 
     Args:
-        cell: (RNNCell, optional) If it is not specified,
+        cell: (RNNCell, optional) If not specified,
             a cell is created as specified in :attr:`hparams["rnn_cell"]`.
         cell_dropout_mode (optional): A Tensor taking value of
             :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, which
-            toggles dropout in the RNN cell (e.g., activates dropout in the
-            TRAIN mode). If `None`, :func:`~texar.context.global_mode` is used.
+            toggles dropout in the RNN cell (e.g., activates dropout in
+            TRAIN mode). If `None`, :func:`~texar.global_mode` is used.
             Ignored if :attr:`cell` is given.
         output_layer (optional): An instance of
-            :tf_main:`tf.layers.Layer <layers/Layer>`. Apply to the RNN cell
+            :tf_main:`tf.layers.Layer <layers/Layer>`. Applies to the RNN cell
             output of each step. If `None` (default), the output layer is
             created as specified in :attr:`hparams["output_layer"]`.
-        hparams (dict, optional): Encoder hyperparameters. If it is not
-            specified, the default hyperparameter setting is used. See
-            :attr:`default_hparams` for the sturcture and default values.
-            Missing values will take default.
+        hparams (dict or HParams, optional): Hyperparameters. Missing
+            hyperparamerter will be set to default values. See
+            :meth:`default_hparams` for the hyperparameter sturcture and
+            default values.
+
+    .. document private functions
+    .. automethod:: _build
     """
 
     def __init__(self,
@@ -102,8 +121,61 @@ class UnidirectionalRNNClassifier(ClassifierBase):
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
-        TODO
-        final_time, all_time, time_wise,
+        .. code-block:: python
+
+            {
+                # (1) Same hyperparameters as in UnidirectionalRNNEncoder
+                ...
+
+                # (2) Additional hyperparameters
+                "num_classes": 2,
+                "logit_layer_kwargs": None,
+                "clas_strategy": "final_time",
+                "max_seq_length": None,
+                "name": "unidirectional_rnn_classifier"
+            }
+
+        Here:
+
+        1. Same hyperparameters as in
+        :class:`~texar.modules.UnidirectionalRNNEncoder`.
+        See the :meth:`~texar.modules.UnidirectionalRNNEncoder.default_hparams`.
+        An instance of UnidirectionalRNNEncoder is created for feature
+        extraction.
+
+        2. Additional hyperparameters:
+
+            "num_classes" : int
+                Number of classes:
+
+                - If **`> 0`**, an additional :tf_main:`Dense <layers/Dense>` \
+                layer is appended to the encoder to compute the logits over \
+                classes.
+                - If **`<= 0`**, no dense layer is appended. The number of \
+                classes is assumed to be the final dense layer size of the \
+                encoder.
+
+            "logit_layer_kwargs" : dict
+                Keyword arguments for the logit Dense layer constructor,
+                except for argument "units" which is set to "num_classes".
+                Ignored if no extra logit layer is appended.
+
+            "clas_strategy" : str
+                The classification strategy, one of:
+
+                - **"final_time"**: Sequence-leve classification based on \
+                the output of the final time step. One sequence has one class.
+                - **"all_time"**: Sequence-level classification based on \
+                the output of all time steps. One sequence has one class.
+                - **"time_wise"**: Step-wise classfication, i.e., make \
+                classification for each time step based on its output.
+
+            "max_seq_length" : int, optional
+                Maximum possible length of input sequences. Required if
+                "clas_strategy" is "all_time".
+
+            "name" : str
+                Name of the classifier.
         """
         hparams = UnidirectionalRNNEncoder.default_hparams()
         hparams.update({
@@ -122,7 +194,58 @@ class UnidirectionalRNNClassifier(ClassifierBase):
                time_major=False,
                mode=None,
                **kwargs):
-        """
+        """Feeds the inputs through the network and makes classification.
+
+        The arguments are the same as in
+        :class:`~texar.modules.UnidirectionalRNNEncoder`.
+
+        Args:
+            inputs: A 3D Tensor of shape `[batch_size, max_time, dim]`.
+                The first two dimensions
+                `batch_size` and `max_time` may be exchanged if
+                `time_major=True` is specified.
+            sequence_length (optional): A 1D int tensor of shape `[batch_size]`.
+                Sequence lengths
+                of the batch inputs. Used to copy-through state and zero-out
+                outputs when past a batch element's sequence length.
+            initial_state (optional): Initial state of the RNN.
+            time_major (bool): The shape format of the :attr:`inputs` and
+                :attr:`outputs` Tensors. If `True`, these tensors are of shape
+                `[max_time, batch_size, depth]`. If `False` (default),
+                these tensors are of shape `[batch_size, max_time, depth]`.
+            mode (optional): A tensor taking value in
+                :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
+                `TRAIN`, `EVAL`, and `PREDICT`. Controls output layer dropout
+                if the output layer is specified with :attr:`hparams`.
+                If `None` (default), :func:`texar.global_mode()`
+                is used.
+            return_cell_output (bool): Whether to return the output of the RNN
+                cell. This is the results prior to the output layer.
+            **kwargs: Optional keyword arguments of
+                :tf_main:`tf.nn.dynamic_rnn <nn/dynamic_rnn>`,
+                such as `swap_memory`, `dtype`, `parallel_iterations`, etc.
+
+        Returns:
+            A tuple `(logits, pred)`, containing the logits over classes and
+            the predictions, respectively.
+
+            - If "clas_strategy"=="final_time" or "all_time"
+
+                - If "num_classes"==1, `logits` and `pred` are of both \
+                shape `[batch_size]`
+                - If "num_classes">1, `logits` is of shape \
+                `[batch_size, num_classes]` and `pred` is of shape \
+                `[batch_size]`.
+
+            - If "clas_strategy"=="time_wise",
+
+                - If "num_classes"==1, `logits` and `pred` are of both \
+                shape `[batch_size, max_time]`
+                - If "num_classes">1, `logits` is of shape \
+                `[batch_size, max_time, num_classes]` and `pred` is of shape \
+                `[batch_size, max_time]`.
+                - If `time_major` is `True`, the batch and time dimensions are\
+                exchanged.
         """
         enc_outputs, _, enc_output_size = self._encoder(
             inputs=inputs,
@@ -188,10 +311,24 @@ class UnidirectionalRNNClassifier(ClassifierBase):
                 logits = self._logit_layer(logit_input)
 
         # Compute predications
+        num_classes = self._hparams.num_classes
+        is_binary = num_classes == 1
+        is_binary = is_binary or (num_classes <= 0 and logits.shape[-1] == 1)
+
         if stra == 'time_wise':
-            pred = tf.argmax(logits, axis=-1)
+            if is_binary:
+                pred = tf.squeeze(tf.greater(logits, 0), -1)
+                logits = tf.squeeze(logits, -1)
+            else:
+                pred = tf.argmax(logits, axis=-1)
         else:
-            pred = tf.argmax(logits, axis=1)
+            if is_binary:
+                pred = tf.greater(logits, 0)
+                logits = tf.reshape(logits, [-1])
+            else:
+                pred = tf.argmax(logits, axis=-1)
+            pred = tf.reshape(pred, [-1])
+        pred = tf.to_int64(pred)
 
         if not self._built:
             self._add_internal_trainable_variables()

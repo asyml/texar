@@ -17,7 +17,9 @@ Contents:
    code/data.rst
    code/core.rst
    code/modules.rst
-   code/models.rst
+   code/agents.rst
    code/losses.rst
+   code/evals.rst
+   code/models.rst
    code/context.rst
    code/hyperparams.rst
