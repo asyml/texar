@@ -97,30 +97,31 @@ class MemNetSingleLayer(ModuleBase):
             "name": "memnet_single_layer"
         }
 
-    def _build(self, query, Aout, Cout, **kwargs):
+    def _build(self, u, m, c, **kwargs):
         """An A-C operation with memory and query vector.
 
         Args:
-            query (Tensor): A `Tensor`.
-            Aout (Tensor): Output of A operation. Should be in shape `[None, memory_size, dim]`.
-            Cout (Tensor): Output of C operation. Should be in shape `[None, memory_size, dim]`.
+            u (Tensor): The input query `Tensor` of shape `[None, dim]`.
+            m (Tensor): Output of A operation. Should be in shape `[None, memory_size, dim]`.
+            c (Tensor): Output of C operation. Should be in shape `[None, memory_size, dim]`.
 
         Returns:
-            A `Tensor` of shape same as :attr:`query`.
+            A `Tensor` of shape same as :attr:`u`.
         """
-        u = query
         with tf.variable_scope(self.variable_scope):
-            a = Aout
-            c = Cout
-            u = tf.expand_dims(u, axis=2)
-            p = tf.matmul(a, u)
+            # Input memory representation
+            p = tf.matmul(m, tf.expand_dims(u, axis=2))
             p = tf.transpose(p, perm=[0, 2, 1])
-            p = tf.nn.softmax(p)
-            o = tf.matmul(p, c)
+
+            p = tf.nn.softmax(p) # equ. (1)
+
+            # Output memory representation
+            o = tf.matmul(p, c) # equ. (2)
             o = tf.squeeze(o, axis=[1])
+
             if self._H:
-                query = tf.matmul(query, self._H)
-            u_ = tf.add(o, query)
+                u = tf.matmul(u, self._H) # RNN-like style
+            u_ = tf.add(u, o) # u^{k+1} = H u^k + o^k
 
         if not self._built:
             self._add_internal_trainable_variables()
