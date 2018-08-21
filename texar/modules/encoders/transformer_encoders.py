@@ -31,7 +31,6 @@ from texar.utils.shapes import shape_list
 from texar.utils.mode import is_train_mode
 
 # pylint: disable=too-many-locals, invalid-name
-
 __all__ = [
     "TransformerEncoder"
 ]
@@ -64,11 +63,11 @@ class TransformerEncoder(EncoderBase):
             if not self._hparams.bos_pad:
                 self._embedding = tf.concat(\
                     (tf.zeros(shape=[1, self._hparams.num_units]),
-                        embedding[1:, :]), 0)
+                     embedding[1:, :]), 0)
             else:
                 self._embedding = tf.concat(\
                     (tf.zeros(shape=[2, self._hparams.num_units]),
-                        embedding[2:, :]), 0)
+                     embedding[2:, :]), 0)
         self.stack_output = None
 
     @staticmethod

@@ -47,12 +47,13 @@ if __name__ == "__main__":
     labels = tf.placeholder(tf.int64, shape=(None, None))
     global_step = tf.Variable(0, dtype=tf.int64, trainable=False)
     global_step_py = 0
-    learning_rate  = tf.placeholder(tf.float64, shape=(), name='lr')
+    learning_rate = tf.placeholder(tf.float64, shape=(), name='lr')
     istarget = tf.to_float(tf.not_equal(labels, 0))
     word_embedder = tx.modules.WordEmbedder(
         vocab_size=args.n_vocab,
         hparams=args.word_embedding_hparams,
     )
+    #TODO(haoran):Cannot keep consistent result if rewriting encoder embedding
     encoder = TransformerEncoder(
         embedding=word_embedder._embedding,
         hparams=encoder_hparams)
@@ -62,7 +63,7 @@ if __name__ == "__main__":
     decoder = TransformerDecoder(
         embedding=encoder._embedding,
         hparams=decoder_hparams)
-    logits, preds=decoder(
+    logits, preds = decoder(
         encoder_output,
         encoder_decoder_attention_bias,
         decoder_input,
@@ -72,7 +73,7 @@ if __name__ == "__main__":
         encoder_decoder_attention_bias,
         decoder_input=None,
         mode=tf.estimator.ModeKeys.PREDICT)
-    mle_loss = transformer_utils.smoothing_cross_entropy(logits,
+    mle_loss = transformer_utils.smoothing_cross_entropy(logits, \
         labels, args.n_vocab, loss_hparams['label_confidence'])
     mle_loss = tf.reduce_sum(mle_loss * istarget) / tf.reduce_sum(istarget)
     tf.summary.scalar('mle_loss', mle_loss)
@@ -109,14 +110,14 @@ if __name__ == "__main__":
                 tx.global_mode(): tf.estimator.ModeKeys.EVAL,
             }
             fetches = {
-                    'predictions': predictions['sampled_ids'][:, 0, :],
+                'predictions': predictions['sampled_ids'][:, 0, :],
             }
             _fetches = sess.run(fetches, feed_dict=_feed_dict)
             hypotheses.extend(h.tolist() for h in _fetches['predictions'])
         # Threshold Global Steps to save the model
         outputs_tmp_filename = args.log_dir + \
             'my_model_epoch{}.beam{}alpha{}.outputs.tmp'.format(\
-            epoch , args.beam_width, args.alpha)
+            epoch, args.beam_width, args.alpha)
         refer_tmp_filename = os.path.join(args.log_dir, 'val_refer.tmp')
         with codecs.open(outputs_tmp_filename, 'w+', 'utf-8') as tmpfile, \
                 codecs.open(refer_tmp_filename, 'w+', 'utf-8') as tmpref:
@@ -137,8 +138,7 @@ if __name__ == "__main__":
                 epoch, eval_bleu)
             best_score = eval_bleu
             best_epoch = epoch
-            eval_saver.save(sess,
-                args.log_dir + 'my-model-highest_bleu.ckpt')
+            eval_saver.save(sess, args.log_dir + 'my-model-highest_bleu.ckpt')
 
     def _train_epoch(cur_sess, cur_epoch):
         global train_data, train_finished, global_step_py
@@ -150,7 +150,8 @@ if __name__ == "__main__":
                                         random_shuffler=
                                         data.iterator.RandomShuffler())
         for num_steps, train_batch in enumerate(train_iter):
-            in_arrays = utils.data_reader.seq2seq_pad_concat_convert(train_batch, -1)
+            in_arrays = utils.data_reader.seq2seq_pad_concat_convert(\
+                train_batch, -1)
             _feed_dict = {
                 encoder_input: in_arrays[0],
                 decoder_input: in_arrays[1],
@@ -190,8 +191,8 @@ if __name__ == "__main__":
                 encoder_input: x_block,
                 tx.global_mode(): tf.estimator.ModeKeys.EVAL,
             }
-            fetches ={
-                    'predictions': predictions['sampled_ids'][:, 0, :],
+            fetches = {
+                'predictions': predictions['sampled_ids'][:, 0, :],
             }
             _fetches = sess.run(fetches, feed_dict=_feed_dict)
             hypotheses.extend(h.tolist() for h in _fetches['predictions'])
@@ -226,6 +227,5 @@ if __name__ == "__main__":
                 _train_epoch(sess, epoch)
         elif args.mode == 'test':
             cur_mname = tf.train.latest_checkpoint(args.log_dir).split('/')[-1]
-            eval_saver.restore(sess,
-                tf.train.latest_checkpoint(args.log_dir))
+            eval_saver.restore(sess, tf.train.latest_checkpoint(args.log_dir))
             _test_epoch(sess)

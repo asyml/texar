@@ -6,21 +6,12 @@ import argparse
 import copy
 import os
 
-class Hyperparams:
-    """
-        config dictionrary, initialized as an empty object.
-        The specific values are passed on with the ArgumentParser
-    """
-    # pylint: disable=too-many-instance-attributes
-    # pylint: disable=too-few-public-methods
-    def __init__(self):
-        self.help = "the hyperparams dictionary to use"
-
 def load_hyperparams():
     """
         main function to define hyperparams
     """
     # pylint: disable=too-many-statements
+    class Hyperparams(): pass
     args = Hyperparams()
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--wbatchsize', type=int, default=3000)
@@ -32,8 +23,7 @@ def load_hyperparams():
                            help='can also be test mode')
     argparser.add_argument('--src_language', type=str, default='en')
     argparser.add_argument('--tgt_language', type=str, default='de')
-    argparser.add_argument('--filename_prefix', type=str,
-        default='processed.')
+    argparser.add_argument('--filename_prefix', type=str, default='processed.')
     argparser.add_argument('--model_dir', type=str, default='default')
     argparser.add_argument('--model_filename', type=str, default='')
     argparser.add_argument('--verbose', type=int, default=0)
