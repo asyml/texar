@@ -202,6 +202,8 @@ def get_instance(class_or_name, kwargs, module_paths=None):
         class_ = get_class(class_, module_paths)
     # Check validity of arguments
     class_args = set(inspect.getargspec(class_.__init__).args)
+    if kwargs is None:
+        kwargs = {}
     for key in kwargs.keys():
         if key not in class_args:
             raise ValueError(
@@ -279,6 +281,8 @@ def get_instance_with_redundant_kwargs(
     # Select valid arguments
     selected_kwargs = {}
     class_args = set(inspect.getargspec(class_.__init__).args)
+    if kwargs is None:
+        kwargs = {}
     for key, value in kwargs.items():
         if key in class_args:
             selected_kwargs[key] = value
@@ -340,6 +344,9 @@ def call_function_with_redundant_kwargs(fn, kwargs):
         fn_args = set(inspect.getargspec(fn).args)
     except TypeError:
         fn_args = set(inspect.getargspec(fn.__call__).args)
+
+    if kwargs is None:
+        kwargs = {}
 
     # Select valid arguments
     selected_kwargs = {}

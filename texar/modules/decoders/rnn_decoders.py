@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Various RNN decoders.
 """
@@ -31,26 +43,28 @@ __all__ = [
 class BasicRNNDecoderOutput(
         collections.namedtuple("BasicRNNDecoderOutput",
                                ("logits", "sample_id", "cell_output"))):
-    """The outputs of basic RNN decoders that include both RNN results and
-    sampled ids at each step.
+    """The outputs of basic RNN decoder that include both RNN outputs and
+    sampled ids at each step. This is also used to store results of all the
+    steps after decoding the whole sequence.
 
     Attributes:
-        logits: The output of RNN at each step by applying the
+        logits: The outputs of RNN (at each step/of all steps) by applying the
             output layer on cell outputs. E.g., in
             :class:`~texar.modules.BasicRNNDecoder` with default
             hyperparameters, this is a Tensor of
-            shape `[batch_size, max_time, vocab_size]`.
-        sample_id: The sampled results at each step. E.g., in
-            :class:`~texar.modules.BasicRNNDecoder`
-            with default helpers (e.g.,
-            :class:`~texar.modules.TrainingHelper`), this is a Tensor
+            shape `[batch_size, max_time, vocab_size]` after decoding the
+            whole sequence.
+        sample_id: The sampled results (at each step/of all steps). E.g., in
+            BasicRNNDecoder with decoding strategy of train_greedy,
+            this is a Tensor
             of shape `[batch_size, max_time]` containing the sampled token
-            index at each step.
-        cell_output: The output of RNN cell at each step. This is the results
-            prior to the output layer. E.g., in
-            :class:`~texar.modules.BasicRNNDecoder` with default
+            indexes of all steps.
+        cell_output: The output of RNN cell (at each step/of all steps).
+            This is the results prior to the output layer. E.g., in
+            BasicRNNDecoder with default
             hyperparameters, this is a Tensor of
-            shape `[batch_size, max_time, cell_output_size]`.
+            shape `[batch_size, max_time, cell_output_size]` after decoding
+            the whole sequence.
     """
     pass
 
@@ -59,45 +73,49 @@ class AttentionRNNDecoderOutput(
             "AttentionRNNDecoderOutput",
             ["logits", "sample_id", "cell_output",
              "attention_scores", "attention_context"])):
-    """The outputs of attention RNN decoders that additionally include attention
-    results.
+    """The outputs of attention RNN decoders that additionally include
+    attention results.
 
     Attributes:
-        logits: The outputs of RNN at each step by applying the
+        logits: The outputs of RNN (at each step/of all steps) by applying the
             output layer on cell outputs. E.g., in
             :class:`~texar.modules.AttentionRNNDecoder`, this is a Tensor of
-            shape `[batch_size, max_time, vocab_size]`.
-        sample_id: The sampled results at each step. E.g., in
-            :class:`~texar.modules.AttentionRNNDecoder` with default helpers
-            (e.g., :class:`~texar.modules.TrainingHelper`), this
+            shape `[batch_size, max_time, vocab_size]` after decoding.
+        sample_id: The sampled results (at each step/of all steps). E.g., in
+            :class:`~texar.modules.AttentionRNNDecoder` with decoding strategy
+            of train_greedy, this
             is a Tensor of shape `[batch_size, max_time]` containing the
-            sampled token index at each step.
-        cell_output: The output of RNN cell at each step. E.g., in
-            :class:`~texar.modules.AttentionRNNDecoder`, this is a Tensor of
-            shape `[batch_size, max_time, cell_output_size]`.
+            sampled token indexes of all steps.
+        cell_output: The output of RNN cell (at each step/of all steps).
+            This is the results prior to the output layer. E.g., in
+            AttentionRNNDecoder with default
+            hyperparameters, this is a Tensor of
+            shape `[batch_size, max_time, cell_output_size]` after decoding
+            the whole sequence.
         attention_scores: A single or tuple of `Tensor`(s) containing the
-            alignments emitted at the previous time step for each attention
-            mechanism.
-        attention_context: The attention emitted at the previous time step.
+            alignments emitted (at the previous time step/of all time steps)
+            for each attention mechanism.
+        attention_context: The attention emitted (at the previous time step/of
+            all time steps).
     """
     pass
 
 
 class BasicRNNDecoder(RNNDecoderBase):
-    """Basic RNN decoder that performs sampling at each step.
+    """Basic RNN decoder.
 
     Args:
-        cell (RNNCell, optional): An instance of `RNNCell`. If `None`
+        cell (RNNCell, optional): An instance of
+            :tf_main:`RNNCell <ontrib/rnn/RNNCell>`. If `None`
             (default), a cell is created as specified in
-            :attr:`hparams["rnn_cell"]` (see
-            :meth:`~texar.modules.BasicRNNDecoder.default_hparams`).
+            :attr:`hparams`.
         cell_dropout_mode (optional): A Tensor taking value of
             :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, which
-            toggles dropout in the RNN cell (e.g., activates dropout in the
-            TRAIN mode). If `None`, :func:`~texar.context.global_mode` is used.
+            toggles dropout in the RNN cell (e.g., activates dropout in
+            TRAIN mode). If `None`, :func:`~texar.global_mode` is used.
             Ignored if :attr:`cell` is given.
         vocab_size (int, optional): Vocabulary size. Required if
-            :attr:`output_layer:` is `None`.
+            :attr:`output_layer` is `None`.
         output_layer (optional): An instance of
             :tf_main:`tf.layers.Layer <layers/Layer>`, or
             :tf_main:`tf.identity <identity>`. Apply to the RNN cell
@@ -105,10 +123,51 @@ class BasicRNNDecoder(RNNDecoderBase):
             is used with output dimension set to :attr:`vocab_size`.
             Set `output_layer=tf.identity` if you do not want to have an
             output layer after the RNN cell outputs.
-        hparams (dict, optional): Hyperparameters. If not specified, the default
-            hyperparameter setting is used. See
-            :meth:`~texar.modules.BasicRNNDecoder.default_hparams` for the
-            structure and default values.
+        hparams (dict, optional): Hyperparameters. Missing
+            hyperparamerter will be set to default values. See
+            :meth:`default_hparams` for the hyperparameter sturcture and
+            default values.
+
+    See :meth:`~texar.modules.RNNDecoderBase._build` for the inputs and outputs
+    of the decoder. The decoder returns
+    `(outputs, final_state, sequence_lengths)`, where `outputs` is an instance
+    of :class:`~texar.modules.BasicRNNDecoderOutput`.
+
+    Example:
+
+        .. code-block:: python
+
+            embedder = WordEmbedder(vocab_size=data.vocab.size)
+            decoder = BasicRNNDecoder(vocab_size=data.vocab.size)
+
+            # Training loss
+            outputs, _, _ = decoder(
+                decoding_strategy='train_greedy',
+                inputs=embedder(data_batch['text_ids']),
+                sequence_length=data_batch['length']-1)
+
+            loss = tx.losses.sequence_sparse_softmax_cross_entropy(
+                labels=data_batch['text_ids'][:, 1:],
+                logits=outputs.logits,
+                sequence_length=data_batch['length']-1)
+
+            # Inference sample
+            outputs, _, _ = decoder(
+                decoding_strategy='infer_sample',
+                start_tokens=[data.vocab.bos_token_id]*100,
+                end_token=data.vocab.eos.token_id,
+                embedding=embedder,
+                max_decoding_length=60,
+                mode=tf.estimator.ModeKeys.PREDICT)
+
+            sample_id = sess.run(outputs.sample_id)
+            sample_text = tx.utils.map_ids_to_strs(sample_id, data.vocab)
+            print(sample_text)
+            # [
+            #   the first sequence sample .
+            #   the second sequence sample .
+            #   ...
+            # ]
     """
 
     def __init__(self,
@@ -124,57 +183,58 @@ class BasicRNNDecoder(RNNDecoderBase):
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
-        Returns:
-            .. code-block:: python
+        .. code-block:: python
 
-                {
-                    "rnn_cell": default_rnn_cell_hparams(),
-                    "helper_train": default_helper_train_hparams(),
-                    "helper_infer": default_helper_infer_hparams(),
-                    "max_decoding_length_train": None,
-                    "max_decoding_length_infer": None,
-                    "name": "basic_rnn_decoder"
+            {
+                "rnn_cell": default_rnn_cell_hparams(),
+                "max_decoding_length_train": None,
+                "max_decoding_length_infer": None,
+                "helper_train": {
+                    "type": "TrainingHelper",
+                    "kwargs": {}
                 }
+                "helper_infer": {
+                    "type": "SampleEmbeddingHelper",
+                    "kwargs": {}
+                }
+                "name": "basic_rnn_decoder"
+            }
 
-            Here:
+        Here:
 
-            "rnn_cell" : dict
-                A dictionary of RNN cell hyperparameters. Ignored if
-                :attr:`cell` is given when constructing the decoder.
+        "rnn_cell" : dict
+            A dictionary of RNN cell hyperparameters. Ignored if
+            :attr:`cell` is given to the decoder constructor.
+            The default value is defined in
+            :meth:`~texar.core.layers.default_rnn_cell_hparams`.
 
-                The default value is defined in
-                :meth:`~texar.core.layers.default_rnn_cell_hparams`.
+        "max_decoding_length_train": int or None
+            Maximum allowed number of decoding steps in training mode.
+            If `None` (default), decoding is
+            performed until fully done, e.g., encountering the <EOS> token.
+            Ignored if `max_decoding_length` is given when calling
+            the decoder.
 
-            "helper_train" : dict
-                A dictionary of :class:`Helper` hyperparameters. The
-                helper is used in training phase.
+        "max_decoding_length_infer" : int or None
+            Same as "max_decoding_length_train" but for inference mode.
 
-                The default value is defined in
-                :meth:`~texar.modules.default_helper_train_hparams`
+        "helper_train" : dict
+            The hyperparameters of the helper used in training.
+            "type" can be a helper class, its name or module path, or a
+            helper instance. If a class name is given, the class must be
+            from module :tf_main:`tf.contrib.seq2seq <contrib/seq2seq>`,
+            :mod:`texar.modules`, or :mod:`texar.custom`. This is used
+            only when both `decoding_strategy` and `helper` augments are
+            `None` when calling the decoder. See
+            :meth:`~texar.modules.RNNDecoderBase._build` for more details.
 
-            "helper_infer": dict
-                A dictionary of :class:`Helper` hyperparameters. The
-                helper is used in inference phase.
+        "helper_infer": dict
+            Same as "helper_train" but during inference mode.
 
-                The default value is defined in
-                :meth:`~texar.modules.default_helper_infer_hparams`
+        "name" : str
+            Name of the decoder.
 
-            "max_decoding_length_train": int or None
-                Maximum allowed number of decoding steps in training mode..
-
-                The default is `None`, which means decoding is
-                performed until fully done, e.g., encountering the <EOS> token.
-
-            "max_decoding_length_infer" : int or None
-                Maximum allowed number of decoding steps in inference mode.
-
-                The default is `None`, which means decoding is
-                performed until fully done, e.g., encountering the <EOS> token.
-
-            "name" : str
-                Name of the decoder.
-
-                The default value is "basic_rnn_decoder".
+            The default value is "basic_rnn_decoder".
         """
         hparams = RNNDecoderBase.default_hparams()
         hparams["name"] = "basic_rnn_decoder"
@@ -223,35 +283,25 @@ class BasicRNNDecoder(RNNDecoderBase):
                 lambda _: dtype, self._cell.output_size))
 
 
-#TODO(zhiting): allow a list of Attention Mechanisms
 class AttentionRNNDecoder(RNNDecoderBase):
     """RNN decoder with attention mechanism.
 
-    Common arguments are the same as in
-    :class:`~texar.modules.BasicRNNDecoder`, including
-    :attr:`cell`, :attr:`vocab_size`, and :attr:`output_layer`.
-
     Args:
-        memory: The memory to query; usually the output of an RNN encoder.  This
-            tensor should be shaped `[batch_size, max_time, ...]`.
-        memory_sequence_length (optional): Sequence lengths for the batch
-            entries in memory.  If provided, the memory tensor rows are masked
+        memory: The memory to query, e.g., the output of an RNN encoder. This
+            tensor should be shaped `[batch_size, max_time, dim]`.
+        memory_sequence_length (optional): A tensor of shape `[batch_size]`
+            containing the sequence lengths for the batch
+            entries in memory. If provided, the memory tensor rows are masked
             with zeros for values past the respective sequence lengths.
-        cell_input_fn (callable, optional): A callable that produces RNN cell
-            inputs. If `None` (default), the default is used:
-            `lambda inputs, attention: tf.concat([inputs, attention], -1)`,
-            which cancats regular RNN cell inputs with attentions.
-        cell (RNNCell, optional): An instance of `RNNCell`. If `None`
-            (default), a cell is created as specified in
-            :attr:`hparams["rnn_cell"]` (see
-            :meth:`~texar.modules.AttentionRNNDecoder.default_hparams`).
+        cell (RNNCell, optional): An instance of `RNNCell`. If `None`, a cell
+            is created as specified in :attr:`hparams`.
         cell_dropout_mode (optional): A Tensor taking value of
             :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, which
-            toggles dropout in the RNN cell (e.g., activates dropout in the
-            TRAIN mode). If `None`, :func:`~texar.context.global_mode` is used.
+            toggles dropout in the RNN cell (e.g., activates dropout in
+            TRAIN mode). If `None`, :func:`~texar.global_mode` is used.
             Ignored if :attr:`cell` is given.
         vocab_size (int, optional): Vocabulary size. Required if
-            :attr:`output_layer:` is `None`.
+            :attr:`output_layer` is `None`.
         output_layer (optional): An instance of
             :tf_main:`tf.layers.Layer <layers/Layer>`, or
             :tf_main:`tf.identity <identity>`. Apply to the RNN cell
@@ -259,20 +309,53 @@ class AttentionRNNDecoder(RNNDecoderBase):
             is used with output dimension set to :attr:`vocab_size`.
             Set `output_layer=tf.identity` if you do not want to have an
             output layer after the RNN cell outputs.
-        hparams (dict, optional): Hyperparameters. If not specified, the default
-            hyperparameter setting is used. See
-            :meth:`~texar.modules.AttentionRNNDecoder.default_hparams` for the
-            structure and default values.
+        cell_input_fn (callable, optional): A callable that produces RNN cell
+            inputs. If `None` (default), the default is used:
+            `lambda inputs, attention: tf.concat([inputs, attention], -1)`,
+            which cancats regular RNN cell inputs with attentions.
+        hparams (dict, optional): Hyperparameters. Missing
+            hyperparamerter will be set to default values. See
+            :meth:`default_hparams` for the hyperparameter sturcture and
+            default values.
 
+    See :meth:`~texar.modules.RNNDecoderBase._build` for the inputs and outputs
+    of the decoder. The decoder returns
+    `(outputs, final_state, sequence_lengths)`, where `outputs` is an instance
+    of :class:`~texar.modules.AttentionRNNDecoderOutput`.
+
+    Example:
+
+        .. code-block:: python
+
+            # Encodes the source
+            enc_embedder = WordEmbedder(data.source_vocab.size, ...)
+            encoder = UnidirectionalRNNEncoder(...)
+
+            enc_outputs, _ = encoder(
+                inputs=enc_embedder(data_batch['source_text_ids']),
+                sequence_length=data_batch['source_length'])
+
+            # Decodes while attending to the source
+            dec_embedder = WordEmbedder(vocab_size=data.target_vocab.size, ...)
+            decoder = AttentionRNNDecoder(
+                memory=enc_outputs,
+                memory_sequence_length=data_batch['source_length'],
+                vocab_size=data.target_vocab.size)
+
+            outputs, _, _ = decoder(
+                decoding_strategy='train_greedy',
+                inputs=dec_embedder(data_batch['target_text_ids']),
+                sequence_length=data_batch['target_length']-1)
     """
     def __init__(self,
                  memory,
                  memory_sequence_length=None,
-                 cell_input_fn=None,
                  cell=None,
                  cell_dropout_mode=None,
                  vocab_size=None,
                  output_layer=None,
+                 #attention_layer=None, # TODO(zhiting): only valid for tf>=1.0
+                 cell_input_fn=None,
                  hparams=None):
         RNNDecoderBase.__init__(
             self, cell, vocab_size, output_layer, cell_dropout_mode, hparams)
@@ -311,146 +394,127 @@ class AttentionRNNDecoder(RNNDecoderBase):
         # Use variable_scope to ensure all trainable variables created in
         # AttentionWrapper are collected
         with tf.variable_scope(self.variable_scope):
+            #if attention_layer is not None:
+            #    self._attn_cell_kwargs["attention_layer_size"] = None
             attn_cell = AttentionWrapper(
                 self._cell,
                 attention_mechanism,
                 cell_input_fn=self._cell_input_fn,
+                #attention_layer=attention_layer,
                 **self._attn_cell_kwargs)
             self._cell = attn_cell
 
-    #TODO(zhiting): fix the TODOs in the docstring
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values:
 
         Common hyperparameters are the same as in
-        :class:`~texar.modules.BasicRNNDecoder`
-        (see :meth:`texar.modules.BasicRNNDecoder.default_hparams`).
-        Additional hyperparameters are included for attention mechanism
+        :class:`~texar.modules.BasicRNNDecoder`.
+        :meth:`~texar.modules.BasicRNNDecoder.default_hparams`.
+        Additional hyperparameters are for attention mechanism
         configuration.
 
-        Returns:
-            .. code-block:: python
+        .. code-block:: python
 
-                {
-                    "attention": {
+            {
+                "attention": {
+                    "type": "LuongAttention",
+                    "kwargs": {
+                        "num_units": 256,
+                    },
+                    "attention_layer_size": None,
+                    "alignment_history": False,
+                    "output_attention": True,
+                },
+                # The following hyperparameters are the same as with
+                # `BasicRNNDecoder`
+                "rnn_cell": default_rnn_cell_hparams(),
+                "max_decoding_length_train": None,
+                "max_decoding_length_infer": None,
+                "helper_train": {
+                    "type": "TrainingHelper",
+                    "kwargs": {}
+                }
+                "helper_infer": {
+                    "type": "SampleEmbeddingHelper",
+                    "kwargs": {}
+                }
+                "name": "attention_rnn_decoder"
+            }
+
+        Here:
+
+        "attention" : dict
+            Attention hyperparameters, including:
+
+            "type" : str or class or instance
+                The attention type. Can be an attention class, its name or
+                module path, or a class instance. The class must be a subclass
+                of :tf_main:`TF AttentionMechanism
+                <contrib/seq2seq/AttentionMechanism>`. If class name is
+                given, the class must be from modules
+                :tf_main:`tf.contrib.seq2seq <contrib/seq2seq>` or
+                :mod:`texar.custom`.
+
+                Example:
+
+                    .. code-block:: python
+
+                        # class name
+                        "type": "LuongAttention"
+                        "type": "BahdanauAttention"
+                        # module path
+                        "type": "tf.contrib.seq2seq.BahdanauMonotonicAttention"
+                        "type": "my_module.MyAttentionMechanismClass"
+                        # class
+                        "type": tf.contrib.seq2seq.LuongMonotonicAttention
+                        # instance
+                        "type": LuongAttention(...)
+
+            "kwargs" : dict
+                keyword arguments for the attention class constructor.
+                Arguments :attr:`memory` and
+                :attr:`memory_sequence_length` should **not** be
+                specified here because they are given to the decoder
+                constructor. Ignored if "type" is an attention class
+                instance. For example
+
+                Example:
+
+                    .. code-block:: python
+
                         "type": "LuongAttention",
                         "kwargs": {
                             "num_units": 256,
-                        },
-                        "attention_layer_size": None,
-                        "alignment_history": False,
-                        "output_attention": True,
-                    },
-                    # The following hyperparameters are the same with
-                    # `BasicRNNDecoder`
-                    "rnn_cell": default_rnn_cell_hparams(),
-                    "helper_train": default_helper_train_hparams(),
-                    "helper_infer": default_helper_infer_hparams(),
-                    "max_decoding_length_train": None,
-                    "max_decoding_length_infer": None,
-                    "name": "attention_rnn_decoder"
-                }
+                            "probability_fn": tf.nn.softmax
+                        }
 
-            Here:
+                    Here "probability_fn" can also be set to the string name
+                    or module path to a probability function.
 
-            "attention" : dict
-                Attention hyperparameters, which includes:
+                "attention_layer_size" : int or None
+                    The depth of the attention (output) layer. The context and
+                    cell output are fed into the attention layer to generate
+                    attention at each time step.
+                    If `None` (default), use the context as attention at each
+                    time step.
 
-                "type" : str
-                    Name or full path to the attention class which can be
+                "alignment_history": bool
+                    whether to store alignment history from all time steps
+                    in the final output state. (Stored as a time major
+                    `TensorArray` on which you must call `stack()`.)
 
-                    - Built-in attentions defined in \
-                `tensorflow.contrib.seq2seq`, including \
-                :class:`~tensorflow.contrib.seq2seq.LuongAttention`,\
-                :class:`~tensorflow.contrib.seq2seq.BahdanauAttention`,\
-                :class:`~tensorflow.contrib.seq2seq.BahdanauMonotonicAttention`\
-                and \
-                :class:`~tensorflow.contrib.seq2seq.LuongMonotonicAttention`.
-                    - User-defined attention classes in :mod:`texar.custom`.
-                    - External attention classes. Must provide the full path, \
-                      e.g., "my_module.MyAttentionClass".
-
-                    The default value is "LuongAttention".
-
-                "kwargs" : dict
-                    A dictionary of arguments for constructor of the attention
-                    class. Any arguments besides the ones in the default
-                    value are allowed, except :attr:`memory` and
-                    :attr:`memory_sequence_length` (if exist) which are provided
-                    by :attr:`attention_keys` and
-                    :attr:`attention_values_length` in the decoder's
-                    constructor, respectively.
-
-                    The default value is:
-
-                        .. code-block:: python
-
-                            {
-                                "num_units": 256,
-                            }
-
-                        - :attr:`"num_units"` is the depth of the attention \
-                        mechanism.
-
-                        E.g., We can specify :attr:`probability_fn` for
-                        :tf_main:`LuongAttention
-                        <contrib/seq2seq/LuongAttention>` or
-                        :tf_main:`BahdanauAttention
-                        <contrib/seq2seq/BahdanauAttention>` like:
-
-                        .. code-block:: python
-
-                            {
-                                "probability_fn": pf_value,
-                                ...
-                            }
-
-                        where :attr:`pf_value` is a callable or its name
-                        or full path to that converts the attention score to
-                        probabilities.
-                        The callable can be :tf_main:`tf.nn.softmax
-                        <nn/softmax>` (default),
-                        :tf_main:`tf.contrib.seq2seq.hardmax
-                        <contrib/seq2seq/hardmax>`, or
-                        :tf_main:`tf.contrib.sparsemax.sparsemax
-                        <contrib/sparsemax/sparsemax>`.
-                        Its signature should be:
-                        `probabilities = probability_fn(score)`
-
-                    "attention_layer_size" : int or None
-                        The depth of the attention (output) layer. If `None`
-                        (default), use the context as attention at each time
-                        step. Otherwise, feed the context and cell output into
-                        the attention layer to generate attention at each time
-                        step.
-
-                        The default value is `None`.
-
-                        TODO(zhiting): what does this mean?
-
-                    "alignment_history": bool
-                        whether to store alignment history from all time steps
-                        in the final output state.
-
-                        The default value is `False`.
-
-                        TODO(zhiting): what does this mean?
-
-                    "output_attention": bool
-                        If `True` (default), the output at each time step is
-                        the attention value. This is the behavior of Luong-style
-                        attention mechanisms. If `False`, the output at each
-                        time step is the output of `cell`.  This is the
-                        beahvior of Bhadanau-style attention mechanisms.
-                        In both cases, the `attention` tensor is propagated to
-                        the next time step via the state and is used there.
-                        This flag only controls whether the attention mechanism
-                        is propagated up to the next cell in an RNN stack or to
-                        the top RNN output.
-
-                        The default value is `True`.
-
+                "output_attention": bool
+                    If `True` (default), the output at each time step is
+                    the attention value. This is the behavior of Luong-style
+                    attention mechanisms. If `False`, the output at each
+                    time step is the output of `cell`.  This is the
+                    beahvior of Bhadanau-style attention mechanisms.
+                    In both cases, the `attention` tensor is propagated to
+                    the next time step via the state and is used there.
+                    This flag only controls whether the attention mechanism
+                    is propagated up to the next cell in an RNN stack or to
+                    the top RNN output.
         """
         hparams = RNNDecoderBase.default_hparams()
         hparams["name"] = "attention_rnn_decoder"
@@ -465,6 +529,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
         }
         return hparams
 
+    # pylint: disable=arguments-differ
     def _get_beam_search_cell(self, beam_width):
         """Returns the RNN cell for beam search decoding.
         """
@@ -573,23 +638,20 @@ class AttentionRNNDecoder(RNNDecoderBase):
 
     def zero_state(self, batch_size, dtype):
         """Returns zero state of the basic cell.
-
-        Same as :attr:`decoder.cell._cell.zero_state`.
+        Equivalent to :attr:`decoder.cell._cell.zero_state`.
         """
         return self._cell._cell.zero_state(batch_size=batch_size, dtype=dtype)
 
     def wrapper_zero_state(self, batch_size, dtype):
         """Returns zero state of the attention-wrapped cell.
-
-        Same as :attr:`decoder.cell.zero_state`.
+        Equivalent to :attr:`decoder.cell.zero_state`.
         """
         return self._cell.zero_state(batch_size=batch_size, dtype=dtype)
 
     @property
     def state_size(self):
         """The state size of the basic cell.
-
-        Same as :attr:`decoder.cell._cell.state_size`.
+        Equivalent to :attr:`decoder.cell._cell.state_size`.
         """
         return self._cell._cell.state_size
 
@@ -597,8 +659,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
     @property
     def wrapper_state_size(self):
         """The state size of the attention-wrapped cell.
-
-        Same as :attr:`decoder.cell.state_size`.
+        Equivalent to :attr:`decoder.cell.state_size`.
         """
         return self._cell.state_size
 

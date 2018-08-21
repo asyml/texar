@@ -1,5 +1,18 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
- transformer decoders. Attention is all you need.
+Transformer decoder.
 """
 
 from __future__ import absolute_import
@@ -7,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 # pylint: disable=no-name-in-module, too-many-arguments, too-many-locals
-# pylint: disable=not-context-manager
 
 import collections
 
@@ -31,7 +43,10 @@ class TransformerDecoderOutput(
     pass
 
 class TransformerDecoder(ModuleBase):
-    """decoder for transformer: Attention is all you need
+    """Transformer decoder.
+
+    Args:
+
     """
     def __init__(self, embedding, hparams=None):
         ModuleBase.__init__(self, hparams)
@@ -56,12 +71,19 @@ class TransformerDecoder(ModuleBase):
             self._vocab_size = self._embedding.get_shape().as_list()[0]
         self.output_layer = \
             self._build_output_layer(shape_list(self._embedding)[-1])
+
     @staticmethod
     def default_hparams():
-        """default hyperrams for transformer deocder.
+        """Returns a dictionary of hyperparameters with default values.
+
+        .. code-block:: python
+
+            {
+
+            }
             sampling_method: argmax or sample. To choose the function
-                transforming the logits to the sampled id in the next
-                position when inferencing.
+                transforming the logits to the sampled id in the next position
+                when inferencing.
         """
         return {
             'sampling_method': 'argmax',
@@ -70,6 +92,7 @@ class TransformerDecoder(ModuleBase):
             'position_embedder': None,
             'share_embed_and_transform': True,
             'transform_with_bias': True,
+            #TODO(haoran): change name to transformer_decoder
             "name":"decoder",
             "num_heads":8,
             "num_blocks":6,
@@ -130,17 +153,21 @@ class TransformerDecoder(ModuleBase):
 
         return _impl
 
-    #pylint:disable=arguments-differ
-    def _build(self, encoder_output, encoder_decoder_attention_bias,\
-        decoder_input, mode):
+    def _build(self,    # pylint: disable=arguments-differ
+               encoder_output,
+               encoder_decoder_attention_bias,
+               decoder_input,
+               mode=None):
         """
-            this function is called on training generally.
-            Args:
-                targets: [bath_size, target_length], generally begins with [bos] token
-                encoder_output: [batch_size, source_length, channels]
-            outputs:
-                logits: [batch_size, target_length, vocab_size]
-                preds: [batch_size, target_length]
+        This function is called on training generally.
+
+        Args:
+            targets: [bath_size, target_length], generally begins with [bos] token
+            encoder_output: [batch_size, source_length, channels]
+
+        Returns:
+            logits: [batch_size, target_length, vocab_size]
+            preds: [batch_size, target_length]
         """
         if is_train_mode_py(mode):
             decoder_self_attention_bias = (
@@ -304,7 +331,7 @@ class TransformerDecoder(ModuleBase):
         return TransformerDecoderOutput(
             output_logits=tensor_shape.TensorShape([None, None, self._vocab_size]),
             sample_id=tensor_shape.TensorShape([None, None])
-            )
+        )
 
     def output_dtype(self):
         """

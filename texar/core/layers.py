@@ -426,10 +426,8 @@ def get_activation_fn(fn_name="identity", kwargs=None):
     signature.
 
     Args:
-        fn_name (str or callable): The name or full path to an activation
-            function, or the function itself.
-
-            The function can be:
+        fn_name (str or callable): An activation function, or its name or
+            module path. The function can be:
 
             - Built-in function defined in :tf_main:`tf < >` or \
             :tf_main:`tf.nn <nn>`, e.g., :tf_main:`tf.identity <identity>`.

@@ -59,31 +59,35 @@ def beam_search_decode(decoder_or_cell,
                        max_decoding_length=None,
                        output_time_major=False,
                        **kwargs):
-    """Performs BeamSearch sampling decoding.
+    """Performs beam search sampling decoding.
 
     Args:
         decoder_or_cell: An instance of
-            :class:`~texar.modules.decoders.rnn_decoder_base.RNNDecoderBase`,
-            or an instance of :tf_main:`RNNCell <contrib/rnn/RNNCell>`.
-        embedding: A callable that takes a vector tensor of `ids` (argmax ids),
+            subclass of :class:`~texar.modules.RNNDecoderBase`,
+            or an instance of :tf_main:`RNNCell <contrib/rnn/RNNCell>`. The
+            decoder or RNN cell to perform decoding.
+        embedding: A callable that takes a vector tensor of indexes (e.g.,
+            an instance of subclass of :class:`~texar.modules.EmbedderBase`),
             or the :attr:`params` argument for
             :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`.
         start_tokens: `int32` vector shaped `[batch_size]`, the start tokens.
         end_token: `int32` scalar, the token that marks end of decoding.
-        beam_width: Python integer, the number of beams.
-        initial_state (optional): Initial state of decoding. The state must NOT
-            be tiled with :tf_main:`tile_batch <contrib/seq2seq/tile_batch>`.
+        beam_width (int): Python integer, the number of beams.
+        initial_state (optional): Initial state of decoding. If `None`
+            (default), zero state is used.
+
+            The state must **not** be tiled with
+            :tf_main:`tile_batch <contrib/seq2seq/tile_batch>`.
             If you have an already-tiled initial state, use
             :attr:`tiled_initial_state` instead.
 
-            In the case of attention RNN decoder,:attr:`initial_state` must
-            NOT be an :tf_main:`AttentionWrapperState
+            In the case of attention RNN decoder, `initial_state` must
+            **not** be an :tf_main:`AttentionWrapperState
             <contrib/seq2seq/AttentionWrapperState>`. Instead, it must be a
-            state of the wrapped `RNNCell`, and the state will be wrapped into
+            state of the wrapped `RNNCell`, which state will be wrapped into
             `AttentionWrapperState` automatically.
 
-            If `None` (default), zero state is used. Ignored if
-            :attr:`tiled_initial_state` is given.
+            Ignored if :attr:`tiled_initial_state` is given.
         tiled_initial_state (optional): Initial state that has been tiled
             (typicaly with :tf_main:`tile_batch <contrib/seq2seq/tile_batch>`)
             so that the batch dimension has size `batch_size * beam_width`.
@@ -92,8 +96,8 @@ def beam_search_decode(decoder_or_cell,
             of the wrapped `RNNCell`, or an `AttentionWrapperState`.
 
             If not given, :attr:`initial_state` is used.
-        output_layer: (optional) An instance of `tf.layers.Layer` to apply
-            to the RNN output prior to storing the result or sampling. If
+        output_layer (optional): A :tf_main:`Layer <layers/Layer>` instance to
+            apply to the RNN output prior to storing the result or sampling. If
             `None` and :attr:`decoder_or_cell` is a decoder, the decoder's
             output layer will be used.
         length_penalty_weight: Float weight to penalize length.
@@ -105,17 +109,73 @@ def beam_search_decode(decoder_or_cell,
             time major tensors. If `False` (default), outputs are returned
             as batch major tensors.
         **kwargs: Other keyword arguments for :tf_main:`dynamic_decode
-            <contrib/seq2seq/dynamic_decode>`. Argument `maximum_iterations`
-            is set to :attr:`max_decoding_length`.
+            <contrib/seq2seq/dynamic_decode>` except argument
+            `maximum_iterations` which is set to :attr:`max_decoding_length`.
 
     Returns:
-        (outputs, final_state, sequence_length):
+        A tuple `(outputs, final_state, sequence_length)`, where
 
-        - outputs: An instance of :tf_main:`FinalBeamSearchDecoderOutput
-            <contrib/seq2seq/FinalBeamSearchDecoderOutput>`.
-        - final_state: An instance of :tf_main:`BeamSearchDecoderState
-            <contrib/seq2seq/BeamSearchDecoderState>`.
-        - sequence_length: A Tensor of shape `[batch_size]`.
+        - outputs: An instance of :tf_main:`FinalBeamSearchDecoderOutput \
+        <contrib/seq2seq/FinalBeamSearchDecoderOutput>`.
+        - final_state: An instance of :tf_main:`BeamSearchDecoderState \
+        <contrib/seq2seq/BeamSearchDecoderState>`.
+        - sequence_length: A Tensor of shape `[batch_size]` containing \
+        the lengths of samples.
+
+    Example:
+
+        .. code-block:: python
+
+            ## Beam search with basic RNN decoder
+
+            embedder = WordEmbedder(vocab_size=data.vocab.size)
+            decoder = BasicRNNDecoder(vocab_size=data.vocab.size)
+
+            outputs, _, _, = beam_search_decode(
+                decoder_or_cell=decoder,
+                embedding=embedder,
+                start_tokens=[data.vocab.bos_token_id] * 100,
+                end_token=data.vocab.eos_token_id,
+                beam_width=5,
+                max_decoding_length=60)
+
+            sample_ids = sess.run(outputs.predicted_ids)
+            sample_text = tx.utils.map_ids_to_strs(sample_id[:,:,0], data.vocab)
+            print(sample_text)
+            # [
+            #   the first sequence sample .
+            #   the second sequence sample .
+            #   ...
+            # ]
+
+        .. code-block:: python
+
+            ## Beam search with attention RNN decoder
+
+            # Encodes the source
+            enc_embedder = WordEmbedder(data.source_vocab.size, ...)
+            encoder = UnidirectionalRNNEncoder(...)
+
+            enc_outputs, enc_state = encoder(
+                inputs=enc_embedder(data_batch['source_text_ids']),
+                sequence_length=data_batch['source_length'])
+
+            # Decodes while attending to the source
+            dec_embedder = WordEmbedder(vocab_size=data.target_vocab.size, ...)
+            decoder = AttentionRNNDecoder(
+                memory=enc_outputs,
+                memory_sequence_length=data_batch['source_length'],
+                vocab_size=data.target_vocab.size)
+
+            # Beam search
+            outputs, _, _, = beam_search_decode(
+                decoder_or_cell=decoder,
+                embedding=dec_embedder,
+                start_tokens=[data.vocab.bos_token_id] * 100,
+                end_token=data.vocab.eos_token_id,
+                beam_width=5,
+                initial_state=enc_state,
+                max_decoding_length=60)
     """
     if isinstance(decoder_or_cell, RNNDecoderBase):
         cell = decoder_or_cell._get_beam_search_cell(beam_width=beam_width)

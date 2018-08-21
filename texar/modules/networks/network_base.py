@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Base class for feed forward neural networks.
 """
@@ -54,7 +66,15 @@ def _build_layers(network, layers=None, layer_hparams=None):
         network._layers_by_name[layer_name] = layer
 
 class FeedForwardNetworkBase(ModuleBase):
-    """Base class inherited by all feed forward network classes.
+    """Base class inherited by all feed-forward network classes.
+
+    Args:
+        hparams (dict, optional): Hyperparameters. Missing
+            hyperparamerter will be set to default values. See
+            :meth:`default_hparams` for the hyperparameter sturcture and
+            default values.
+
+    See :meth:`_build` for the inputs and outputs.
     """
 
     def __init__(self, hparams=None):
@@ -70,19 +90,30 @@ class FeedForwardNetworkBase(ModuleBase):
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
-        TODO
+        .. code-block:: python
+
+            {
+                "name": "NN"
+            }
         """
         return {
             "name": "NN"
         }
 
     def _build(self, inputs, mode=None):
-        """
+        """Feeds forward inputs through the network layers and returns outputs.
 
         Args:
-            inputs:
+            inputs: The inputs to the network. The requirements on inputs
+                depends on the first layer and subsequent layers in the
+                network.
+            mode (optional): A tensor taking value in
+                :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
+                `TRAIN`, `EVAL`, and `PREDICT`. If `None`,
+                :func:`texar.global_mode` is used.
 
         Returns:
+            The output of the network.
         """
         training = is_train_mode(mode)
 

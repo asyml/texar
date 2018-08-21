@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Base class for RNN decoders.
 """
@@ -31,8 +43,12 @@ __all__ = [
 
 class RNNDecoderBase(ModuleBase, TFDecoder):
     """Base class inherited by all RNN decoder classes.
-
     See :class:`~texar.modules.BasicRNNDecoder` for the argumenrts.
+
+    See :meth:`_build` for the inputs and outputs of RNN decoders in general.
+
+    .. document private functions
+    .. automethod:: _build
     """
 
     def __init__(self,
@@ -76,7 +92,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
-        The hyperparameters have the same structure as in
+        The hyperparameters are the same as in
         :meth:`~texar.modules.BasicRNNDecoder.default_hparams` of
         :class:`~texar.modules.BasicRNNDecoder`, except that the default
         "name" here is "rnn_decoder".
@@ -91,51 +107,79 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         }
 
     def _build(self,
-               initial_state=None,
-               max_decoding_length=None,
-               impute_finished=False,
-               output_time_major=False,
                decoding_strategy="train_greedy",
+               initial_state=None,
                inputs=None,
                sequence_length=None,
-               input_time_major=False,
                embedding=None,
                start_tokens=None,
                end_token=None,
                softmax_temperature=None,
+               max_decoding_length=None,
+               impute_finished=False,
+               output_time_major=False,
+               input_time_major=False,
                helper=None,
                mode=None,
                **kwargs):
-        """Performs decoding. The decoder provides 3 ways to specify the
-        decoding strategy, with varying flexibility:
+        """Performs decoding. This is a shared interface for both
+        :class:`~texar.modules.BasicRNNDecoder` and
+        :class:`~texar.modules.AttentionRNNDecoder`.
 
-        - :attr:`decoding_strategy` argument: A string taking value:
+        The function provides **3 ways** to specify the
+        decoding method, with varying flexibility:
 
-            - "train_greedy": decoding in training fashion (i.e., feeding \
-              ground truth to decode the next step), and each sample is \
-              obtained by taking the argmax of the RNN output logits. \
+        1. The :attr:`decoding_strategy` argument: A string taking value of:
+
+            - **"train_greedy"**: decoding in teacher-forcing fashion \
+              (i.e., feeding \
+              `ground truth` to decode the next step), and each sample is \
+              obtained by taking the `argmax` of the RNN output logits. \
               Arguments :attr:`(inputs, sequence_length, input_time_major)` \
               are required for this strategy, and argument :attr:`embedding` \
               is optional.
-            - "infer_greedy": decoding in inference fashion (i.e., feeding \
-              the generated sample to decode the next step), and each sample\
-              is obtained by taking the argmax of the RNN output logits.\
+            - **"infer_greedy"**: decoding in inference fashion (i.e., feeding \
+              the `generated` sample to decode the next step), and each sample\
+              is obtained by taking the `argmax` of the RNN output logits.\
               Arguments :attr:`(embedding, start_tokens, end_token)` are \
-              required for this strategy.
-            - "infer_sample": decoding in inference fashion, and each sample \
-              is obtained by random sampling from the RNN output distribution. \
-              Arguments :attr:`(embedding, start_tokens, end_token)` are \
-              required for this strategy.
+              required for this strategy, and argument \
+              :attr:`max_decoding_length` is optional.
+            - **"infer_sample"**: decoding in inference fashion, and each
+              sample is obtained by `random sampling` from the RNN output
+              distribution. Arguments \
+              :attr:`(embedding, start_tokens, end_token)` are \
+              required for this strategy, and argument \
+              :attr:`max_decoding_length` is optional.
+          This argument is used only when argument :attr:`helper` is `None`.
 
-          This argument is used only when :attr:`helper` is `None`.
+          Example:
 
-        - :attr:`helper` argument: An instance of \
-          :tf_main:`tf.contrib.seq2seq.Helper <contrib/seq2seq/Helper>`. This \
-          provides a superset of decoding strategies than above, for example:
+            .. code-block:: python
+
+                embedder = WordEmbedder(vocab_size=data.vocab.size)
+                decoder = BasicRNNDecoder(vocab_size=data.vocab.size)
+
+                # Teacher-forcing decoding
+                outputs_1, _, _ = decoder(
+                    decoding_strategy='train_greedy',
+                    inputs=embedder(data_batch['text_ids']),
+                    sequence_length=data_batch['length']-1)
+
+                # Random sample decoding. Gets 100 sequence samples
+                outputs_2, _, sequence_length = decoder(
+                    decoding_strategy='infer_sample',
+                    start_tokens=[data.vocab.bos_token_id]*100,
+                    end_token=data.vocab.eos.token_id,
+                    embedding=embedder,
+                    max_decoding_length=60)
+
+        2. The :attr:`helper` argument: An instance of subclass of \
+           :tf_main:`tf.contrib.seq2seq.Helper <contrib/seq2seq/Helper>`. This \
+           provides a superset of decoding strategies than above, for example:
 
             - :tf_main:`TrainingHelper
               <contrib/seq2seq/TrainingHelper>` corresponding to the \
-              :attr:`"train_argmax"` strategy.
+              "train_greedy" strategy.
             - :tf_main:`ScheduledEmbeddingTrainingHelper
               <contrib/seq2seq/ScheduledEmbeddingTrainingHelper>` and \
               :tf_main:`ScheduledOutputTrainingHelper
@@ -144,28 +188,128 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             - :class:`~texar.modules.SoftmaxEmbeddingHelper` and \
               :class:`~texar.modules.GumbelSoftmaxEmbeddingHelper` for \
               soft decoding and gradient backpropagation.
-
           This means gives the maximal flexibility of configuring the decoding\
           strategy.
 
-        - :attr:`hparams["helper_train"]` and :attr:`hparams["helper_infer"]`:\
-          Specifying the helper through hyperparameters. Train and infer \
-          strategy is toggled based on :attr:`mode`. Appriopriate arguments \
-          (e.g., :attr:`inputs`, :attr:`start_tokens`, etc) are selected to \
-          construct the helper. Additional construction arguments can be \
-          provided either through :attr:`**kwargs`, or through \
-          :attr:`hparams["helper_train/infer"]["kwargs"]`.
+          Example:
 
-          This means is used only when :attr:`decoding_strategy` and \
-          :attr:`helper` are both `None`.
+            .. code-block:: python
+
+                embedder = WordEmbedder(vocab_size=data.vocab.size)
+                decoder = BasicRNNDecoder(vocab_size=data.vocab.size)
+
+                # Teacher-forcing decoding, same as above with
+                # `decoding_strategy='train_greedy'`
+                helper_1 = tf.contrib.seq2seq.TrainingHelper(
+                    inputs=embedders(data_batch['text_ids']),
+                    sequence_length=data_batch['length']-1)
+                outputs_1, _, _ = decoder(helper=helper_1)
+
+                # Gumbel-softmax decoding
+                helper_2 = GumbelSoftmaxEmbeddingHelper(
+                    embedding=embedder,
+                    start_tokens=[data.vocab.bos_token_id]*100,
+                    end_token=data.vocab.eos_token_id,
+                    tau=0.1)
+                outputs_2, _, sequence_length = decoder(
+                    max_decoding_length=60, helper=helper_2)
+
+        3. :attr:`hparams["helper_train"]` and :attr:`hparams["helper_infer"]`:\
+           Specifying the helper through hyperparameters. Train and infer \
+           strategy is toggled based on :attr:`mode`. Appriopriate arguments \
+           (e.g., :attr:`inputs`, :attr:`start_tokens`, etc) are selected to \
+           construct the helper. Additional arguments for helper constructor \
+           can be provided either through :attr:`**kwargs`, or through \
+           :attr:`hparams["helper_train/infer"]["kwargs"]`.
+
+           This means is used only when both :attr:`decoding_strategy` and \
+           :attr:`helper` are `None`.
+
+           Example:
+
+             .. code-block:: python
+
+                h = {
+                    "helper_infer": {
+                        "type": "GumbelSoftmaxEmbeddingHelper",
+                        "kwargs": { "tau": 0.1 }
+                    }
+                }
+                embedder = WordEmbedder(vocab_size=data.vocab.size)
+                decoder = BasicRNNDecoder(vocab_size=data.vocab.size, hparams=h)
+
+                # Gumbel-softmax decoding
+                output, _, _ = decoder(
+                    decoding_strategy=None, # Sets to None explicit
+                    embedding=embedder,
+                    start_tokens=[data.vocab.bos_token_id]*100,
+                    end_token=data.vocab.eos_token_id,
+                    max_decoding_length=60,
+                    mode=tf.estimator.ModeKeys.PREDICT)
+                        # PREDICT mode also shuts down dropout
 
         Args:
+            decoding_strategy (str, optional): A string specifying the decoding
+                strategy. Different arguments are required based on the
+                strategy.
+                Ignored if :attr:`helper` is given.
             initial_state (optional): Initial state of decoding.
                 If `None` (default), zero state is used.
+
+            inputs (optional): Input tensors for teacher forcing decoding.
+                Used when `decoding_strategy` is set to "train_greedy", or
+                when `hparams`-configured helper is used.
+
+                - If :attr:`embedding` is `None`, `inputs` is directly \
+                fed to the decoder. E.g., in `"train_greedy"` strategy, \
+                `inputs` must be a 3D Tensor of shape \
+                `[batch_size, max_time, emb_dim]` (or \
+                `[max_time, batch_size, emb_dim]` if `input_time_major`==True).
+                - If `embedding` is given, `inputs` is used as index \
+                to look up embeddings and feed in the decoder. \
+                E.g., if `embedding` is an instance of \
+                :class:`~texar.modules.WordEmbedder`, \
+                then :attr:`inputs` is usually a 2D int Tensor \
+                `[batch_size, max_time]` (or \
+                `[max_time, batch_size]` if `input_time_major`==True) \
+                containing the token indexes.
+            sequence_length (optional): A 1D int Tensor containing the
+                sequence length of :attr:`inputs`.
+                Used when `decoding_strategy="train_greedy"` or
+                `hparams`-configured helper is used.
+            embedding (optional): A callable that returns embedding vectors
+                of `inputs` (e.g., an instance of subclass of
+                :class:`~texar.modules.EmbedderBase`), or the `params`
+                argument of
+                :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`.
+                If provided, `inputs` (if used) will be passed to
+                `embedding` to fetch the embedding vectors of the inputs.
+                Required when `decoding_strategy="infer_greedy"`
+                or `"infer_sample"`; optional when
+                `decoding_strategy="train_greedy"`.
+            start_tokens (optional): A int Tensor of shape `[batch_size]`,
+                the start tokens.
+                Used when `decoding_strategy="infer_greedy"` or
+                `"infer_sample"`, or when `hparams`-configured
+                helper is used.
+                Companying with Texar data module, to get `batch_size` samples
+                where batch_size is changing according to the data module,
+                this can be set as
+                `start_tokens=tf.ones_like(batch['length'])*bos_token_id`.
+            end_token (optional): A int 0D Tensor, the token that marks end
+                of decoding.
+                Used when `decoding_strategy="infer_greedy"` or
+                `"infer_sample"`, or when `hparams`-configured
+                helper is used.
+            softmax_temperature (optional): A float 0D Tensor, value to divide
+                the logits by before computing the softmax. Larger values
+                (above 1.0) result in more random samples. Must > 0. If `None`,
+                1.0 is used.
+                Used when `decoding_strategy="infer_sample"`.
             max_decoding_length: A int scalar Tensor indicating the maximum
                 allowed number of decoding steps. If `None` (default), either
-                :attr:`hparams["max_decoding_length_train"]` or
-                :attr:`hparams["max_decoding_length_infer"]` is used
+                `hparams["max_decoding_length_train"]` or
+                `hparams["max_decoding_length_infer"]` is used
                 according to :attr:`mode`.
             impute_finished (bool): If `True`, then states for batch
                 entries which are marked as finished get copied through and
@@ -176,81 +320,34 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             output_time_major (bool): If `True`, outputs are returned as
                 time major tensors. If `False` (default), outputs are returned
                 as batch major tensors.
-            decoding_strategy (str, optional): A string specifying the decoding
-                strategy. Different arguments are required based on the
-                strategy.
-                Ignored if :attr:`helper` is given.
-            inputs (optional): Input tensors. Used when
-                :attr:`decoding_strategy="train_greedy"` or
-                :attr:`hparams`-configured helper is used.
-
-                If :attr:`embedding` is `None`, :attr:`inputs` is directly
-                fed to the decoder. E.g., in `"train_greedy"` strategy,
-                :attr:`inputs` must be a 3D Tensor of shape
-                `[batch_size, max_time, emb_dim]` (or
-                `[max_time, batch_size, emb_dim]` if :attr:`input_time_major`
-                is `True`).
-
-                If :attr:`embedding` is given, :attr:`inputs` is used as index
-                to look up embeddings to be fed in the decoder. Requirements on
-                :attr:`inputs` depend on :attr:`embedding`.
-                E.g., if :attr:`embedding` is an instance of
-                :class:`~texar.modules.WordEmbedder`,
-                then :attr:`inputs` is usually a 2D int Tensor
-                `[batch_size, max_time]` (or
-                `[max_time, batch_size]` if :attr:`input_time_major`
-                is `True`) containing the token indexes.
-            sequence_length (optional): A 1D int Tensor containing the
-                sequence length of :attr:`inputs`.
-                Used when :attr:`decoding_strategy="train_greedy"` or
-                :attr:`hparams`-configured helper is used.
             input_time_major (optional): Whether the :attr:`inputs` tensor is
                 time major.
-                Used when :attr:`decoding_strategy="train_greedy"` or
-                :attr:`hparams`-configured helper is used.
-            embedding (optional): A callable that returns embedding vectors
-                of inputs, or the :attr:`params` argument of
-                :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`. In the
-                later case, :attr:`inputs` (if used) must be an `int` Tensor
-                containing the ids to be looked up in :attr:`embedding`.
-                Required when :attr:`decoding_strategy="infer_greedy"`
-                or `"infer_sample"`; optional when
-                :attr:`decoding_strategy="train_greedy"`.
-            start_tokens (optional): A int Tensor of shape `[batch_size]`,
-                the start tokens.
-                Used when :attr:`decoding_strategy="infer_greedy"` or
-                `"infer_sample"`, or when :attr:`hparams`-configured
-                helper is used.
-            end_token (optional): A int 0D Tensor, the token that marks end
-                of decoding.
-                Used when :attr:`decoding_strategy="infer_greedy"` or
-                `"infer_sample"`, or when :attr:`hparams`-configured
-                helper is used.
-            softmax_temperature (optional): A float 0D Tensor, value to divide
-                the logits by before computing the softmax. Larger values
-                (above 1.0) result in more random samples. Must > 0. If `None`,
-                1.0 is used. Used when :attr:`decoding_strategy="infer_sample"`.
+                Used when `decoding_strategy="train_greedy"` or
+                `hparams`-configured helper is used.
             helper (optional): An instance of
                 :tf_main:`Helper <contrib/seq2seq/Helper>`
                 that defines the decoding strategy. If given,
-                :attr:`decoding_strategy`
+                `decoding_strategy`
                 and helper configs in :attr:`hparams` are ignored.
             mode (str, optional): A string taking value in
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`. If
                 `TRAIN`, training related hyperparameters are used (e.g.,
-                :attr:`hparams['max_decoding_length_train']`), otherwise,
+                `hparams['max_decoding_length_train']`), otherwise,
                 inference related hyperparameters are used (e.g.,
-                :attr:`hparams['max_decoding_length_infer']`). If
-                `None` (default), `TRAIN` mode is used.
-            **kwargs: Other keyword arguments for constructing helper
-                defined by :attr:`hparams["helper_trainn"]` or
-                :attr:`hparams["helper_infer"]`.
+                `hparams['max_decoding_length_infer']`).
+                If `None` (default), `TRAIN` mode is used.
+            **kwargs: Other keyword arguments for constructing helpers
+                defined by `hparams["helper_trainn"]` or
+                `hparams["helper_infer"]`.
 
         Returns:
-            `(outputs, final_state, sequence_lengths)`: `outputs` is an object
-            containing the decoder output on all time steps, `final_state` is
-            the cell state of the final time step, `sequence_lengths` is a
-            Tensor of shape `[batch_size]`.
+            `(outputs, final_state, sequence_lengths)`, where
+
+            - **`outputs`**: an object containing the decoder output on all \
+            time steps.
+            - **`final_state`**: is the cell state of the final time step.
+            - **`sequence_lengths`**: is an int Tensor of shape `[batch_size]` \
+            containing the length of each sample.
         """
         # Helper
         if helper is not None:
@@ -390,9 +487,8 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         return self._cell
 
     def zero_state(self, batch_size, dtype):
-        """Zero state of the rnn cell.
-
-        Same as :attr:`decoder.cell.zero_state`.
+        """Zero state of the RNN cell.
+        Equivalent to :attr:`decoder.cell.zero_state`.
         """
         return self._cell.zero_state(
             batch_size=batch_size, dtype=dtype)
@@ -400,8 +496,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
     @property
     def state_size(self):
         """The state size of decoder cell.
-
-        Same as :attr:`decoder.cell.state_size`.
+        Equivalent to :attr:`decoder.cell.state_size`.
         """
         return self.cell.state_size
 

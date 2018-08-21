@@ -8,17 +8,12 @@ from __future__ import print_function
 import pickle
 import random
 import logging
-#import codecs
 import codecs
 import os
 from importlib import reload
-from matplotlib import pyplot as plt
-plt.switch_backend('agg')
 
-# pylint: disable=wrong-import-position
 import tensorflow as tf
 import texar as tx
-# pylint: disable=invalid-name, no-name-in-module
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.utils import transformer_utils
 import hyperparams
@@ -34,7 +29,7 @@ if __name__ == "__main__":
         hparams['opt_hparams'], hparams['loss_hparams'], hparams['args']
     set_random_seed(args.random_seed)
 
-    logging.shutdown()
+    logging.shutdown() # TODO(zhiting): ?
     reload(logging)
     logging_file = os.path.join(args.log_dir, 'logging.txt')
     print('logging file is saved in :{}'.format(logging_file))
