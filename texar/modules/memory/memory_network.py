@@ -149,7 +149,7 @@ class MemNetBase(ModuleBase):
     """
 
     def __init__(self, vocab_size, input_embedder_fn, output_embedder_fn,
-        query_embedder_fn, hparams=None):
+                 query_embedder_fn, hparams=None):
         ModuleBase.__init__(self, hparams)
         self._n_hops = self.hparams.n_hops
         self._dim = self.hparams.dim
@@ -265,9 +265,9 @@ class MemNetRNNLike(MemNetBase):
     """
 
     def __init__(self, vocab_size,
-        input_embedder_fn=default_embedder_fn,
-        output_embedder_fn=default_embedder_fn,
-        query_embedder_fn=None, hparams=None):
+                 input_embedder_fn=default_embedder_fn,
+                 output_embedder_fn=default_embedder_fn,
+                 query_embedder_fn=None, hparams=None):
         MemNetBase.__init__(self, vocab_size, input_embedder_fn,
             output_embedder_fn, query_embedder_fn, hparams)
         with tf.variable_scope(self.variable_scope):
@@ -386,7 +386,7 @@ class MemNetRNNLike(MemNetBase):
         and return the :attr:`logits` after the final matrix.
         """
         with tf.variable_scope(self.variable_scope):
-            if self._query_embedder_fn:
+            if self.B is not None:
                 query = self.B(query)
             self.u = [query]
             self.m = self.A(memory)
@@ -420,6 +420,7 @@ class MemNetRNNLike(MemNetBase):
                 else:
                     u_ = tf.nn.dropout(u_, keep_prob)
                 self.u.append(u_)
+
             logits = tf.matmul(self.u[-1], self._final_matrix)
 
         if not self._built:

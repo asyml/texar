@@ -41,7 +41,7 @@ opt = {
 
 embedder = {
     "memory_size": memory_size,
-    "word_embedder": {
+    "embedding": {
         "dim": dim,
         "dropout_rate": 0.2
     },
