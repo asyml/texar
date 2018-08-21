@@ -96,8 +96,10 @@ def default_embed_fn(memory, vocab_size, hparams):
     temporal_embedding = PositionEmbedder(
         position_size=memory_size,
         hparams=hparams["temporal_embedding"]
-    ).embedding
-    return tf.add(embedded_memory, temporal_embedding)
+    )
+    temporal_embedded = temporal_embedding(
+        sequence_length=tf.constant([memory_size]))
+    return tf.add(embedded_memory, temporal_embedded)
 
 class MemNetSingleLayer(ModuleBase):
     """An A-C layer for memory network.
@@ -181,7 +183,8 @@ class MemNetBase(ModuleBase):
             Differs from different kinds of memory network.
         output_embed_fn (function): Function implements C-operation.
             Differs from different kinds of memory network.
-        query_embed_fn (function): Function implements B-operation (for input query).
+        query_embed_fn (function): Function implements B-operation
+            (for input query).
             Differs from different kinds of memory network.
         hparams (HParams or dict, optional): Memory network base class
             hyperparameters. If it is not specified, the default hyperparameter
@@ -296,13 +299,15 @@ class MemNetRNNLike(MemNetBase):
         details.
 
     Args:
-        vocab_size (int): Vocabulary size of all :attr:`embed_fn`s and final embedding matrix.
+        vocab_size (int): Vocabulary size of all :attr:`embed_fn`s and
+            final embedding matrix.
         input_embed_fn (function): Function implements A-operation.
             Default is :func:`~texar.modules.memory.default_embed_fn`.
             See default function for details.
         output_embed_fn (function): Function implements C-operation.
             Similar to :attr:`input_embed_fn`.
-        query_embed_fn (function): Function implements B-operation (for input query).
+        query_embed_fn (function): Function implements B-operation
+            (for input query).
             Similar to :attr:`input_embed_fn`.
         hparams (HParams or dict, optional): RNN-like memory network
             hyperparameters. If it is not specified, the default hyperparameter
