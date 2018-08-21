@@ -10,3 +10,4 @@ from __future__ import print_function
 # pylint: disable=wildcard-import
 
 from texar.modules.memory.memory_network import *
+from texar.modules.memory.embed_fns import *

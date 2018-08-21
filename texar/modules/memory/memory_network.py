@@ -23,83 +23,17 @@ from __future__ import print_function
 import tensorflow as tf
 
 from texar.module_base import ModuleBase
-from texar.modules.embedders import WordEmbedder, PositionEmbedder
+from texar.modules.embedders import WordEmbedder
 from texar.utils.mode import switch_dropout
+from texar.modules.memory.embed_fns import \
+    default_embed_fn, get_default_embed_fn_hparams
 
 # pylint: disable=invalid-name
 
 __all__ = [
     'MemNetBase',
     'MemNetRNNLike',
-    'default_embed_fn',
-    'get_default_embed_fn_hparams',
 ]
-
-def get_default_embed_fn_hparams():
-    """Returns a dictionary of hyperparameters with default hparams for
-    :func:`~texar.modules.memory.default_embed_fn`
-
-    Returns:
-        .. code-block:: python
-
-            {
-                "memory_size": 100,
-                "embedding": {
-                    "name": "embedding",
-                    "dim": 100,
-                    "initializer": None, # use default initializer
-                    "dropout_rate": 0
-                }
-                "temporal_embedding": {
-                    "name": "temporal_embedding",
-                    "dim": 100,
-                    "initializer": None, # use default initializer
-                    "dropout_rate": 0
-                }
-            }
-    """
-    return {
-        "memory_size": 100,
-        "embedding": {
-            "name": "embedding",
-            "dim": 100,
-            "initializer": None,
-            "dropout_rate": 0
-        },
-        "temporal_embedding": {
-            "name": "temporal_embedding",
-            "dim": 100,
-            "dropout_rate": 0
-        }
-    }
-
-def default_embed_fn(memory, vocab_size, hparams):
-    """Default embed function for A, C or B operation.
-
-    Args:
-        memory: Memory elements used for embedding lookup.
-        vocab_size(int): Size of vocabulary used for embedding.
-        hparams(HParams or dict): Hyperparameters of this function.
-            See :func:`~texar.modules.memory.get_default_embed_fn_hparams`.
-
-    Returns:
-        Result of the memory operation.
-        In this case, :attr:`embedded_memory + temporal_embedding`.
-    """
-    memory_size = hparams["memory_size"]
-    embedding = WordEmbedder(
-        vocab_size=vocab_size,
-        hparams=hparams["embedding"]
-    )
-    embedded_memory = embedding(memory)
-    # temporal embedding
-    temporal_embedding = PositionEmbedder(
-        position_size=memory_size,
-        hparams=hparams["temporal_embedding"]
-    )
-    temporal_embedded = temporal_embedding(
-        sequence_length=tf.constant([memory_size]))
-    return tf.add(embedded_memory, temporal_embedded)
 
 class MemNetSingleLayer(ModuleBase):
     """An A-C layer for memory network.
@@ -394,19 +328,34 @@ class MemNetRNNLike(MemNetBase):
             hparams[_] = get_default_embed_fn_hparams()
         return hparams
 
-    def _build(self, memory, query, **kwargs):
+    def _build(self, query, memory=None, soft_memory=None, **kwargs):
         """Pass the :attr:`memory` and :attr:`query` through the memory network
         and return the :attr:`logits` after the final matrix.
 
         Args:
-            memory: TODO
+            query: Query vectors as the intial input of the memory network.
+                If you'd like to apply some transformation (e.g., embedding)
+                on it before it's fed into the network, please add
+                `query_embed_fn` when constructing this instance.
+                If you do not provide `query_embed_fn`, it should be of shape
+                `[batch_size, dim]`.
+            memory (optional): Memory used in A/C operations. By default, it
+                should be an integer tensor of shape
+                `[batch_size, memory_size]`,
+                containing the ids to embed if provided.
+            soft_memory (optional): Soft memory used in A/C operations. By
+                default, it should be a tensor of shape
+                `[batch_size, memory_size, vocab_size]`,
+                containing the weights used to mix the embedding vectors.
+                If you'd like to apply a matrix multiplication on the memory,
+                this option can also be used.
         """
         with tf.variable_scope(self.variable_scope):
             if self.B is not None:
                 query = self.B(query)
             self.u = [query]
-            self.m = self.A(memory)
-            self.c = self.C(memory)
+            self.m = self.A(memory, soft_memory)
+            self.c = self.C(memory, soft_memory)
 
             keep_prob = switch_dropout(1-self.hparams.dropout_rate)
             if self.hparams.variational:
