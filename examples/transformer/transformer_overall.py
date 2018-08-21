@@ -20,6 +20,7 @@ import hyperparams
 import bleu_tool
 from torchtext import data
 import utils.data_reader
+from utils.data_writer import write_words
 from utils.helpers import set_random_seed, batch_size_fn, adjust_lr
 
 if __name__ == "__main__":
@@ -114,7 +115,6 @@ if __name__ == "__main__":
             }
             _fetches = sess.run(fetches, feed_dict=_feed_dict)
             hypotheses.extend(h.tolist() for h in _fetches['predictions'])
-        # Threshold Global Steps to save the model
         outputs_tmp_filename = args.log_dir + \
             'my_model_epoch{}.beam{}alpha{}.outputs.tmp'.format(\
             epoch, args.beam_width, args.alpha)
@@ -126,10 +126,8 @@ if __name__ == "__main__":
                     hyp = hyp[:hyp.index(decoder._hparams.eos_id)]
                 if decoder._hparams.eos_id in tgt:
                     tgt = tgt[:tgt.index(decoder._hparams.eos_id)]
-                str_hyp = [str(i) for i in hyp]
-                str_tgt = [str(i) for i in tgt]
-                tmpfile.write(' '.join(str_hyp) + '\n')
-                tmpref.write(' '.join(str_tgt) + '\n')
+                tmpfile.write(' '.join([str(i) for i in hyp]) + '\n')
+                tmpref.write(' '.join([str(i) for i in tgt]) + '\n')
         eval_bleu = float(100 * bleu_tool.bleu_wrapper(\
             refer_tmp_filename, outputs_tmp_filename, case_sensitive=True))
         logging.info('eval_bleu %f in epoch %d)' % (eval_bleu, epoch))
@@ -161,7 +159,6 @@ if __name__ == "__main__":
             }
             fetches = {
                 'target': labels,
-                'logits': logits,
                 'predictions': preds,
                 'step': global_step,
                 'train_op': train_op,
@@ -184,7 +181,7 @@ if __name__ == "__main__":
     def _test_epoch(cur_sess):
         references, hypotheses, rwords, hwords = [], [], [], []
         for i in range(0, len(test_data), args.test_batch_size):
-            sources, targets = zip(*test_data[i: i+args.test_batch_size])
+            sources, targets = zip(*test_data[i: i + args.test_batch_size])
             references.extend(t.tolist() for t in targets)
             x_block = utils.data_reader.source_pad_concat_convert(sources)
             _feed_dict = {
@@ -205,11 +202,8 @@ if __name__ == "__main__":
             '{}.test.beam{}alpha{}.outputs.decodes'.format(\
             cur_mname, args.beam_width, args.alpha)
         refer_tmp_filename = args.log_dir + 'test_reference.tmp'
-        with codecs.open(outputs_tmp_filename, 'w+', 'utf-8') as tmpfile, \
-                codecs.open(refer_tmp_filename, 'w+', 'utf-8') as tmpref:
-            for hyp, tgt in zip(hwords, rwords):
-                tmpfile.write(' '.join(hyp) + '\n')
-                tmpref.write(' '.join(tgt) + '\n')
+        write_words(hwords, outputs_tmp_filename)
+        write_words(rwords, refer_tmp_filename)
         logging.info('test finished. The output is in %s' % \
             (outputs_tmp_filename))
     with tf.Session() as sess:
@@ -217,10 +211,6 @@ if __name__ == "__main__":
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
         var_list = tf.trainable_variables()
-        with open(args.log_dir + 'var.list', 'w+') as outfile:
-            for var in var_list:
-                outfile.write('var:{} shape:{} dtype:{}\n'.format(\
-                    var.name, var.shape, var.dtype))
         writer = tf.summary.FileWriter(args.log_dir, graph=sess.graph)
         if args.mode == 'train_and_evaluate':
             for epoch in range(args.start_epoch, args.epoch):
