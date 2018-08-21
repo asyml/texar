@@ -31,8 +31,8 @@ def default_embedder_fn(memory, vocab_size, hparams):
 
                 {
                     "memory_size": 100,
-                    "word_embedder": {
-                        "name": "word_embedder",
+                    "embedding": {
+                        "name": "embedding",
                         "dim": 100,
                         "initializer": None, # use default initializer
                         "dropout_rate": 0
@@ -49,11 +49,11 @@ def default_embedder_fn(memory, vocab_size, hparams):
         In this case, :attr:`embedded_memory + temporal_embedding`.
     """
     memory_size = hparams["memory_size"]
-    word_embedder = WordEmbedder(
+    embedding = WordEmbedder(
         vocab_size=vocab_size,
-        hparams=hparams["word_embedder"]
+        hparams=hparams["embedding"]
     )
-    embedded_memory = word_embedder(memory)
+    embedded_memory = embedding(memory)
     # temporal embedding
     temporal_embedding = WordEmbedder(
         vocab_size=memory_size,
@@ -317,8 +317,8 @@ class MemNetRNNLike(MemNetBase):
                     }
                     "A": {
                         "memory_size": 100,
-                        "word_embedder": {
-                            "name": "word_embedder",
+                        "embedding": {
+                            "name": "embedding",
                             "dim": 100,
                             "initializer": None, # use default initializer
                             "dropout_rate": 0
@@ -331,8 +331,8 @@ class MemNetRNNLike(MemNetBase):
                     }
                     "C": {
                         "memory_size": 100,
-                        "word_embedder": {
-                            "name": "word_embedder",
+                        "embedding": {
+                            "name": "embedding",
                             "dim": 100,
                             "initializer": None, # use default initializer
                             "dropout_rate": 0
@@ -345,8 +345,8 @@ class MemNetRNNLike(MemNetBase):
                     }
                     "B": {
                         "memory_size": 100,
-                        "word_embedder": {
-                            "name": "word_embedder",
+                        "embedding": {
+                            "name": "embedding",
                             "dim": 100,
                             "initializer": None, # use default initializer
                             "dropout_rate": 0
@@ -365,8 +365,8 @@ class MemNetRNNLike(MemNetBase):
         hparams["need_H"] = True
         default_embedder_hparams = {
             "memory_size": 100,
-            "word_embedder": {
-                "name": "word_embedder",
+            "embedding": {
+                "name": "embedding",
                 "dim": 100,
                 "initializer": None,
                 "dropout_rate": 0
