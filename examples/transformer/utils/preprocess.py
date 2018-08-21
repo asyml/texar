@@ -10,10 +10,10 @@ import json
 import os
 import numpy as np
 import pickle
+import argparse
 
 #pylint:disable=invalid-name
 
-from config import get_preprocess_args
 split_pattern = re.compile(r'([.,!?"\':;)(])')
 digit_pattern = re.compile(r'\d')
 Special_Seq = collections.namedtuple('Special_Seq', \
@@ -74,10 +74,42 @@ def make_dataset(path, w2id, tok=False):
         token_count += array.size
         unknown_count += (array == Vocab_Pad.UNK).sum()
     print('# of tokens:{}'.format(token_count))
-    print('# of unknown {} {:.2}'.format(unknown_count,
-                                         100. * unknown_count / token_count))
+    print('# of unknown {} {:.2}'.format(unknown_count,\
+        100. * unknown_count / token_count))
     return dataset, npy_dataset
 
+def get_preprocess_args():
+    """Data preprocessing options."""
+    class Config(): pass
+    config = Config()
+    parser = argparse.ArgumentParser(description='Preprocessing Options')
+    parser.add_argument('--source-vocab', type=int, default=40000,
+                        help='Vocabulary size of source language')
+    parser.add_argument('--target-vocab', type=int, default=40000,
+                        help='Vocabulary size of target language')
+    parser.add_argument('--tok', dest='tok', action='store_true',
+                        help='tokenized and lowercased')
+    parser.set_defaults(tok=False)
+    parser.add_argument('--max_seq_length', type=int, default=70)
+    parser.add_argument('--pre_encoding', type=str, default='spm')
+    parser.add_argument('--src', type=str, default='en')
+    parser.add_argument('--tgt', type=str, default='vi')
+    parser.add_argument('--input_dir', '-i', type=str, \
+        default='./data/en_vi/data/', help='Input directory')
+    parser.add_argument('--save_data', type=str, default='preprocess', \
+        help='Output file for the prepared data')
+    parser.parse_args(namespace=config)
+
+    #keep consistent with original implementation
+    #pylint:disable=attribute-defined-outside-init
+    config.input = config.input_dir
+    config.source_train = 'train.' + config.src
+    config.target_train = 'train.' + config.tgt
+    config.source_valid = 'valid.' + config.src
+    config.target_valid = 'valid.' + config.tgt
+    config.source_test = 'test.'+ config.src
+    config.target_test = 'test.' + config.tgt
+    return config
 
 if __name__ == "__main__":
     args = get_preprocess_args()
