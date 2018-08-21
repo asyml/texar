@@ -9,7 +9,7 @@ from __future__ import print_function
 import tensorflow as tf
 
 from texar.module_base import ModuleBase
-from texar.modules.embedders import WordEmbedder
+from texar.modules.embedders import WordEmbedder, PositionEmbedder
 from texar.utils.mode import switch_dropout
 
 __all__ = [
@@ -77,8 +77,8 @@ def default_embed_fn(memory, vocab_size, hparams):
     )
     embedded_memory = embedding(memory)
     # temporal embedding
-    temporal_embedding = WordEmbedder(
-        vocab_size=memory_size,
+    temporal_embedding = PositionEmbedder(
+        position_size=memory_size,
         hparams=hparams["temporal_embedding"]
     ).embedding
     return tf.add(embedded_memory, temporal_embedding)
