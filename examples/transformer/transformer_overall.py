@@ -29,7 +29,8 @@ if __name__ == "__main__":
         hparams['opt_hparams'], hparams['loss_hparams'], hparams['args']
     set_random_seed(args.random_seed)
 
-    logging.shutdown() # TODO(zhiting): ?
+    #TODO(haoran): fix this
+    logging.shutdown()
     reload(logging)
     logging_file = os.path.join(args.log_dir, 'logging.txt')
     print('logging file is saved in :{}'.format(logging_file))
@@ -52,13 +53,14 @@ if __name__ == "__main__":
         vocab_size=args.n_vocab,
         hparams=args.word_embedding_hparams,
     )
-    encoder = TransformerEncoder(hparams=encoder_hparams)
-    inputs_padding = tf.to_float(tf.equal(encoder_input, 0))
-    enc = word_embedder(encoder_input)
-    encoder_output, encoder_decoder_attention_bias = \
-        encoder(enc, inputs_padding)
-    decoder = TransformerDecoder(
+    encoder = TransformerEncoder(
         embedding=word_embedder._embedding,
+        hparams=encoder_hparams)
+    inputs_padding = tf.to_float(tf.equal(encoder_input, 0))
+    encoder_output, encoder_decoder_attention_bias = \
+        encoder(encoder_input, inputs_padding)
+    decoder = TransformerDecoder(
+        embedding=encoder._embedding,
         hparams=decoder_hparams)
     logits, preds=decoder(
         encoder_output,
@@ -207,7 +209,8 @@ if __name__ == "__main__":
             for hyp, tgt in zip(hwords, rwords):
                 tmpfile.write(' '.join(hyp) + '\n')
                 tmpref.write(' '.join(tgt) + '\n')
-
+        logging.info('test finished. The output is in %s' % \
+            (outputs_tmp_filename))
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())

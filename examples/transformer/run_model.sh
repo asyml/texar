@@ -57,17 +57,4 @@ case ${hparams_set} in
             --affine_bias=0 --eval_interval_epoch=1 \
             --zero_pad=1 --bos_pad=0 \
             --filename_prefix=processed. &> ${logging_filename};;
-    4)
-    echo 'load from pytorch model, this feature is not mature.'
-    src_language=en
-    tgt_language=vi
-    encoder=bpe
-    DATA_DIR="./temp/run_${src_language}_${tgt_language}_${encoder}/data/"
-    python transformer_overall.py --running_mode=test --input=${DATA_DIR} --filename_prefix=processed. \
-        --pre_encoding=${encoder} \
-        --src_language=${src_language} --tgt_language=${tgt_language} --test_batch_size=2 --beam_width=5 --alpha=0.6 \
-        --load_from_pytorch=1 \
-        --model_dir=/home/hzt/shr/transformer_pytorch/temp/run_en_vi/models/ \
-        --model_filename=ckpt_from_pytorch.p \
-        --log_disk_dir=${LOG_DISK_DIR} --debug=1 &> test_debug.txt;;
 esac

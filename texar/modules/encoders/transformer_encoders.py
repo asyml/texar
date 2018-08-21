@@ -48,6 +48,7 @@ class TransformerEncoder(EncoderBase):
             default values.
     """
     def __init__(self,
+                 embedding,
                  hparams=None):
         EncoderBase.__init__(self, hparams)
         self.enc = None
@@ -59,6 +60,15 @@ class TransformerEncoder(EncoderBase):
                 self.position_embedder = \
                     position_embedders.SinusoidsPositionEmbedder(\
                     self._hparams.position_embedder.hparams)
+        if self._hparams.zero_pad:
+            if not self._hparams.bos_pad:
+                self._embedding = tf.concat(\
+                    (tf.zeros(shape=[1, self._hparams.num_units]),
+                        embedding[1:, :]), 0)
+            else:
+                self._embedding = tf.concat(\
+                    (tf.zeros(shape=[2, self._hparams.num_units]),
+                        embedding[2:, :]), 0)
         self.stack_output = None
 
     @staticmethod
@@ -137,26 +147,18 @@ class TransformerEncoder(EncoderBase):
             encoder_decoder_attention_bias: The masks to indicate which
                 positions in the inputs are not padding.
         """
-        bsize, lengths, channels = shape_list(enc)
-        if self._hparams.zero_pad:
-            if not self._hparams.bos_pad:
-                enc = tf.concat(\
-                    (tf.zeros(shape=[bsize, 1, channels]),
-                        enc[:, 1:, :]), 1)
-            else:
-                enc = tf.concat(\
-                    (tf.zeros(shape=[bsize, 2, channels]),
-                        enc[:, 2:, :]), 1)
+        enc = tf.nn.embedding_lookup(self._embedding, enc)
         if self._hparams.multiply_embedding_mode == 'sqrt_depth':
-            self.enc = enc * channels**0.5
+            self.enc = enc * self._hparams.num_units**0.5
         else:
             self.enc = enc
+        _, lengths, _ = shape_list(self.enc)
         ignore_padding = attentions.attention_bias_ignore_padding(
             inputs_padding)
         encoder_self_attention_bias = ignore_padding
         encoder_decoder_attention_bias = ignore_padding
 
-        pos_embeds = self.position_embedder(lengths, channels)
+        pos_embeds = self.position_embedder(lengths, self._hparams.num_units)
         input_embedding = self.enc + pos_embeds
 
         x = tf.layers.dropout(input_embedding,
