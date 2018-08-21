@@ -207,7 +207,7 @@ class MemNetBase(ModuleBase):
                 Should be not less than 0 and not more than :attr`"dim"`.
 
             "memory_size": int
-                Size of elements used in the memory.
+                Number of elements used as the memory.
 
             "need_H": bool
                 Whether needs to perform transform with :attr:`H` matrix at the end of A-C layer.
@@ -389,8 +389,8 @@ class MemNetRNNLike(MemNetBase):
             if self._query_embedder_fn:
                 query = self.B(query)
             self.u = [query]
-            self.Aout = self.A(memory)
-            self.Cout = self.C(memory)
+            self.m = self.A(memory)
+            self.c = self.C(memory)
 
             keep_prob = switch_dropout(1-self.hparams.dropout_rate)
             if self.hparams.variational:
@@ -402,7 +402,7 @@ class MemNetRNNLike(MemNetBase):
                     return tf.div(val, keep_prob) * binary_tensor
 
             for k in range(self._n_hops):
-                u_ = self.AC(self.u[-1], self.Aout, self.Cout)
+                u_ = self.AC(self.u[-1], self.m, self.c)
                 if self._reludim == 0:
                     pass
                 elif self._reludim == self._dim:
