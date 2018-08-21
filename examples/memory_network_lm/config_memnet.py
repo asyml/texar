@@ -39,7 +39,7 @@ opt = {
     },
 }
 
-embedder = {
+embed = {
     "memory_size": memory_size,
     "embedding": {
         "dim": dim,
@@ -61,8 +61,8 @@ memnet = {
         "dim": dim,
         "dropout_rate": 0.2
     },
-    "A": embedder,
-    "C": embedder,
+    "A": embed,
+    "C": embed,
     "dropout_rate": 0.2,
     "variational": True
 }

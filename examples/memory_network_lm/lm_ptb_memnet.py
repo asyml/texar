@@ -47,6 +47,7 @@ import importlib
 import numpy as np
 import tensorflow as tf
 import texar as tx
+import argparse
 
 from ptb_reader import prepare_data
 from ptb_reader import ptb_iterator_memnet as ptb_iterator
@@ -65,6 +66,11 @@ FLAGS = flags.FLAGS
 config = importlib.import_module(FLAGS.config)
 
 def _main(_):
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('--lr', type=float, default=None)
+    args = argparser.parse_args()
+    lr = args.lr
+
     # Data
     batch_size = config.batch_size
     memory_size = config.memory_size
@@ -92,11 +98,8 @@ def _main(_):
     mle_loss = tf.reduce_sum(mle_loss)
 
     # Use global_step to pass epoch, for lr decay
-    lr = config.opt["optimizer"]["kwargs"]["learning_rate"]
-    manual_lr = input("please input lr "
-                      "(to use lr in the config file, input nothing): ")
-    if manual_lr:
-        lr = float(manual_lr)
+    if lr is None:
+        lr = config.opt["optimizer"]["kwargs"]["learning_rate"]
     learning_rate = tf.placeholder(tf.float32, [], name="learning_rate")
     global_step = tf.Variable(0, dtype=tf.int32, name="global_step")
     increment_global_step = tf.assign_add(global_step, 1)

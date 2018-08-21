@@ -15,34 +15,56 @@ from texar.utils.mode import switch_dropout
 __all__ = [
     'MemNetBase',
     'MemNetRNNLike',
-    'default_embedder_fn',
+    'default_embed_fn',
+    'get_default_embed_fn_hparams',
 ]
 
-def default_embedder_fn(memory, vocab_size, hparams):
-    """Default embedder function for A, C or B operation.
+def get_default_embed_fn_hparams():
+    """Returns a dictionary of hyperparameters with default hparams for
+    :func:`~texar.modules.memory.default_embed_fn`
+
+    Returns:
+        .. code-block:: python
+
+            {
+                "memory_size": 100,
+                "embedding": {
+                    "name": "embedding",
+                    "dim": 100,
+                    "initializer": None, # use default initializer
+                    "dropout_rate": 0
+                }
+                "temporal_embedding": {
+                    "name": "temporal_embedding",
+                    "dim": 100,
+                    "initializer": None, # use default initializer
+                    "dropout_rate": 0
+                }
+            }
+    """
+    return {
+        "memory_size": 100,
+        "embedding": {
+            "name": "embedding",
+            "dim": 100,
+            "initializer": None,
+            "dropout_rate": 0
+        },
+        "temporal_embedding": {
+            "name": "temporal_embedding",
+            "dim": 100,
+            "dropout_rate": 0
+        }
+    }
+
+def default_embed_fn(memory, vocab_size, hparams):
+    """Default embed function for A, C or B operation.
 
     Args:
         memory: Memory elements used for embedding lookup.
         vocab_size(int): Size of vocabulary used for embedding.
         hparams(HParams or dict): Hyperparameters of this function.
-            Example:
-
-            .. code-block:: python
-
-                {
-                    "memory_size": 100,
-                    "embedding": {
-                        "name": "embedding",
-                        "dim": 100,
-                        "initializer": None, # use default initializer
-                        "dropout_rate": 0
-                    }
-                    "temporal_embedding": {
-                        "name": "temporal_embedding",
-                        "dim": 100,
-                        "dropout_rate": 0
-                    }
-                }
+            See :func:`~texar.modules.memory.get_default_embed_fn_hparams`.
 
     Returns:
         Result of the memory operation.
@@ -135,30 +157,30 @@ class MemNetBase(ModuleBase):
     """Base class inherited by memory networks.
 
     Args:
-        vocab_size (int): Vocabulary size of all :attr:`embedder_fn`s and final embedding matrix.
-        input_embedder_fn (function): Function implements A-operation.
+        vocab_size (int): Vocabulary size of all :attr:`embed_fn`s and final embedding matrix.
+        input_embed_fn (function): Function implements A-operation.
             Differs from different kinds of memory network.
-        output_embedder_fn (function): Function implements C-operation.
-            Similar to :attr:`input_embedder_fn`.
-        query_embedder_fn (function): Function implements B-operation (for input query).
-            Similar to :attr:`input_embedder_fn`.
+        output_embed_fn (function): Function implements C-operation.
+            Differs from different kinds of memory network.
+        query_embed_fn (function): Function implements B-operation (for input query).
+            Differs from different kinds of memory network.
         hparams (HParams or dict, optional): Memory network base class
             hyperparameters. If it is not specified, the default hyperparameter
             setting is used. See :attr:`default_hparams` for the structure and
             default values.
     """
 
-    def __init__(self, vocab_size, input_embedder_fn, output_embedder_fn,
-                 query_embedder_fn, hparams=None):
+    def __init__(self, vocab_size, input_embed_fn, output_embed_fn,
+                 query_embed_fn, hparams=None):
         ModuleBase.__init__(self, hparams)
         self._n_hops = self.hparams.n_hops
         self._dim = self.hparams.dim
         self._reludim = self.hparams.reludim
         self._memory_size = self.hparams.memory_size
         self._vocab_size = vocab_size
-        self._input_embedder_fn = input_embedder_fn
-        self._output_embedder_fn = output_embedder_fn
-        self._query_embedder_fn = query_embedder_fn
+        self._input_embed_fn = input_embed_fn
+        self._output_embed_fn = output_embed_fn
+        self._query_embed_fn = query_embed_fn
         with tf.variable_scope(self.variable_scope):
             if self.hparams.need_H:
                 self.H = tf.get_variable(
@@ -246,18 +268,18 @@ class MemNetRNNLike(MemNetBase):
     """An implementation of multi-layer end-to-end memory network
     with RNN-like weight tying described in the paper.
 
-    If you want to customize the embedder functions,
-    see :func:`~texar.modules.memory.default_embedder_fn` for implemention details.
+    If you want to customize the embed functions,
+    see :func:`~texar.modules.memory.default_embed_fn` for implemention details.
 
     Args:
-        vocab_size (int): Vocabulary size of all :attr:`embedder_fn`s and final embedding matrix.
-        input_embedder_fn (function): Function implements A-operation.
-            Default is :func:`~texar.modules.memory.default_embedder_fn`.
+        vocab_size (int): Vocabulary size of all :attr:`embed_fn`s and final embedding matrix.
+        input_embed_fn (function): Function implements A-operation.
+            Default is :func:`~texar.modules.memory.default_embed_fn`.
             See default function for details.
-        output_embedder_fn (function): Function implements C-operation.
-            Similar to :attr:`input_embedder_fn`.
-        query_embedder_fn (function): Function implements B-operation (for input query).
-            Similar to :attr:`input_embedder_fn`.
+        output_embed_fn (function): Function implements C-operation.
+            Similar to :attr:`input_embed_fn`.
+        query_embed_fn (function): Function implements B-operation (for input query).
+            Similar to :attr:`input_embed_fn`.
         hparams (HParams or dict, optional): RNN-like memory network
             hyperparameters. If it is not specified, the default hyperparameter
             setting is used. See :attr:`default_hparams` for the structure and
@@ -265,16 +287,16 @@ class MemNetRNNLike(MemNetBase):
     """
 
     def __init__(self, vocab_size,
-                 input_embedder_fn=default_embedder_fn,
-                 output_embedder_fn=default_embedder_fn,
-                 query_embedder_fn=None, hparams=None):
-        MemNetBase.__init__(self, vocab_size, input_embedder_fn,
-            output_embedder_fn, query_embedder_fn, hparams)
+                 input_embed_fn=default_embed_fn,
+                 output_embed_fn=default_embed_fn,
+                 query_embed_fn=None, hparams=None):
+        MemNetBase.__init__(self, vocab_size, input_embed_fn,
+            output_embed_fn, query_embed_fn, hparams)
         with tf.variable_scope(self.variable_scope):
-            if self._query_embedder_fn:
+            if self._query_embed_fn:
                 self.B = tf.make_template(
                     "B",
-                    self._query_embedder_fn,
+                    self._query_embed_fn,
                     vocab_size=self._vocab_size,
                     hparams=self.hparams.B,
                     create_scope_now_=True)
@@ -282,13 +304,13 @@ class MemNetRNNLike(MemNetBase):
                 self.B = None
             self.A = tf.make_template(
                 "A",
-                self._input_embedder_fn,
+                self._input_embed_fn,
                 vocab_size=self._vocab_size,
                 hparams=self.hparams.A,
                 create_scope_now_=True)
             self.C = tf.make_template(
                 "C",
-                self._output_embedder_fn,
+                self._output_embed_fn,
                 vocab_size=self._vocab_size,
                 hparams=self.hparams.C,
                 create_scope_now_=True)
@@ -315,70 +337,32 @@ class MemNetRNNLike(MemNetBase):
                         "dim": 100,
                         "dropout_rate": 0
                     }
-                    "A": {
-                        "memory_size": 100,
-                        "embedding": {
-                            "name": "embedding",
-                            "dim": 100,
-                            "initializer": None, # use default initializer
-                            "dropout_rate": 0
-                        }
-                        "temporal_embedding": {
-                            "name": "temporal_embedding",
-                            "dim": 100,
-                            "dropout_rate": 0
-                        }
+                    "A": default_embed_hparams,
+                    "C": default_embed_hparams,
+                    "B": default_embed_hparams,
+                }
+
+                default_embed_hparams = {
+                    "memory_size": 100,
+                    "embedding": {
+                        "name": "embedding",
+                        "dim": 100,
+                        "initializer": None, # use default initializer
+                        "dropout_rate": 0
+                    },
+                    "temporal_embedding": {
+                        "name": "temporal_embedding",
+                        "dim": 100,
+                        "initializer": None, # use default initializer
+                        "dropout_rate": 0
                     }
-                    "C": {
-                        "memory_size": 100,
-                        "embedding": {
-                            "name": "embedding",
-                            "dim": 100,
-                            "initializer": None, # use default initializer
-                            "dropout_rate": 0
-                        }
-                        "temporal_embedding": {
-                            "name": "temporal_embedding",
-                            "dim": 100,
-                            "dropout_rate": 0
-                        }
-                    }
-                    "B": {
-                        "memory_size": 100,
-                        "embedding": {
-                            "name": "embedding",
-                            "dim": 100,
-                            "initializer": None, # use default initializer
-                            "dropout_rate": 0
-                        }
-                        "temporal_embedding": {
-                            "name": "temporal_embedding",
-                            "dim": 100,
-                            "dropout_rate": 0
-                        }
-                    }
-                    "dropout_rate": 0 # dropout after each hop
                 }
         """
         hparams = MemNetBase.default_hparams()
         hparams["name"] = "memnet_rnnlike"
         hparams["need_H"] = True
-        default_embedder_hparams = {
-            "memory_size": 100,
-            "embedding": {
-                "name": "embedding",
-                "dim": 100,
-                "initializer": None,
-                "dropout_rate": 0
-            },
-            "temporal_embedding": {
-                "name": "temporal_embedding",
-                "dim": 100,
-                "dropout_rate": 0
-            }
-        }
         for _ in ("A", "C", "B"):
-            hparams[_] = default_embedder_hparams
+            hparams[_] = get_default_embed_fn_hparams()
         return hparams
 
     def _build(self, memory, query, **kwargs):
