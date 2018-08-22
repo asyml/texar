@@ -1,5 +1,21 @@
+# Copyright 2018 The Tensor2Tensor Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Modifications copyright (C) 2018 Texar
+# ==============================================================================
 """
-This script is adapted from the tensor2tensor repositor.
+This script is adapted from the tensor2tensor repository.
 """
 
 from __future__ import absolute_import
@@ -7,6 +23,8 @@ from __future__ import print_function
 from __future__ import division
 
 import tensorflow as tf
+
+# pylint: disable=invalid-name, too-many-arguments, too-many-locals
 
 class PadRemover(object):
     """Helper to remove padding from a tensor before sending to the experts.
@@ -32,8 +50,10 @@ class PadRemover(object):
         """Compute and store the location of the padding.
         Args:
             pad_mask (tf.Tensor): Reference padding tensor of shape
-                [batch_size,length] or [dim_origin] (dim_origin=batch_size*length)
-                containing non-zeros positive values to indicate padding location.
+                [batch_size,length] or [dim_origin]
+                (dim_origin=batch_size*length)
+                containing non-zeros positive values to indicate padding
+                location.
         """
         self.nonpad_ids = None
         self.dim_origin = None
@@ -42,23 +62,26 @@ class PadRemover(object):
             pad_mask = tf.reshape(pad_mask, [-1])    # Flatten the batch
             # nonpad_ids contains coordinates of zeros rows (as pad_mask is
             # float32, checking zero equality is done with |x| < epsilon, with
-            # epsilon=1e-9 as standard, here pad_mask only contains positive values
-            # so tf.abs would be redundant)
+            # epsilon=1e-9 as standard, here pad_mask only contains positive
+            # values so tf.abs would be redundant)
             self.nonpad_ids = tf.to_int32(tf.where(pad_mask < 1e-9))
             self.dim_origin = tf.shape(pad_mask)[:1]
 
     def remove(self, x):
         """Remove padding from the given tensor.
+
         Args:
-            x (tf.Tensor): of shape [dim_origin,...]
+            x: A Tensor of shape [dim_origin,...]
+
         Returns:
-            a tensor of shape [dim_compressed,...] with dim_compressed <= dim_origin
+            A tensor of shape [dim_compressed,...] with dim_compressed
+            <= dim_origin
         """
         with tf.name_scope("pad_reduce/remove"):
             x_shape = x.get_shape().as_list()
             x = tf.gather_nd(
-                    x,
-                    indices=self.nonpad_ids,
+                x,
+                indices=self.nonpad_ids,
             )
             #if not context.in_eager_mode():
             # This is a hack but for some reason, gather_nd return a tensor of
@@ -68,17 +91,20 @@ class PadRemover(object):
 
     def restore(self, x):
         """Add padding back to the given tensor.
+
         Args:
-            x (tf.Tensor): of shape [dim_compressed,...]
+            x: A Tensor of shape [dim_compressed,...]
+
         Returns:
-            a tensor of shape [dim_origin,...] with dim_compressed >= dim_origin. The
+            A tensor of shape [dim_origin,...] with
+            dim_compressed >= dim_origin. The
             dim is restored from the original reference tensor
         """
         with tf.name_scope("pad_reduce/restore"):
             x = tf.scatter_nd(
-                    indices=self.nonpad_ids,
-                    updates=x,
-                    shape=tf.concat([self.dim_origin, tf.shape(x)[1:]], axis=0),
+                indices=self.nonpad_ids,
+                updates=x,
+                shape=tf.concat([self.dim_origin, tf.shape(x)[1:]], axis=0),
             )
         return x
 
@@ -144,11 +170,11 @@ def _batching_scheme(batch_size,
         raise ValueError("max_length must be greater or equal\
             to min_length")
     boundaries = _bucket_boundaries(max_length, min_length_bucket,
-        length_bucket_step)
+                                    length_bucket_step)
     boundaries = [boundary * length_multiplier for boundary in boundaries]
     max_length *= length_multiplier
     batch_sizes = [max(1, batch_size // length)
-        for length in boundaries + [max_length]]
+                   for length in boundaries + [max_length]]
     max_batch_size = max(batch_sizes)
     # Since the Datasets API only allows a single constant for window_size,
     # and it needs divide all bucket_batch_sizes, we pick a
@@ -167,9 +193,9 @@ def _batching_scheme(batch_size,
     window_size = max(
         [i for i in highly_composite_numbers if i <= 3 * max_batch_size])
     divisors = [i for i in range(1, window_size + 1)
-        if window_size % i == 0]
+                if window_size % i == 0]
     batch_sizes = [max([d for d in divisors if d <= bs])
-        for bs in batch_sizes]
+                   for bs in batch_sizes]
     window_size *= shard_multiplier
     batch_sizes = [bs * shard_multiplier for bs in batch_sizes]
     # The Datasets API splits one window into multiple batches, which
@@ -222,7 +248,7 @@ def smoothing_cross_entropy(logits,
         if gaussian and confidence > 0.0:
             labels = tf.cast(labels, tf.float32)
             normal_dist = tf.distributions.Normal(loc=labels,
-                scale=confidence)
+                                                  scale=confidence)
             soft_targets = normal_dist.prob(
                 tf.cast(tf.range(vocab_size), tf.float32)\
                     [:, None, None])
