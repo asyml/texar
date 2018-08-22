@@ -30,7 +30,7 @@ from tensorflow.python.util import nest
 from texar.core import layers
 from texar.module_base import ModuleBase
 from texar.modules.networks.networks import FeedForwardNetwork
-from texar.modules.embedders import position_embedders
+from texar.modules.embedders.position_embedders import SinusoidsPositionEmbedder
 from texar.utils import beam_search
 from texar.utils.shapes import shape_list
 from texar.utils import transformer_attentions as attentions
@@ -39,27 +39,43 @@ from texar.utils.mode import is_train_mode, is_train_mode_py
 class TransformerDecoderOutput(
         collections.namedtuple("TransformerDecoderOutput",\
             ("output_logits", "sample_ids"))):
-    """the output logits and sampled_ids"""
+    """The output :class:`TransformerDecoder`.
+
+    Attributes:
+        logits: A float Tensor of shape
+            `[batch_size, max_time, vocab_size]` containing the logits.
+        sample_id: An int Tensor of shape `[batch_size, max_time]`
+            containing the sampled token indexes.
+    """
     pass
 
 class TransformerDecoder(ModuleBase):
-    """Transformer decoder.
+    """Transformer decoder that applies multi-head self attention for
+    sequence decoding.
 
     Args:
-
+        embedding: A Tensor of shape `[vocab_size, dim]` containing the
+            word embeddng. The Tensor is used as the decoder output layer.
+        hparams (dict or HParams, optional): Hyperparameters. Missing
+            hyperparamerter will be set to default values. See
+            :meth:`default_hparams` for the hyperparameter sturcture and
+            default values.
     """
     def __init__(self, embedding, hparams=None):
         ModuleBase.__init__(self, hparams)
+
         with tf.variable_scope(self.variable_scope):
             if self._hparams.initializer:
                 tf.get_variable_scope().set_initializer( \
                     layers.get_initializer(self._hparams.initializer))
-            if self._hparams.position_embedder.name == 'sinusoids':
-                self.position_embedder = \
-                    position_embedders.SinusoidsPositionEmbedder( \
-                    self._hparams.position_embedder.hparams)
+
+            self.position_embedder = \
+                SinusoidsPositionEmbedder(
+                    self._hparams.position_embedder_hparams)
+
             self._embedding = embedding
             self._vocab_size = self._embedding.get_shape().as_list()[0]
+
         self.output_layer = \
             self._build_output_layer(shape_list(self._embedding)[-1])
 
@@ -70,34 +86,53 @@ class TransformerDecoder(ModuleBase):
         .. code-block:: python
 
             {
-
+                "sampling_method": "argmax",
+                "initializer": None,
+                "multiply_embedding_mode": "sqrt_depth",
+                "position_embedder_hparams": None,
+                "share_embed_and_transform": True,
+                "transform_with_bias": True,
+                "num_heads":8,
+                "num_blocks":6,
+                "maximum_decode_length":10,
+                "embedding_dropout":0.1,
+                "attention_dropout":0.1,
+                "residual_dropout":0.1,
+                "poswise_feedforward":None,
+                "num_units":512,
+                "eos_idx": 2,
+                "bos_idx": 1,
+                "beam_width":1,
+                "alpha":0,
+                "name":"transformer_decoder",
             }
-            sampling_method: argmax or sample. To choose the function
-                transforming the logits to the sampled id in the next position
-                when inferencing.
-            share_embed_and_transform: Choose whether to share the projection
-                vector from hidden vector to logits and the word embeddings.
-            transform_with_bias: Whether to apply an additional bias vector
-                when projecting the hidden vector to logits.
-            alpha: for length penalty. Refer to
-                https://arxiv.org/abs/1609.08144.
-            maximum_decode_length: The maximum length when decoding.
-            beam_width: When setting as 1, use greedy decoding when testing,
-                when it's larger than 1, use beam search strategy.
-            bos_idx: The index of <BOS> token in the vocabulary.
-            eos_idx: The index of <EOS> token in the vocabulary, indicating
-                the sentence is completed.
-            The meaning of other parameters are similar to TransformerEncoder
+
+        Here:
+
+        sampling_method: argmax or sample. To choose the function
+            transforming the logits to the sampled id in the next position
+            when inferencing.
+        share_embed_and_transform: Choose whether to share the projection
+            vector from hidden vector to logits and the word embeddings.
+        transform_with_bias: Whether to apply an additional bias vector
+            when projecting the hidden vector to logits.
+        alpha: for length penalty. Refer to
+            https://arxiv.org/abs/1609.08144.
+        maximum_decode_length: The maximum length when decoding.
+        beam_width: When setting as 1, use greedy decoding when testing,
+            when it's larger than 1, use beam search strategy.
+        bos_idx: The index of <BOS> token in the vocabulary.
+        eos_idx: The index of <EOS> token in the vocabulary, indicating
+            the sentence is completed.
+        The meaning of other parameters are similar to TransformerEncoder
         """
         return {
             'sampling_method': 'argmax',
             'initializer': None,
             'multiply_embedding_mode': 'sqrt_depth',
-            'position_embedder': None,
+            'position_embedder_hparams': None,
             'share_embed_and_transform': True,
             'transform_with_bias': True,
-            #TODO(haoran): change name to transformer_decoder
-            "name":"decoder",
             "num_heads":8,
             "num_blocks":6,
             "maximum_decode_length":10,
@@ -110,6 +145,7 @@ class TransformerDecoder(ModuleBase):
             'bos_idx': 1,
             "beam_width":1,
             'alpha':0,
+            "name":"transformer_decoder",
         }
 
     def _prepare_tokens_to_embeds(self, tokens):

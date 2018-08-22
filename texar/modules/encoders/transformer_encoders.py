@@ -57,9 +57,9 @@ class TransformerEncoder(EncoderBase):
                 tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
 
-                self.position_embedder = \
-                    SinusoidsPositionEmbedder(
-                        self._hparams.position_embedder_hparams)
+            self.position_embedder = \
+                SinusoidsPositionEmbedder(
+                    self._hparams.position_embedder_hparams)
 
     @staticmethod
     def default_hparams():
@@ -68,16 +68,16 @@ class TransformerEncoder(EncoderBase):
         .. code-block:: python
 
             {
-                'num_blocks': 6,
-                'num_heads': 8,
-                'num_units': 512,
-                'multiply_embedding_mode': 'sqrt_depth',
+                "num_blocks": 6,
+                "num_heads": 8,
+                "num_units": 512,
+                "multiply_embedding_mode": "sqrt_depth",
                 "position_embedder_hparams": None,
-                'embedding_dropout': 0.1,
-                'attention_dropout': 0.1,
-                'residual_dropout': 0.1,
-                'poswise_feedforward': None,
-                'initializer': None,
+                "embedding_dropout": 0.1,
+                "attention_dropout": 0.1,
+                "residual_dropout": 0.1,
+                "poswise_feedforward": None,
+                "initializer": None,
                 "name": "transformer_encoder"
             }
 
