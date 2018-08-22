@@ -59,15 +59,6 @@ class TransformerEncoder(EncoderBase):
                 self.position_embedder = \
                     position_embedders.SinusoidsPositionEmbedder(\
                     self._hparams.position_embedder.hparams)
-        if self._hparams.zero_pad:
-            if not self._hparams.bos_pad:
-                self._embedding = tf.concat(\
-                    (tf.zeros(shape=[1, self._hparams.num_units]),
-                     embedding[1:, :]), 0)
-            else:
-                self._embedding = tf.concat(\
-                    (tf.zeros(shape=[2, self._hparams.num_units]),
-                     embedding[2:, :]), 0)
         self.stack_output = None
 
     @staticmethod
@@ -79,8 +70,6 @@ class TransformerEncoder(EncoderBase):
                 'multiply_embedding_mode': 'sqrt_depth',
                 "position_embedder": None,
                 "name":"encoder",
-                "zero_pad":False,
-                "bos_pad":False,
                 'embedding_dropout':0.1,
                 'attention_dropout':0.1,
                 'residual_dropout':0.1,
@@ -99,10 +88,6 @@ class TransformerEncoder(EncoderBase):
                 embedding to the sqrt of its dimension.
             position_embedder: The hyperparameters to define the position
                 embedder.
-            zero_pad: If it's set as True, we use all-zero embedding to
-                represent the special <PAD> token.
-            bos_pad: If it's set as True, we use all-zero embedding to
-                represent the special <BOS> token.
             embeddin_dropout: The dropout rate of the word embeddings.
             attention_dropout: The dropout rate of the attention
                 calculation.
@@ -118,8 +103,6 @@ class TransformerEncoder(EncoderBase):
             'initializer': None,
             'multiply_embedding_mode': 'sqrt_depth',
             "position_embedder": None,
-            "zero_pad": False,
-            "bos_pad": False,
             'embedding_dropout': 0.1,
             'attention_dropout': 0.1,
             'residual_dropout': 0.1,
@@ -146,7 +129,6 @@ class TransformerEncoder(EncoderBase):
             encoder_decoder_attention_bias: The masks to indicate which
                 positions in the inputs are not padding.
         """
-        enc = tf.nn.embedding_lookup(self._embedding, enc)
         if self._hparams.multiply_embedding_mode == 'sqrt_depth':
             self.enc = enc * self._hparams.num_units**0.5
         else:
@@ -157,7 +139,8 @@ class TransformerEncoder(EncoderBase):
         encoder_self_attention_bias = ignore_padding
         encoder_decoder_attention_bias = ignore_padding
 
-        pos_embeds = self.position_embedder(lengths, self._hparams.num_units)
+        pos_embeds = self.position_embedder(lengths,
+                                            self._hparams.num_units)
         input_embedding = self.enc + pos_embeds
 
         x = tf.layers.dropout(input_embedding,

@@ -157,7 +157,7 @@ class TransformerDecoder(ModuleBase):
     def _build(self,    # pylint: disable=arguments-differ
                encoder_output,
                encoder_decoder_attention_bias,
-               decoder_input,
+               target_inputs,
                mode=None):
         """
         This function is called on training generally.
@@ -166,7 +166,8 @@ class TransformerDecoder(ModuleBase):
             encoder_output: [batch_size, source_length, channels]
             encoder_decoder_attention_bias: The attention bias set as a
                 huge negative value if the position is padding.
-            decoder_input: Passed when training. Should be None when testing.
+            target_inputs: Passed when training.
+                Should be None when testing.
             mode: A python string (not a tensor), control the graph running
                 flow of training or testing.
 
@@ -180,9 +181,7 @@ class TransformerDecoder(ModuleBase):
             """
             decoder_self_attention_bias = (
                 attentions.attention_bias_lower_triangle(
-                    shape_list(decoder_input)[1]))
-            target_inputs = tf.nn.embedding_lookup(self._embedding,
-                                                   decoder_input)
+                    shape_list(target_inputs)[1]))
             if self._hparams.multiply_embedding_mode == 'sqrt_depth':
                 target_inputs = target_inputs * \
                     (self._embedding.shape.as_list()[-1]**0.5)

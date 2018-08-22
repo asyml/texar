@@ -39,7 +39,7 @@ case ${hparams_set} in
         --beam_width=5 --alpha=0.6 \
         --log_disk_dir=${LOG_DISK_DIR} \
         --affine_bias=0 --eval_interval_epoch=1 \
-        --zero_pad=1 --bos_pad=0 --eval_steps=2000 \
+        --eval_steps=2000 \
         --filename_prefix=processed. &> ${logging_filename};;
 
     2)
@@ -55,6 +55,5 @@ case ${hparams_set} in
             --beam_width=5 --alpha=0.6 \
             --log_disk_dir=${LOG_DISK_DIR} \
             --affine_bias=0 --eval_interval_epoch=1 \
-            --zero_pad=1 --bos_pad=0 \
             --filename_prefix=processed. &> ${logging_filename};;
 esac

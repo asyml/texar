@@ -26,9 +26,6 @@ def load_hyperparams():
     argparser.add_argument('--model_dir', type=str, default='default')
     argparser.add_argument('--model_filename', type=str, default='')
     argparser.add_argument('--verbose', type=int, default=0)
-    argparser.add_argument('--zero_pad', type=int, default=0)
-    argparser.add_argument('--bos_pad', type=int, default=0,
-                           help='use all-zero embedding for bos')
     argparser.add_argument('--test_batch_size', type=int, default=32)
     argparser.add_argument('--eval_steps', type=int, default=2000)
     argparser.add_argument('--max_training_steps', type=int, default=250000)
@@ -103,8 +100,6 @@ def load_hyperparams():
         'num_blocks': 6,
         'num_heads': 8,
         'num_units': args.hidden_dim,
-        'zero_pad': args.zero_pad,
-        'bos_pad': args.bos_pad,
         'initializer': {
             'type': 'variance_scaling_initializer',
             'kwargs': {
@@ -144,8 +139,6 @@ def load_hyperparams():
         },
     }
     decoder_hparams = copy.deepcopy(encoder_hparams)
-    del decoder_hparams['bos_pad']
-    del decoder_hparams['zero_pad']
     decoder_hparams['share_embed_and_transform'] = True
     decoder_hparams['transform_with_bias'] = args.affine_bias
     decoder_hparams['maximum_decode_length'] = args.max_decode_len
