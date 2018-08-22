@@ -30,7 +30,9 @@ class PadRemover(object):
     """Helper to remove padding from a tensor before sending to the experts.
     The padding is computed for one reference tensor containing the padding mask
     and then can be applied to any other tensor of shape [dim_origin,...].
-    Ex:
+
+    Example::
+
             input = [
                 [tok1, tok2],
                 [tok3, tok4],
@@ -48,6 +50,7 @@ class PadRemover(object):
 
     def __init__(self, pad_mask):
         """Compute and store the location of the padding.
+
         Args:
             pad_mask (tf.Tensor): Reference padding tensor of shape
                 [batch_size,length] or [dim_origin]
@@ -112,8 +115,10 @@ def embedding_to_padding(emb):
     """Calculates the padding mask based on which embeddings are all zero.
     We have hacked symbol_modality to return all-zero embeddings
     for padding.
+
     Args:
         emb: a Tensor with shape [..., depth].
+
     Returns:
         a float Tensor with shape [...].
     """
@@ -142,6 +147,7 @@ def _batching_scheme(batch_size,
     """A batching scheme based on model hyperparameters.
     Every batch containins a number of sequences divisible
     by `shard_multiplier`.
+
     Args:
         batch_size: int, total number of tokens in a batch.
         max_length: int, sequences longer than this will be skipped.
@@ -157,11 +163,14 @@ def _batching_scheme(batch_size,
         length_multiplier: an integer multiplier that is used to increase
             the batch sizes and sequence length tolerance.
         min_length: int, sequences shorter than this will be skipped.
+
     Returns:
         A dictionary with parameters that can be passed to input_pipeline:
-        * boundaries: list of bucket boundaries
-        * batch_sizes: list of batch sizes for each length bucket
-        * max_length: int, maximum length of an example
+
+            - boundaries: list of bucket boundaries
+            - batch_sizes: list of batch sizes for each length bucket
+            - max_length: int, maximum length of an example
+
     Raises:
         ValueError: If min_length > max_length
     """
@@ -221,6 +230,7 @@ def smoothing_cross_entropy(logits,
                             gaussian=False,
                             zero_pad=True):
     """Cross entropy with label smoothing to limit over-confidence.
+
     Args:
         logits: Tensor of size [batch_size, ?, vocab_size]
         labels: Tensor of size [batch_size, ?]
@@ -233,6 +243,7 @@ def smoothing_cross_entropy(logits,
             in the smoothed labels. By setting this, we replicate the
             numeric calculation of tensor2tensor, which doesn't set the
             <BOS> token in the vocabulary.
+
     Returns:
         the cross entropy loss.
     """
@@ -271,6 +282,6 @@ def smoothing_cross_entropy(logits,
             cross_entropy_fn = tf.nn.softmax_cross_entropy_with_logits_v2
         else:
             cross_entropy_fn = tf.nn.softmax_cross_entropy_with_logits
-    return cross_entropy_fn(
-        logits=logits, labels=soft_targets)
+
+    return cross_entropy_fn(logits=logits, labels=soft_targets)
 
