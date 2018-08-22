@@ -240,7 +240,6 @@ class SinusoidsPositionEmbedder(EmbedderBase):
     cos(timestep/timescale).  All of these sinusoids are concatenated in
     the channels dimension.
 
-
     .. document private functions
     .. automethod:: _build
     """
@@ -262,9 +261,9 @@ class SinusoidsPositionEmbedder(EmbedderBase):
             }
         """
         hparams = {
-            'name':'sinusoid_posisiton_embedder',
             'min_timescale': 1.0,
             'max_timescale': 1.0e4,
+            'name':'sinusoid_posisiton_embedder',
         }
         return hparams
 
@@ -289,5 +288,6 @@ class SinusoidsPositionEmbedder(EmbedderBase):
         signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=1)
         signal = tf.pad(signal, [[0, 0], [0, tf.mod(channels, 2)]])
         signal = tf.reshape(signal, [1, length, channels])
+
         return signal
 

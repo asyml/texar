@@ -435,7 +435,7 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
                 `TRAIN`, `EVAL`, and `PREDICT`. Controls output layer dropout
                 if the output layer is specified with :attr:`hparams`.
-                If `None` (default), :func:`texar.global_mode()`
+                If `None` (default), :func:`texar.global_mode`
                 is used.
             return_cell_output (bool): Whether to return the output of the RNN
                 cell. This is the results prior to the output layer.
