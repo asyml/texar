@@ -4,6 +4,33 @@
 Agents
 *******
 
+Episodic Agents
+=================
+
+:hidden:`EpisodicAgentBase`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.agents.EpisodicAgentBase
+    :members:
+    :inherited-members:
+
+:hidden:`PGAgent`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.agents.PGAgent
+    :members:
+    :inherited-members:
+
+:hidden:`DQNAgent`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.agents.DQNAgent
+    :members:
+    :inherited-members:
+
+:hidden:`ActorCriticAgent`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.agents.ActorCriticAgent
+    :members:
+    :inherited-members:
+
 Agent Utils
 ============
 

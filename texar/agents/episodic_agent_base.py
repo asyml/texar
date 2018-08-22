@@ -27,6 +27,9 @@ from texar.agents.agent_base import AgentBase
 class EpisodicAgentBase(AgentBase):
     """Base class inherited by episodic RL agents.
 
+    An agent is a wrapper of the **training process** that trains a model
+    with RL algorithms.
+
     An episodic RL agent typically provides 3 interfaces, namely, :meth:`reset`,
     :meth:`get_action` and :meth:`observe`, and is used as the following
     example.

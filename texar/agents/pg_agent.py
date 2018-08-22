@@ -39,7 +39,7 @@ class PGAgent(EpisodicAgentBase):
 
     - Key **"action"** whose value is a Tensor of shape \
     `[1] + action_shape` containing a single action.
-    - One of "log_prob" or "dist":
+    - One of keys "log_prob" or "dist":
 
         - **log_prob**: A Tensor of shape `[1]`, the log probability of the \
         "action".
