@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Various losses
 """
@@ -39,33 +51,33 @@ def sequence_softmax_cross_entropy(labels,
     Args:
         labels: Target class distributions.
 
-            If :attr:`time_major` is `False` (default), this must be a
-                Tensor of shape `[batch_size, max_time, num_classes]`.
+            - If :attr:`time_major` is `False` (default), this must be a\
+            Tensor of shape `[batch_size, max_time, num_classes]`.
 
-            If :attr:`time_major` is `True`, this must be a Tensor of shape
-                `[max_time, batch_size, num_classes]`.
+            - If `time_major` is `True`, this must be a Tensor of shape\
+            `[max_time, batch_size, num_classes]`.
 
-            Each row of :attr:`labels` should be a valid probability
+            Each row of `labels` should be a valid probability
             distribution, otherwise, the computation of the gradient will be
             incorrect.
         logits: Unscaled log probabilities. This must have the shape of
             `[max_time, batch_size, num_classes]` or
             `[batch_size, max_time, num_classes]` according to
-            the value of :attr:`time_major`.
+            the value of `time_major`.
         sequence_length: A Tensor of shape `[batch_size]`. Time steps beyond
             the respective sequence lengths will have zero losses.
         average_across_timesteps (bool): If set, average the loss across
-            the time dimension. Must not set :attr:`average_across_timesteps`
-            and :attr:`sum_over_timesteps` at the same time.
+            the time dimension. Must not set `average_across_timesteps`
+            and `sum_over_timesteps` at the same time.
         average_across_batch (bool): If set, average the loss across the
-            batch dimension. Must not set :attr:`average_across_batch`'
-            and :attr:`sum_over_batch` at the same time.
+            batch dimension. Must not set `average_across_batch`'
+            and `sum_over_batch` at the same time.
         sum_over_timesteps (bool): If set, sum the loss across the
-            time dimension. Must not set :attr:`average_across_timesteps`
-            and :attr:`sum_over_timesteps` at the same time.
+            time dimension. Must not set `average_across_timesteps`
+            and `sum_over_timesteps` at the same time.
         sum_over_batch (bool): If set, sum the loss across the
-            batch dimension. Must not set :attr:`average_across_batch`
-            and :attr:`sum_over_batch` at the same time.
+            batch dimension. Must not set `average_across_batch`
+            and `sum_over_batch` at the same time.
         time_major (bool): The shape format of the inputs. If `True`,
             :attr:`labels` and :attr:`logits` must have shape
             `[max_time, batch_size, ...]`. If `False`
@@ -120,29 +132,29 @@ def sequence_sparse_softmax_cross_entropy(labels,
         labels: Target class indexes. I.e., classes are mutually exclusive
             (each entry is in exactly one class).
 
-            If :attr:`time_major` is `False` (default), this must be
-                a Tensor of shape `[batch_size, max_time]`.
+            - If :attr:`time_major` is `False` (default), this must be\
+            a Tensor of shape `[batch_size, max_time]`.
 
-            If :attr:`time_major` is `True`, this must be a Tensor of shape
-                `[max_time, batch_size].`
+            - If `time_major` is `True`, this must be a Tensor of shape\
+            `[max_time, batch_size].`
         logits: Unscaled log probabilities. This must have the shape of
             `[max_time, batch_size, num_classes]` or
             `[batch_size, max_time, num_classes]` according to
-            the value of :attr:`time_major`.
+            the value of `time_major`.
         sequence_length: A Tensor of shape `[batch_size]`. Time steps beyond
             the respective sequence lengths will have zero losses.
         average_across_timesteps (bool): If set, average the loss across
-            the time dimension. Must not set :attr:`average_across_timesteps`
-            and :attr:`sum_over_timesteps` at the same time.
+            the time dimension. Must not set `average_across_timesteps`
+            and `sum_over_timesteps` at the same time.
         average_across_batch (bool): If set, average the loss across the
-            batch dimension. Must not set :attr:`average_across_batch`'
-            and :attr:`sum_over_batch` at the same time.
+            batch dimension. Must not set `average_across_batch`'
+            and `sum_over_batch` at the same time.
         sum_over_timesteps (bool): If set, sum the loss across the
-            time dimension. Must not set :attr:`average_across_timesteps`
-            and :attr:`sum_over_timesteps` at the same time.
+            time dimension. Must not set `average_across_timesteps`
+            and `sum_over_timesteps` at the same time.
         sum_over_batch (bool): If set, sum the loss across the
-            batch dimension. Must not set :attr:`average_across_batch`
-            and :attr:`sum_over_batch` at the same time.
+            batch dimension. Must not set `average_across_batch`
+            and `sum_over_batch` at the same time.
         time_major (bool): The shape format of the inputs. If `True`,
             :attr:`labels` and :attr:`logits` must have shape
             `[max_time, batch_size, ...]`. If `False`
@@ -159,6 +171,23 @@ def sequence_sparse_softmax_cross_entropy(labels,
 
         - If :attr:`average_across_batch` is `True` and other arguments are \
         `False`, the return Tensor is of shape `[max_time]`.
+
+    Example:
+
+        .. code-block:: python
+
+            embedder = WordEmbedder(vocab_size=data.vocab.size)
+            decoder = BasicRNNDecoder(vocab_size=data.vocab.size)
+            outputs, _, _ = decoder(
+                decoding_strategy='train_greedy',
+                inputs=embedder(data_batch['text_ids']),
+                sequence_length=data_batch['length']-1)
+
+            loss = sequence_sparse_softmax_cross_entropy(
+                labels=data_batch['text_ids'][:, 1:],
+                logits=outputs.logits,
+                sequence_length=data_batch['length']-1)
+
     """
     with tf.name_scope(name, "sequence_sparse_softmax_cross_entropy"):
         losses = tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -194,13 +223,13 @@ def sequence_sigmoid_cross_entropy(labels,
     Args:
         labels: Target class distributions.
 
-            If :attr:`time_major` is `False` (default), this must be a
-                Tensor of shape `[batch_size, max_time(, num_classes)]`.
+            - If :attr:`time_major` is `False` (default), this must be a\
+            Tensor of shape `[batch_size, max_time(, num_classes)]`.
 
-            If :attr:`time_major` is `True`, this must be a Tensor of shape
-                `[max_time, batch_size(, num_classes)]`.
+            - If `time_major` is `True`, this must be a Tensor of shape\
+            `[max_time, batch_size(, num_classes)]`.
 
-            Each row of :attr:`labels` should be a valid probability
+            Each row of `labels` should be a valid probability
             distribution, otherwise, the computation of the gradient will be
             incorrect.
         logits: Unscaled log probabilities having the same shape as with
@@ -208,24 +237,24 @@ def sequence_sigmoid_cross_entropy(labels,
         sequence_length: A Tensor of shape `[batch_size]`. Time steps beyond
             the respective sequence lengths will have zero losses.
         average_across_timesteps (bool): If set, average the loss across
-            the time dimension. Must not set :attr:`average_across_timesteps`
-            and :attr:`sum_over_timesteps` at the same time.
+            the time dimension. Must not set `average_across_timesteps`
+            and `sum_over_timesteps` at the same time.
         average_across_batch (bool): If set, average the loss across the
-            batch dimension. Must not set :attr:`average_across_batch`'
-            and :attr:`sum_over_batch` at the same time.
+            batch dimension. Must not set `average_across_batch`'
+            and `sum_over_batch` at the same time.
         average_across_classes (bool): If set, average the loss across the
             class dimension (if exists). Must not set
-            :attr:`average_across_classes`' and :attr:`sum_over_classes` at
+            `average_across_classes`' and `sum_over_classes` at
             the same time. Ignored if :attr:`logits` is a 2D Tensor.
         sum_over_timesteps (bool): If set, sum the loss across the
-            time dimension. Must not set :attr:`average_across_timesteps`
-            and :attr:`sum_over_timesteps` at the same time.
+            time dimension. Must not set `average_across_timesteps`
+            and `sum_over_timesteps` at the same time.
         sum_over_batch (bool): If set, sum the loss across the
-            batch dimension. Must not set :attr:`average_across_batch`
-            and :attr:`sum_over_batch` at the same time.
+            batch dimension. Must not set `average_across_batch`
+            and `sum_over_batch` at the same time.
         sum_over_classes (bool): If set, sum the loss across the
-            class dimension. Must not set :attr:`average_across_classes`
-            and :attr:`sum_over_classes` at the same time. Ignored if
+            class dimension. Must not set `average_across_classes`
+            and `sum_over_classes` at the same time. Ignored if
             :attr:`logits` is a 2D Tensor.
         time_major (bool): The shape format of the inputs. If `True`,
             :attr:`labels` and :attr:`logits` must have shape
@@ -290,18 +319,18 @@ def binary_sigmoid_cross_entropy(pos_logits=None,
         neg_logits: The logits of predicting positive on negative data. A
             tensor of shape `[batch_size(, num_classes)]`.
         average_across_batch (bool): If set, average the loss across the
-            batch dimension. Must not set :attr:`average_across_batch`'
-            and :attr:`sum_over_batch` at the same time.
+            batch dimension. Must not set `average_across_batch`'
+            and `sum_over_batch` at the same time.
         average_across_classes (bool): If set, average the loss across the
             class dimension (if exists). Must not set
-            :attr:`average_across_classes`' and :attr:`sum_over_classes` at
+            `average_across_classes`' and `sum_over_classes` at
             the same time. Ignored if :attr:`logits` is a 1D Tensor.
         sum_over_batch (bool): If set, sum the loss across the
-            batch dimension. Must not set :attr:`average_across_batch`
-            and :attr:`sum_over_batch` at the same time.
+            batch dimension. Must not set `average_across_batch`
+            and `sum_over_batch` at the same time.
         sum_over_classes (bool): If set, sum the loss across the
-            class dimension. Must not set :attr:`average_across_classes`
-            and :attr:`sum_over_classes` at the same time. Ignored if
+            class dimension. Must not set `average_across_classes`
+            and `sum_over_classes` at the same time. Ignored if
             :attr:`logits` is a 2D Tensor.
         return_pos_neg_losses (bool): If set, additionally returns the losses
             on :attr:`pos_logits` and :attr:`neg_logits`, respectively.
@@ -312,16 +341,16 @@ def binary_sigmoid_cross_entropy(pos_logits=None,
         on the arguments :attr:`{average_across}/{sum_over}_{batch}/{classes}`.
         For example:
 
-        - If :attr:`sum_over_batch` and :attr:`average_across_classes`  \
-        are `True` (default), the return Tensor is of rank 0.
+            - If :attr:`sum_over_batch` and :attr:`average_across_classes`  \
+            are `True` (default), the return Tensor is of rank 0.
 
-        - If  arguments are `False`, the return Tensor is of shape \
-        `[batch_size(, num_classes)]`.
+            - If  arguments are `False`, the return Tensor is of shape \
+            `[batch_size(, num_classes)]`.
 
-        If :attr:`return_pos_neg_losses`=`True`, returns a tuple
-        `(loss, pos_loss, neg_loss)`, where :attr:`loss` is the loss above;
-        :attr:`pos_loss` is the loss on :attr:`pos_logits` only; and
-        :attr:`neg_loss` is the loss on :attr:`neg_logits` only. They have
+        If :attr:`return_pos_neg_losses` is `True`, returns a tuple
+        `(loss, pos_loss, neg_loss)`, where `loss` is the loss above;
+        `pos_loss` is the loss on `pos_logits` only; and
+        `neg_loss` is the loss on `neg_logits` only. They have
         `loss = pos_loss + neg_loss`.
     """
     with tf.name_scope(name, "binary_sigmoid_cross_entropy"):
@@ -363,30 +392,31 @@ def binary_sigmoid_cross_entropy_with_clas(clas_fn,
                                            name=None):
     """Computes sigmoid cross entropy of binary classifier.
 
+    .. role:: python(code)
+       :language: python
+
     Args:
         clas_fn: A callable takes data (e.g., :attr:`pos_inputs` and
             :attr:`fake_inputs`) and returns the logits of being positive. The
-            signature of :attr:`clas_fn` must be:
-
-                `logits (, ...) = clas_fn(inputs)`
-
-            That is, the return value of :attr:`clas_fn` can be the logits, or
+            signature of `clas_fn` must be:
+            :python:`logits (, ...) = clas_fn(inputs)`.
+            The return value of `clas_fn` can be the logits, or
             a tuple where the logits are the first element.
-        pos_inputs: The positive data fed into :attr:`clas_fn`.
-        neg_inputs: The negative data fed into :attr:`clas_fn`.
+        pos_inputs: The positive data fed into `clas_fn`.
+        neg_inputs: The negative data fed into `clas_fn`.
         average_across_batch (bool): If set, average the loss across the
-            batch dimension. Must not set :attr:`average_across_batch`'
-            and :attr:`sum_over_batch` at the same time.
+            batch dimension. Must not set `average_across_batch`'
+            and `sum_over_batch` at the same time.
         average_across_classes (bool): If set, average the loss across the
             class dimension (if exists). Must not set
-            :attr:`average_across_classes`' and :attr:`sum_over_classes` at
+            `average_across_classes`' and `sum_over_classes` at
             the same time. Ignored if :attr:`logits` is a 1D Tensor.
         sum_over_batch (bool): If set, sum the loss across the
-            batch dimension. Must not set :attr:`average_across_batch`
-            and :attr:`sum_over_batch` at the same time.
+            batch dimension. Must not set `average_across_batch`
+            and `sum_over_batch` at the same time.
         sum_over_classes (bool): If set, sum the loss across the
-            class dimension. Must not set :attr:`average_across_classes`
-            and :attr:`sum_over_classes` at the same time. Ignored if
+            class dimension. Must not set `average_across_classes`
+            and `sum_over_classes` at the same time. Ignored if
             :attr:`logits` is a 2D Tensor.
         return_pos_neg_losses (bool): If set, additionally returns the losses
             on :attr:`pos_logits` and :attr:`neg_logits`, respectively.
@@ -397,16 +427,16 @@ def binary_sigmoid_cross_entropy_with_clas(clas_fn,
         on the arguments :attr:`{average_across}/{sum_over}_{batch}/{classes}`.
         For example:
 
-        - If :attr:`sum_over_batch` and :attr:`average_across_classes`  \
-        are `True` (default), the return Tensor is of rank 0.
+            - If :attr:`sum_over_batch` and :attr:`average_across_classes`  \
+            are `True` (default), the return Tensor is of rank 0.
 
-        - If  arguments are `False`, the return Tensor is of shape \
-        `[batch_size(, num_classes)]`.
+            - If  arguments are `False`, the return Tensor is of shape \
+            `[batch_size(, num_classes)]`.
 
         If :attr:`return_pos_neg_losses`=`True`, returns a tuple
-        `(loss, pos_loss, neg_loss)`, where :attr:`loss` is the loss above;
-        :attr:`pos_loss` is the loss on :attr:`pos_logits` only; and
-        :attr:`neg_loss` is the loss on :attr:`neg_logits` only. They have
+        `(loss, pos_loss, neg_loss)`, where `loss` is the loss above;
+        `pos_loss` is the loss on `pos_logits` only; and
+        `neg_loss` is the loss on `neg_logits` only. They have
         `loss = pos_loss + neg_loss`.
     """
     pos_logits = None
