@@ -60,6 +60,12 @@ class ReplayMemoryBase(object):
             'name': 'replay_memory'
         }
 
+    def last(self):
+        raise NotImplementedError
+
+    def size(self):
+        raise NotImplementedError
+
 
 class DequeReplayMemory(ReplayMemoryBase):
     """A deque based replay memory that accepts new memory entry and deletes
@@ -112,3 +118,9 @@ class DequeReplayMemory(ReplayMemoryBase):
         a list.
         """
         return random.sample(self.deque, size)
+
+    def last(self):
+        return self.deque[-1]
+
+    def size(self):
+        return len(self.deque)
