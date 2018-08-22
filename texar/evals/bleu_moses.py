@@ -46,8 +46,8 @@ def _parse_multi_bleu_ret(bleu_str, return_all=False):
 
 def sentence_bleu_moses(references, hypothesis, lowercase=False,
                         return_all=False):
-    """Calculates BLEU score of a hypothesis sentence using the MOSES
-    multi-bleu.perl script.
+    """Calculates BLEU score of a hypothesis sentence using the
+    **MOSES multi-bleu.perl** script.
 
     Args:
         references: A list of reference for the hypothesis.
@@ -72,8 +72,8 @@ def sentence_bleu_moses(references, hypothesis, lowercase=False,
 
 def corpus_bleu_moses(list_of_references, hypotheses, lowercase=False,
                       return_all=False):
-    """Calculates corpus-level BLEU score using the MOSES
-    multi-bleu.perl script.
+    """Calculates corpus-level BLEU score using the
+    **MOSES multi-bleu.perl** script.
 
     Args:
         list_of_references: A list of lists of references for each hypothesis.

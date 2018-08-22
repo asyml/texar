@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Utilities for maintaining moving average.
 """
@@ -8,6 +20,8 @@ from __future__ import print_function
 from __future__ import division
 
 from collections import deque
+
+# pylint: disable=invalid-name
 
 __all__ = [
     "_SingleAverageRecorder",
@@ -108,14 +122,39 @@ class _SingleAverageRecorder(object):
         return self.name
 
 class AverageRecorder(object):
-    """Maintains the moving average (i.e., the average of the latest N records)
-    of possibly multiple metrics.
+    """Maintains the moving averages (i.e., the average of the latest N
+    records) of (possibly multiple) fields.
 
-    The metrics are determined by the first call of :meth:`add`.
+    Fields are determined by the first call of :meth:`add`.
 
     Args:
         size (int, optional): The window size of moving average. If `None`,
             the average of all added records is maintained.
+
+    Example:
+
+        .. code-block:: python
+
+            ## Use to maintain moving average of training loss
+            avg_rec = AverageRecorder(size=10) # average over latest 10 records
+            while training:
+                loss_0, loss_1  = ...
+                avg_rec.add([loss_0, loss_1])
+                # avg_rec.avg() == [0.12343452, 0.567800323]
+                # avg_rec.avg(0) == 0.12343452
+                # avg_rec.to_str(precision=2, ) == '0.12 0.57'
+
+            ## Use to maintain average of test metrics on the whole test set
+            avg_rec = AverageRecorder() # average over ALL records
+            while test:
+                metric_0, metric_1  = ...
+                avg_rec.add({'m0': metric_0, 'm1': metric_1}) # dict is allowed
+            print(avg_rec.to_str(precision=4, delimiter=' , '))
+            # 'm0: 0.1234 , m1: 0.5678'
+            #
+            # avg_rec.avg() == {'m0': 0.12343452, 'm1': 0.567800323}
+            # avg_rec.avg(0) == 0.12343452
+
     """
 
     def __init__(self, size=None):
@@ -147,11 +186,12 @@ class AverageRecorder(object):
         a subset of fields than the first call to :meth:`add`.
 
         Example:
+
             .. code-block:: python
 
-                recorder.add({1: v1, 2: v2}) # 1st call to `add`
-                x = recorder.add({1: v3}) # 2nd call to `add`
-                # x == {1: (v1 + v3) / 2, 2: v2}
+                recorder.add({'1': 0.2, '2': 0.2}) # 1st call to `add`
+                x = recorder.add({'1': 0.4}) # 2nd call to `add`
+                # x == {'1': 0.3, '2': 0.2}
 
         Args:
             record: A single scalar, a list of scalars, or a dict of scalars.
@@ -227,10 +267,11 @@ class AverageRecorder(object):
     def reset(self, id_or_name=None):
         """Resets the record.
 
-        id_or_name (optional): A list or a single element. Each element is
-            the index (if the record type is `list`) or name (if the
-            record type is `dict`) of the field to reset.
-            If `None`, all fields are reset.
+        Args:
+            id_or_name (optional): A list or a single element. Each element is
+                the index (if the record type is `list`) or name (if the
+                record type is `dict`) of the field to reset.
+                If `None`, all fields are reset.
         """
         keys = id_or_name
         if keys is None:
@@ -265,7 +306,8 @@ class AverageRecorder(object):
                 for name, rec in self._recorders.items()}
         str_list = []
         if self._record_type in {list, tuple}:
-            for i in range(len(strs)):
+            for i in range(len(strs)):# pylint: disable=consider-using-enumerate
+                # Enumerates the keys in order, which are the indexes
                 str_list.append(strs[i])
         elif self._record_type == dict:
             str_list = list(strs.values())

@@ -26,6 +26,14 @@ def get_unique_named_variable_scope(base_name):
 
     Returns:
         An instance of :tf_main:`variable_scope <variable_scope>`.
+
+    Example:
+
+        .. code-block:: python
+
+            vs = get_unique_named_variable_scope('base_name')
+            with tf.variable_scope(vs):
+                ....
     """
     with tf.variable_scope(None, default_name=base_name) as vs:
         return vs
@@ -35,7 +43,7 @@ def add_variable(variable, var_list):
 
     Args:
         variable: A (list of) variable(s).
-        var_list (list): The list where the :attr:`variable` are added.
+        var_list (list): The list where the :attr:`variable` are added to.
     """
     if isinstance(variable, (list, tuple)):
         for var in variable:

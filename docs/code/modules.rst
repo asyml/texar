@@ -103,7 +103,7 @@ Decoders
     :exclude-members: initialize,step,finalize,tracks_own_finished,output_size,output_dtype
 
 :hidden:`AttentionRNNDecoderOutput`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.AttentionRNNDecoderOutput
     :members:
 

@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to texar's documentation!
+Welcome to Texar's documentation!
 ==================================
 
 TxtGen is a flexible TensorFlow library to generate text.
@@ -23,3 +23,4 @@ Contents:
    code/models.rst
    code/context.rst
    code/hyperparams.rst
+   code/utils.rst

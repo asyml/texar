@@ -36,7 +36,8 @@ def transpose_batch_time(inputs):
             nested) tuple of such elements.
 
     Returns:
-        A Tensor with transposed batch and time dimensions of inputs.
+        A (possibly nested tuple of) Tensor with transposed batch and
+        time dimensions of inputs.
     """
     flat_input = nest.flatten(inputs)
     flat_input = [ops.convert_to_tensor(input_) for input_ in flat_input]
@@ -85,17 +86,11 @@ def mask_sequences(sequence,
     arrays or Tensors, respectively. If both are python arrays (or None), the
     return will be a python array as well.
 
-    :attr:`tensor_rank` is ignored when :attr:`sequence` and
-    :attr:`sequence_length` are both python arrays (rather than Tensors).
-
     Args:
         sequence: A Tensor or python array of sequence values.
-
-            If `time_major=False` (default), this must be a Tensor of shape:
-                `[batch_size, max_time, ...]`.
-
-            If `time_major=True`, this must be a Tensor of shape:
-                `[max_time, batch_size, ...].`
+            If `time_major==False` (default), this must be a Tensor of shape
+            `[batch_size, max_time, ...]`. The batch and time dimension is
+            exchanged if `time_major==True`.
         sequence_length: A Tensor or python array of shape `[batch_size]`.
             Time steps beyond the respective sequence lengths will be
             made zero.
