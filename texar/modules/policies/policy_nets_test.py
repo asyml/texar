@@ -21,11 +21,19 @@ class CategoricalPolicyNetTest(tf.test.TestCase):
         """
         policy = CategoricalPolicyNet()
 
+        inputs = tf.random_uniform(shape=[1, 4])
+        outputs = policy(inputs=inputs)
+        self.assertEqual(list(outputs['action'].shape[1:]),
+                         list(policy.action_space.shape))
+        self.assertIsInstance(outputs['dist'],
+                              tf.distributions.Categorical)
+
+
         inputs = tf.random_uniform(shape=[64, 4])
         outputs = policy(inputs=inputs)
-        self.assertEqual(outputs['action'].shape, outputs['log_prob'].shape)
-        self.assertIsInstance(
-            outputs['distribution'], tf.distributions.Categorical)
+        self.assertEqual(list(outputs['action'].shape[1:]),
+                         list(policy.action_space.shape))
+        self.assertEqual(int(outputs['action'].shape[0]), 64)
 
 if __name__ == "__main__":
     tf.test.main()

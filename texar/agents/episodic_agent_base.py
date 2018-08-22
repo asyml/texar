@@ -49,15 +49,14 @@ class EpisodicAgentBase(AgentBase):
     def _reset(self):
         raise NotImplementedError
 
-    def observe(self, observ, action, reward, terminal, next_observ, train_policy=True, feed_dict=None):
+    def observe(self, reward, terminal, train_policy=True, feed_dict=None):
         """Observes experience from environment.
 
         Args:
         """
-        return self._observe_tmplt_fn(
-            observ, action, reward, terminal, next_observ, train_policy, feed_dict)
+        return self._observe_tmplt_fn(reward, terminal, train_policy, feed_dict)
 
-    def _observe(self, observ, action, reward, terminal, next_observ, train_policy, feed_dict):
+    def _observe(self, reward, terminal, train_policy, feed_dict):
         raise NotImplementedError
 
     def get_action(self, observ, feed_dict=None):

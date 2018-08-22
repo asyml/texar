@@ -1,22 +1,31 @@
+"""Deep Q learning Agent.
+"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
-import numpy as np
-import texar as tx
 import random
+import numpy as np
 
+import tensorflow as tf
+
+import texar as tx
 from texar.agents.episodic_agent_base import EpisodicAgentBase
 from texar.utils import utils
 from texar.core import optimization as opt
+
+# pylint: disable=too-many-instance-attributes, too-many-arguments
+# pylint: disable=invalid-name
 
 __all__ = [
     "DQNAgent"
 ]
 
 
+# TODO(zhiting): only support discrete actions?
 class DQNAgent(EpisodicAgentBase):
+    """Deep Q learning agent.
+    """
     def __init__(self,
                  env_config,
                  sess=None,
@@ -105,6 +114,7 @@ class DQNAgent(EpisodicAgentBase):
                 dtype=self._env_config.action_dtype,
                 shape=[None, self._num_actions],
                 name='action_inputs')
+            # TODO(zhiting): the name `y` is not readable.
             self._y_inputs = tf.placeholder(
                 dtype=tf.float32,
                 shape=[None, ],
@@ -208,7 +218,7 @@ class DQNAgent(EpisodicAgentBase):
                 self.timestep % self._update_period == 0):
             self._sess.run(self._update_op, feed_dict=feed_dict)
 
-    def get_action(self, observ, feed_dict=None):
+    def _get_action(self, observ, feed_dict=None):
         qvalue = self._sess.run(
             self._qnet_outputs['qvalues'],
             feed_dict={self._observ_inputs: np.array([observ]),

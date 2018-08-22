@@ -166,6 +166,21 @@ Connectors
     :inherited-members:
 
 
+Classifiers
+============
+
+:hidden:`Conv1DClassifier`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.Conv1DClassifier
+    :members:
+    :inherited-members:
+
+:hidden:`UnidirectionalRNNClassifier`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.UnidirectionalRNNClassifier
+    :members:
+    :inherited-members:
+
 Networks
 ========
 
@@ -173,16 +188,19 @@ Networks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.FeedForwardNetworkBase
     :members:
+    :inherited-members:
 
 :hidden:`FeedForwardNetwork`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.FeedForwardNetwork
     :members:
+    :inherited-members:
 
 :hidden:`Conv1DNetwork`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.Conv1DNetwork
     :members:
+    :inherited-members:
 
 Memory
 ======
@@ -210,3 +228,32 @@ default_embedder_fn
 
 .. autofunction:: texar.modules.memory.default_embedder_fn
 
+Policies
+=========
+
+:hidden:`PolicyNetBase`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.PolicyNetBase
+    :members:
+    :inherited-members:
+
+:hidden:`CategoricalPolicyNet`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.CategoricalPolicyNet
+    :members:
+    :inherited-members:
+
+Q-Nets
+=========
+
+:hidden:`QNetBase`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.QNetBase
+    :members:
+    :inherited-members:
+
+:hidden:`CategoricalPolicyNet`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.CategoricalQNet
+    :members:
+    :inherited-members:

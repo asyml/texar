@@ -115,5 +115,67 @@ class UnidirectionalRNNClassifierTest(tf.test.TestCase):
             self.assertEqual(logits_.shape, (batch_size, clas.num_classes))
             self.assertEqual(pred_.shape, (batch_size, ))
 
+    def test_binary(self):
+        """Tests binary classification.
+        """
+        max_time = 8
+        batch_size = 16
+        emb_dim = 100
+        inputs = tf.random_uniform([batch_size, max_time, emb_dim],
+                                   maxval=1., dtype=tf.float32)
+
+        # case 1 omittd
+
+        # case 2
+        hparams = {
+            "num_classes": 1,
+            "clas_strategy": "time_wise"
+        }
+        clas = UnidirectionalRNNClassifier(hparams=hparams)
+        logits, pred = clas(inputs)
+
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            logits_, pred_ = sess.run([logits, pred])
+            self.assertEqual(logits_.shape, (batch_size, max_time))
+            self.assertEqual(pred_.shape, (batch_size, max_time))
+
+        # case 3
+        hparams = {
+            "output_layer": {
+                "num_layers": 1,
+                "layer_size": 10
+            },
+            "num_classes": 1,
+            "clas_strategy": "time_wise"
+        }
+        clas = UnidirectionalRNNClassifier(hparams=hparams)
+        logits, pred = clas(inputs)
+
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            logits_, pred_ = sess.run([logits, pred])
+            self.assertEqual(logits_.shape, (batch_size, max_time))
+            self.assertEqual(pred_.shape, (batch_size, max_time))
+
+
+        # case 4
+        hparams = {
+            "num_classes": 1,
+            "clas_strategy": "all_time",
+            "max_seq_length": max_time
+        }
+        inputs = tf.placeholder(tf.float32, shape=[batch_size, 6, emb_dim])
+        clas = UnidirectionalRNNClassifier(hparams=hparams)
+        logits, pred = clas(inputs)
+
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            logits_, pred_ = sess.run(
+                [logits, pred],
+                feed_dict={inputs: np.random.randn(batch_size, 6, emb_dim)})
+            self.assertEqual(logits_.shape, (batch_size, ))
+            self.assertEqual(pred_.shape, (batch_size, ))
+
 if __name__ == "__main__":
     tf.test.main()

@@ -1,5 +1,19 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
-End to end memory network.
+End-to-end memory network described in
+(Sukhbaatar et al.) End-To-End Memory Networks
 """
 
 from __future__ import absolute_import
@@ -11,6 +25,8 @@ import tensorflow as tf
 from texar.module_base import ModuleBase
 from texar.modules.embedders import WordEmbedder, PositionEmbedder
 from texar.utils.mode import switch_dropout
+
+# pylint: disable=invalid-name
 
 __all__ = [
     'MemNetBase',
@@ -88,7 +104,7 @@ class MemNetSingleLayer(ModuleBase):
 
     Args:
         H (optional): The matrix :attr:`H` multiplied to :attr:`o` at the end.
-        hparams (HParams or dict, optional): Memory network single layer
+        hparams (dict or HParams, optional): Memory network single layer
             hyperparameters. If it is not specified, the default hyperparameter
             setting is used. See :attr:`default_hparams` for the structure and
             default values.
@@ -124,8 +140,10 @@ class MemNetSingleLayer(ModuleBase):
 
         Args:
             u (Tensor): The input query `Tensor` of shape `[None, dim]`.
-            m (Tensor): Output of A operation. Should be in shape `[None, memory_size, dim]`.
-            c (Tensor): Output of C operation. Should be in shape `[None, memory_size, dim]`.
+            m (Tensor): Output of A operation. Should be in shape
+                `[None, memory_size, dim]`.
+            c (Tensor): Output of C operation. Should be in shape
+                `[None, memory_size, dim]`.
 
         Returns:
             A `Tensor` of shape same as :attr:`u`.
@@ -157,7 +175,8 @@ class MemNetBase(ModuleBase):
     """Base class inherited by memory networks.
 
     Args:
-        vocab_size (int): Vocabulary size of all :attr:`embed_fn`s and final embedding matrix.
+        vocab_size (int): Vocabulary size of all :attr:`embed_fn`s
+            and final embedding matrix.
         input_embed_fn (function): Function implements A-operation.
             Differs from different kinds of memory network.
         output_embed_fn (function): Function implements C-operation.
@@ -232,18 +251,22 @@ class MemNetBase(ModuleBase):
                 Number of elements used as the memory.
 
             "need_H": bool
-                Whether needs to perform transform with :attr:`H` matrix at the end of A-C layer.
+                Whether needs to perform transform with :attr:`H` matrix at
+                the end of A-C layer.
 
             "final_matrix": dict
                 Hyperparameters of the final matrix.
-                Should be same as :class:`~texar.modules.embedders.WordEmbedder`.
+                Should be same as
+                :class:`~texar.modules.embedders.WordEmbedder`.
 
             "dropout_rate": float
-                The dropout rate to apply to the output of each hop. Should be between 0 and 1.
+                The dropout rate to apply to the output of each hop. Should
+                be between 0 and 1.
                 E.g., `dropout_rate=0.1` would drop out 10% of the units.
 
             "variational": bool
-                Whether to share dropout masks after each hop like variational RNNs.
+                Whether to share dropout masks after each hop like variational
+                RNNs.
         """
         return {
             "name": "memnet_base",
@@ -269,7 +292,8 @@ class MemNetRNNLike(MemNetBase):
     with RNN-like weight tying described in the paper.
 
     If you want to customize the embed functions,
-    see :func:`~texar.modules.memory.default_embed_fn` for implemention details.
+    see :func:`~texar.modules.memory.default_embed_fn` for implemention
+        details.
 
     Args:
         vocab_size (int): Vocabulary size of all :attr:`embed_fn`s and final embedding matrix.
@@ -368,6 +392,9 @@ class MemNetRNNLike(MemNetBase):
     def _build(self, memory, query, **kwargs):
         """Pass the :attr:`memory` and :attr:`query` through the memory network
         and return the :attr:`logits` after the final matrix.
+
+        Args:
+            memory: TODO
         """
         with tf.variable_scope(self.variable_scope):
             if self.B is not None:

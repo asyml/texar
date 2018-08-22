@@ -471,8 +471,7 @@ class Conv1DNetwork(FeedForwardNetworkBase):
                 :func:`texar.global_mode` is used.
 
         Returns:
-            The output of the network.
-
+            The output of the final layer.
         """
         if sequence_length is not None:
             inputs = mask_sequences(

@@ -122,13 +122,14 @@ class PGAgent(EpisodicAgentBase):
 
         vals = self._sess.run(fetches, feed_dict=feed_dict_)
         action = vals['action']
+        action = action[0] # Removes the batch dimension
 
         self._observs.append(observ)
         self._actions.append(action)
 
         return action
 
-    def _observe(self, observ, action, reward, terminal, next_observ, train_policy, feed_dict):
+    def _observe(self, reward, terminal, train_policy, feed_dict):
         self._rewards.append(reward)
 
         if terminal and train_policy:

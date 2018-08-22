@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from texar import context
 from texar.core import layers
 from texar.utils import transformer_attentions as attentions
 from texar.modules.embedders import position_embedders
@@ -29,9 +28,9 @@ from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.networks.networks import FeedForwardNetwork
 from texar import utils
 from texar.utils.shapes import shape_list
+from texar.utils.mode import is_train_mode
 
 # pylint: disable=too-many-locals, invalid-name
-
 __all__ = [
     "TransformerEncoder"
 ]
@@ -40,15 +39,6 @@ class TransformerEncoder(EncoderBase):
     """Transformer encoder.
 
     Args:
-        embedding (optional): A `Variable` or a 2D `Tensor` (or `numpy
-            array`) of shape `[vocab_size, embedding_dim]` that contains the
-            token embeddings. If a `Variable`, it is directly used in
-            encoding, and the hyperparameters in :attr:`hparams["embedding"]`
-            is ignored. If a `Tensor` or `numpy array`, a new `Variable` is
-            created taking :attr:`embedding` as initial value. The :attr
-            `"initializer"` and :attr:`"dim"` hyperparameters in :attr
-            `hparams["embedding"]` are ignored. If not given, a new `Variable`
-            is created as specified in :attr:`hparams["embedding"]`.
         vocab_size (int, optional): The vocabulary size. Required if
             :attr:`embedding` is not provided.
         hparams (dict or HParams, optional): Hyperparameters. Missing
@@ -58,11 +48,8 @@ class TransformerEncoder(EncoderBase):
     """
     def __init__(self,
                  embedding,
-                 vocab_size=None,
                  hparams=None):
         EncoderBase.__init__(self, hparams)
-        self._vocab_size = vocab_size
-        self._embedding = None
         self.enc = None
         with tf.variable_scope(self.variable_scope):
             if self._hparams.initializer:
@@ -72,116 +59,94 @@ class TransformerEncoder(EncoderBase):
                 self.position_embedder = \
                     position_embedders.SinusoidsPositionEmbedder(\
                     self._hparams.position_embedder.hparams)
-
-        if self._hparams.use_embedding:
-            if isinstance(embedding, tf.Variable):
-                self._embedding = embedding
-            embed_dim = self._embedding.get_shape().as_list()[-1]
-            if self._hparams.zero_pad: # TODO(zhiting): vocab has zero pad
-                if not self._hparams.bos_pad:
-                    self._embedding = tf.concat(\
-                        (tf.zeros(shape=[1, embed_dim]),
-                         self._embedding[1:, :]), 0)
-                else:
-                    self._embedding = tf.concat(\
-                        (tf.zeros(shape=[2, embed_dim]),
-                         self._embedding[2:, :]), 0)
-            if self._vocab_size is None:
-                self._vocab_size = self._embedding.get_shape().as_list()[0]
-        with tf.variable_scope(self.variable_scope):
-            if self._hparams.target_space_id is not None:
-                space_embedding = tf.get_variable('target_space_embedding', \
-                    [32, embed_dim])
-                self.target_symbol_embedding = tf.gather(space_embedding, \
-                    self._hparams.target_space_id)
-            else:
-                self.target_symbol_embedding = None
         self.stack_output = None
 
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
-
         .. code-block:: python
-
             {
                 'initializer':None,
                 'multiply_embedding_mode': 'sqrt_depth',
-                "use_embedding": True,
                 "position_embedder": None,
                 "name":"encoder",
-                "zero_pad":False,
-                "bos_pad":False,
-                'sinusoid':True,
                 'embedding_dropout':0.1,
                 'attention_dropout':0.1,
                 'residual_dropout':0.1,
                 'num_blocks':6,
                 'num_heads':8,
                 'poswise_feedforward':None,
-                'target_space_id': None,
                 'num_units': 512,
                 "name": "transformer_encoder"
             }
 
         Here:
-
-            TODO
+            initializer: The default initializer to initialize the
+                variables created in this module.
+            multiply_embedding_mode: 'sqrt_depth' is a normalization method
+                for the following attention calculation, multiplying each
+                embedding to the sqrt of its dimension.
+            position_embedder: The hyperparameters to define the position
+                embedder.
+            embeddin_dropout: The dropout rate of the word embeddings.
+            attention_dropout: The dropout rate of the attention
+                calculation.
+            residual_dropout, The dropout rate of the residual connection.
+            num_blocks: The number of stacked blocks.
+            num_heads: The number of heads for attention calculation.
+            poswise_feedforward: The hyperparameters to define the
+                feed forward layers in each block.
+            num_units: The dimension the embeddings and encoded vectors.
+            name: A tensorflow-compatible name for this module.
         """
         return {
             'initializer': None,
             'multiply_embedding_mode': 'sqrt_depth',
-            "use_embedding": True,
             "position_embedder": None,
-            "zero_pad": False,
-            "bos_pad": False,
-            'sinusoid': True,
             'embedding_dropout': 0.1,
             'attention_dropout': 0.1,
             'residual_dropout': 0.1,
             'num_blocks': 6,
             'num_heads': 8,
             'poswise_feedforward': None,
-            'target_space_id': None,
             'num_units': 512,
-            "name": "transformer_encoder",
+            "name": "encoder",
         }
 
-    def _build(self, inputs, mode=None): # pylint: disable=arguments-differ
+    # pylint: disable=arguments-differ
+    def _build(self, enc, inputs_padding, mode=None):
         """Encodes the inputs.
 
         Args:
-            inputs: A 2D Tensor of shape `[batch_size, max_time]`
+            enc: A 3D Tensor of shape `[batch_size, max_time, dim]
+            inputs_padding: A 2D Tensor to indicate which positions
+                in the enc tensor are paddings.
             mode(optional): A tensor taking value in
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`
 
         Returns:
-            TODO
+            encoder_output: the encoded vectors
+            encoder_decoder_attention_bias: The masks to indicate which
+                positions in the inputs are not padding.
         """
-        encoder_padding = tf.to_float(tf.equal(inputs, 0))
-        self.enc = tf.nn.embedding_lookup(self._embedding, inputs)
-        _, _, channels = shape_list(self.enc)
         if self._hparams.multiply_embedding_mode == 'sqrt_depth':
-            self.enc = self.enc * channels**0.5
-
+            self.enc = enc * self._hparams.num_units**0.5
+        else:
+            self.enc = enc
+        _, lengths, _ = shape_list(self.enc)
         ignore_padding = attentions.attention_bias_ignore_padding(
-            encoder_padding)
+            inputs_padding)
         encoder_self_attention_bias = ignore_padding
         encoder_decoder_attention_bias = ignore_padding
 
-        if self.target_symbol_embedding:
-            emb_target_space = tf.reshape(
-                self.target_symbol_embedding, [1, 1, -1])
-            self.enc = self.enc + emb_target_space
-        lengths = shape_list(self.enc)[1]
-        channels = shape_list(self.enc)[2]
-        pos_embeds = self.position_embedder(lengths, channels)
+        pos_embeds = self.position_embedder(lengths,
+                                            self._hparams.num_units)
         input_embedding = self.enc + pos_embeds
 
         x = tf.layers.dropout(input_embedding,
                               rate=self._hparams.embedding_dropout,
-                              training=context.global_mode_train())
-        pad_remover = utils.transformer_utils.PadRemover(encoder_padding)
+                              training=is_train_mode(mode))
+        pad_remover = utils.transformer_utils.PadRemover(inputs_padding)
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("layer_{}".format(i)):
                 with tf.variable_scope('self_attention'):
@@ -197,7 +162,7 @@ class TransformerEncoder(EncoderBase):
                     x = x + tf.layers.dropout(
                         selfatt_output,
                         rate=self._hparams.residual_dropout,
-                        training=context.global_mode_train()
+                        training=is_train_mode(mode),
                     )
                 poswise_network = FeedForwardNetwork(
                     hparams=self._hparams['poswise_feedforward'])
@@ -210,7 +175,7 @@ class TransformerEncoder(EncoderBase):
                     sub_output = tf.layers.dropout(
                         poswise_network(y),
                         rate=self._hparams.residual_dropout,
-                        training=context.global_mode_train()
+                        training=is_train_mode(mode)
                     )
                     sub_output = tf.reshape(pad_remover.restore(tf.squeeze(\
                         sub_output, axis=0)), original_shape \
