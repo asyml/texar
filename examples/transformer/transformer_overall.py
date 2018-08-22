@@ -30,7 +30,7 @@ if __name__ == "__main__":
         hparams['opt_hparams'], hparams['loss_hparams'], hparams['args']
     set_random_seed(args.random_seed)
 
-    #TODO(haoran): fix this
+    #TODO(haoran): fix this. Not sure where logging was called prior
     logging.shutdown()
     reload(logging)
     logging_file = os.path.join(args.log_dir, 'logging.txt')
@@ -39,40 +39,53 @@ if __name__ == "__main__":
         format='%(asctime)s:%(levelname)s:%(message)s', level=logging.INFO)
     train_data, dev_data, test_data = utils.data_reader.load_data_numpy(\
         args.input, args.filename_prefix)
-    with open(args.vocab_file, 'rb') as f:
-        args.id2w = pickle.load(f)
+    with open(args.vocab_file, 'rb') as f: args.id2w = pickle.load(f)
     args.n_vocab = len(args.id2w)
 
     encoder_input = tf.placeholder(tf.int64, shape=(None, None))
     decoder_input = tf.placeholder(tf.int64, shape=(None, None))
     labels = tf.placeholder(tf.int64, shape=(None, None))
     global_step = tf.Variable(0, dtype=tf.int64, trainable=False)
-    global_step_py = 0
+    global_step_py, best_score, best_epoch = 0, 0, -1
     learning_rate = tf.placeholder(tf.float64, shape=(), name='lr')
     istarget = tf.to_float(tf.not_equal(labels, 0))
     word_embedder = tx.modules.WordEmbedder(
         vocab_size=args.n_vocab,
         hparams=args.word_embedding_hparams,
     )
-    #TODO(haoran):Cannot keep consistent result if rewriting encoder embedding
     encoder = TransformerEncoder(
         embedding=word_embedder._embedding,
         hparams=encoder_hparams)
-    inputs_padding = tf.to_float(tf.equal(encoder_input, 0))
+    src_inputs_padding = tf.to_float(tf.equal(encoder_input, 0))
+    src_inputs_embedding = tf.multiply(
+        word_embedder(encoder_input),
+        tf.expand_dims(1 - src_inputs_padding, 2)
+    )
     encoder_output, encoder_decoder_attention_bias = \
-        encoder(encoder_input, inputs_padding)
+        encoder(src_inputs_embedding, src_inputs_padding)
+
+    # In the decoder, share the word embeddings with projection layer.
+    tgt_embeds = tf.concat([
+        tf.zeros(shape=[1, encoder_hparams['num_units']]),
+        word_embedder._embedding[1:, :]], 0
+    )
     decoder = TransformerDecoder(
-        embedding=encoder._embedding,
+        embedding=tgt_embeds,
         hparams=decoder_hparams)
+    tgt_inputs_padding = tf.to_float(tf.equal(decoder_input, 0))
+    tgt_inputs_embedding = tf.multiply(
+        word_embedder(decoder_input),
+        tf.expand_dims(1 - tgt_inputs_padding, 2)
+    )
     logits, preds = decoder(
         encoder_output,
         encoder_decoder_attention_bias,
-        decoder_input,
+        tgt_inputs_embedding,
         mode=tf.estimator.ModeKeys.TRAIN)
     predictions = decoder(
         encoder_output,
         encoder_decoder_attention_bias,
-        decoder_input=None,
+        target_inputs=None,
         mode=tf.estimator.ModeKeys.PREDICT)
     mle_loss = transformer_utils.smoothing_cross_entropy(logits, \
         labels, args.n_vocab, loss_hparams['label_confidence'])
@@ -92,10 +105,8 @@ if __name__ == "__main__":
     tf.summary.scalar('lr', learning_rate)
     merged = tf.summary.merge_all()
     eval_saver = tf.train.Saver(max_to_keep=5)
-    config = tf.ConfigProto(
-        allow_soft_placement=True)
+    config = tf.ConfigProto(allow_soft_placement=True)
     config.gpu_options.allow_growth = True
-    best_score, best_epoch = 0, -1
     train_finished = False
 
     def _eval_epoch(cur_sess, epoch):
@@ -105,7 +116,6 @@ if __name__ == "__main__":
             sources, targets = zip(*dev_data[i:i+args.test_batch_size])
             references.extend(t.tolist() for t in targets)
             x_block = utils.data_reader.source_pad_concat_convert(sources)
-
             _feed_dict = {
                 encoder_input: x_block,
                 tx.global_mode(): tf.estimator.ModeKeys.EVAL,
@@ -120,7 +130,7 @@ if __name__ == "__main__":
             epoch, args.beam_width, args.alpha)
         refer_tmp_filename = os.path.join(args.log_dir, 'val_refer.tmp')
         with codecs.open(outputs_tmp_filename, 'w+', 'utf-8') as tmpfile, \
-                codecs.open(refer_tmp_filename, 'w+', 'utf-8') as tmpref:
+            codecs.open(refer_tmp_filename, 'w+', 'utf-8') as tmpref:
             for hyp, tgt in zip(hypotheses, references):
                 if decoder._hparams.eos_id in hyp:
                     hyp = hyp[:hyp.index(decoder._hparams.eos_id)]
@@ -132,21 +142,21 @@ if __name__ == "__main__":
             refer_tmp_filename, outputs_tmp_filename, case_sensitive=True))
         logging.info('eval_bleu %f in epoch %d)' % (eval_bleu, epoch))
         if eval_bleu > best_score:
-            logging.info('the %s epoch, highest bleu %s', \
-                epoch, eval_bleu)
-            best_score = eval_bleu
-            best_epoch = epoch
+            logging.info('%s epoch, highest bleu %s',epoch, eval_bleu)
+            best_score, best_epoch = eval_bleu, epoch
             eval_saver.save(sess, args.log_dir + 'my-model-highest_bleu.ckpt')
 
     def _train_epoch(cur_sess, cur_epoch):
         global train_data, train_finished, global_step_py
         random.shuffle(train_data)
-        train_iter = data.iterator.pool(train_data,
-                                        args.wbatchsize,
-                                        key=lambda x: (len(x[0]), len(x[1])),
-                                        batch_size_fn=batch_size_fn,
-                                        random_shuffler=
-                                        data.iterator.RandomShuffler())
+        train_iter = data.iterator.pool(
+            train_data,
+            args.wbatchsize,
+            key=lambda x: (len(x[0]), len(x[1])),
+            batch_size_fn=batch_size_fn,
+            random_shuffler=
+            data.iterator.RandomShuffler()
+        )
         for num_steps, train_batch in enumerate(train_iter):
             in_arrays = utils.data_reader.seq2seq_pad_concat_convert(\
                 train_batch, -1)
@@ -165,8 +175,8 @@ if __name__ == "__main__":
                 'mgd': merged,
             }
             _fetches = sess.run(fetches, feed_dict=_feed_dict)
-            global_step_py, loss, mgd, source, target = _fetches['step'], \
-                _fetches['train_op'], _fetches['mgd'], \
+            global_step_py, loss, mgd, source, target = \
+                _fetches['step'], _fetches['train_op'], _fetches['mgd'], \
                 _fetches['source'], _fetches['target']
             if global_step_py % 500 == 0:
                 logging.info('step:%s source:%s targets:%s loss:%s', \
@@ -181,7 +191,8 @@ if __name__ == "__main__":
     def _test_epoch(cur_sess):
         references, hypotheses, rwords, hwords = [], [], [], []
         for i in range(0, len(test_data), args.test_batch_size):
-            sources, targets = zip(*test_data[i: i + args.test_batch_size])
+            sources, targets = \
+                zip(*test_data[i: i + args.test_batch_size])
             references.extend(t.tolist() for t in targets)
             x_block = utils.data_reader.source_pad_concat_convert(sources)
             _feed_dict = {
@@ -206,6 +217,7 @@ if __name__ == "__main__":
         write_words(rwords, refer_tmp_filename)
         logging.info('test finished. The output is in %s' % \
             (outputs_tmp_filename))
+
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
