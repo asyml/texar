@@ -62,7 +62,7 @@ def _main(_):
             next_observ, reward, terminal, _ = env.step(action=action)
             if terminal:
                 reward = 0.
-            agent.observe(observ, action, reward, terminal, next_observ, feed_dict=feed_dict)
+            agent.observe(reward, terminal, feed_dict=feed_dict)
             observ = next_observ
 
             reward_sum += reward

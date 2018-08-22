@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Various loss functions for policy gradients.
 """
@@ -34,10 +46,10 @@ def pg_loss_with_logits(actions,
                         time_major=False):
     """Policy gradient loss with logits. Used for discrete actions.
 
-    pg_loss = reduce( advantages * -log_prob( actions )  ),
-    where `advantages` and `actions` will not bprop gradients.
+    `pg_loss = reduce( advantages * -log_prob( actions )  )`,
+    where `advantages` and `actions` do not back-propagate gradients.
 
-    All arguments except :attr:`logits` and :attr:`actions` are the same as
+    All arguments except :attr:`logits` and :attr:`actions` are the same with
     :func:`pg_loss_with_log_probs`.
 
     Args:
@@ -54,57 +66,55 @@ def pg_loss_with_logits(actions,
         logits: Unscaled log probabilities of shape
             `[(batch_size,) max_time, d_3, ..., d_{rank+1}]`
             and dtype `float32` or `float64`.
-
-            The batch and time dimensions are exchanged if :attr:`time_major`
+            The batch and time dimensions are exchanged if `time_major`
             is `True`.
         advantages: Tensor of shape
             `[(batch_size,) max_time, d_3, ..., d_rank]` and
             dtype `float32` or `float64`.
-
-            The batch and time dimensions are exchanged if :attr:`time_major`
+            The batch and time dimensions are exchanged if `time_major`
             is `True`.
         rank (int, optional): The rank of :attr:`actions`.
             If `None` (default), rank is automatically inferred from
-            :attr:`actions` or :attr:`advantages`. If the inferred rank is
-            `None`, :attr:`rank` is set to 1 if :attr:`batched` is `False`,
-            and :attr:`rank`=2 if :attr:`batched` is `True`.
+            `actions` or `advantages`. If the inference fails,
+            `rank` is set to 1 if :attr:`batched` is `False`,
+            and set to 2 if :attr:`batched` is `True`.
         batched (bool): `True` if the inputs are batched.
         sequence_length (optional): A Tensor of shape `[batch_size]`.
             Time steps beyond the respective sequence lengths will have zero
             losses. Used if :attr:`batched` is `True`.
         average_across_timesteps (bool): If set, average the loss across
-            the time dimension. Must not set :attr:`average_across_timesteps`
-            and :attr:`sum_over_timesteps` at the same time.
+            the time dimension. Must not set `average_across_timesteps`
+            and `sum_over_timesteps` at the same time.
         average_across_batch (bool): If set, average the loss across the
-            batch dimension. Must not set :attr:`average_across_batch`'
-            and :attr:`sum_over_batch` at the same time.
-            Ignored if :attr:`batched` is `False`.
+            batch dimension. Must not set `average_across_batch`'
+            and `sum_over_batch` at the same time.
+            Ignored if `batched` is `False`.
         average_across_remaining (bool): If set, average the sequence across the
-            remaining dimensions. Must not set :attr:`average_across_remaining`'
-            and :attr:`sum_over_remaining` at the same time. Ignored if
+            remaining dimensions. Must not set `average_across_remaining`'
+            and `sum_over_remaining` at the same time. Ignored if
             no more dimensions other than the batch and time dimensions.
         sum_over_timesteps (bool): If set, sum the loss across the
-            time dimension. Must not set :attr:`average_across_timesteps`
-            and :attr:`sum_over_timesteps` at the same time.
+            time dimension. Must not set `average_across_timesteps`
+            and `sum_over_timesteps` at the same time.
         sum_over_batch (bool): If set, sum the loss across the
-            batch dimension. Must not set :attr:`average_across_batch`
-            and :attr:`sum_over_batch` at the same time.
-            Ignored if :attr:`batched` is `False`.
+            batch dimension. Must not set `average_across_batch`
+            and `sum_over_batch` at the same time.
+            Ignored if `batched` is `False`.
         sum_over_remaining (bool): If set, sum the loss across the
-            remaining dimension. Must not set :attr:`average_across_remaining`
-            and :attr:`sum_over_remaining` at the same time. Ignored if
+            remaining dimension. Must not set `average_across_remaining`
+            and `sum_over_remaining` at the same time. Ignored if
             no more dimensions other than the batch and time dimensions.
         time_major (bool): The shape format of the inputs. If `True`,
             :attr:`logits`, :attr:`actions` and :attr:`advantages` must
             have shape `[max_time, batch_size, ...]`. If `False` (default),
             they must have shape `[batch_size, max_time, ...]`.
-            Ignored if :attr:`batched` is `False`.
+            Ignored if `batched` is `False`.
 
     Returns:
         A Tensor containing the loss to minimize, whose rank depends on the
         reduce arguments. For example, the batch dimension is reduced if
         either :attr:`average_across_batch` or :attr:`sum_over_batch` is
-        `True`, which makes the rank of output tensor decrease by 1.
+        `True`, which decreases the rank of output tensor by 1.
     """
     actions = tf.stop_gradient(actions)
     neg_log_probs = tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -137,8 +147,8 @@ def pg_loss_with_log_probs(log_probs,
                            time_major=False):
     """Policy gradient loss with log probs of actions.
 
-    pg_loss = reduce( advantages * -log_probs ),
-    where `advantages` will not bprop gradients.
+    `pg_loss = reduce( advantages * -log_probs )`,
+    where `advantages` does not back-propagate gradients.
 
     All arguments except :attr:`log_probs` are the same as
     :func:`pg_loss_with_logits`.
@@ -156,43 +166,39 @@ def pg_loss_with_log_probs(log_probs,
         advantages: Tensor of shape
             `[(batch_size,) max_time, d_3, ..., d_rank]` and
             dtype `float32` or `float64`.
-
-            The batch dimension exists only if
-            :attr:`batched` is `True`.
-
+            The batch dimension exists only if `batched` is `True`.
             The batch and time dimensions
-            are exchanged, i.e., `[max_time, batch_size, ...]` if
-            :attr:`time_major` is `True`.
+            are exchanged if `time_major` is `True`.
         rank (int, optional): The rank of :attr:`log_probs`.
             If `None` (default), rank is automatically inferred from
-            :attr:`log_probs` or :attr:`advantages`. If the inferred rank is
-            `None`, :attr:`rank` is set to 1 if :attr:`batched``==False`,
-            and :attr:`rank`=2 if :attr:`batched``==True`.
+            `log_probs` or `advantages`. If the inference fails,
+            `rank` is set to 1 if `batched``==False`,
+            and set to 2 if `batched``==True`.
         batched (bool): `True` if the inputs are batched.
         sequence_length (optional): A Tensor of shape `[batch_size]`.
             Time steps beyond the respective sequence lengths will have zero
             losses. Used if :attr:`batched` is `True`.
         average_across_timesteps (bool): If set, average the loss across
-            the time dimension. Must not set :attr:`average_across_timesteps`
-            and :attr:`sum_over_timesteps` at the same time.
+            the time dimension. Must not set `average_across_timesteps`
+            and `sum_over_timesteps` at the same time.
         average_across_batch (bool): If set, average the loss across the
-            batch dimension. Must not set :attr:`average_across_batch`'
-            and :attr:`sum_over_batch` at the same time.
-            Ignored if :attr:`batched` is `False`.
+            batch dimension. Must not set `average_across_batch`'
+            and `sum_over_batch` at the same time.
+            Ignored if `batched` is `False`.
         average_across_remaining (bool): If set, average the sequence across the
-            remaining dimensions. Must not set :attr:`average_across_remaining`'
-            and :attr:`sum_over_remaining` at the same time. Ignored if
+            remaining dimensions. Must not set `average_across_remaining`'
+            and `sum_over_remaining` at the same time. Ignored if
             no more dimensions other than the batch and time dimensions.
         sum_over_timesteps (bool): If set, sum the loss across the
-            time dimension. Must not set :attr:`average_across_timesteps`
-            and :attr:`sum_over_timesteps` at the same time.
+            time dimension. Must not set `average_across_timesteps`
+            and `sum_over_timesteps` at the same time.
         sum_over_batch (bool): If set, sum the loss across the
-            batch dimension. Must not set :attr:`average_across_batch`
-            and :attr:`sum_over_batch` at the same time.
-            Ignored if :attr:`batched` is `False`.
+            batch dimension. Must not set `average_across_batch`
+            and `sum_over_batch` at the same time.
+            Ignored if `batched` is `False`.
         sum_over_remaining (bool): If set, sum the loss across the
-            remaining dimension. Must not set :attr:`average_across_remaining`
-            and :attr:`sum_over_remaining` at the same time. Ignored if
+            remaining dimension. Must not set `average_across_remaining`
+            and `sum_over_remaining` at the same time. Ignored if
             no more dimensions other than the batch and time dimensions.
         time_major (bool): The shape format of the inputs. If `True`,
             :attr:`log_probs` and :attr:`advantages` must have shape
@@ -204,7 +210,7 @@ def pg_loss_with_log_probs(log_probs,
         A Tensor containing the loss to minimize, whose rank depends on the
         reduce arguments. For example, the batch dimension is reduced if
         either :attr:`average_across_batch` or :attr:`sum_over_batch` is
-        `True`, which makes the rank of output tensor decrease by 1.
+        `True`, which decreases the rank of output tensor by 1.
     """
     advantages = tf.stop_gradient(advantages)
 

@@ -12,8 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""Implemetation of beam seach with penalties.
+#
+# Modifications copyright (C) 2018 Texar
+# ==============================================================================
+"""
+Implemetation of beam seach with penalties.
 Adapted from tensor2tensor repositor.
 """
 

@@ -26,6 +26,7 @@ import tensorflow as tf
 import texar as tx
 from texar.agents import PGAgent
 
+
 flags = tf.flags
 
 flags.DEFINE_string("config", "config", "The config to use.")
@@ -58,8 +59,7 @@ if __name__ == '__main__':
                 action = agent.get_action(observ, feed_dict=feed_dict)
 
                 next_observ, reward, terminal, _ = env.step(action=action)
-                agent.observe(observ, action, reward, terminal, next_observ,
-                              feed_dict=feed_dict)
+                agent.observe(reward, terminal, feed_dict=feed_dict)
                 observ = next_observ
 
                 reward_sum += reward

@@ -54,8 +54,8 @@ class AverageRecorderTest(tf.test.TestCase):
             self.assertEqual(recorder.add([1., 2.]), [1., 2.])
             self.assertEqual(recorder.add([1.]), [1., 2.])
             self.assertEqual(recorder.avg(), [1., 2.])
-            self.assertEqual(recorder.avg(0), [1.])
-            self.assertEqual(recorder.avg(1), [2.])
+            self.assertEqual(recorder.avg(0), 1.)
+            self.assertEqual(recorder.avg(1), 2.)
             self.assertEqual(recorder.avg([0, 1]), [1., 2.])
 
         recorder = AverageRecorder()
@@ -63,8 +63,8 @@ class AverageRecorderTest(tf.test.TestCase):
             self.assertEqual(recorder.add({'1': 1, '2': 2}), {'1': 1., '2': 2.})
             self.assertEqual(recorder.add({'1': 1}), {'1': 1., '2': 2.})
             self.assertEqual(recorder.avg(), {'1': 1., '2': 2.})
-            self.assertEqual(recorder.avg('1'), {'1': 1.})
-            self.assertEqual(recorder.avg('2'), {'2': 2.})
+            self.assertEqual(recorder.avg('1'), 1.)
+            self.assertEqual(recorder.avg('2'), 2.)
             self.assertEqual(recorder.avg(['1', '2']), {'1': 1., '2': 2.})
 
 if __name__ == "__main__":

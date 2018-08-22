@@ -39,9 +39,9 @@ opt = {
     },
 }
 
-embedder = {  # TODO(zhiting): rename
+embed = {
     "memory_size": memory_size,
-    "word_embedder": {
+    "embedding": {
         "dim": dim,
         "dropout_rate": 0.2
     },
@@ -61,8 +61,8 @@ memnet = {
         "dim": dim,
         "dropout_rate": 0.2
     },
-    "A": embedder,
-    "C": embedder,
+    "A": embed,
+    "C": embed,
     "dropout_rate": 0.2,
     "variational": True
 }

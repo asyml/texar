@@ -47,6 +47,7 @@ import importlib
 import numpy as np
 import tensorflow as tf
 import texar as tx
+import argparse
 
 from ptb_reader import prepare_data
 from ptb_reader import ptb_iterator_memnet as ptb_iterator
@@ -59,6 +60,7 @@ flags.DEFINE_string("data_path", "./",
                     "the directory will be created and PTB raw data will "
                     "be downloaded.")
 flags.DEFINE_string("config", "config_memnet", "The config to use.")
+flags.DEFINE_float("lr", None, "Initial learning rate")
 
 FLAGS = flags.FLAGS
 
@@ -84,7 +86,7 @@ def _main(_):
                                           hparams=config.memnet)
         queries = tf.fill([tf.shape(inputs)[0], config.dim],
                           config.query_constant)
-        logits = memnet(inputs, queries)
+        logits = memnet(queries, inputs)
 
     # Losses & train ops
     mle_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -92,11 +94,9 @@ def _main(_):
     mle_loss = tf.reduce_sum(mle_loss)
 
     # Use global_step to pass epoch, for lr decay
-    lr = config.opt["optimizer"]["kwargs"]["learning_rate"]
-    manual_lr = input("please input lr "
-                      "(to use lr in the config file, input nothing): ")
-    if manual_lr:
-        lr = float(manual_lr)
+    lr = FLAGS.lr
+    if lr is None:
+        lr = config.opt["optimizer"]["kwargs"]["learning_rate"]
     learning_rate = tf.placeholder(tf.float32, [], name="learning_rate")
     global_step = tf.Variable(0, dtype=tf.int32, name="global_step")
     increment_global_step = tf.assign_add(global_step, 1)

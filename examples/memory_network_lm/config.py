@@ -36,9 +36,9 @@ opt = {
     },
 }
 
-embedder = {
+embed = {
     "memory_size": memory_size,
-    "word_embedder": {
+    "embedding": {
         "dim": dim,
     },
     "temporal_embedding": {
@@ -55,7 +55,7 @@ memnet = {
     "final_matrix": {
         "dim": dim,
     },
-    "A": embedder,
-    "C": embedder,
+    "A": embed,
+    "C": embed,
     "variational": False
 }

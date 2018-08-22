@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Various entropies.
 """
@@ -46,24 +58,30 @@ def entropy_with_logits(logits,
             (i.e., `distribution_dim`). So the last dimension is always
             summed out to compute the entropy.
         rank (int, optional): The rank of :attr:`logits`.
-            If `None` (default), :attr:`rank` is inferred automatically from
-            :attr:`logits`. If the inferred rank is `None`, :attr:`rank` is
+            If `None` (default), `rank` is inferred automatically from
+            `logits`. If the inference fails, `rank` is
             set to 2, i.e., assuming :attr:`logits` is of shape
             `[batch_size, distribution_dim]`
         average_across_batch (bool): If set, average the entropy across the
-            batch dimension. Must not set :attr:`average_across_batch`'
-            and :attr:`sum_over_batch` at the same time.
+            batch dimension. Must not set `average_across_batch`'
+            and `sum_over_batch` at the same time.
         average_across_remaining (bool): If set, average the entropy across the
-            remaining dimensions. Must not set :attr:`average_across_remaining`'
-            and :attr:`sum_over_remaining` at the same time.
+            remaining dimensions. Must not set `average_across_remaining`'
+            and `sum_over_remaining` at the same time.
             Used only when :attr:`logits` has rank >= 3.
         sum_over_batch (bool): If set, sum the entropy across the
-            batch dimension. Must not set :attr:`average_across_batch`
-            and :attr:`sum_over_batch` at the same time.
+            batch dimension. Must not set `average_across_batch`
+            and `sum_over_batch` at the same time.
         sum_over_remaining (bool): If set, sum the entropy across the
-            remaining dimension. Must not set :attr:`average_across_remaining`
-            and :attr:`sum_over_remaining` at the same time.
+            remaining dimension. Must not set `average_across_remaining`
+            and `sum_over_remaining` at the same time.
             Used only when :attr:`logits` has rank >= 3.
+
+    Returns:
+        A Tensor containing the shannon entropy. The dimensionality of the
+        Tensor depends on the configuration of reduction arguments. For
+        example, if both batch and remaining dimensions are reduced (by
+        either sum or average), the returned Tensor is a scalar Tensor.
     """
     entropy = _get_entropy(logits)
 
@@ -123,37 +141,43 @@ def sequence_entropy_with_logits(logits,
             The batch and time dimensions are exchanged if :attr:`time_major`
             is `True`.
         rank (int, optional): The rank of :attr:`logits`.
-            If `None` (default), :attr:`rank` is inferred automatically from
-            :attr:`logits`. If the inferred rank is `None`, :attr:`rank` is
-            set to 3, i.e., assuming :attr:`logits` is of shape
+            If `None` (default), `rank` is inferred automatically from
+            `logits`. If the inference fails, `rank` is
+            set to 3, i.e., assuming `logits` is of shape
             `[batch_size, max_time, distribution_dim]`
         sequence_length (optional): A Tensor of shape `[batch_size]`.
             Time steps beyond the respective sequence lengths are
             counted into the entropy.
         average_across_timesteps (bool): If set, average the entropy across
-            the time dimension. Must not set :attr:`average_across_timesteps`
-            and :attr:`sum_over_timesteps` at the same time.
+            the time dimension. Must not set `average_across_timesteps`
+            and `sum_over_timesteps` at the same time.
         average_across_batch (bool): If set, average the entropy across the
-            batch dimension. Must not set :attr:`average_across_batch`'
-            and :attr:`sum_over_batch` at the same time.
+            batch dimension. Must not set `average_across_batch`'
+            and `sum_over_batch` at the same time.
         average_across_remaining (bool): If set, average the entropy across the
-            remaining dimensions. Must not set :attr:`average_across_remaining`'
-            and :attr:`sum_over_remaining` at the same time.
+            remaining dimensions. Must not set `average_across_remaining`'
+            and `sum_over_remaining` at the same time.
             Used only when :attr:`logits` has rank >= 4.
         sum_over_timesteps (bool): If set, sum the entropy across the
-            time dimension. Must not set :attr:`average_across_timesteps`
-            and :attr:`sum_over_timesteps` at the same time.
+            time dimension. Must not set `average_across_timesteps`
+            and `sum_over_timesteps` at the same time.
         sum_over_batch (bool): If set, sum the entropy across the
-            batch dimension. Must not set :attr:`average_across_batch`
-            and :attr:`sum_over_batch` at the same time.
+            batch dimension. Must not set `average_across_batch`
+            and `sum_over_batch` at the same time.
         sum_over_remaining (bool): If set, sum the entropy across the
-            remaining dimension. Must not set :attr:`average_across_remaining`
-            and :attr:`sum_over_remaining` at the same time.
+            remaining dimension. Must not set `average_across_remaining`
+            and `sum_over_remaining` at the same time.
             Used only when :attr:`logits` has rank >= 4.
         time_major (bool): The shape format of the inputs. If `True`,
             :attr:`logits` must have shape `[max_time, batch_size, ...]`.
             If `False` (default), it must have shape
             `[batch_size, max_time, ...]`.
+
+    Returns:
+        A Tensor containing the shannon entropy. The dimensionality of the
+        Tensor depends on the configuration of reduction arguments. For
+        example, if batch, time, and remaining dimensions are all reduced (by
+        either sum or average), the returned Tensor is a scalar Tensor.
     """
     entropy = _get_entropy(logits)
 

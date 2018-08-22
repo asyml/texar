@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Miscellaneous Utility functions.
 """
@@ -145,12 +157,13 @@ def check_or_get_instance(ins_or_class_or_name, kwargs, module_paths=None,
     Args:
         ins_or_class_or_name: Can be of 3 types:
 
-            - A string representing the name or full path to a class to \
+            - A class to instantiate.
+            - A string of the name or full path to a class to \
               instantiate.
-            - The class itself to instantiate.
-            - The class instance itself to check types.
+            - The class instance to check types.
 
-        kwargs (dict): Keyword arguments for the class constructor.
+        kwargs (dict): Keyword arguments for the class constructor. Ignored
+            if `ins_or_class_or_name` is a class instance.
         module_paths (list, optional): Paths to candidate modules to
             search for the class. This is used if the class cannot be
             located solely based on :attr:`class_name`. The first module
@@ -179,8 +192,8 @@ def get_instance(class_or_name, kwargs, module_paths=None):
     """Creates a class instance.
 
     Args:
-        class_or_name: Name or full path to a class to instantiate, or the
-            class itself.
+        class_or_name: A class, or its name or full path to a class to
+            instantiate.
         kwargs (dict): Keyword arguments for the class constructor.
         module_paths (list, optional): Paths to candidate modules to
             search for the class. This is used if the class cannot be
@@ -222,10 +235,10 @@ def check_or_get_instance_with_redundant_kwargs(
     Args:
         ins_or_class_or_name: Can be of 3 types:
 
-            - A string representing the name or full path to a class to \
+            - A class to instantiate.
+            - A string of the name or module path to a class to \
               instantiate.
-            - The class itself to instantiate.
-            - The class instance itself to check types.
+            - The class instance to check types.
 
         kwargs (dict): Keyword arguments for the class constructor.
         module_paths (list, optional): Paths to candidate modules to
@@ -260,7 +273,7 @@ def get_instance_with_redundant_kwargs(
     class construction method are used.
 
     Args:
-        class_name (str): Name or full path of the class to instantiate.
+        class_name (str): A class or its name or module path.
         kwargs (dict): A dictionary of arguments for the class constructor. It
             may include invalid arguments which will be ignored.
         module_paths (list of str): A list of paths to candidate modules to
@@ -437,7 +450,7 @@ def dict_patch(tgt_dict, src_dict):
     return tgt_dict
 
 def dict_lookup(dict_, keys, default=None):
-    """Looks up :attr:`keys` in the dict, outputs the corresponding values.
+    """Looks up :attr:`keys` in the dict, returns the corresponding values.
 
     The :attr:`default` is used for keys not present in the dict.
 
@@ -461,9 +474,9 @@ def dict_fetch(src_dict, tgt_dict_or_keys):
     :attr:`tgt_dict_or_keys`.
 
     Args:
-        src_dict: A dict or instance of :class:`texar.HParams`.
+        src_dict: A dict or instance of :class:`~texar.HParams`.
             The source dict to fetch values from.
-        tgt_dict_or_keys: A dict, instance of :class:`texar.HParams`,
+        tgt_dict_or_keys: A dict, instance of :class:`~texar.HParams`,
             or a list (or a dict_keys) of keys to be included in the output
             dict.
 
@@ -513,8 +526,8 @@ def flatten_dict(dict_, parent_key="", sep="."):
         dict_ (dict): The dictionary to flatten.
         parent_key (str): A prefix to prepend to each key.
         sep (str): Separator that intervenes between parent and child keys.
-            E.g., if :attr:`sep``='.'`, then { "a": { "b": 3 } } is converted
-            into { "a.b": 3 }.
+            E.g., if `sep` == '.', then `{ "a": { "b": 3 } }` is converted
+            into `{ "a.b": 3 }`.
 
     Returns:
         A new flattened `dict`.
@@ -550,8 +563,8 @@ def default_str(str_, default_str):
 def uniquify_str(str_, str_set):
     """Uniquifies :attr:`str_` if :attr:`str_` is included in :attr:`str_set`.
 
-    This is done by appending '_[digits]' to :attr:`str_`. Returns
-    :attr:`str_` directly if :attr:`str_` is not included in :attr:`str_set`.
+    This is done by appending a number to :attr:`str_`. Returns
+    :attr:`str_` directly if it is not included in :attr:`str_set`.
 
     Args:
         str_ (string): A string to uniquify.
@@ -560,8 +573,16 @@ def uniquify_str(str_, str_set):
             collection.
 
     Returns:
-        string: The uniquified string. Returns :attr:`str_` directly if it is
-            already unique.
+        The uniquified string. Returns :attr:`str_` directly if it is
+        already unique.
+
+    Example:
+
+        .. code-block:: python
+
+            print(uniquify_str('name', ['name', 'name_1']))
+            # 'name_2'
+
     """
     if str_ not in str_set:
         return str_
@@ -579,10 +600,10 @@ def strip_token(str_, token, compat=True):
     Assumes tokens in the strings are separated with the space character.
 
     Args:
-        str_: A `str`, or an `n`-D numpy array or (possibly nested)
+        str\_: A `str`, or an `n`-D numpy array or (possibly nested)
             list of `str`.
         token (str): The token to strip, e.g., the '<PAD>' token defined in
-            :class:`~texar.data.vocabulary.SpecialTokens`.PAD
+            :class:`~texar.data.SpecialTokens`.PAD
         compat (bool): Whether to convert tokens into `unicode` (Python 2)
             or `str` (Python 3).
 
@@ -614,10 +635,10 @@ def strip_eos(str_, eos_token='<EOS>', compat=True):
     Assumes tokens in the strings are separated with the space character.
 
     Args:
-        str_: A `str`, or an `n`-D numpy array or (possibly nested)
+        str\_: A `str`, or an `n`-D numpy array or (possibly nested)
             list of `str`.
         eos_token (str): The EOS token. Default is '<EOS>' as defined in
-            :class:`~texar.data.vocabulary.SpecialTokens`.`EOS`
+            :class:`~texar.data.SpecialTokens`.EOS
         compat (bool): Whether to convert tokens into `unicode` (Python 2)
             or `str` (Python 3).
 
@@ -653,10 +674,10 @@ def strip_bos(str_, bos_token='<BOS>', compat=True):
     Assumes tokens in the strings are separated with the space character.
 
     Args:
-        str_: A `str`, or an `n`-D numpy array or (possibly nested)
+        str\_: A `str`, or an `n`-D numpy array or (possibly nested)
             list of `str`.
         bos_token (str): The BOS token. Default is '<BOS>' as defined in
-            :class:`~texar.data.vocabulary.SpecialTokens`.`BOS`
+            :class:`~texar.data.SpecialTokens`.BOS
         compat (bool): Whether to convert tokens into `unicode` (Python 2)
             or `str` (Python 3).
 
@@ -690,23 +711,26 @@ def strip_special_tokens(str_, strip_pad='<PAD>', strip_bos='<BOS>',
         - Removes leading and and trailing PAD tokens
         - Removes leading BOS tokens
 
+    This is a joint function of :func:`strip_eos`, :func:`strip_pad`, and
+    :func:`strip_bos`
+
     Args:
-        str_: A `str`, or an `n`-D numpy array or (possibly nested)
+        str\_: A `str`, or an `n`-D numpy array or (possibly nested)
             list of `str`.
         strip_pad (str): The PAD token to strip from the strings (i.e., remove
             the leading and trailing PAD tokens of the strings). Default
             is '<PAD>' as defined in
-            :class:`~texar.data.vocabulary.SpecialTokens`.`PAD`.
+            :class:`~texar.data.SpecialTokens`.PAD.
             Set to `None` or `False` to disable the stripping.
         strip_bos (str): The BOS token to strip from the strings (i.e., remove
             the leading BOS tokens of the strings).
             Default is '<BOS>' as defined in
-            :class:`~texar.data.vocabulary.SpecialTokens`.`BOS`.
+            :class:`~texar.data.SpecialTokens`.BOS.
             Set to `None` or `False` to disable the stripping.
         strip_eos (str): The EOS token to strip from the strings (i.e., remove
             the EOS tokens and all subsequent tokens of the strings).
             Default is '<EOS>' as defined in
-            :class:`~texar.data.vocabulary.SpecialTokens`.`EOS`.
+            :class:`~texar.data.SpecialTokens`.EOS.
             Set to `None` or `False` to disable the stripping.
         compat (bool): Whether to convert tokens into `unicode` (Python 2)
             or `str` (Python 3).
@@ -763,33 +787,49 @@ def str_join(tokens, sep=' ', compat=True):
 
 def map_ids_to_strs(ids, vocab, join=True, strip_pad='<PAD>',
                     strip_bos='<BOS>', strip_eos='<EOS>', compat=True):
-    """Transforms indexes to strings by id-token mapping, token concat, token
-    stripping, etc.
+    """Transforms `int` indexes to strings by id-token mapping, token concat,
+    and special token stripping, etc.
 
     Args:
         ids: An n-D numpy array or (possibly nested) list of `int` indexes.
         vocab: An instance of :class:`~texar.data.Vocab`.
-        join (bool): Whether concat along the last dimension of :attr:`ids`
-            the tokens into a string with a space character.
+        join (bool): Whether to concat along the last dimension of the
+            the tokens into a string separated with a space character.
         strip_pad (str): The PAD token to strip from the strings (i.e., remove
             the leading and trailing PAD tokens of the strings). Default
             is '<PAD>' as defined in
-            :class:`~texar.data.vocabulary.SpecialTokens`.`PAD`.
+            :class:`~texar.data.SpecialTokens`.PAD.
             Set to `None` or `False` to disable the stripping.
         strip_bos (str): The BOS token to strip from the strings (i.e., remove
             the leading BOS tokens of the strings).
             Default is '<BOS>' as defined in
-            :class:`~texar.data.vocabulary.SpecialTokens`.`BOS`.
+            :class:`~texar.data.SpecialTokens`.BOS.
             Set to `None` or `False` to disable the stripping.
         strip_eos (str): The EOS token to strip from the strings (i.e., remove
             the EOS tokens and all subsequent tokens of the strings).
             Default is '<EOS>' as defined in
-            :class:`~texar.data.vocabulary.SpecialTokens`.`EOS`.
+            :class:`~texar.data.SpecialTokens`.EOS.
             Set to `None` or `False` to disable the stripping.
+
     Returns:
-        If :attr:`join`=True, returns a (n-1)-D numpy array (or list) of
-        concatenated strings. If :attr:`join`=False, returns an n-D numpy
+        If :attr:`join` is True, returns a `(n-1)`-D numpy array (or list) of
+        concatenated strings. If :attr:`join` is False, returns an `n`-D numpy
         array (or list) of str tokens.
+
+    Example:
+
+        .. code-block:: python
+
+            text_ids = [[1, 9, 6, 2, 0, 0], [1, 28, 7, 8, 2, 0]]
+
+            text = map_ids_to_strs(text_ids, data.vocab)
+            # text == ['a sentence', 'parsed from ids']
+
+            text = map_ids_to_strs(
+                text_ids, data.vocab, join=False,
+                strip_pad=None, strip_bos=None, strip_eos=None)
+            # text == [['<BOS>', 'a', 'sentence', '<EOS>', '<PAD>', '<PAD>'],
+            #          ['<BOS>', 'parsed', 'from', 'ids', '<EOS>', '<PAD>']]
     """
     tokens = vocab.map_ids_to_tokens_py(ids)
 
@@ -838,6 +878,6 @@ def straight_through(fw_tensor, bw_tensor):
 
     Returns:
         A tensor of the same shape and value with :attr:`fw_tensor` but will
-            direct gradient to bw_tensor.
+        direct gradient to bw_tensor.
     """
     return tf.stop_gradient(fw_tensor) + bw_tensor - tf.stop_gradient(bw_tensor)

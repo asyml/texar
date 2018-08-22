@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Utility functions related to input/output.
 """
@@ -102,6 +114,10 @@ def load_config_single(fname, config=None):
 def load_config(config_path, config=None):
     """Loads configs from (possibly multiple) file(s).
 
+    A config file can be either a Python file (with suffix '.py')
+    or a YAML file. If the filename is not suffixed with '.py', the file is
+    parsed as YAML.
+
     Args:
         config_path: Paths to configuration files. This can be a `list` of
             config file names, or a path to a directory in which all files
@@ -142,33 +158,34 @@ def write_paired_text(src, tgt, fname, append=False, mode='h', sep='\t'):
         src: A list (or array) of `str` source text.
         ttg: A list (or array) of `str` target text.
         fname (str): The output filename.
-        append (bool): Whether appending to the end of the file if exists.
+        append (bool): Whether append content to the end of the file if exists.
         mode (str): The mode of writing, with the following options:
 
-            - :attr:`'h'`: The "horizontal" mode. Each source target pair is \
-                written in one line, intervened with :attr:`sep`, e.g.,
+            - **'h'**: The "horizontal" mode. Each source target pair is \
+                written in one line, intervened with :attr:`sep`, e.g.::
 
                     source_1 target_1
                     source_2 target_2
 
-            - :attr:`'v'`: The "vertical" mode. Each source target pair is \
-                written in two consecutive lines, e.g,
+            - **'v'**: The "vertical" mode. Each source target pair is \
+                written in two consecutive lines, e.g::
 
                     source_1
                     target_1
                     source_2
                     target_2
 
-            - :attr:`'s'`: The "separate" mode. Each source target pair is \
+            - **'s'**: The "separate" mode. Each source target pair is \
                     written in corresponding lines of two files named \
-                    as :attr:`fname`.src and :attr:`fname`.tgt, respectively.
+                    as `"{fname}.src"` and `"fname.tgt"`, respectively.
+
         sep (str): The string intervening between source and target. Used
-            when :attr:`mode`='h'.
+            when :attr:`mode` is set to 'h'.
 
     Returns:
-        The fileanme(s). If :attr:`mode`=='h' or :attr:`mode`=='v', returns
-        :attr:`fname`. If :attr:`mode`=='s', returns a list of filenames
-        `[':attr:`fname`.src', ':attr:`fname`.tgt']`.
+        The fileanme(s). If `mode` == 'h' or 'v', returns
+        :attr:`fname`. If `mode` == 's', returns a list of filenames
+        `["{fname}.src", "{fname}.tgt"]`.
     """
     fmode = 'a' if append else 'w'
     if mode == 's':

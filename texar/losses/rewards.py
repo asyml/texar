@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Various reward related functions.
 """
@@ -31,12 +43,8 @@ def discount_reward(reward,
     """Computes discounted reward.
 
     :attr:`reward` and :attr:`sequence_length` can be either Tensors or python
-    arrays. If both are python array (or None), the return will be a python
-    array as well.
-
-    :attr:`tensor_rank` is ignored when :attr:`sequence` and
-    :attr:`sequence_length` are both python arrays (or None) rather than
-    Tensors.
+    arrays. If both are python array (or `None`), the return will be a python
+    array as well. Otherwise tf Tensors are returned.
 
     Args:
         reward: A Tensor or python array. Can be 1D with shape `[batch_size]`,
@@ -47,21 +55,22 @@ def discount_reward(reward,
         discount (float): A scalar. The discount factor.
         normalize (bool): Whether to normalize the discounted reward, by
             `(discounted_reward - mean) / std`.
-        dtype (dtype): Type of :attr:`sequence`. If `None`, infer from
-            :attr:`reward` automatically.
+        dtype (dtype): Type of :attr:`reward`. If `None`, infer from
+            `reward` automatically.
         tensor_rank (int): The number of dimensions of :attr:`reward`.
             Default is 1, i.e., :attr:`reward` is a 1D Tensor consisting
             of a batch dimension. Ignored if :attr:`reward`
-            and :attr:`sequence_length` are python arrays (or None).
+            and :attr:`sequence_length` are python arrays (or `None`).
 
     Returns:
         A 2D Tensor or python array of the discounted reward.
 
         If :attr:`reward` and :attr:`sequence_length` are python
-        arrays (or None), the returned value is a python array as well.
+        arrays (or `None`), the returned value is a python array as well.
 
 
     Example:
+
         .. code-block:: python
 
             r = [2., 1.]

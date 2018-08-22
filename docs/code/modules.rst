@@ -103,7 +103,7 @@ Decoders
     :exclude-members: initialize,step,finalize,tracks_own_finished,output_size,output_dtype
 
 :hidden:`AttentionRNNDecoderOutput`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.AttentionRNNDecoderOutput
     :members:
 
@@ -231,7 +231,6 @@ default_embedder_fn
 Policies
 =========
 
-
 :hidden:`PolicyNetBase`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.PolicyNetBase
@@ -241,5 +240,20 @@ Policies
 :hidden:`CategoricalPolicyNet`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.CategoricalPolicyNet
+    :members:
+    :inherited-members:
+
+Q-Nets
+=========
+
+:hidden:`QNetBase`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.QNetBase
+    :members:
+    :inherited-members:
+
+:hidden:`CategoricalPolicyNet`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.CategoricalQNet
     :members:
     :inherited-members:

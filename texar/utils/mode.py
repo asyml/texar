@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Utility functions related to mode.
 """
@@ -23,7 +35,7 @@ __all__ = [
 ]
 
 def maybe_global_mode(mode):
-    """Returns :func:`texar.contex.global_mode` if :attr:`mode` is `None`,
+    """Returns :func:`texar.global_mode` if :attr:`mode` is `None`,
     otherwise returns :attr:`mode` as-is.
     """
     if mode is None:
@@ -34,7 +46,7 @@ def maybe_global_mode(mode):
 def is_train_mode(mode):
     """Returns a bool Tensor indicating whether the global mode is TRAIN.
     If :attr:`mode` is `None`, the mode is determined by
-    :func:`texar.contex.global_mode`.
+    :func:`texar.global_mode`.
     """
     if mode is None:
         return context.global_mode_train()
@@ -44,7 +56,7 @@ def is_train_mode(mode):
 def is_eval_mode(mode):
     """Returns a bool Tensor indicating whether the global mode is EVAL.
     If :attr:`mode` is `None`, the mode is determined by
-    :func:`texar.contex.global_mode`.
+    :func:`texar.global_mode`.
     """
     if mode is None:
         return context.global_mode_eval()
@@ -54,7 +66,7 @@ def is_eval_mode(mode):
 def is_predict_mode(mode):
     """Returns a bool Tensor indicating whether the global mode is PREDICT.
     If :attr:`mode` is `None`, the mode is determined by
-    :func:`texar.contex.global_mode`.
+    :func:`texar.global_mode`.
     """
     if mode is None:
         return context.global_mode_predict()
@@ -127,10 +139,10 @@ def switch_dropout(dropout_keep_prob, mode=None):
             :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`.
             Dropout is activated if :attr:`mode` is `TRAIN`.
             If `None`, the mode is inferred from
-            :func:`texar.context.global_mode`.
+            :func:`texar.global_mode`.
 
     Returns:
         A unit Tensor that equals the dropout keep probability in `TRAIN` mode,
-        and `1.` in other modes.
+        and `1.0` in other modes.
     """
     return 1. - (1. - dropout_keep_prob) * tf.to_float(is_train_mode(mode))

@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Utility functions related to data types.
 """
@@ -25,14 +37,14 @@ __all__ = [
 ]
 
 def get_tf_dtype(dtype): # pylint: disable=too-many-return-statements
-    """Returns respective tf dtype.
+    """Returns equivalent tf dtype.
 
     Args:
         dtype: A str, python numeric or string type, numpy data type, or
             tf dtype.
 
     Returns:
-        The respective tf dtype.
+        The corresponding tf dtype.
     """
     if dtype in {'float', 'float32', 'tf.float32', float,
                  np.float32, tf.float32}:
@@ -85,7 +97,7 @@ def is_placeholder(x):
         return False
 
 def maybe_hparams_to_dict(hparams):
-    """If :attr:`hparams` is an instance of :class:`~texar.hyperparams.HParams`,
+    """If :attr:`hparams` is an instance of :class:`~texar.HParams`,
     converts it to a `dict` and returns. If :attr:`hparams` is a `dict`,
     returns as is.
     """
@@ -105,9 +117,8 @@ def compat_as_text(str_):
     """Converts strings into `unicode` (Python 2) or `str` (Python 3).
 
     Args:
-        str_: A string or element of other types convertible to string. Or an
-            `n`-D numpy array or (possibly nested) list of elements of such
-            types.
+        str\_: A string or other data types convertible to string, or an
+            `n`-D numpy array or (possibly nested) list of such elements.
 
     Returns:
         The converted strings of the same structure/shape as :attr:`str_`.
