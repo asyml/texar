@@ -84,7 +84,10 @@ class DQNAgent(EpisodicAgentBase):
             self._exploration = exploration
 
         self._build_graph()
-        self.timestep = 0
+
+        self._observ = None
+        self._action = None
+        self._timestep = 0
 
     @staticmethod
     def default_hparams():
@@ -166,8 +169,13 @@ class DQNAgent(EpisodicAgentBase):
                       tau * self._qnet.trainable_variables[i]))
         return op
 
-    def _observe(self, observ, action, reward, terminal, next_observ,
-                 train_policy, feed_dict):
+    def _observe(self, reward, terminal, train_policy, feed_dict):
+        if self._timestep > self._cold_start_steps and train_policy:
+            self._train_qnet(feed_dict)
+
+        action = self._action
+        observ = self._observ
+
         action_one_hot = [0.] * self._num_actions
         action_one_hot[action] = 1.
 
@@ -176,11 +184,8 @@ class DQNAgent(EpisodicAgentBase):
             action=action_one_hot,
             reward=reward,
             terminal=terminal,
-            next_observ=next_observ))
-        self.timestep += 1
-
-        if self.timestep > self._cold_start_steps and train_policy:
-            self._train_qnet(feed_dict)
+            next_observ=None))
+        self._timestep += 1
 
     def _train_qnet(self, feed_dict):
         minibatch = self._replay_memory.get(self._sample_batch_size)
@@ -210,12 +215,12 @@ class DQNAgent(EpisodicAgentBase):
 
         self._sess.run(self._train_op, feed_dict=feed_dict_)
 
-        self.update_target(feed_dict)
+        self._update_target(feed_dict)
 
-    def update_target(self, feed_dict):
+    def _update_target(self, feed_dict):
         if self._update_type == 'tau' or (
                 self._update_type == 'copy' and
-                self.timestep % self._update_period == 0):
+                self._timestep % self._update_period == 0):
             self._sess.run(self._update_op, feed_dict=feed_dict)
 
     def _get_action(self, observ, feed_dict=None):
@@ -225,11 +230,17 @@ class DQNAgent(EpisodicAgentBase):
                        tx.global_mode(): tf.estimator.ModeKeys.PREDICT})
 
         action = np.zeros(shape=self._num_actions)
-        if random.random() < self._exploration.get_epsilon(self.timestep):
+        if random.random() < self._exploration.get_epsilon(self._timestep):
             action_id = random.randrange(self._num_actions)
         else:
             action_id = np.argmax(qvalue)
         action[action_id] = 1.0
+
+        self._observ = observ
+        self._action = action_id
+
+        if self._replay_memory.size() >= 1:
+            self._replay_memory.last()['next_observ'] = self._observ
 
         return action_id
 
