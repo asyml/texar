@@ -189,7 +189,7 @@ class HierarchicalRNNEncoder(EncoderBase):
                 The order of first three dimensions can be changed
                 according to :attr:`order`.
 
-            order: a 3-char string containing 'b', 't', and 'u',
+            order: A 3-char string containing 'b', 't', and 'u',
                 that specifies the order of inputs dimensions above.
                 Following four can be accepted:
 
@@ -303,13 +303,13 @@ class HierarchicalRNNEncoder(EncoderBase):
             return nest.map_structure(lambda x: tf.tile(x, multiplier), t)
 
         if order == 'btu':
-            return tf.contrib.seq2seq.tile_batch(initial_state, inputs_shape[0])
+            return _nest_tile(initial_state, inputs_shape[0])
         elif order == 'ubt':
-            return tf.contrib.seq2seq.tile_batch(initial_state, inputs_shape[1])
-        elif order == 'utb':
-            return _nest_tile(initial_state, inputs_shape[2])
-        elif order == 'tbu':
             return _nest_tile(initial_state, inputs_shape[1])
+        elif order == 'utb':
+            return tf.contrib.seq2seq.tile_batch(initial_state, inputs_shape[2])
+        elif order == 'tbu':
+            return tf.contrib.seq2seq.tile_batch(initial_state, inputs_shape[1])
         else:
             raise ValueError('Unknown order: {}'.format(order))
 
