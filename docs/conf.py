@@ -321,7 +321,11 @@ extlinks = {'tf_main': (
                 None),
             'tf_r0.12': (
                 'https://www.tensorflow.org/versions/r0.12/api_docs/python/%s',
-                None)}
+                None),
+            'gym': (
+                'https://gym.openai.com/docs/%s',
+                None),
+            }
 
 # Customize
 autodoc_member_order = 'bysource'

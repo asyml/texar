@@ -23,7 +23,12 @@ __all__ = [
 ]
 
 class PolicyNetBase(ModuleBase):
-    """Policy model based on feed forward network.
+    """Policy model based on feed-forward networks.
+
+    Args:
+        network (optional): A neural network that takes in observation and
+        An instance of subclass of
+            :class:`~texar.modules.FeedForwardNetworkBase`.
     """
     def __init__(self,
                  network=None,
@@ -137,13 +142,15 @@ class CategoricalPolicyNet(PolicyNetBase):
         dist = tf.distributions.Categorical(logits=logits, **dkwargs)
 
         action = dist.sample()
-        action = tf.reshape(action, self._action_space.shape)
+        to_shape = [-1] # for batch dimension
+        to_shape.extend(list(self._action_space.shape))
+        action = tf.reshape(action, to_shape)
 
-        outputs = dict(
-            logits=logits,
-            action=action,
-            dist=dist
-        )
+        outputs = {
+            "logits": logits,
+            "action": action,
+            "dist": dist
+        }
 
         if not self._built:
             self._add_internal_trainable_variables()

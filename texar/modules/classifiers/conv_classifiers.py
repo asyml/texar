@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Various classifier classes.
 """
@@ -23,6 +35,28 @@ __all__ = [
 
 class Conv1DClassifier(ClassifierBase):
     """Simple Conv-1D classifier.
+    This is a combination of the
+    :class:`~texar.modules.Conv1DEncoder` with a classification layer.
+
+    Args:
+        hparams (dict, optional): Hyperparameters. Missing
+            hyperparamerter will be set to default values. See
+            :meth:`default_hparams` for the hyperparameter sturcture and
+            default values.
+
+    Example:
+
+        .. code-block:: python
+
+            clas = Conv1DClassifier(hparams={'num_classes': 10})
+
+            inputs = tf.random_uniform([64, 20, 256])
+            logits, pred = clas(inputs)
+            # logits == Tensor of shape [64, 10]
+            # pred   == Tensor of shape [64]
+
+    .. document private functions
+    .. automethod:: _build
     """
 
     def __init__(self, hparams=None):
@@ -57,6 +91,46 @@ class Conv1DClassifier(ClassifierBase):
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
+
+        .. code-block:: python
+
+            {
+                # (1) Same hyperparameters as in Conv1DEncoder
+                ...
+
+                # (2) Additional hyperparameters
+                "num_classes": 2,
+                "logit_layer_kwargs": {
+                    "use_bias": False
+                },
+                "name": "conv1d_classifier"
+            }
+
+        Here:
+
+        1. Same hyperparameters as in :class:`~texar.modules.Conv1DEncoder`.
+        See the :meth:`~texar.modules.Conv1DEncoder.default_hparams`.
+        An instance of Conv1DEncoder is created for feature extraction.
+
+        2. Additional hyperparameters:
+
+            "num_classes" : int
+                Number of classes:
+
+                - If **`> 0`**, an additional :tf_main:`Dense <layers/Dense>` \
+                layer is appended to the encoder to compute the logits over \
+                classes.
+                - If **`<= 0`**, no dense layer is appended. The number of \
+                classes is assumed to be the final dense layer size of the \
+                encoder.
+
+            "logit_layer_kwargs" : dict
+                Keyword arguments for the logit Dense layer constructor,
+                except for argument "units" which is set to "num_classes".
+                Ignored if no extra logit layer is appended.
+
+            "name" : str
+                Name of the classifier.
         """
         hparams = Conv1DEncoder.default_hparams()
         hparams.update({
@@ -70,19 +144,52 @@ class Conv1DClassifier(ClassifierBase):
                inputs,
                sequence_length=None,
                dtype=None,
-               time_major=False,
                mode=None):
-        logits = self._encoder(inputs, sequence_length, dtype, time_major, mode)
+        """Feeds the inputs through the network and makes classification.
+
+        The arguments are the same as in :class:`~texar.modules.Conv1DEncoder`.
+
+        The predictions of binary classification ("num_classes"=1) and
+        multi-way classification ("num_classes">1) are different, as explained
+        below.
+
+        Args:
+            inputs: The inputs to the network, which is a 3D tensor. See
+                :class:`~texar.modules.Conv1DEncoder` for more details.
+            sequence_length (optional): An int tensor of shape `[batch_size]`
+                containing the length of each element in :attr:`inputs`.
+                If given, time steps beyond the length will first be masked out
+                before feeding to the layers.
+            dtype (optional): Type of the inputs. If not provided, infers
+                from inputs automatically.
+            mode (optional): A tensor taking value in
+                :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
+                `TRAIN`, `EVAL`, and `PREDICT`. If `None`,
+                :func:`texar.global_mode` is used.
+
+        Returns:
+            A tuple `(logits, pred)`, where
+
+            - **`logits`** is a Tensor of shape `[batch_size, num_classes]`\
+            for `num_classes` >1, and `[batch_size]` for `num_classes` =1 \
+            (i.e., binary classification).
+            - **`pred`** is the prediction, a Tensor of shape `[batch_size]` \
+            and type `tf.int64`. For binary classification, the standard \
+            sigmoid function is used for prediction, and the class labels are \
+            `{0, 1}`.
+        """
+        logits = self._encoder(inputs, sequence_length, dtype, mode)
 
         num_classes = self._hparams.num_classes
         is_binary = num_classes == 1
         is_binary = is_binary or (num_classes <= 0 and logits.shape[1] == 1)
 
         if is_binary:
-            pred = tf.to_int64(tf.reshape(tf.greater(logits, 0), [-1]))
+            pred = tf.greater(logits, 0)
             logits = tf.reshape(logits, [-1])
         else:
             pred = tf.argmax(logits, 1)
+        pred = tf.to_int64(tf.reshape(pred, [-1]))
 
         self._built = True
 
@@ -107,7 +214,7 @@ class Conv1DClassifier(ClassifierBase):
 
     @property
     def nn(self): # pylint: disable=invalid-name
-        """The neural network feature extractor.
+        """The classifier neural network.
         """
         return self._encoder
 

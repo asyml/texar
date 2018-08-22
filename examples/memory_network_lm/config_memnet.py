@@ -39,7 +39,7 @@ opt = {
     },
 }
 
-embedder = {
+embedder = {  # TODO(zhiting): rename
     "memory_size": memory_size,
     "word_embedder": {
         "dim": dim,

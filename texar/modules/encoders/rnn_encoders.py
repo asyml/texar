@@ -422,7 +422,8 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                 The first two dimensions
                 :attr:`batch_size` and :attr:`max_time` are exchanged if
                 :attr:`time_major=True` is specified.
-            sequence_length (int list or 1D Tensor, optional): Sequence lengths
+            sequence_length (optional): A 1D int tensor of shape `[batch_size]`.
+                Sequence lengths
                 of the batch inputs. Used to copy-through state and zero-out
                 outputs when past a batch element's sequence length.
             initial_state (optional): Initial state of the RNN.
@@ -434,7 +435,7 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
                 `TRAIN`, `EVAL`, and `PREDICT`. Controls output layer dropout
                 if the output layer is specified with :attr:`hparams`.
-                If `None` (default), :func:`texar.context.global_mode()`
+                If `None` (default), :func:`texar.global_mode()`
                 is used.
             return_cell_output (bool): Whether to return the output of the RNN
                 cell. This is the results prior to the output layer.
@@ -743,7 +744,8 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
                 The first two dimensions
                 `batch_size` and `max_time` may be exchanged if
                 `time_major=True` is specified.
-            sequence_length (int list or 1D Tensor, optional): Sequence lengths
+            sequence_length (optional): A 1D int tensor of shape `[batch_size]`.
+                Sequence lengths
                 of the batch inputs. Used to copy-through state and zero-out
                 outputs when past a batch element's sequence length.
             initial_state (optional): Initial state of the RNN.
@@ -755,7 +757,7 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
                 `TRAIN`, `EVAL`, and `PREDICT`. Controls output layer dropout
                 if the output layer is specified with :attr:`hparams`.
-                If `None` (default), :func:`texar.context.global_mode()`
+                If `None` (default), :func:`texar.global_mode()`
                 is used.
             return_cell_output (bool): Whether to return the output of the RNN
                 cell. This is the results prior to the output layer.
