@@ -44,8 +44,6 @@ case ${hparams_set} in
 
     2)
         echo 'running the model with bigger batch_size and training steps'
-        src_language=en
-        tgt_language=de
         logging_filename=logging_${hparams_set}_${running_mode}.txt
         echo "mode ${running_mode} ${src_language}-${tgt_language}"
         python transformer_overall.py --mode=${running_mode} --max_train_epoch=70\
