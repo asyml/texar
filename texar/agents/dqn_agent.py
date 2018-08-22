@@ -38,6 +38,8 @@ __all__ = [
 # TODO(zhiting): only support discrete actions?
 class DQNAgent(EpisodicAgentBase):
     """Deep Q learning agent.
+
+    TODO
     """
     def __init__(self,
                  env_config,
@@ -104,6 +106,9 @@ class DQNAgent(EpisodicAgentBase):
 
     @staticmethod
     def default_hparams():
+        """
+        TODO
+        """
         return {
             'qnet_type': 'CategoricalQNet',
             'qnet_hparams': None,
