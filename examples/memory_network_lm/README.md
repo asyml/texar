@@ -22,6 +22,7 @@ python3 lm_ptb_memnet.py --config config_memnet --data_path ./
 Here:
   * `--config` specifies the config file to use. E.g., the above use the configuration defined in [config_memnet.py](./config_memnet.py).
   * `--data_path` specifies the directory containing PTB raw data (e.g., `ptb.train.txt`). If the data files do not exist, the program will automatically download, extract, and pre-process the data.
+  * `--lr` specifies the initial learning rate. If not specified, the program will use the learning rate in the config file.
 
 The model will begin training, and will evaluate on the validation data periodically, and evaluate on the test data after the training is done. Checkpoints are saved every 5 epochs.
 
@@ -43,3 +44,5 @@ The perplexity of different configs is:
 | config_memnet | 61     | 61.46 |  98.51 |  94.82|
 
 This result of `config.py` is slightly inferior to the result presented in the paper, since the result in the paper is the best among 10 runs.
+
+The result if `config_memnet` is highly unstable and may not able to recover this performance within one run.

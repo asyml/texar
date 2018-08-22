@@ -60,17 +60,13 @@ flags.DEFINE_string("data_path", "./",
                     "the directory will be created and PTB raw data will "
                     "be downloaded.")
 flags.DEFINE_string("config", "config_memnet", "The config to use.")
+flags.DEFINE_float("lr", None, "Initial learning rate")
 
 FLAGS = flags.FLAGS
 
 config = importlib.import_module(FLAGS.config)
 
 def _main(_):
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument('--lr', type=float, default=None)
-    args = argparser.parse_args()
-    lr = args.lr
-
     # Data
     batch_size = config.batch_size
     memory_size = config.memory_size
@@ -98,6 +94,7 @@ def _main(_):
     mle_loss = tf.reduce_sum(mle_loss)
 
     # Use global_step to pass epoch, for lr decay
+    lr = FLAGS.lr
     if lr is None:
         lr = config.opt["optimizer"]["kwargs"]["learning_rate"]
     learning_rate = tf.placeholder(tf.float32, [], name="learning_rate")
