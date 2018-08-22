@@ -10,7 +10,6 @@ import random
 import logging
 import codecs
 import os
-from importlib import reload
 
 import tensorflow as tf
 import texar as tx
@@ -30,17 +29,22 @@ if __name__ == "__main__":
         hparams['opt_hparams'], hparams['loss_hparams'], hparams['args']
     set_random_seed(args.random_seed)
 
-    #TODO(haoran): fix this. Not sure where logging was called prior
-    logging.shutdown()
-    reload(logging)
+    # configure the logging module
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
     logging_file = os.path.join(args.log_dir, 'logging.txt')
     print('logging file is saved in :{}'.format(logging_file))
-    logging.basicConfig(filename=logging_file, \
-        format='%(asctime)s:%(levelname)s:%(message)s', level=logging.INFO)
+    fh = logging.FileHandler(logging_file)
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(
+        logging.Formatter('%(asctime)s:%(levelname)s:%(message)s'))
+    logger.addHandler(fh)
+
     train_data, dev_data, test_data = utils.data_reader.load_data_numpy(\
         args.input, args.filename_prefix)
     with open(args.vocab_file, 'rb') as f: args.id2w = pickle.load(f)
     args.n_vocab = len(args.id2w)
+    logger.info('begin logging')
 
     encoder_input = tf.placeholder(tf.int64, shape=(None, None))
     decoder_input = tf.placeholder(tf.int64, shape=(None, None))
@@ -140,9 +144,9 @@ if __name__ == "__main__":
                 tmpref.write(' '.join([str(i) for i in tgt]) + '\n')
         eval_bleu = float(100 * bleu_tool.bleu_wrapper(\
             refer_tmp_filename, outputs_tmp_filename, case_sensitive=True))
-        logging.info('eval_bleu %f in epoch %d)' % (eval_bleu, epoch))
+        logger.info('eval_bleu %f in epoch %d)' % (eval_bleu, epoch))
         if eval_bleu > best_score:
-            logging.info('%s epoch, highest bleu %s',epoch, eval_bleu)
+            logger.info('%s epoch, highest bleu %s',epoch, eval_bleu)
             best_score, best_epoch = eval_bleu, epoch
             eval_saver.save(sess, args.log_dir + 'my-model-highest_bleu.ckpt')
 
@@ -179,7 +183,7 @@ if __name__ == "__main__":
                 _fetches['step'], _fetches['train_op'], _fetches['mgd'], \
                 _fetches['source'], _fetches['target']
             if global_step_py % 500 == 0:
-                logging.info('step:%s source:%s targets:%s loss:%s', \
+                logger.info('step:%s source:%s targets:%s loss:%s', \
                     global_step_py, source.shape, target.shape, loss)
             writer.add_summary(mgd, global_step=global_step_py)
             if global_step_py == opt_hparams['max_training_steps']:
@@ -190,7 +194,9 @@ if __name__ == "__main__":
 
     def _test_epoch(cur_sess):
         references, hypotheses, rwords, hwords = [], [], [], []
-        for i in range(0, len(test_data), args.test_batch_size):
+        for i in range(2):
+        #TODO(haoran): recover this line after debugging
+        #for i in range(0, len(test_data), args.test_batch_size):
             sources, targets = \
                 zip(*test_data[i: i + args.test_batch_size])
             references.extend(t.tolist() for t in targets)
@@ -215,14 +221,13 @@ if __name__ == "__main__":
         refer_tmp_filename = args.log_dir + 'test_reference.tmp'
         write_words(hwords, outputs_tmp_filename)
         write_words(rwords, refer_tmp_filename)
-        logging.info('test finished. The output is in %s' % \
+        logger.info('test finished. The output is in %s' % \
             (outputs_tmp_filename))
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
-        var_list = tf.trainable_variables()
         writer = tf.summary.FileWriter(args.log_dir, graph=sess.graph)
         if args.mode == 'train_and_evaluate':
             for epoch in range(args.start_epoch, args.epoch):
