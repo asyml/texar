@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """Policy Gradient agent.
 """
 from __future__ import absolute_import
@@ -17,10 +29,51 @@ from texar.losses.rewards import discount_reward
 
 
 class PGAgent(EpisodicAgentBase):
-    """Policy gradient agent for episodic setting.
+    """Policy gradient agent for episodic setting. This agent here supports
+    **un-batched** training, i.e., each time generates one action, takes one
+    observation, and updates the policy.
+
+    The policy must takes in an observation of shape `[1] + observation_shape`,
+    where the first dimension 1 is for batch dimension, and output a `dict`
+    containing:
+
+    - Key **"action"** whose value is a Tensor of shape \
+    `[1] + action_shape` containing a single action.
+    - One of "log_prob" or "dist":
+
+        - **log_prob**: A Tensor of shape `[1]`, the log probability of the \
+        "action".
+        - **dist**: A \
+        tf_main:`tf.distributions.Distribution <distributions/Distribution>`\
+        with the `log_prob` interface and \
+        `log_prob = dist.log_prob(outputs["action"])`.
+
+    .. role:: python(code)
+       :language: python
 
     Args:
-        TODO
+        env_config: An instance of :class:`~texar.agents.EnvConfig` specifying
+            action space, observation space, and reward range, etc. Use
+            :func:`~texar.agents.get_gym_env_config` to create an EnvConfig
+            from a gym environment.
+        sess (optional): A tf session.
+        policy (optional): A policy net that takes in observation and outputs
+            actions and probabilities.
+        policy_kwargs (dict, optional): Keyword arguments for policy
+            constructor. Note that the `hparams` argument for network
+            constructor is specified in the "policy_hparams" field of
+            :attr:`hparams` and should not be included in `policy_kwargs`.
+            Ignored if :attr:`policy` is given.
+        policy_caller_kwargs (dict, optional): Keyword arguments for
+            calling the policy to get actions. The policy is called with
+            :python:`outputs=policy(inputs=observation, **policy_caller_kwargs)`
+        learning_rate (optional): Learning rate for policy optimization. If
+            not given, determine the learning rate for :attr:`hparams`.
+            See :func:`~texar.core.get_train_op` for more details.
+        hparams (dict or HParams, optional): Hyperparameters. Missing
+            hyperparamerter will be set to default values. See
+            :meth:`default_hparams` for the hyperparameter sturcture and
+            default values.
     """
     def __init__(self,
                  env_config,
@@ -82,7 +135,13 @@ class PGAgent(EpisodicAgentBase):
         return outputs
 
     def _get_pg_loss(self):
-        log_probs = self._outputs['dist'].log_prob(self._action_inputs)
+        if 'log_prob' in self._outputs:
+            log_probs = self._outputs['log_prob']
+        elif 'dist' in self._outputs:
+            log_probs = self._outputs['dist'].log_prob(self._action_inputs)
+        else:
+            raise ValueError('Outputs of the policy must have one of '
+                             '"log_prob" or "dist".')
         pg_loss = losses.pg_loss_with_log_probs(
             log_probs=log_probs,
             advantages=self._advantage_inputs,
@@ -100,6 +159,49 @@ class PGAgent(EpisodicAgentBase):
 
     @staticmethod
     def default_hparams():
+        """Returns a dictionary of hyperparameters with default values:
+
+        .. role:: python(code)
+           :language: python
+
+        .. code-block:: python
+
+            {
+                'policy_type': 'CategoricalPolicyNet',
+                'policy_hparams': None,
+                'discount_factor': 0.95,
+                'normalize_reward': False,
+                'optimization': default_optimization_hparams(),
+                'name': 'pg_agent',
+            }
+
+        Here:
+
+        "policy_type" : str or class or instance
+            Policy net. Can be class, its name or module path, or a class
+            instance. If class name is given, the class must be from module
+            :mod:`texar.modules` or :mod:`texar.custom`. Ignored if a
+            `policy` is given to the agent constructor.
+
+        "policy_hparams" : dict, optional
+            Hyperparameters for the policy net. With the :attr:`policy_kwargs`
+            argument to the constructor, a network is created with
+            :python:`policy_class(**policy_kwargs, hparams=policy_hparams)`.
+
+        "discount_factor" : float
+            The discount factor of reward.
+
+        "normalize_reward" : bool
+            Whether to normalize the discounted reward, by
+            `(discounted_reward - mean) / std`.
+
+        "optimization" : dict
+            Hyperparameters of optimization for updating the policy net.
+            See :func:`~texar.core.default_optimization_hparams` for details.
+
+        "name" : str
+            Name of the agent.
+        """
         return {
             'policy_type': 'CategoricalPolicyNet',
             'policy_hparams': None,
@@ -115,7 +217,9 @@ class PGAgent(EpisodicAgentBase):
         self._rewards = []
 
     def _get_action(self, observ, feed_dict):
-        fetches = dict(action=self._outputs['action'])
+        fetches = {
+            "action": self._outputs['action']
+        }
 
         feed_dict_ = {self._observ_inputs: [observ, ]}
         feed_dict_.update(feed_dict or {})

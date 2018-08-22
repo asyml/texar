@@ -61,9 +61,13 @@ class ReplayMemoryBase(object):
         }
 
     def last(self):
+        """Returns the latest element in the memeory.
+        """
         raise NotImplementedError
 
     def size(self):
+        """Returns the current size of the memory.
+        """
         raise NotImplementedError
 
 
@@ -120,7 +124,11 @@ class DequeReplayMemory(ReplayMemoryBase):
         return random.sample(self.deque, size)
 
     def last(self):
+        """Returns the latest element in the memeory.
+        """
         return self.deque[-1]
 
     def size(self):
+        """Returns the current size of the memory.
+        """
         return len(self.deque)
