@@ -75,11 +75,11 @@ class MemNetSingleLayer(ModuleBase):
         """An A-C operation with memory and query vector.
 
         Args:
-            u (Tensor): The input query `Tensor` of shape `[None, dim]`.
+            u (Tensor): The input query `Tensor` of shape `[None, memory_dim]`.
             m (Tensor): Output of A operation. Should be in shape
-                `[None, memory_size, dim]`.
+                `[None, memory_size, memory_dim]`.
             c (Tensor): Output of C operation. Should be in shape
-                `[None, memory_size, dim]`.
+                `[None, memory_size, memory_dim]`.
 
         Returns:
             A `Tensor` of shape same as :attr:`u`.
@@ -160,13 +160,6 @@ class MemNetBase(ModuleBase):
             if self.hparams.use_H:
                 self.H = tf.get_variable(
                     name="H", shape=[self._memory_dim, self._memory_dim])
-
-            self._final_matrix = tf.transpose(
-                WordEmbedder(
-                    vocab_size=raw_memory_dim,
-                    hparams=self.hparams.final_matrix
-                ).embedding,
-                name="final_matrix")
 
     def _build_embed_fn(self, input_embed_fn, output_embed_fn, query_embed_fn):
         # Optionally creates embed_fn's
@@ -299,11 +292,6 @@ class MemNetBase(ModuleBase):
                 "B": default_embed_fn_hparams,
                 "use_B": False,
                 "use_H": False,
-                "final_matrix": {
-                    "dim": 100,
-                    "dropout_rate": 0,
-                    "name": "final_matrix",
-                },
                 "dropout_rate": 0,
                 "variational": False,
                 "name": "memnet",
@@ -317,12 +305,13 @@ class MemNetBase(ModuleBase):
         "memory_dim" : int
             Memory dimension, i.e., the dimension size of a memory entry
             embedding. Ignored if at least one of the embedding functions is
-            created according to :attr:`hparams`. In this case `memory_dim` is
-            inferred from the creatd embed_fn.
+            created according to :attr:`hparams`. In this case
+            :attr:`memory_dim` is inferred from the created embed_fn.
 
         "relu_dim" : int
-            Number of elements in dim that have relu at the end of each hop.
-            Should be not less than 0 and not more than :attr`"dim"`.
+            Number of elements in :attr:`memory_dim` that have relu at the end
+            of each hop.
+            Should be not less than 0 and not more than :attr`memory_dim`.
 
         "memory_size" : int
             Number of entries in memory.
@@ -337,11 +326,6 @@ class MemNetBase(ModuleBase):
         "use_H" : bool
             Whether to perform a linear transformation with matrix `H` at
             the end of each A-C layer.
-
-        "final_matrix" : dict
-            Hyperparameters of the final matrix.
-            See :meth:`~texar.modules.WordEmbedder.default_hparams` of
-            :class:`~texar.modules.WordEmbedder` for details.
 
         "dropout_rate" : float
             The dropout rate to apply to the output of each hop. Should
@@ -361,11 +345,6 @@ class MemNetBase(ModuleBase):
             "B": default_memnet_embed_fn_hparams(),
             "use_B": False,
             "use_H": False,
-            "final_matrix": {
-                "name": "final_matrix",
-                "dim": 100,
-                "dropout_rate": 0,
-            },
             "dropout_rate": 0,
             "variational": False,
             "name": "memnet",
@@ -433,6 +412,11 @@ class MemNetRNNLike(MemNetBase):
                 self.H,
                 hparams={"name": "AC"})
 
+            self._W = tf.layers.Dense(
+                units=raw_memory_dim,
+                use_bias=False,
+                name="W")
+
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
@@ -440,21 +424,57 @@ class MemNetRNNLike(MemNetBase):
         .. code-block:: python
 
             {
-                "name": "memnet_rnnlike",
                 "n_hops": 1,
-                "dim": 100,
+                "memory_dim": 100,
                 "relu_dim": 50,
                 "memory_size": 100,
+                "A": default_embed_fn_hparams,
+                "C": default_embed_fn_hparams,
+                "B": default_embed_fn_hparams,
+                "use_B": False,
                 "use_H": True,
-                "final_matrix": {
-                    "name": "final_matrix",
-                    "dim": 100,
-                    "dropout_rate": 0
-                }
-                "A": default_embed_hparams,
-                "C": default_embed_hparams,
-                "B": default_embed_hparams,
+                "dropout_rate": 0,
+                "variational": False,
+                "name": "memnet_rnnlike",
             }
+
+        Here:
+
+        "n_hops" : int
+            Number of hops.
+
+        "memory_dim" : int
+            Memory dimension, i.e., the dimension size of a memory entry
+            embedding. Ignored if at least one of the embedding functions is
+            created according to :attr:`hparams`. In this case
+            :attr:`memory_dim` is inferred from the created embed_fn.
+
+        "relu_dim" : int
+            Number of elements in :attr:`memory_dim` that have relu at the end
+            of each hop.
+            Should be not less than 0 and not more than :attr`memory_dim`.
+
+        "memory_size" : int
+            Number of entries in memory.
+
+            For example, the number of sentences {x_i} in Fig.1(a) of
+            (Sukhbaatar et al.) End-To-End Memory Networks.
+
+        "use_B" : bool
+            Whether to create the query embedding function. Ignored if
+            `query_embed_fn` is given to the constructor.
+
+        "use_H" : bool
+            Whether to perform a linear transformation with matrix `H` at
+            the end of each A-C layer.
+
+        "dropout_rate" : float
+            The dropout rate to apply to the output of each hop. Should
+            be between 0 and 1.
+            E.g., `dropout_rate=0.1` would drop out 10% of the units.
+
+        "variational" : bool
+            Whether to share dropout masks after each hop.
         """
         hparams = MemNetBase.default_hparams()
         hparams.update({
@@ -476,7 +496,7 @@ class MemNetRNNLike(MemNetBase):
                 on it before it's fed into the network, please add
                 `query_embed_fn` when constructing this instance.
                 If you do not provide `query_embed_fn`, it should be of shape
-                `[batch_size, dim]`.
+                `[batch_size, memory_dim]`.
             memory (optional): Memory used in A/C operations. By default, it
                 should be an integer tensor of shape
                 `[batch_size, memory_size]`,
@@ -515,15 +535,15 @@ class MemNetRNNLike(MemNetBase):
                 relued_part = tf.nn.relu(relu_part)
                 u_ = tf.concat(axis=1, values=[linear_part, relued_part])
             else:
-                raise Exception("relu_dim = {} is illegal".format(
-                    self._relu_dim))
+                raise ValueError(
+                    "relu_dim = {} is illegal".format(self._relu_dim))
             if self.hparams.variational:
                 u_ = _variational_dropout(u_)
             else:
                 u_ = tf.nn.dropout(u_, keep_prob)
             self._u.append(u_)
 
-        logits = tf.matmul(self._u[-1], self._final_matrix)
+        logits = self._W(self._u[-1])
 
         if not self._built:
             self._add_internal_trainable_variables()

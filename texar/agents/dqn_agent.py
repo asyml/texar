@@ -241,29 +241,39 @@ class DQNAgent(EpisodicAgentBase):
                 self._timestep % self._update_period == 0):
             self._sess.run(self._update_op, feed_dict=feed_dict)
 
-    def _get_action(self, observ, feed_dict=None):
-        qvalue = self._sess.run(
+    def _qvalues_from_qnet(self, observ):
+        return self._sess.run(
             self._qnet_outputs['qvalues'],
             feed_dict={self._observ_inputs: np.array([observ]),
                        tx.global_mode(): tf.estimator.ModeKeys.PREDICT})
 
-        action = np.zeros(shape=self._num_actions)
-        if random.random() < self._exploration.get_epsilon(self._timestep):
-            action_id = random.randrange(self._num_actions)
-        else:
-            action_id = np.argmax(qvalue)
-        action[action_id] = 1.0
+    def _qvalues_from_target(self, observ):
+        return self._sess.run(
+            self._target_outputs['qvalues'],
+            feed_dict={self._observ_inputs: np.array([observ]),
+                       tx.global_mode(): tf.estimator.ModeKeys.PREDICT})
 
+    def _update_observ_action(self, observ, action):
         self._observ = observ
-        self._action = action_id
-
+        self._action = action
         if self._replay_memory.size() >= 1:
             self._replay_memory.last()['next_observ'] = self._observ
 
-        return action_id
+    def _get_action(self, observ, feed_dict=None):
+        qvalue = self._qvalues_from_qnet(observ)
+
+        if random.random() < self._exploration.get_epsilon(self._timestep):
+            action = random.randrange(self._num_actions)
+        else:
+            action = np.argmax(qvalue)
+
+        self._update_observ_action(observ, action)
+
+        return action
 
     def _reset(self):
-        pass
+        self._observ = None
+        self._action = None
 
     @property
     def sess(self):
