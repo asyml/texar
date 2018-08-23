@@ -28,7 +28,7 @@ class EpisodicAgentBase(AgentBase):
     """Base class inherited by episodic RL agents.
 
     An agent is a wrapper of the **training process** that trains a model
-    with RL algorithms.
+    with RL algorithms. Agent itself does not create new trainable variables.
 
     An episodic RL agent typically provides 3 interfaces, namely, :meth:`reset`,
     :meth:`get_action` and :meth:`observe`, and is used as the following

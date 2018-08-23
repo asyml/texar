@@ -77,22 +77,30 @@ if __name__ == "__main__":
         embedding=tgt_embeds,
         hparams=decoder_hparams)
     tgt_inputs_padding = tf.to_float(tf.equal(decoder_input, 0))
+    tgt_lens = tf.reduce_sum(1 - tgt_inputs_padding, axis=1)
     tgt_inputs_embedding = tf.multiply(
         word_embedder(decoder_input),
         tf.expand_dims(1 - tgt_inputs_padding, 2)
     )
-    logits, preds = decoder(
-        encoder_output,
-        src_lens,
+    output, _ = decoder(
+        memory=encoder_output,
+        memory_sequence_length=src_lens,
+        memory_attention_bias=None,
         inputs=tgt_inputs_embedding,
+        inputs_length=tgt_lens,
         decoding_strategy='train_greedy',
         mode=tf.estimator.ModeKeys.TRAIN
     )
+    logits, preds = output.logits, output.sample_id
     predictions = decoder(
-        encoder_output,
-        src_lens,
+        memory=encoder_output,
+        memory_sequence_length=src_lens,
+        memory_attention_bias=None,
         inputs=None,
+        inputs_length=None,
         decoding_strategy='infer_greedy',
+        start_token=1,
+        end_token=2,
         mode=tf.estimator.ModeKeys.PREDICT
     )
     mle_loss = transformer_utils.smoothing_cross_entropy(logits, \
@@ -129,7 +137,7 @@ if __name__ == "__main__":
                 tx.global_mode(): tf.estimator.ModeKeys.EVAL,
             }
             fetches = {
-                'predictions': predictions['sampled_ids'][:, 0, :],
+                'predictions': predictions['sampled_ids'][:, :, 0],
             }
             _fetches = sess.run(fetches, feed_dict=_feed_dict)
             hypotheses.extend(h.tolist() for h in _fetches['predictions'])
@@ -140,10 +148,10 @@ if __name__ == "__main__":
         with codecs.open(outputs_tmp_filename, 'w+', 'utf-8') as tmpfile, \
             codecs.open(refer_tmp_filename, 'w+', 'utf-8') as tmpref:
             for hyp, tgt in zip(hypotheses, references):
-                if decoder._hparams.eos_id in hyp:
-                    hyp = hyp[:hyp.index(decoder._hparams.eos_id)]
-                if decoder._hparams.eos_id in tgt:
-                    tgt = tgt[:tgt.index(decoder._hparams.eos_id)]
+                if decoder._hparams.eos_idx in hyp:
+                    hyp = hyp[:hyp.index(decoder._hparams.eos_idx)]
+                if decoder._hparams.eos_idx in tgt:
+                    tgt = tgt[:tgt.index(decoder._hparams.eos_idx)]
                 tmpfile.write(' '.join([str(i) for i in hyp]) + '\n')
                 tmpref.write(' '.join([str(i) for i in tgt]) + '\n')
         eval_bleu = float(100 * bleu_tool.bleu_wrapper(\
@@ -177,18 +185,18 @@ if __name__ == "__main__":
             }
             fetches = {
                 'target': labels,
-                'predictions': preds,
                 'step': global_step,
                 'train_op': train_op,
                 'mgd': merged,
+                'loss': mle_loss,
             }
             _fetches = sess.run(fetches, feed_dict=_feed_dict)
-            global_step_py, loss, mgd, source, target = \
-                _fetches['step'], _fetches['train_op'], _fetches['mgd'], \
-                _fetches['source'], _fetches['target']
+            global_step_py, loss, mgd, target = \
+                _fetches['step'], _fetches['loss'], _fetches['mgd'], \
+                _fetches['target']
             if global_step_py % 500 == 0:
-                logger.info('step:%s source:%s targets:%s loss:%s', \
-                    global_step_py, source.shape, target.shape, loss)
+                logger.info('step:%s targets:%s loss:%s', \
+                    global_step_py, target.shape, loss)
             writer.add_summary(mgd, global_step=global_step_py)
             if global_step_py == opt_hparams['max_training_steps']:
                 print('reach max training step, loss:{}'.format(loss))
@@ -208,7 +216,7 @@ if __name__ == "__main__":
                 tx.global_mode(): tf.estimator.ModeKeys.EVAL,
             }
             fetches = {
-                'predictions': predictions['sampled_ids'][:, 0, :],
+                'predictions': predictions['sampled_ids'][:, :, 0],
             }
             _fetches = sess.run(fetches, feed_dict=_feed_dict)
             hypotheses.extend(h.tolist() for h in _fetches['predictions'])
