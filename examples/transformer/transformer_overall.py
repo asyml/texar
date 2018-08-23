@@ -28,7 +28,8 @@ if __name__ == "__main__":
         hparams['encoder_hparams'], hparams['decoder_hparams'], \
         hparams['opt_hparams'], hparams['loss_hparams'], hparams['args']
     set_random_seed(args.random_seed)
-
+    beam_width = args.beam_width
+    bos_idx, eos_idx = 1, 2
     # configure the logging module
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
@@ -99,10 +100,16 @@ if __name__ == "__main__":
         inputs=None,
         inputs_length=None,
         decoding_strategy='infer_greedy',
+        beam_width=beam_width,
         start_token=1,
         end_token=2,
         mode=tf.estimator.ModeKeys.PREDICT
     )
+    if beam_width <= 1:
+        infered_ids = predictions[0].sample_id #predictions[0] is the OutputTuple
+    else:
+        infered_ids = predictions['sampled_ids'][:, :, 0]
+
     mle_loss = transformer_utils.smoothing_cross_entropy(logits, \
         labels, args.n_vocab, loss_hparams['label_confidence'])
     mle_loss = tf.reduce_sum(mle_loss * istarget) / tf.reduce_sum(istarget)
@@ -137,7 +144,7 @@ if __name__ == "__main__":
                 tx.global_mode(): tf.estimator.ModeKeys.EVAL,
             }
             fetches = {
-                'predictions': predictions['sampled_ids'][:, :, 0],
+                'predictions': infered_ids,
             }
             _fetches = sess.run(fetches, feed_dict=_feed_dict)
             hypotheses.extend(h.tolist() for h in _fetches['predictions'])
@@ -148,10 +155,10 @@ if __name__ == "__main__":
         with codecs.open(outputs_tmp_filename, 'w+', 'utf-8') as tmpfile, \
             codecs.open(refer_tmp_filename, 'w+', 'utf-8') as tmpref:
             for hyp, tgt in zip(hypotheses, references):
-                if decoder._hparams.eos_idx in hyp:
-                    hyp = hyp[:hyp.index(decoder._hparams.eos_idx)]
-                if decoder._hparams.eos_idx in tgt:
-                    tgt = tgt[:tgt.index(decoder._hparams.eos_idx)]
+                if eos_idx in hyp:
+                    hyp = hyp[:hyp.index(eos_idx)]
+                if eos_idx in tgt:
+                    tgt = tgt[:tgt.index(eos_idx)]
                 tmpfile.write(' '.join([str(i) for i in hyp]) + '\n')
                 tmpref.write(' '.join([str(i) for i in tgt]) + '\n')
         eval_bleu = float(100 * bleu_tool.bleu_wrapper(\
@@ -216,13 +223,13 @@ if __name__ == "__main__":
                 tx.global_mode(): tf.estimator.ModeKeys.EVAL,
             }
             fetches = {
-                'predictions': predictions['sampled_ids'][:, :, 0],
+                'predictions': infered_ids,
             }
             _fetches = sess.run(fetches, feed_dict=_feed_dict)
             hypotheses.extend(h.tolist() for h in _fetches['predictions'])
         for refer, hypo in zip(references, hypotheses):
-            if 2 in hypo:
-                hypo = hypo[:hypo.index(2)]
+            if eos_idx in hypo:
+                hypo = hypo[:hypo.index(eos_idx)]
             rwords.append([args.id2w[y] for y in refer])
             hwords.append([args.id2w[y] for y in hypo])
         outputs_tmp_filename = args.log_dir + \

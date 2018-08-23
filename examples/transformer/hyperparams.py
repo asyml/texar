@@ -106,7 +106,6 @@ def load_hyperparams():
     decoder_hparams['share_embed_and_transform'] = True
     decoder_hparams['transform_with_bias'] = args.affine_bias
     decoder_hparams['maximum_decode_length'] = args.max_decode_len
-    decoder_hparams['beam_width'] = args.beam_width
     loss_hparams = {
         'label_confidence': 0.9,
     }

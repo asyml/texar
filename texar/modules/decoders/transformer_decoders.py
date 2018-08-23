@@ -125,7 +125,6 @@ class TransformerDecoder(ModuleBase):
                     ],
                 },
                 "dim":512,
-                "beam_width":1,
                 "alpha":0,
                 "name":"transformer_decoder",
             }
@@ -139,8 +138,6 @@ class TransformerDecoder(ModuleBase):
         alpha: for length penalty. Refer to
             https://arxiv.org/abs/1609.08144.
         maximum_decode_length: The maximum length when decoding.
-        beam_width: When setting as 1, use greedy decoding when testing,
-            when it's larger than 1, use beam search strategy.
         The meaning of other parameters are similar to TransformerEncoder
         """
         return {
@@ -183,7 +180,6 @@ class TransformerDecoder(ModuleBase):
 		],
             },
             'dim':512,
-            "beam_width":1,
             'alpha':0,
             "name":"decoder",
         }
@@ -234,6 +230,7 @@ class TransformerDecoder(ModuleBase):
                inputs,
                inputs_length,
                decoding_strategy,
+               beam_width=1,
                start_token=None,
                end_token=None,
                mode=None):
@@ -255,9 +252,10 @@ class TransformerDecoder(ModuleBase):
                 'train_greedy': For training with ground truth.
                 'infer_greedy': For greedy decoding without ground truth.
                 'infer_sample': For sampling decoding without ground truth.
+            beam_width:
                 if the beam_width of the decoder is larger than 1,
-                    use beam decoding regardless of decoding strategy if
-                    ground truth is not provided.
+                use beam decoding regardless of decoding strategy if
+                ground truth is not provided.
             start_token:
                 The index of <BOS> token in the dictionary.
             end_token:
@@ -313,7 +311,6 @@ class TransformerDecoder(ModuleBase):
         else:
             # Decoding when ground truth is not provided
             batch_size = tf.shape(memory_attention_bias)[0]
-            beam_width = self._hparams.beam_width
             maximum_decode_length = self.hparams.maximum_decode_length
             start_tokens = tf.fill([batch_size], start_token)
             if beam_width <= 1:
