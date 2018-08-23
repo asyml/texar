@@ -4,6 +4,17 @@
 Agents
 *******
 
+
+Sequence Agents
+=================
+
+:hidden:`SeqPGAgent`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.agents.SeqPGAgent
+    :members:
+    :inherited-members:
+
+
 Episodic Agents
 =================
 

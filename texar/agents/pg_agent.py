@@ -57,6 +57,7 @@ class PGAgent(EpisodicAgentBase):
             :func:`~texar.agents.get_gym_env_config` to create an EnvConfig
             from a gym environment.
         sess (optional): A tf session.
+            Can be `None` here and set later with `agent.sess = session`.
         policy (optional): A policy net that takes in observation and outputs
             actions and probabilities.
         policy_kwargs (dict, optional): Keyword arguments for policy
@@ -68,7 +69,7 @@ class PGAgent(EpisodicAgentBase):
             calling the policy to get actions. The policy is called with
             :python:`outputs=policy(inputs=observation, **policy_caller_kwargs)`
         learning_rate (optional): Learning rate for policy optimization. If
-            not given, determine the learning rate for :attr:`hparams`.
+            not given, determine the learning rate from :attr:`hparams`.
             See :func:`~texar.core.get_train_op` for more details.
         hparams (dict or HParams, optional): Hyperparameters. Missing
             hyperparamerter will be set to default values. See

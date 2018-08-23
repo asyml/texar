@@ -54,7 +54,8 @@ def discount_reward(reward,
             will be masked. Required if :attr:`reward` is 1D.
         discount (float): A scalar. The discount factor.
         normalize (bool): Whether to normalize the discounted reward, by
-            `(discounted_reward - mean) / std`.
+            `(discounted_reward - mean) / std`. Here `mean` and `std` are
+            over all time steps and all samples in the batch.
         dtype (dtype): Type of :attr:`reward`. If `None`, infer from
             `reward` automatically.
         tensor_rank (int): The number of dimensions of :attr:`reward`.
