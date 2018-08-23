@@ -89,14 +89,9 @@ def load_hyperparams():
         }
     }
     encoder_hparams = {
-        'embedding_dropout': 0.1,
         'position_embedder_hparams': {
             'name': 'sinusoids',
         },
-        'attention_dropout': 0.1,
-        'residual_dropout': 0.1,
-        'num_blocks': 6,
-        'num_heads': 8,
         'dim': args.hidden_dim,
         'initializer': {
             'type': 'variance_scaling_initializer',
@@ -105,35 +100,6 @@ def load_hyperparams():
                 'mode':'fan_avg',
                 'distribution':'uniform',
             },
-        },
-        'poswise_feedforward': {
-            'name':'ffn',
-            'layers':[
-                {
-                    'type':'Dense',
-                    'kwargs': {
-                        'name':'conv1',
-                        'units':args.hidden_dim*4,
-                        'activation':'relu',
-                        'use_bias':True,
-                    }
-                },
-                {
-                    'type':'Dropout',
-                    'kwargs': {
-                        #TODO(haoran): this dropout may be tuned
-                        'rate': 0.1,
-                    }
-                },
-                {
-                    'type':'Dense',
-                    'kwargs': {
-                        'name':'conv2',
-                        'units':args.hidden_dim,
-                        'use_bias':True,
-                        }
-                }
-            ],
         },
     }
     decoder_hparams = copy.deepcopy(encoder_hparams)

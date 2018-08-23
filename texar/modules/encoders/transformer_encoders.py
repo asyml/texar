@@ -75,7 +75,34 @@ class TransformerEncoder(EncoderBase):
                 "embedding_dropout": 0.1,
                 "attention_dropout": 0.1,
                 "residual_dropout": 0.1,
-                "poswise_feedforward": None,
+                'poswise_feedforward': {
+                    'name':'ffn',
+                    'layers':[
+                        {
+                            'type':'Dense',
+                            'kwargs': {
+                                'name':'conv1',
+                                'units':2048,
+                                'activation':'relu',
+                                'use_bias':True,
+                            }
+                        },
+                        {
+                            'type':'Dropout',
+                            'kwargs': {
+                                'rate': 0.1,
+                            }
+                        },
+                        {
+                            'type':'Dense',
+                            'kwargs': {
+                                'name':'conv2',
+                                'units':512,
+                                'use_bias':True,
+                                }
+                        }
+                    ],
+                },
                 "initializer": None,
                 "name": "transformer_encoder"
             }
