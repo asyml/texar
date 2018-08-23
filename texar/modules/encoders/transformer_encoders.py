@@ -27,7 +27,7 @@ from texar.modules.embedders.position_embedders import SinusoidsPositionEmbedder
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.networks.networks import FeedForwardNetwork
 from texar import utils
-from texar.utils.shapes import shape_list
+from texar.utils.shapes import shape_list, mask_sequences
 from texar.utils.mode import is_train_mode
 
 # pylint: disable=too-many-locals, invalid-name
@@ -70,8 +70,7 @@ class TransformerEncoder(EncoderBase):
             {
                 "num_blocks": 6,
                 "num_heads": 8,
-                "num_units": 512,
-                "multiply_embedding_mode": "sqrt_depth",
+                "dim": 512,
                 "position_embedder_hparams": None,
                 "embedding_dropout": 0.1,
                 "attention_dropout": 0.1,
@@ -89,13 +88,8 @@ class TransformerEncoder(EncoderBase):
         "num_heads" : int
             Number of heads for attention calculation.
 
-        "num_units" : int
+        "dim" : int
             The dimension the embeddings and encoded vectors.
-
-        "multiply_embedding_mode" : str
-            'sqrt_depth' is a normalization method
-            for the following attention calculation, multiplying each
-            embedding to the sqrt of its dimension.
 
         "position_embedder_hparams" : dict
             Hyperparameters of a
@@ -127,51 +121,79 @@ class TransformerEncoder(EncoderBase):
         """
         return {
             'initializer': None,
-            'multiply_embedding_mode': 'sqrt_depth',
-            "position_embedder": None,
+            "position_embedder_hparams": None,
             'embedding_dropout': 0.1,
             'attention_dropout': 0.1,
             'residual_dropout': 0.1,
             'num_blocks': 6,
             'num_heads': 8,
-            'poswise_feedforward': None,
-            'num_units': 512,
+            'poswise_feedforward': {
+		'name':'ffn',
+		'layers':[
+		    {
+			'type':'Dense',
+			'kwargs': {
+			    'name':'conv1',
+			    'units':2048,
+			    'activation':'relu',
+			    'use_bias':True,
+			}
+		    },
+		    {
+			'type':'Dropout',
+			'kwargs': {
+			    'rate': 0.1,
+			}
+		    },
+		    {
+			'type':'Dense',
+			'kwargs': {
+			    'name':'conv2',
+			    'units':512,
+			    'use_bias':True,
+			    }
+		    }
+		],
+            },
+            'dim': 512,
             "name": "transformer_encoder",
         }
 
     # pylint: disable=arguments-differ
-    def _build(self, inputs, inputs_padding, mode=None):
+    def _build(self, inputs, sequence_length, mode=None):
         """Encodes the inputs.
 
         Args:
             inputs: A 3D Tensor of shape `[batch_size, max_time, dim]`,
                 containing the word embeddings of input sequences.
-            inputs_padding: A 2D Tensor of shape `[batch_size, max_time]`
-                indicating which positions in :attr:`inputs` are paddings.
+            sequence_length: A 1D Tensor of shape `[batch_size]`
             mode (optional): A tensor taking value in
-                :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
-                `TRAIN`, `EVAL`, and `PREDICT`. Used to toggle dropout.
+                :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`,
+                including `TRAIN`, `EVAL`, and `PREDICT`. Used to toggle
+                dropout.
                 If `None` (default), :func:`texar.global_mode` is used.
 
         Returns:
             A tuple (encoder_output, encoder_decoder_attention_bias), where
 
-            - **encoder_output**: The encoded vectors
+            - **encoder_output**: The encoded vectors, a 3D Tensor of shape
+                `[batch_size, max_time, dim]
             - **encoder_decoder_attention_bias**: The masks that indicate which\
             positions in the inputs are not padding.
         """
-        if self._hparams.multiply_embedding_mode == 'sqrt_depth':
-            inputs = inputs * self._hparams.num_units**0.5
+        #multiply embedding with the sqrt of its dimention for normalization
+        inputs = inputs * self._hparams.dim**0.5
 
         _, lengths, _ = shape_list(inputs)
-
+        #inputs_padding: 1 for padding and 0 for valid tokens
+        inputs_padding = 1 - mask_sequences(inputs, sequence_length)[:, :, 0]
         ignore_padding = attentions.attention_bias_ignore_padding(
             inputs_padding)
         encoder_self_attention_bias = ignore_padding
         encoder_decoder_attention_bias = ignore_padding
 
         pos_embeds = self.position_embedder(lengths,
-                                            self._hparams.num_units)
+                                            self._hparams.dim)
         input_embedding = inputs + pos_embeds
 
         x = tf.layers.dropout(input_embedding,
@@ -188,7 +210,7 @@ class TransformerEncoder(EncoderBase):
                         memory_attention_bias=encoder_self_attention_bias,
                         num_heads=self._hparams.num_heads,
                         dropout_rate=self._hparams.attention_dropout,
-                        num_units=self._hparams.num_units,
+                        num_units=self._hparams.dim,
                         scope='multihead_attention'
                     )
                     x = x + tf.layers.dropout(
@@ -202,7 +224,7 @@ class TransformerEncoder(EncoderBase):
                 with tf.variable_scope(poswise_network.variable_scope):
                     y = layers.layer_normalize(x)
                     original_shape = shape_list(y)
-                    y = tf.reshape(y, [-1, self._hparams.num_units])
+                    y = tf.reshape(y, [-1, self._hparams.dim])
                     y = tf.expand_dims(pad_remover.remove(y), axis=0)
                     #[1, batch_size*seq_length, hidden_dim]
                     sub_output = tf.layers.dropout(

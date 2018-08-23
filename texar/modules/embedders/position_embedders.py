@@ -230,15 +230,15 @@ class SinusoidsPositionEmbedder(EmbedderBase):
     This allows attention to learn to use absolute and relative positions.
 
     Timing signals should be added to some precursors of both the query
-    and thememory inputs to attention.
+    and the memory inputs to attention.
     The use of relative position is possible because sin(x+y) and
     cos(x+y) can be experessed in terms of y, sin(x) and cos(x).
     In particular, we use a geometric sequence of timescales starting with
     min_timescale and ending with max_timescale.  The number of different
-    timescales is equal to channels / 2. For each timescale, we
+    timescales is equal to dim / 2. For each timescale, we
     generate the two sinusoidal signals sin(timestep/timescale) and
     cos(timestep/timescale).  All of these sinusoids are concatenated in
-    the channels dimension.
+    the dim dimension.
 
     .. document private functions
     .. automethod:: _build
@@ -250,7 +250,7 @@ class SinusoidsPositionEmbedder(EmbedderBase):
         """Returns a dictionary of hyperparameters with default values
         We use a geometric sequence of timescales starting with
         min_timescale and ending with max_timescale. The number of different
-        timescales is equal to channels/2.
+        timescales is equal to dim/2.
 
         .. code-block:: python
 
@@ -267,15 +267,17 @@ class SinusoidsPositionEmbedder(EmbedderBase):
         }
         return hparams
 
-    def _build(self, length, channels):
+    def _build(self, position_size, dim):
         """Embeds.
 
         Args:
-            length:
-            channels:
+            position_size: The number of positions, generally the max sequence length.
+            dim: The dimension of the position embedding.
+        Returns:
+            A `Tensor` of shape `[1, position_size, dim]`.
         """
-        position = tf.to_float(tf.range(length))
-        num_timescales = channels // 2
+        position = tf.to_float(tf.range(position_size))
+        num_timescales = dim // 2
         min_timescale = self._hparams.min_timescale
         max_timescale = self._hparams.max_timescale
         log_timescale_increment = (
@@ -286,8 +288,8 @@ class SinusoidsPositionEmbedder(EmbedderBase):
         scaled_time = tf.expand_dims(position, 1) \
             * tf.expand_dims(inv_timescales, 0)
         signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=1)
-        signal = tf.pad(signal, [[0, 0], [0, tf.mod(channels, 2)]])
-        signal = tf.reshape(signal, [1, length, channels])
+        signal = tf.pad(signal, [[0, 0], [0, tf.mod(dim, 2)]])
+        signal = tf.reshape(signal, [1, position_size, dim])
 
         return signal
 
