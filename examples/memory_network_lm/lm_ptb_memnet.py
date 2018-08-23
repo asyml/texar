@@ -27,7 +27,7 @@ If data is now provided, the program will download from above automatically.
 To run:
 
 $ python lm_ptb_memnet.py --data_path=simple-examples/data \
-  --config=config_memnet
+  --config=config
 
 This code will automatically save and restore from directory `ckpt/`.
 If the directory doesn't exist, then it will create it and initialize model.
@@ -59,7 +59,7 @@ flags.DEFINE_string("data_path", "./",
                     "E.g., ./simple-examples/data. If not exists, "
                     "the directory will be created and PTB raw data will "
                     "be downloaded.")
-flags.DEFINE_string("config", "config_memnet", "The config to use.")
+flags.DEFINE_string("config", "config", "The config to use.")
 flags.DEFINE_float("lr", None, "Initial learning rate")
 
 FLAGS = flags.FLAGS
