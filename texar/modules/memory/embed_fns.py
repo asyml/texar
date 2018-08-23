@@ -20,86 +20,55 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
-
-from texar.modules.embedders import WordEmbedder, PositionEmbedder
+# pylint: disable=invalid-name, too-many-arguments
 
 __all__ = [
-    'default_embed_fn',
-    'get_default_embed_fn_hparams',
+    'default_memnet_embed_fn_hparams',
 ]
 
-def get_default_embed_fn_hparams():
+def default_memnet_embed_fn_hparams():
     """Returns a dictionary of hyperparameters with default hparams for
     :func:`~texar.modules.memory.default_embed_fn`
 
-    Returns:
-        .. code-block:: python
+    .. code-block:: python
 
-            {
-                "memory_size": 100,
-                "embedding": {
-                    "name": "embedding",
-                    "dim": 100,
-                    "initializer": None, # use default initializer
-                    "dropout_rate": 0
-                }
-                "temporal_embedding": {
-                    "name": "temporal_embedding",
-                    "dim": 100,
-                    "initializer": None, # use default initializer
-                    "dropout_rate": 0
-                }
-            }
+        {
+            "embedding": {
+                "dim": 100
+            },
+            "temporal_embedding": {
+                "dim": 100
+            },
+            "combine_mode": "add"
+        }
+
+    Here:
+
+    "embedding" : dict, optional
+        Hyperparameters for embedding operations. See
+        :meth:`~texar.modules.WordEmbedder.default_hparams` of
+        :class:`~texar.modules.WordEmbedder` for details. If `None`, the
+        default hyperparameters are used.
+
+    "temporal_embedding" : dict, optional
+        Hyperparameters for temporal embedding operations. See
+        :meth:`~texar.modules.PositionEmbedder.default_hparams` of
+        :class:`~texar.modules.PositionEmbedder` for details. If `None`, the
+        default hyperparameters are used.
+
+    "combine_mode" : str
+        Either **'add'** or **'concat'**. If 'add', memory
+        embedding and temporal embedding are added up. In this case the two
+        embedders must have the same dimension. If 'concat', the two
+        embeddings are concated.
     """
     return {
-        "memory_size": 100,
         "embedding": {
-            "name": "embedding",
-            "dim": 100,
-            "initializer": None,
-            "dropout_rate": 0
+            "dim": 100
         },
         "temporal_embedding": {
-            "name": "temporal_embedding",
-            "dim": 100,
-            "dropout_rate": 0
-        }
+            "dim": 100
+        },
+        "combine_mode": "add"
     }
 
-def default_embed_fn(memory, soft_memory, vocab_size, hparams):
-    """Default embed function for A, C or B operation.
-
-    Args:
-        memory: Memory indices used for embedding lookup.
-        vocab_size(int): Size of vocabulary used for embedding.
-        hparams(HParams or dict): Hyperparameters of this function.
-            See :func:`~texar.modules.memory.get_default_embed_fn_hparams`.
-
-    Returns:
-        Result of the memory operation.
-        In this case, :attr:`embedded_memory + temporal_embedding`.
-    """
-    if memory is None and soft_memory is None:
-        raise ValueError("Either `memory` or `soft_memory` is required.")
-    if memory is not None and soft_memory is not None:
-        raise ValueError(
-            "Must not specify `memory` and `soft_memory` at the same time.")
-
-    memory_size = hparams["memory_size"]
-
-    embedding = WordEmbedder(
-        vocab_size=vocab_size,
-        hparams=hparams["embedding"]
-    )
-    embedded_memory = embedding(ids=memory, soft_ids=soft_memory)
-
-    # temporal embedding
-    temporal_embedding = PositionEmbedder(
-        position_size=memory_size,
-        hparams=hparams["temporal_embedding"]
-    )
-    temporal_embedded = temporal_embedding(
-        sequence_length=tf.constant([memory_size]))
-
-    return tf.add(embedded_memory, temporal_embedded)

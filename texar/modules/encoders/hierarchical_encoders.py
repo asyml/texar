@@ -214,7 +214,7 @@ class HierarchicalRNNEncoder(EncoderBase):
                 such as `initial_state`, etc.
                 Note that `sequence_length`, and `time_major`
                 must not be included here.
-                `time_major` is derived from `order` automatically.
+                `time_major` is derived from :attr:`order` automatically.
                 By default, arguments will be sent to both major and minor
                 encoders. To specify which encoder an argument should be sent
                 to, add '_minor'/'_major' as its suffix.
@@ -222,10 +222,14 @@ class HierarchicalRNNEncoder(EncoderBase):
                 Note that `initial_state_minor` must have a batch dimension
                 of size `B*T`. If you have an initial state of batch dimension
                 = `T`, use :meth:`tile_initial_state_minor` to tile it
-                according to order and then to be used here.
+                according to `order`.
 
         Returns:
             A tuple `(outputs, final_state)` by the major encoder.
+
+            See
+            the return values of `_build()` method of respective encoder class
+            for details.
         """
 
         def _kwargs_split(kwargs):
