@@ -82,7 +82,7 @@ def _main(_):
     initializer = tf.random_normal_initializer(
         stddev=config.initialize_stddev)
     with tf.variable_scope("model", initializer=initializer):
-        memnet = tx.modules.MemNetRNNLike(vocab_size=vocab_size,
+        memnet = tx.modules.MemNetRNNLike(raw_memory_dim=vocab_size,
                                           hparams=config.memnet)
         queries = tf.fill([tf.shape(inputs)[0], config.dim],
                           config.query_constant)

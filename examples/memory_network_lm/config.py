@@ -16,7 +16,7 @@
 
 n_hops = 7
 dim = 150
-reludim = dim // 2
+relu_dim = dim // 2
 batch_size = 128
 num_epochs = 200
 memory_size = 200
@@ -37,7 +37,6 @@ opt = {
 }
 
 embed = {
-    "memory_size": memory_size,
     "embedding": {
         "dim": dim,
     },
@@ -48,14 +47,8 @@ embed = {
 
 memnet = {
     "n_hops": n_hops,
-    "dim": dim,
-    "reludim": reludim,
+    "relu_dim": relu_dim,
     "memory_size": memory_size,
-    "need_H": True,
-    "final_matrix": {
-        "dim": dim,
-    },
     "A": embed,
     "C": embed,
-    "variational": False
 }
