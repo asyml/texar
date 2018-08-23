@@ -515,8 +515,8 @@ class MemNetRNNLike(MemNetBase):
                 relued_part = tf.nn.relu(relu_part)
                 u_ = tf.concat(axis=1, values=[linear_part, relued_part])
             else:
-                raise Exception("relu_dim = {} is illegal".format(
-                    self._relu_dim))
+                raise ValueError(
+                    "relu_dim = {} is illegal".format(self._relu_dim))
             if self.hparams.variational:
                 u_ = _variational_dropout(u_)
             else:
