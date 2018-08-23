@@ -121,14 +121,16 @@ class MemNetBase(ModuleBase):
             (Sukhbaatar et al.)
             If not provided, a default embedding operation is created as
             specified in :attr:`hparams`. See
-            :func:`~texar.modules.default_memnet_embed_fn` for details.
+            :meth:`~texar.modules.MemNetBase.get_default_embed_fn`
+            for details.
         output_embed_fn (optional): A callable that embeds raw memory entries
             as outputs.
             This corresponds to the `C` embedding operation in
             (Sukhbaatar et al.)
             If not provided, a default embedding operation is created as
             specified in :attr:`hparams`. See
-            :func:`~texar.modules.default_memnet_embed_fn` for details.
+            :meth:`~texar.modules.MemNetBase.get_default_embed_fn`
+            for details.
         query_embed_fn (optional): A callable that embeds query.
             This corresponds to the `B` embedding operation in
             (Sukhbaatar et al.). If not provided and "use_B" is True
