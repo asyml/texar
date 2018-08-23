@@ -89,17 +89,10 @@ def load_hyperparams():
         }
     }
     encoder_hparams = {
-        'multiply_embedding_mode': "sqrt_depth",
-        'embedding_dropout': 0.1,
-        'position_embedder': {
+        'position_embedder_hparams': {
             'name': 'sinusoids',
-            'hparams': None,
         },
-        'attention_dropout': 0.1,
-        'residual_dropout': 0.1,
-        'num_blocks': 6,
-        'num_heads': 8,
-        'num_units': args.hidden_dim,
+        'dim': args.hidden_dim,
         'initializer': {
             'type': 'variance_scaling_initializer',
             'kwargs': {
@@ -108,42 +101,12 @@ def load_hyperparams():
                 'distribution':'uniform',
             },
         },
-        'poswise_feedforward': {
-            'name':'ffn',
-            'layers':[
-                {
-                    'type':'Dense',
-                    'kwargs': {
-                        'name':'conv1',
-                        'units':args.hidden_dim*4,
-                        'activation':'relu',
-                        'use_bias':True,
-                    }
-                },
-                {
-                    'type':'Dropout',
-                    'kwargs': {
-                        #TODO(haoran): this dropout may be tuned
-                        'rate': 0.1,
-                    }
-                },
-                {
-                    'type':'Dense',
-                    'kwargs': {
-                        'name':'conv2',
-                        'units':args.hidden_dim,
-                        'use_bias':True,
-                        }
-                }
-            ],
-        },
     }
     decoder_hparams = copy.deepcopy(encoder_hparams)
     decoder_hparams['share_embed_and_transform'] = True
     decoder_hparams['transform_with_bias'] = args.affine_bias
     decoder_hparams['maximum_decode_length'] = args.max_decode_len
     decoder_hparams['beam_width'] = args.beam_width
-    decoder_hparams['sampling_method'] = 'argmax'
     loss_hparams = {
         'label_confidence': 0.9,
     }

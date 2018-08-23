@@ -32,7 +32,7 @@ from texar.module_base import ModuleBase
 from texar.modules.networks.networks import FeedForwardNetwork
 from texar.modules.embedders.position_embedders import SinusoidsPositionEmbedder
 from texar.utils import beam_search
-from texar.utils.shapes import shape_list
+from texar.utils.shapes import shape_list, mask_sequences
 from texar.utils import transformer_attentions as attentions
 from texar.utils.mode import is_train_mode, is_train_mode_py
 
@@ -86,20 +86,45 @@ class TransformerDecoder(ModuleBase):
         .. code-block:: python
 
             {
-                "sampling_method": "argmax",
                 "initializer": None,
-                "multiply_embedding_mode": "sqrt_depth",
                 "position_embedder_hparams": None,
                 "share_embed_and_transform": True,
                 "transform_with_bias": True,
                 "num_heads":8,
                 "num_blocks":6,
-                "maximum_decode_length":10,
+                "maximum_decode_length":256,
                 "embedding_dropout":0.1,
                 "attention_dropout":0.1,
                 "residual_dropout":0.1,
-                "poswise_feedforward":None,
-                "num_units":512,
+                'poswise_feedforward': {
+                    'name':'ffn',
+                    'layers':[
+                        {
+                            'type':'Dense',
+                            'kwargs': {
+                                'name':'conv1',
+                                'units':2048,
+                                'activation':'relu',
+                                'use_bias':True,
+                            }
+                        },
+                        {
+                            'type':'Dropout',
+                            'kwargs': {
+                                'rate': 0.1,
+                            }
+                        },
+                        {
+                            'type':'Dense',
+                            'kwargs': {
+                                'name':'conv2',
+                                'units':512,
+                                'use_bias':True,
+                                }
+                        }
+                    ],
+                },
+                "dim":512,
                 "eos_idx": 2,
                 "bos_idx": 1,
                 "beam_width":1,
@@ -109,9 +134,6 @@ class TransformerDecoder(ModuleBase):
 
         Here:
 
-        sampling_method: argmax or sample. To choose the function
-            transforming the logits to the sampled id in the next position
-            when inferencing.
         share_embed_and_transform: Choose whether to share the projection
             vector from hidden vector to logits and the word embeddings.
         transform_with_bias: Whether to apply an additional bias vector
@@ -127,25 +149,50 @@ class TransformerDecoder(ModuleBase):
         The meaning of other parameters are similar to TransformerEncoder
         """
         return {
-            'sampling_method': 'argmax',
             'initializer': None,
-            'multiply_embedding_mode': 'sqrt_depth',
             'position_embedder_hparams': None,
             'share_embed_and_transform': True,
             'transform_with_bias': True,
             "num_heads":8,
             "num_blocks":6,
-            "maximum_decode_length":10,
+            "maximum_decode_length":256,
             "embedding_dropout":0.1,
             'attention_dropout':0.1,
             'residual_dropout':0.1,
-            'poswise_feedforward':None,
-            'num_units':512,
+            'poswise_feedforward': {
+		'name':'ffn',
+		'layers':[
+		    {
+			'type':'Dense',
+			'kwargs': {
+			    'name':'conv1',
+			    'units':2048,
+			    'activation':'relu',
+			    'use_bias':True,
+			}
+		    },
+		    {
+			'type':'Dropout',
+			'kwargs': {
+			    'rate': 0.1,
+			}
+		    },
+		    {
+			'type':'Dense',
+			'kwargs': {
+			    'name':'conv2',
+			    'units':512,
+			    'use_bias':True,
+			    }
+		    }
+		],
+            },
+            'dim':512,
             'eos_idx': 2,
             'bos_idx': 1,
             "beam_width":1,
             'alpha':0,
-            "name":"transformer_decoder",
+            "name":"decoder",
         }
 
     def _prepare_tokens_to_embeds(self, tokens):
@@ -168,10 +215,8 @@ class TransformerDecoder(ModuleBase):
         def _impl(ids, step, cache):
             ids = ids[:, -1:]
             inputs = embedding_fn(ids)
-            if self._hparams.multiply_embedding_mode == 'sqrt_depth':
-                inputs *= self._embedding.shape.as_list()[-1]**0.5
-            else:
-                assert NotImplementedError
+            # multiply embedding by sqrt of its dimention
+            inputs *= self._embedding.shape.as_list()[-1]**0.5
             inputs += timing_signal[:, step:step+1]
 
             """
@@ -192,8 +237,9 @@ class TransformerDecoder(ModuleBase):
 
     def _build(self,    # pylint: disable=arguments-differ
                encoder_output,
-               encoder_decoder_attention_bias,
-               target_inputs,
+               src_sequence_length,
+               inputs,
+               decoding_strategy,
                mode=None):
         """
         This function is called on training generally.
@@ -202,7 +248,7 @@ class TransformerDecoder(ModuleBase):
             encoder_output: [batch_size, source_length, channels]
             encoder_decoder_attention_bias: The attention bias set as a
                 huge negative value if the position is padding.
-            target_inputs: Passed when training.
+            inputs: Passed when training.
                 Should be None when testing.
             mode: A python string (not a tensor), control the graph running
                 flow of training or testing.
@@ -211,19 +257,24 @@ class TransformerDecoder(ModuleBase):
             logits: [batch_size, target_length, vocab_size]
             preds: [batch_size, target_length]
         """
+        enc_padding = 1 - mask_sequences(tf.ones_like(encoder_output),
+                                         src_sequence_length,
+                                         tensor_rank=3)[:, :, 0]
+        encoder_decoder_attention_bias = attentions.attention_bias_ignore_padding(
+            enc_padding)
         if is_train_mode_py(mode):
             """
             Mask the attention on future positions
             """
+            assert decoding_strategy == 'train_greedy'
             decoder_self_attention_bias = (
                 attentions.attention_bias_lower_triangle(
-                    shape_list(target_inputs)[1]))
-            if self._hparams.multiply_embedding_mode == 'sqrt_depth':
-                target_inputs = target_inputs * \
-                    (self._embedding.shape.as_list()[-1]**0.5)
-            lengths = shape_list(target_inputs)[1]
-            channels = shape_list(target_inputs)[2]
+                    shape_list(inputs)[1]))
+            target_inputs = inputs * self._hparams.dim**0.5
+
+            _, lengths, channels= shape_list(target_inputs)
             pos_embeds = self.position_embedder(lengths, channels)
+
             inputs = target_inputs + pos_embeds
 
             decoder_output = self._self_attention_stack(
@@ -245,7 +296,7 @@ class TransformerDecoder(ModuleBase):
             batch_size = tf.shape(encoder_decoder_attention_bias)[0]
             beam_width = self._hparams.beam_width
             maximum_decode_length = self.hparams.maximum_decode_length
-            start_tokens = tf.fill([batch_size], 1)
+            start_tokens = tf.fill([batch_size], self._hparams.bos_idx)
             if beam_width <= 1:
                 sampled_ids, log_probs = self._greedy_decode(
                     self._prepare_tokens_to_embeds,
@@ -254,7 +305,8 @@ class TransformerDecoder(ModuleBase):
                     decode_length=maximum_decode_length,
                     memory=encoder_output,
                     encoder_decoder_attention_bias=\
-                        encoder_decoder_attention_bias
+                        encoder_decoder_attention_bias,
+                    decoding_strategy=decoding_strategy,
                 )
             else:
                 sampled_ids, log_probs = self._beam_decode(
@@ -305,7 +357,7 @@ class TransformerDecoder(ModuleBase):
                         queries=layers.layer_normalize(x),
                         memory=None,
                         memory_attention_bias=decoder_self_attention_bias,
-                        num_units=self._hparams.num_units,
+                        num_units=self._hparams.dim,
                         num_heads=self._hparams.num_heads,
                         dropout_rate=self._hparams.attention_dropout,
                         cache=layer_cache,
@@ -323,7 +375,7 @@ class TransformerDecoder(ModuleBase):
                             memory=encoder_output,
                             memory_attention_bias=
                             encoder_decoder_attention_bias,
-                            num_units=self._hparams.num_units,
+                            num_units=self._hparams.dim,
                             num_heads=self._hparams.num_heads,
                             dropout_rate=self._hparams.attention_dropout,
                             scope="multihead_attention"
@@ -343,7 +395,7 @@ class TransformerDecoder(ModuleBase):
 
         return layers.layer_normalize(x)
 
-    def _build_output_layer(self, num_units):
+    def _build_output_layer(self, dim):
         if self._hparams.share_embed_and_transform:
             if self._hparams.transform_with_bias:
                 with tf.variable_scope(self.variable_scope):
@@ -353,7 +405,7 @@ class TransformerDecoder(ModuleBase):
                 affine_bias = None
             def outputs_to_logits(outputs):
                 shape = shape_list(outputs)
-                outputs = tf.reshape(outputs, [-1, num_units])
+                outputs = tf.reshape(outputs, [-1, dim])
                 logits = tf.matmul(outputs, self._embedding, transpose_b=True)
                 if affine_bias is not None:
                     logits += affine_bias
@@ -363,7 +415,7 @@ class TransformerDecoder(ModuleBase):
         else:
             layer = tf.layers.Dense(self._vocab_size, \
                 use_bias=self._hparams.transform_with_bias)
-            layer.build([None, num_units])
+            layer.build([None, dim])
             return layer
 
     @property
@@ -408,7 +460,8 @@ class TransformerDecoder(ModuleBase):
                        eos,
                        decode_length,
                        memory,
-                       encoder_decoder_attention_bias):
+                       encoder_decoder_attention_bias,
+                       decoding_strategy):
         batch_size = tf.shape(start_tokens)[0]
         finished = tf.fill([batch_size], False)
         step = tf.constant(0)
@@ -428,9 +481,9 @@ class TransformerDecoder(ModuleBase):
             log_probs = logits - \
                 tf.reduce_logsumexp(logits, axis=-1, keep_dims=True)
 
-            if self._hparams.sampling_method == 'argmax':
+            if decoding_strategy == 'infer_greedy':
                 next_id = tf.argmax(logits, -1, output_type=tf.int32)
-            elif self._hparams.sampling_method == 'sample':
+            elif decoding_strategy == 'infer_sample':
                 next_id = tf.multinomial(logits, 1).squeeze(axis=1)
             finished |= tf.equal(next_id, eos)
             log_prob_indices = tf.stack(

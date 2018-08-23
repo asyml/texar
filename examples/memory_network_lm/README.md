@@ -16,11 +16,11 @@ If data does not exist under `data_path`, the program will automatically downloa
 The following cmd trains the model:
 
 ```bash
-python3 lm_ptb_memnet.py --config config_memnet --data_path ./
+python3 lm_ptb_memnet.py --config config --data_path ./
 ```
 
 Here:
-  * `--config` specifies the config file to use. E.g., the above use the configuration defined in [config_memnet.py](./config_memnet.py).
+  * `--config` specifies the config file to use. E.g., the above use the configuration defined in [config.py](./config.py).
   * `--data_path` specifies the directory containing PTB raw data (e.g., `ptb.train.txt`). If the data files do not exist, the program will automatically download, extract, and pre-process the data.
   * `--lr` specifies the initial learning rate. If not specified, the program will use the learning rate in the config file.
 
@@ -28,11 +28,7 @@ The model will begin training, and will evaluate on the validation data periodic
 
 ## Configurations ##
 
-There are two config files in this directory: [config.py](./config.py) and [config_memnet.py](./config_memnet.py).
-
 [config.py](./config.py) is the largest and best configuration described on the last line of Table 2 in [(Sukhbaatar, et. al.) End-To-End Memory Networks](https://arxiv.org/pdf/1503.08895v4.pdf). It sets number of hops to 7, hidden dim to 150, and memory size to 200. This model has 4,582,500 parameters in total.
-
-[config_memnet.py](./config_memnet.py) is a modified larger model. It yields 11,073,600 parameters in total. It increases number of hops to 10, hidden dim to 360. In order to alleviate overfitting, dropout rate of 0.2 is added onto some parts of the model. Also, dropout masks are shared among the outputs of different hops (i.e., variational dropout). Note that this config uses a specialized learning rate decay scheme. See the config file and code for more details about this scheme.
 
 ## Results ##
 
@@ -41,8 +37,5 @@ The perplexity of different configs is:
 | config        | epochs | train | valid  | test  |
 | ------------- | -------| ------| -------| ------|
 | config        | 51     | 50.70 | 120.97 | 113.06|
-| config_memnet | 61     | 61.46 |  98.51 |  94.82|
 
 This result of `config.py` is slightly inferior to the result presented in the paper, since the result in the paper is the best among 10 runs.
-
-The result if `config_memnet` is highly unstable and may not able to recover this performance within one run.

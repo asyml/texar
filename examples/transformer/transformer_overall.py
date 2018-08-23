@@ -58,19 +58,19 @@ if __name__ == "__main__":
         hparams=args.word_embedding_hparams,
     )
     encoder = TransformerEncoder(
-        embedding=word_embedder._embedding,
         hparams=encoder_hparams)
     src_inputs_padding = tf.to_float(tf.equal(encoder_input, 0))
     src_inputs_embedding = tf.multiply(
         word_embedder(encoder_input),
         tf.expand_dims(1 - src_inputs_padding, 2)
     )
+    src_lens = tf.reduce_sum(1 - src_inputs_padding, axis=1)
     encoder_output, encoder_decoder_attention_bias = \
-        encoder(src_inputs_embedding, src_inputs_padding)
+        encoder(src_inputs_embedding, src_lens)
 
     # In the decoder, share the word embeddings with projection layer.
     tgt_embeds = tf.concat([
-        tf.zeros(shape=[1, encoder_hparams['num_units']]),
+        tf.zeros(shape=[1, encoder_hparams['dim']]),
         word_embedder._embedding[1:, :]], 0
     )
     decoder = TransformerDecoder(
@@ -83,14 +83,18 @@ if __name__ == "__main__":
     )
     logits, preds = decoder(
         encoder_output,
-        encoder_decoder_attention_bias,
-        tgt_inputs_embedding,
-        mode=tf.estimator.ModeKeys.TRAIN)
+        src_lens,
+        inputs=tgt_inputs_embedding,
+        decoding_strategy='train_greedy',
+        mode=tf.estimator.ModeKeys.TRAIN
+    )
     predictions = decoder(
         encoder_output,
-        encoder_decoder_attention_bias,
-        target_inputs=None,
-        mode=tf.estimator.ModeKeys.PREDICT)
+        src_lens,
+        inputs=None,
+        decoding_strategy='infer_greedy',
+        mode=tf.estimator.ModeKeys.PREDICT
+    )
     mle_loss = transformer_utils.smoothing_cross_entropy(logits, \
         labels, args.n_vocab, loss_hparams['label_confidence'])
     mle_loss = tf.reduce_sum(mle_loss * istarget) / tf.reduce_sum(istarget)
@@ -194,9 +198,7 @@ if __name__ == "__main__":
 
     def _test_epoch(cur_sess):
         references, hypotheses, rwords, hwords = [], [], [], []
-        for i in range(2):
-        #TODO(haoran): recover this line after debugging
-        #for i in range(0, len(test_data), args.test_batch_size):
+        for i in range(0, len(test_data), args.test_batch_size):
             sources, targets = \
                 zip(*test_data[i: i + args.test_batch_size])
             references.extend(t.tolist() for t in targets)
