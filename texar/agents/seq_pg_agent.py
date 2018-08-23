@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """Policy Gradient agent for sequence prediction.
 """
 from __future__ import absolute_import
@@ -22,8 +34,54 @@ __all__ = [
 class SeqPGAgent(SeqAgentBase):
     """Policy Gradient agent for sequence prediction.
 
+    This is a wrapper of the **training process** that trains a model
+    with policy gradient. Agent itself does not create new trainable variables.
+
     Args:
-        TODO
+        samples: An `int` Tensor of shape `[batch_size, max_time]` containing
+            sampled sequences from the model.
+        logits: A float Tenosr of shape `[batch_size, max_time, vocab_size]`
+            containing the logits of samples from the model.
+        sequence_length: A Tensor of shape `[batch_size]`.
+            Time steps beyond the respective sequence lengths are masked out.
+        trainable_variables (optional): Trainable variables of the model to
+            update during training. If `None`, all trainable variables in the
+            graph are used.
+        learning_rate (optional): Learning rate for policy optimization. If
+            not given, determine the learning rate from :attr:`hparams`.
+            See :func:`~texar.core.get_train_op` for more details.
+        sess (optional): A tf session.
+            Can be `None` here and set later with `agent.sess = session`.
+        hparams (dict or HParams, optional): Hyperparameters. Missing
+            hyperparamerter will be set to default values. See
+            :meth:`default_hparams` for the hyperparameter sturcture and
+            default values.
+
+    Example:
+
+        .. code-block:: python
+
+            ## Train a decoder with policy gradient
+            decoder = BasicRNNDecoder(...)
+            outputs, _, sequence_length = decoder(
+                decoding_strategy='infer_sample', ...)
+
+            sess = tf.Session()
+            agent = SeqPGAgent(
+                samples=outputs.sample_id,
+                logits=outputs.logits,
+                sequence_length=sequence_length,
+                sess=sess)
+            while training:
+                # Generate samples
+                vals = agent.get_samples()
+                # Evaluate reward
+                sample_text = tx.utils.map_ids_to_strs(vals['samples'], vocab)
+                reward_bleu = []
+                for y, y_ in zip(ground_truth, sample_text)
+                    reward_bleu.append(tx.evals.sentence_bleu(y, y_)
+                # Update
+                agent.observe(reward=reward_bleu)
     """
     def __init__(self,
                  samples,
@@ -106,6 +164,54 @@ class SeqPGAgent(SeqAgentBase):
 
     @staticmethod
     def default_hparams():
+        """Returns a dictionary of hyperparameters with default values:
+
+        .. role:: python(code)
+           :language: python
+
+        .. code-block:: python
+
+            {
+                'discount_factor': 0.95,
+                'normalize_reward': False,
+                'entropy_weight': 0.,
+                'loss': {
+                    'average_across_batch': True,
+                    'average_across_timesteps': False,
+                    'sum_over_batch': False,
+                    'sum_over_timesteps': True,
+                    'time_major': False
+                },
+                'optimization': default_optimization_hparams(),
+                'name': 'pg_agent',
+            }
+
+        Here:
+
+        "discount_factor" : float
+            The discount factor of reward.
+
+        "normalize_reward" : bool
+            Whether to normalize the discounted reward, by
+            `(discounted_reward - mean) / std`. Here `mean` and `std` are
+            over all time steps and all samples in the batch.
+
+        "entropy_weight" : float
+            The weight of entropy loss of the sample distribution, to encourage
+            maximizing the Shannon entropy. Set to 0 to disable the loss.
+
+        "loss" : dict
+            Extra keyword arguments for
+            :func:`~texar.losses.pg_loss_with_logits`, including the
+            reduce arguments (e.g., `average_across_batch`) and `time_major`
+
+        "optimization" : dict
+            Hyperparameters of optimization for updating the policy net.
+            See :func:`~texar.core.default_optimization_hparams` for details.
+
+        "name" : str
+            Name of the agent.
+        """
         return {
             'discount_factor': 0.95,
             'normalize_reward': False,
@@ -165,7 +271,34 @@ class SeqPGAgent(SeqAgentBase):
                     "in `extra_fetches`.")
 
     def get_samples(self, extra_fetches=None, feed_dict=None):
-        """TODO
+        """Returns sequence samples and extra results.
+
+        Args:
+            extra_fetches (dict, optional): Extra tensors to fetch values,
+                besides `samples` and `sequence_length`. Same as the
+                `fetches` argument of
+                :tf_main:`tf.Session.run <Session#run>` and
+                tf_main:`partial_run <Session#partial_run>`.
+            feed_dict (dict, optional): A `dict` that maps tensor to
+                values. Note that all placeholder values used in
+                :meth:`get_samples` and subsequent :meth:`observe` calls
+                should be fed here.
+
+        Returns:
+            A `dict` with keys **"samples"** and **"sequence_length"**
+            containing the fetched values of :attr:`samples` and
+            :attr:`sequence_length`, as well as other fetched values
+            as specified in :attr:`extra_fetches`.
+
+        Example:
+
+            .. code-block:: python
+
+                extra_fetches = {'truth_ids': data_batch['text_ids']}
+                vals = agent.get_samples()
+                sample_text = tx.utils.map_ids_to_strs(vals['samples'], vocab)
+                truth_text = tx.utils.map_ids_to_strs(vals['truth_ids'], vocab)
+                reward = reward_fn_in_python(truth_text, sample_text)
         """
         if self._sess is None:
             raise ValueError("`sess` must be specified before sampling.")
@@ -199,18 +332,29 @@ class SeqPGAgent(SeqAgentBase):
 
         return vals
 
-    def observe(self, reward, train_policy=True, return_loss=True):
-        """
+    def observe(self, reward, train_policy=True, compute_loss=True):
+        """Observes the reward, and updates the policy or computes loss
+        accordingly.
 
         Args:
-            reward: A Python array of shape `[batch_size]`.
-            TODO
+            reward: A Python array/list of shape `[batch_size]` containing
+                the reward for the samples generated in last call of
+                :meth:`get_samples`.
+            train_policy (bool): Whether to update the policy model according
+                to the reward.
+            compute_loss (bool): If `train_policy` is False, whether to
+                compute the policy gradient loss (but does not update the
+                policy).
+
+        Returns:
+            If `train_policy` or `compute_loss` is True, returns the loss
+            (a python float scalar). Otherwise returns `None`.
         """
         self._rewards = reward
 
         if train_policy:
             return self._train_policy()
-        elif return_loss:
+        elif compute_loss:
             return self._evaluate_pg_loss()
         else:
             return None
@@ -242,9 +386,6 @@ class SeqPGAgent(SeqAgentBase):
 
     def _train_policy(self):
         """Updates the policy.
-
-        Args:
-            TODO
         """
         fetches = {
             "loss": self._train_op,

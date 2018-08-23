@@ -1,3 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Unit tests for sequence prediction policy gradient agents.
 """
@@ -51,14 +64,12 @@ class SeqPGAgentTest(tf.test.TestCase):
 
             feed_dict = {context.global_mode(): tf.estimator.ModeKeys.TRAIN}
             for _ in range(2):
-                samples, _ = agent.get_samples(feed_dict)
-                self.assertEqual(samples.shape[0], self._batch_size)
+                vals = agent.get_samples(feed_dict=feed_dict)
+                self.assertEqual(vals['samples'].shape[0], self._batch_size)
 
-                loss_1 = agent.observe(
-                    [1.]*self._batch_size, feed_dict=feed_dict)
+                loss_1 = agent.observe([1.]*self._batch_size)
                 loss_2 = agent.observe(
-                    [1.]*self._batch_size, train_policy=False,
-                    feed_dict=feed_dict)
+                    [1.]*self._batch_size, train_policy=False)
                 self.assertEqual(loss_1.shape, ())
                 self.assertEqual(loss_2.shape, ())
 
