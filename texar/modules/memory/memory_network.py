@@ -254,7 +254,7 @@ class MemNetBase(ModuleBase):
         elif combine == 'concat':
             memory_dim = embedder.dim + temporal_embedder.dim
 
-        def _embed_fn(memory, soft_memory):
+        def _embed_fn(memory, soft_memory, mode=None):
             if memory is None and soft_memory is None:
                 raise ValueError(
                     "Either `memory` or `soft_memory` is required.")
@@ -263,9 +263,10 @@ class MemNetBase(ModuleBase):
                     "Must not specify `memory` and `soft_memory` at the "
                     "same time.")
 
-            embedded_memory = embedder(ids=memory, soft_ids=soft_memory)
+            embedded_memory = embedder(
+                ids=memory, soft_ids=soft_memory, mode=mode)
             temporal_embedded = temporal_embedder(
-                sequence_length=tf.constant([self._memory_size]))
+                sequence_length=tf.constant([self._memory_size]), mode=mode)
 
             if combine == 'add':
                 return tf.add(embedded_memory, temporal_embedded)
@@ -483,7 +484,7 @@ class MemNetRNNLike(MemNetBase):
         })
         return hparams
 
-    def _build(self, query, memory=None, soft_memory=None, **kwargs):
+    def _build(self, query, memory=None, soft_memory=None, mode=None, **kwargs):
         """Pass the :attr:`memory` and :attr:`query` through the memory network
         and return the :attr:`logits` after the final matrix.
 
@@ -507,14 +508,18 @@ class MemNetRNNLike(MemNetBase):
                 containing the weights used to mix the embedding vectors.
                 If you'd like to apply a matrix multiplication on the memory,
                 this option can also be used.
+            mode (optional): A tensor taking value in
+                :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
+                `TRAIN`, `EVAL`, and `PREDICT`. If `None`, dropout is
+                controlled by :func:`texar.global_mode`.
         """
         if self._B is not None:
-            query = self._B(query)
+            query = self._B(query, mode=mode)
         self._u = [query]
-        self._m = self._A(memory, soft_memory)
-        self._c = self._C(memory, soft_memory)
+        self._m = self._A(memory, soft_memory, mode=mode)
+        self._c = self._C(memory, soft_memory, mode=mode)
 
-        keep_prob = switch_dropout(1-self.hparams.dropout_rate)
+        keep_prob = switch_dropout(1-self.hparams.dropout_rate, mode=mode)
         if self.hparams.variational:
             with tf.variable_scope("variational_dropout"):
                 noise = tf.random_uniform(tf.shape(self._u[-1]))
