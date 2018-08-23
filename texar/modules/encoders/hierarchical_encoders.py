@@ -212,25 +212,19 @@ class HierarchicalRNNEncoder(EncoderBase):
             sequence_length_major (optional): The `sequence_length` argument
                 sent to major encoder. This is a 1-D Tensor of shape
                 `[B]`.
-            initial_state_major (optional): Initial state for the major-level
-                encoder. The batch dimension must equal `B`.
-            initial_state_minor (optional): Initial state for the minor-level
-                encoder. The batch dimension must equal `B`. The state will be
-                copied and used to start encoding each low-level sequence.
-                Ignored if :attr:`tiled_initial_state_minor` is provided.
-            tiled_initial_state_minor (optional): Initial state for the
-                minor-level encoder. The batch dimension must equal `B*T`.
             **kwargs: Other keyword arguments for the major and minor encoders,
-                such as `swap_memory`, etc.
-                Note that `sequence_length`, `initial_state`, and `time_major`
+                such as `initial_state`, etc.
+                Note that `sequence_length`, and `time_major`
                 must not be included here.
                 `time_major` is derived from `order` automatically.
                 By default, arguments will be sent to both major and minor
                 encoders. To specify which encoder an argument should be sent
                 to, add '_minor'/'_major' as its suffix.
 
-                Note that `initial_state_minor` must be provided with B,T dims
-                flatten into one dim of length BxT.
+                Note that `initial_state_minor` must have a batch dimension
+                of size `B*T`. If you have an initial state of batch dimension
+                = `T`, use :meth:`tile_initial_state_minor` to tile it
+                according to order and then to be used here.
 
         Returns:
             A tuple `(outputs, final_state)` by the major encoder.
@@ -243,15 +237,16 @@ class HierarchicalRNNEncoder(EncoderBase):
                     kwargs_minor[k[:-6]] = v
                 if len(k) >= 6 and k[-6:] == ['_major']:
                     kwargs_major[k[:-6]] = v
-
-            kwargs_minor['sequence_length'] = sequence_length_minor
-            kwargs_major['sequence_length'] = sequence_length_major
-
             return kwargs_minor, kwargs_major
 
         kwargs_minor, kwargs_major = _kwargs_split(kwargs)
+        kwargs_minor['sequence_length'] = sequence_length_minor
+        kwargs_major['sequence_length'] = sequence_length_major
 
-        shape = tf.shape(inputs)[:3]
+        kwargs_major['initial_state'] = initial_state_major
+        kwargs_minor['initial_state'] = self._get_initial_state_minor(
+            order, initial_state_minor, tiled_initial_state_minor,
+            tf.shape(inputs))
 
         expand, shape = self._get_flatten_order(
             order, kwargs_major, kwargs_minor, tf.shape(inputs))
@@ -293,6 +288,33 @@ class HierarchicalRNNEncoder(EncoderBase):
         return outputs_major, states_major
 
     @staticmethod
+    def tile_initial_state_minor(initial_state, order, inputs_shape):
+        """Tile an initial state to be used for encoder minor.
+
+        The batch dimension of :attr:`initial_state` must equal `T`. The
+        state will be copied for `B` times and used to start encoding each
+        low-level sequence. For example, the first utterance in each dialog
+        history in the batch will have the same initial state.
+
+        Args:
+            initial_state: Initial state with the batch dimension of size `T`.
+            order (str): The dimension order of inputs. Must be the same as
+                used in :meth:`_build`.
+            inputs_shape: Shape of `inputs` for :meth:`_build`. Can usually
+                be Obtained with `tf.shape(inputs)`.
+        """
+        if order == 'btu':
+            return tf.contrib.seq2seq.tile_batch(initial_state, inputs_shape[0])
+        elif order == 'ubt':
+            return tf.contrib.seq2seq.tile_batch(initial_state, inputs_shape[1])
+        elif order == 'utb':
+            return tf.tile(initial_state, inputs_shape[2])
+        elif order == 'tbu':
+            return tf.tile(initial_state, inputs_shape[1])
+        else:
+            raise ValueError('Unknown order: {}'.format(order))
+
+    @staticmethod
     def _get_flatten_order(order, kwargs_minor, kwargs_major, shape):
         if order == 'btu':
             kwargs_minor.setdefault('time_major', False)
@@ -314,6 +336,8 @@ class HierarchicalRNNEncoder(EncoderBase):
             kwargs_major.setdefault('time_major', False)
             expand = shape[1:3]
             shape = [shape[0], shape[1] * shape[2]]
+        else:
+            raise ValueError('Unknown order: {}'.format(order))
 
         return expand, shape
 

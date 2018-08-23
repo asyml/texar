@@ -15,6 +15,9 @@ from texar.modules.encoders.hierarchical_encoders import HierarchicalRNNEncoder
 # pylint: disable=too-many-locals
 
 class HierarchicalRNNEncoderTest(tf.test.TestCase):
+    """Tests HierarchicalRNNEncoder
+    """
+
     def test_trainable_variables(self):
         encoder = HierarchicalRNNEncoder()
 
