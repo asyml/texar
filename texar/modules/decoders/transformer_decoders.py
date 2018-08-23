@@ -38,7 +38,7 @@ from texar.utils.mode import is_train_mode, is_train_mode_py
 
 class TransformerDecoderOutput(
         collections.namedtuple("TransformerDecoderOutput",\
-            ("output_logits", "sample_ids"))):
+            ("logits", "sample_id"))):
     """The output :class:`TransformerDecoder`.
 
     Attributes:
@@ -125,8 +125,6 @@ class TransformerDecoder(ModuleBase):
                     ],
                 },
                 "dim":512,
-                "eos_idx": 2,
-                "bos_idx": 1,
                 "beam_width":1,
                 "alpha":0,
                 "name":"transformer_decoder",
@@ -143,9 +141,6 @@ class TransformerDecoder(ModuleBase):
         maximum_decode_length: The maximum length when decoding.
         beam_width: When setting as 1, use greedy decoding when testing,
             when it's larger than 1, use beam search strategy.
-        bos_idx: The index of <BOS> token in the vocabulary.
-        eos_idx: The index of <EOS> token in the vocabulary, indicating
-            the sentence is completed.
         The meaning of other parameters are similar to TransformerEncoder
         """
         return {
@@ -188,8 +183,6 @@ class TransformerDecoder(ModuleBase):
 		],
             },
             'dim':512,
-            'eos_idx': 2,
-            'bos_idx': 1,
             "beam_width":1,
             'alpha':0,
             "name":"decoder",
@@ -218,14 +211,13 @@ class TransformerDecoder(ModuleBase):
             # multiply embedding by sqrt of its dimention
             inputs *= self._embedding.shape.as_list()[-1]**0.5
             inputs += timing_signal[:, step:step+1]
-
             """
             Here we use the tensorflow flags to control the is_train_mode
             setting, instead of user passed
             """
             outputs = self._self_attention_stack(
                 inputs,
-                encoder_output=cache['memory'],
+                memory=cache['memory'],
                 cache=cache,
             )
             #outputs = outputs[:, -1:, :]
@@ -236,20 +228,40 @@ class TransformerDecoder(ModuleBase):
         return _impl
 
     def _build(self,    # pylint: disable=arguments-differ
-               encoder_output,
-               src_sequence_length,
+               memory,
+               memory_sequence_length,
+               memory_attention_bias,
                inputs,
+               inputs_length,
                decoding_strategy,
+               start_token=None,
+               end_token=None,
                mode=None):
         """
         This function is called on training generally.
 
         Args:
-            encoder_output: [batch_size, source_length, channels]
-            encoder_decoder_attention_bias: The attention bias set as a
-                huge negative value if the position is padding.
+            memory: [batch_size, length, dim]
+            memory_sequence_length: 1D Tensor of shape [batch_size]
+                Only be used when memory_attention_bias is not provided.
+            memory_attention_bias: 4D Tensor of shape
+                `[batch_size, num_heads, length, dim]`. The attention bias
+                set as a huge negative value if the correpsonding position is padding.
             inputs: Passed when training.
                 Should be None when testing.
+            inputs_length: 1D Tensor of shape [batch_size]
+                Not used. Just for consistency. Should be passed when training.
+            decoding_strategy:
+                'train_greedy': For training with ground truth.
+                'infer_greedy': For greedy decoding without ground truth.
+                'infer_sample': For sampling decoding without ground truth.
+                if the beam_width of the decoder is larger than 1,
+                    use beam decoding regardless of decoding strategy if
+                    ground truth is not provided.
+            start_token:
+                The index of <BOS> token in the dictionary.
+            end_token:
+                The index of <EOS> token in the dictionary.
             mode: A python string (not a tensor), control the graph running
                 flow of training or testing.
 
@@ -257,16 +269,18 @@ class TransformerDecoder(ModuleBase):
             logits: [batch_size, target_length, vocab_size]
             preds: [batch_size, target_length]
         """
-        enc_padding = 1 - mask_sequences(tf.ones_like(encoder_output),
-                                         src_sequence_length,
-                                         tensor_rank=3)[:, :, 0]
-        encoder_decoder_attention_bias = attentions.attention_bias_ignore_padding(
-            enc_padding)
-        if is_train_mode_py(mode):
+        if memory_attention_bias is None:
+            if memory_sequence_length is None:
+                raise ValueError
+            enc_padding = 1 - mask_sequences(tf.ones_like(memory),
+                                             memory_sequence_length,
+                                             tensor_rank=3)[:, :, 0]
+            memory_attention_bias = attentions.attention_bias_ignore_padding(
+                enc_padding)
+        if decoding_strategy == 'train_greedy':
             """
             Mask the attention on future positions
             """
-            assert decoding_strategy == 'train_greedy'
             decoder_self_attention_bias = (
                 attentions.attention_bias_lower_triangle(
                     shape_list(inputs)[1]))
@@ -279,60 +293,72 @@ class TransformerDecoder(ModuleBase):
 
             decoder_output = self._self_attention_stack(
                 inputs,
-                encoder_output,
+                memory,
                 decoder_self_attention_bias=decoder_self_attention_bias,
-                encoder_decoder_attention_bias=encoder_decoder_attention_bias,
+                memory_attention_bias=memory_attention_bias,
                 cache=None,
                 mode=mode,
             )
             logits = self.output_layer(decoder_output)
             preds = tf.to_int32(tf.argmax(logits, axis=-1))
-
+            output_length = inputs_length
+            output = TransformerDecoderOutput(
+                logits=logits,
+                sample_id=preds
+            )
             if not self._built:
                 self._add_internal_trainable_variables()
                 self._built = True
-            return logits, preds
+            return output, output_length
         else:
-            batch_size = tf.shape(encoder_decoder_attention_bias)[0]
+            # Decoding when ground truth is not provided
+            batch_size = tf.shape(memory_attention_bias)[0]
             beam_width = self._hparams.beam_width
             maximum_decode_length = self.hparams.maximum_decode_length
-            start_tokens = tf.fill([batch_size], self._hparams.bos_idx)
+            start_tokens = tf.fill([batch_size], start_token)
             if beam_width <= 1:
-                sampled_ids, log_probs = self._greedy_decode(
+                logits, preds, seq_len = self._infer_sampling(
                     self._prepare_tokens_to_embeds,
                     start_tokens,
-                    self._hparams.eos_idx,
+                    end_token,
                     decode_length=maximum_decode_length,
-                    memory=encoder_output,
-                    encoder_decoder_attention_bias=\
-                        encoder_decoder_attention_bias,
+                    memory=memory,
+                    memory_attention_bias=memory_attention_bias,
                     decoding_strategy=decoding_strategy,
                 )
+                output = TransformerDecoderOutput(
+                    logits=logits,
+                    sample_id=preds
+                )
+                if not self._built:
+                    self._add_internal_trainable_variables()
+                    self._built = True
+                return output, seq_len
             else:
+                # The output format is different when running beam search
                 sampled_ids, log_probs = self._beam_decode(
                     self._prepare_tokens_to_embeds,
                     start_tokens,
-                    self._hparams.eos_idx,
+                    end_token,
                     beam_width=beam_width,
                     decode_length=maximum_decode_length,
-                    memory=encoder_output,
-                    encoder_decoder_attention_bias=\
-                        encoder_decoder_attention_bias,
+                    memory=memory,
+                    memory_attention_bias=memory_attention_bias,
                 )
-            predictions = {
-                'sampled_ids':sampled_ids,
-                'log_probs': log_probs
-            }
-            if not self._built:
-                self._add_internal_trainable_variables()
-                self._built = True
-            return predictions
+                predictions = {
+                    'sampled_ids':sampled_ids,
+                    'log_probs': log_probs
+                }
+                if not self._built:
+                    self._add_internal_trainable_variables()
+                    self._built = True
+                return predictions
 
     def _self_attention_stack(self,
                               inputs,
-                              encoder_output,
+                              memory,
                               decoder_self_attention_bias=None,
-                              encoder_decoder_attention_bias=None,
+                              memory_attention_bias=None,
                               cache=None,
                               mode=None):
         """
@@ -342,8 +368,8 @@ class TransformerDecoder(ModuleBase):
                                    rate=self._hparams.embedding_dropout,
                                    training=is_train_mode(mode))
         if cache is not None:
-            encoder_decoder_attention_bias = \
-                cache['encoder_decoder_attention_bias']
+            memory_attention_bias = \
+                cache['memory_attention_bias']
         else:
             assert decoder_self_attention_bias is not None
 
@@ -368,13 +394,12 @@ class TransformerDecoder(ModuleBase):
                         rate=self._hparams.residual_dropout,
                         training=is_train_mode(mode),
                     )
-                if encoder_output is not None:
+                if memory is not None:
                     with tf.variable_scope('encdec_attention'):
                         encdec_output = attentions.multihead_attention(
                             queries=layers.layer_normalize(x),
-                            memory=encoder_output,
-                            memory_attention_bias=
-                            encoder_decoder_attention_bias,
+                            memory=memory,
+                            memory_attention_bias=memory_attention_bias,
                             num_units=self._hparams.dim,
                             num_heads=self._hparams.num_heads,
                             dropout_rate=self._hparams.attention_dropout,
@@ -426,7 +451,7 @@ class TransformerDecoder(ModuleBase):
         preds: [batch_size, length]
         """
         return TransformerDecoderOutput(
-            output_logits=tensor_shape.TensorShape([None, None,
+            logits=tensor_shape.TensorShape([None, None,
                                                     self._vocab_size]),
             sample_id=tensor_shape.TensorShape([None, None])
         )
@@ -436,12 +461,12 @@ class TransformerDecoder(ModuleBase):
         The output dtype of the _build function, (float32, int32)
         """
         return TransformerDecoderOutput(
-            output_logits=dtypes.float32, sample_id=dtypes.int32)
+            logits=dtypes.float32, sample_id=dtypes.int32)
 
-    def _init_cache(self, memory, encoder_decoder_attention_bias):
+    def _init_cache(self, memory, memory_attention_bias):
         cache = {
             'memory': memory,
-            'encoder_decoder_attention_bias': encoder_decoder_attention_bias,
+            'memory_attention_bias': memory_attention_bias,
         }
         batch_size = tf.shape(memory)[0]
         depth = memory.get_shape().as_list()[-1]
@@ -454,55 +479,60 @@ class TransformerDecoder(ModuleBase):
             }
         return cache
 
-    def _greedy_decode(self,
-                       embedding_fn,
-                       start_tokens,
-                       eos,
-                       decode_length,
-                       memory,
-                       encoder_decoder_attention_bias,
-                       decoding_strategy):
+    def _infer_sampling(self,
+                        embedding_fn,
+                        start_tokens,
+                        end_token,
+                        decode_length,
+                        memory,
+                        memory_attention_bias,
+                        decoding_strategy):
         batch_size = tf.shape(start_tokens)[0]
         finished = tf.fill([batch_size], False)
+        seq_length = tf.zeros([batch_size], dtype=tf.int32)
         step = tf.constant(0)
         decoded_ids = tf.zeros([batch_size, 0], dtype=tf.int32)
+        logits_list = tf.zeros([batch_size, 0, self._vocab_size], dtype=tf.float32)
         next_id = tf.expand_dims(start_tokens, 1)
-        log_prob = tf.zeros([batch_size], dtype=tf.float32)
 
-        cache = self._init_cache(memory, encoder_decoder_attention_bias)
+        cache = self._init_cache(memory, memory_attention_bias)
         symbols_to_logits_fn = self._symbols_to_logits_fn(
             embedding_fn,
             max_length=decode_length+1
         )
-
-        def _body(step, finished, next_id, decoded_ids, cache, log_prob):
+        def _body(step, finished, next_id, decoded_ids, cache, logits_list, seq_length):
 
             logits, cache = symbols_to_logits_fn(next_id, step, cache)
-            log_probs = logits - \
-                tf.reduce_logsumexp(logits, axis=-1, keep_dims=True)
 
             if decoding_strategy == 'infer_greedy':
                 next_id = tf.argmax(logits, -1, output_type=tf.int32)
             elif decoding_strategy == 'infer_sample':
-                next_id = tf.multinomial(logits, 1).squeeze(axis=1)
-            finished |= tf.equal(next_id, eos)
-            log_prob_indices = tf.stack(
-                [tf.range(tf.to_int32(batch_size)), next_id], axis=1)
-            log_prob += tf.gather_nd(log_probs, log_prob_indices)
-
+                sample_id_sampler = categorical.Categorical(logis=logits)
+                next_id = sample_id_sampler.sample()
+                print('next id:shape:{}'.format(next_id.shape))
+            cur_finished = tf.equal(next_id, end_token)
+            update_len = tf.logical_and(
+                tf.logical_not(finished),
+                cur_finished)
+            seq_length = tf.where(
+                update_len,
+                tf.fill(tf.shape(seq_length), step+1),
+                seq_length)
             next_id = tf.expand_dims(next_id, axis=1)
+            finished |= cur_finished
             #keep the shape as [batch_size, seq_len]
-
+            logits = tf.expand_dims(logits, axis=1)
+            logits_list = tf.concat([logits_list, logits], axis=1)
             decoded_ids = tf.concat([decoded_ids, next_id], axis=1)
-            return step+1, finished, next_id, decoded_ids, cache, log_prob
+            return step+1, finished, next_id, decoded_ids, cache, logits_list, seq_length
 
         def is_not_finished(i, finished, *_):
             return (i < decode_length) & tf.logical_not(tf.reduce_all(finished))
 
-        _, _, _, decoded_ids, _, log_prob = tf.while_loop(
+        _, _, _, decoded_ids, _, logits_list, seq_length = tf.while_loop(
             is_not_finished,
             _body,
-            loop_vars=(step, finished, next_id, decoded_ids, cache, log_prob),
+            loop_vars=(step, finished, next_id, decoded_ids, cache, logits_list, seq_length),
             shape_invariants=(
                 tf.TensorShape([]),
                 tf.TensorShape([None]),
@@ -510,22 +540,21 @@ class TransformerDecoder(ModuleBase):
                 tf.TensorShape([None, None]),
                 nest.map_structure(beam_search.get_state_shape_invariants,
                                    cache),
-                tf.TensorShape([None]),
+                tf.TensorShape([None, None, None]),
+                tf.TensorShape([None])
             ))
 
-        outputs = tf.expand_dims(decoded_ids, 1)
-        log_prob = tf.expand_dims(log_prob, 1)
-        return (outputs, log_prob)
+        return logits_list, decoded_ids, seq_length
 
     def _beam_decode(self,
                      embedding_fn,
                      start_tokens,
-                     eos,
+                     end_token,
                      memory,
-                     encoder_decoder_attention_bias,
+                     memory_attention_bias,
                      decode_length=256,
                      beam_width=5):
-        cache = self._init_cache(memory, encoder_decoder_attention_bias)
+        cache = self._init_cache(memory, memory_attention_bias)
         symbols_to_logits_fn = self._symbols_to_logits_fn(embedding_fn, \
             max_length=decode_length+1)
         outputs, log_probs = beam_search.beam_search(
@@ -536,7 +565,8 @@ class TransformerDecoder(ModuleBase):
             self._vocab_size,
             self._hparams.alpha,
             states=cache,
-            eos_id=eos)
+            eos_id=end_token)
 
         outputs = outputs[:, :, 1:] # ignore <BOS>
+        outputs = tf.transpose(outputs, [0, 2, 1]) #[batch_size, seq_length, beam_width]
         return (outputs, log_probs)

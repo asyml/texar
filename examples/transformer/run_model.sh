@@ -36,7 +36,7 @@ case ${hparams_set} in
         --model_dir=${model_dir}\
         --src_language=${src_language} --tgt_language=${tgt_language} \
         --wbatchsize=2048 --test_batch_size=64 \
-        --beam_width=5 --alpha=0.6 \
+        --beam_width=1 --alpha=0.6 \
         --log_disk_dir=${LOG_DISK_DIR} \
         --affine_bias=0 --eval_interval_epoch=1 \
         --eval_steps=2000 \

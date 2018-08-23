@@ -4,6 +4,7 @@ This file gives some help files for model training.
 import tensorflow as tf
 import numpy as np
 import random
+import math
 
 def set_random_seed(myseed):
     tf.set_random_seed(myseed)
@@ -27,7 +28,7 @@ def adjust_lr(fstep, opt_config):
         lr = opt_config['static_lr']
     else:
         lr = opt_config['lr_constant'] \
-            * tf.minimum(1.0, (fstep / opt_config['warmup_steps'])) \
-            * tf.rsqrt(tf.maximum(fstep, opt_config['warmup_steps']))
+            * min(1.0, (fstep / opt_config['warmup_steps'])) \
+            * (1 / math.sqrt(max(fstep, opt_config['warmup_steps'])))
     return lr
 
