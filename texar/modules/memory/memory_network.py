@@ -267,6 +267,8 @@ class MemNetBase(ModuleBase):
                 ids=memory, soft_ids=soft_memory, mode=mode)
             temporal_embedded = temporal_embedder(
                 sequence_length=tf.constant([self._memory_size]), mode=mode)
+            temporal_embedded = tf.tile(
+                temporal_embedded, [tf.shape(embedded_memory)[0], 1, 1])
 
             if combine == 'add':
                 return tf.add(embedded_memory, temporal_embedded)
@@ -353,6 +355,24 @@ class MemNetBase(ModuleBase):
 
     def _build(self, memory, query, **kwargs):
         raise NotImplementedError
+
+    @property
+    def memory_size(self):
+        """The memory size.
+        """
+        return self._memory_size
+
+    @property
+    def raw_memory_dim(self):
+        """The dimension of memory element (or vocabulary size).
+        """
+        return self._raw_memory_dim
+
+    @property
+    def memory_dim(self):
+        """The dimension of embedded memory and all vectors in hops.
+        """
+        return self._memory_dim
 
 
 class MemNetRNNLike(MemNetBase):
@@ -484,7 +504,8 @@ class MemNetRNNLike(MemNetBase):
         })
         return hparams
 
-    def _build(self, query, memory=None, soft_memory=None, mode=None, **kwargs):
+    def _build(self, memory=None, query=None, soft_memory=None, soft_query=None,
+               mode=None, **kwargs):
         """Pass the :attr:`memory` and :attr:`query` through the memory network
         and return the :attr:`logits` after the final matrix.
 
@@ -492,29 +513,41 @@ class MemNetRNNLike(MemNetBase):
         They should not be specified at the same time.
 
         Args:
-            query: Query vectors as the intial input of the memory network.
+            memory (optional): Memory used in A/C operations. By default, it
+                should be an integer tensor of shape
+                `[batch_size, memory_size]`,
+                containing the ids to embed if provided.
+            query (optional): Query vectors as the intial input of the memory
+                network.
                 If you'd like to apply some transformation (e.g., embedding)
                 on it before it's fed into the network, please add
                 `query_embed_fn` when constructing this instance.
                 If you do not provide `query_embed_fn`, it should be of shape
                 `[batch_size, memory_dim]`.
-            memory (optional): Memory used in A/C operations. By default, it
-                should be an integer tensor of shape
-                `[batch_size, memory_size]`,
-                containing the ids to embed if provided.
             soft_memory (optional): Soft memory used in A/C operations. By
                 default, it should be a tensor of shape
                 `[batch_size, memory_size, raw_memory_dim]`,
                 containing the weights used to mix the embedding vectors.
                 If you'd like to apply a matrix multiplication on the memory,
                 this option can also be used.
+            soft_query (optional): Query vectors as the intial input of the
+                memory network.
+                Similar to :attr:`soft_memory`, if `query_embed_fn` is set to
+                :meth:`~texar.modules.MemNetBase.get_default_embed_fn`,
+                then it must be of shape
+                `[batch_size, memory_size, raw_memory_dim]`.
+                If you'd like to apply some transformation (e.g., embedding)
+                on it before it's fed into the network, please add
+                `query_embed_fn` when constructing this instance.
+                If you do not provide `query_embed_fn`, it should be of shape
+                `[batch_size, memory_dim]`.
             mode (optional): A tensor taking value in
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
                 `TRAIN`, `EVAL`, and `PREDICT`. If `None`, dropout is
                 controlled by :func:`texar.global_mode`.
         """
         if self._B is not None:
-            query = self._B(query, mode=mode)
+            query = self._B(query, soft_query, mode=mode)
         self._u = [query]
         self._m = self._A(memory, soft_memory, mode=mode)
         self._c = self._C(memory, soft_memory, mode=mode)

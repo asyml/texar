@@ -86,7 +86,7 @@ def _main(_):
                                           hparams=config.memnet)
         queries = tf.fill([tf.shape(inputs)[0], config.dim],
                           config.query_constant)
-        logits = memnet(queries, inputs)
+        logits = memnet(inputs, queries)
 
     # Losses & train ops
     mle_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(
