@@ -172,6 +172,9 @@ class HierarchicalRNNEncoder(EncoderBase):
                medium=None,
                sequence_length_major=None,
                sequence_length_minor=None,
+               initial_state_major=None,
+               initial_state_minor=None,
+               tiled_initial_state_minor=None,
                **kwargs):
         """Encodes the inputs.
 
@@ -179,50 +182,58 @@ class HierarchicalRNNEncoder(EncoderBase):
             inputs: A 4-D tensor of shape `[B, T, U, dim]`, where
 
                 - B: batch_size
-                - T: the major seq len (high-level length)
-                - U: the minor seq len (low-level length)
+                - T: the max length of high-level sequences. E.g., the max \
+                number of utterances in dialog history.
+                - U: the max length of low-level sequences. E.g., the max \
+                length of each utterance in dialog history.
                 - dim: embedding dimension
 
                 The order of first three dimensions can be changed
-                according to the argument :attr:`time_major` of the two
-                encoders.
+                according to :attr:`order`.
 
             order: a 3-char string containing 'b', 't', and 'u',
-                that specifies the order of inputs dimension.
+                that specifies the order of inputs dimensions above.
                 Following four can be accepted:
 
-                    - 'btu': set time_major=False for both. (default)
-                    - 'utb': set time_major=True for both.
-                    - 'tbu': set time_major=True for major encoder only.
-                    - 'ubt': set time_major=True for minor encoder only.
+                    - **'btu'**: None of the encoders are time-major.
+                    - **'utb'**: Both encoders are time-major.
+                    - **'tbu'**: The major encoder is time-major.
+                    - **'ubt'**: The minor encoder is time-major.
 
             medium (optional): A list of callables that subsequently process the
                 final states of minor encoder and obtain the inputs
                 for the major encoder.
-
                 If not specified, :meth:`flatten` is used for processing
                 the minor's final states.
-
-            sequence_length_minor (optional): The `sequence_length` kwarg sent
-                to minor encoder. It can be either a 1-D tensor or 2-D tensor, 
-                with BxT units following correct order.
-
-            sequence_length_major (optional): The `sequence_length` kwarg sent
-                to major encoder.
-
+            sequence_length_minor (optional): The `sequence_length` argument
+                sent to minor encoder. It can be either a 1-D Tensor of shape
+                `[B*T]`, or a 2-D Tensor of shape `[B, T]` or `[T, B]`
+                according to :attr:`order`.
+            sequence_length_major (optional): The `sequence_length` argument
+                sent to major encoder. This is a 1-D Tensor of shape
+                `[B]`.
+            initial_state_major (optional): Initial state for the major-level
+                encoder. The batch dimension must equal `B`.
+            initial_state_minor (optional): Initial state for the minor-level
+                encoder. The batch dimension must equal `B`. The state will be
+                copied and used to start encoding each low-level sequence.
+                Ignored if :attr:`tiled_initial_state_minor` is provided.
+            tiled_initial_state_minor (optional): Initial state for the
+                minor-level encoder. The batch dimension must equal `B*T`.
             **kwargs: Other keyword arguments for the major and minor encoders,
-                such as `initial_state` and so on, except `time_major`, which 
-                will be automatically derived from `order` args.
-
+                such as `swap_memory`, etc.
+                Note that `sequence_length`, `initial_state`, and `time_major`
+                must not be included here.
+                `time_major` is derived from `order` automatically.
                 By default, arguments will be sent to both major and minor
-                encoders. To specify the encoder that arguments sent to, add
-                '_minor'/'_major' as its suffix.
+                encoders. To specify which encoder an argument should be sent
+                to, add '_minor'/'_major' as its suffix.
 
-                `initial_state_minor` must be provided with B,T dims flatten
-                into one dim of length BxT.
+                Note that `initial_state_minor` must be provided with B,T dims
+                flatten into one dim of length BxT.
 
         Returns:
-            `(outputs, final_state)` by the major encoder.
+            A tuple `(outputs, final_state)` by the major encoder.
         """
 
         def _kwargs_split(kwargs):
