@@ -172,9 +172,6 @@ class HierarchicalRNNEncoder(EncoderBase):
                medium=None,
                sequence_length_major=None,
                sequence_length_minor=None,
-               initial_state_major=None,
-               initial_state_minor=None,
-               tiled_initial_state_minor=None,
                **kwargs):
         """Encodes the inputs.
 
@@ -242,11 +239,6 @@ class HierarchicalRNNEncoder(EncoderBase):
         kwargs_minor, kwargs_major = _kwargs_split(kwargs)
         kwargs_minor['sequence_length'] = sequence_length_minor
         kwargs_major['sequence_length'] = sequence_length_major
-
-        kwargs_major['initial_state'] = initial_state_major
-        kwargs_minor['initial_state'] = self._get_initial_state_minor(
-            order, initial_state_minor, tiled_initial_state_minor,
-            tf.shape(inputs))
 
         expand, shape = self._get_flatten_order(
             order, kwargs_major, kwargs_minor, tf.shape(inputs))
