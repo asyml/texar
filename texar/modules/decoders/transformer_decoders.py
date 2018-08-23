@@ -165,7 +165,7 @@ class TransformerDecoder(ModuleBase):
             'bos_idx': 1,
             "beam_width":1,
             'alpha':0,
-            "name":"transformer_decoder",
+            "name":"decoder",
         }
 
     def _prepare_tokens_to_embeds(self, tokens):
@@ -230,7 +230,9 @@ class TransformerDecoder(ModuleBase):
             logits: [batch_size, target_length, vocab_size]
             preds: [batch_size, target_length]
         """
-        enc_padding = 1 - mask_sequences(encoder_output, src_sequence_length)[:, :, 0]
+        enc_padding = 1 - mask_sequences(tf.ones_like(encoder_output),
+                                         src_sequence_length,
+                                         tensor_rank=3)[:, :, 0]
         encoder_decoder_attention_bias = attentions.attention_bias_ignore_padding(
             enc_padding)
         if is_train_mode_py(mode):
@@ -241,11 +243,11 @@ class TransformerDecoder(ModuleBase):
             decoder_self_attention_bias = (
                 attentions.attention_bias_lower_triangle(
                     shape_list(inputs)[1]))
-            target_inputs = inputs * \
-                (self._embedding.shape.as_list()[-1]**0.5)
-            lengths = shape_list(target_inputs)[1]
-            channels = shape_list(target_inputs)[2]
+            target_inputs = inputs * self._hparams.dim**0.5
+
+            _, lengths, channels= shape_list(target_inputs)
             pos_embeds = self.position_embedder(lengths, channels)
+
             inputs = target_inputs + pos_embeds
 
             decoder_output = self._self_attention_stack(

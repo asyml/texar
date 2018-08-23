@@ -64,7 +64,7 @@ if __name__ == "__main__":
         word_embedder(encoder_input),
         tf.expand_dims(1 - src_inputs_padding, 2)
     )
-    src_lens = tf.reduce_sum(src_inputs_padding, axis=1)
+    src_lens = tf.reduce_sum(1 - src_inputs_padding, axis=1)
     encoder_output, encoder_decoder_attention_bias = \
         encoder(src_inputs_embedding, src_lens)
 
@@ -198,9 +198,7 @@ if __name__ == "__main__":
 
     def _test_epoch(cur_sess):
         references, hypotheses, rwords, hwords = [], [], [], []
-        for i in range(2):
-        #TODO(haoran): recover this line after debugging
-        #for i in range(0, len(test_data), args.test_batch_size):
+        for i in range(0, len(test_data), args.test_batch_size):
             sources, targets = \
                 zip(*test_data[i: i + args.test_batch_size])
             references.extend(t.tolist() for t in targets)

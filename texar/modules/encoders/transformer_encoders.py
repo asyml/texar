@@ -156,7 +156,7 @@ class TransformerEncoder(EncoderBase):
 		],
             },
             'dim': 512,
-            "name": "transformer_encoder",
+            "name": "encoder",
         }
 
     # pylint: disable=arguments-differ
@@ -185,8 +185,10 @@ class TransformerEncoder(EncoderBase):
         inputs = inputs * self._hparams.dim**0.5
 
         _, lengths, _ = shape_list(inputs)
-        #inputs_padding: 1 for padding and 0 for valid tokens
-        inputs_padding = 1 - mask_sequences(inputs, sequence_length)[:, :, 0]
+
+        inputs_padding = 1 - mask_sequences(tf.ones_like(inputs),
+                                            sequence_length,
+                                            tensor_rank=3)[:, :, 0]
         ignore_padding = attentions.attention_bias_ignore_padding(
             inputs_padding)
         encoder_self_attention_bias = ignore_padding
