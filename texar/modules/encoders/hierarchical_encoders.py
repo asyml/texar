@@ -23,6 +23,7 @@ import collections
 
 import tensorflow as tf
 from tensorflow.contrib.rnn import LSTMStateTuple
+from tensorflow.python.util import nest    # pylint: disable=E0611
 
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.utils import utils
@@ -281,7 +282,7 @@ class HierarchicalRNNEncoder(EncoderBase):
 
     @staticmethod
     def tile_initial_state_minor(initial_state, order, inputs_shape):
-        """Tile an initial state to be used for encoder minor.
+        """Tiles an initial state to be used for encoder minor.
 
         The batch dimension of :attr:`initial_state` must equal `T`. The
         state will be copied for `B` times and used to start encoding each
@@ -294,15 +295,21 @@ class HierarchicalRNNEncoder(EncoderBase):
                 used in :meth:`_build`.
             inputs_shape: Shape of `inputs` for :meth:`_build`. Can usually
                 be Obtained with `tf.shape(inputs)`.
+
+        Returns:
+            A tiled initial state with batch dimension of size `B*T`
         """
+        def _nest_tile(t, multiplier):
+            return nest.map_structure(lambda x: tf.tile(x, multiplier), t)
+
         if order == 'btu':
             return tf.contrib.seq2seq.tile_batch(initial_state, inputs_shape[0])
         elif order == 'ubt':
             return tf.contrib.seq2seq.tile_batch(initial_state, inputs_shape[1])
         elif order == 'utb':
-            return tf.tile(initial_state, inputs_shape[2])
+            return _nest_tile(initial_state, inputs_shape[2])
         elif order == 'tbu':
-            return tf.tile(initial_state, inputs_shape[1])
+            return _nest_tile(initial_state, inputs_shape[1])
         else:
             raise ValueError('Unknown order: {}'.format(order))
 
