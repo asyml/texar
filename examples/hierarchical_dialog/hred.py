@@ -71,7 +71,7 @@ def main():
     ecdr_states = encoder(
         context_embed,
         medium=['flatten', add_source_speaker_token],
-        sequence_length=data_batch['source_length'],
+        sequence_length_minor=data_batch['source_length'],
         sequence_length_major=data_batch['source_utterance_cnt'])
     ecdr_states = ecdr_states[1]
 
