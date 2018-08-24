@@ -32,38 +32,101 @@ def _type_name(value):
     return type(value).__name__
 
 class HParams(object):
-    """Hyperparameters.
+    """A class that maintains hyperparameters for configing Texar modules.
+    The class has several useful features:
 
-    Type check is performed to make sure the value types of hyperparameters in
-    :attr:`hparams` are consistent with their default value types in
-    :attr:`default_hparams`. Missing hyperparameters are set to default values.
-    The only exception happens when :attr:`default_hparams` has the structure:
+    - **Auto-completion of missing values.** Users can specify only a subset of\
+    hyperparameters they care about. Other hyperparameters will automatically\
+    take the default values. The auto-completion performs **recursively** so \
+    that hyperparameters taking `dict` values will also be auto-completed \
+    **All Texar modules** provide a \
+    :meth:`default_hparams` containing allowed hyperparameters and their \
+    default values. For example
 
-    .. code-block:: python
+        .. code-block:: python
 
-        {
-            "type": "<some type>",
-            "kwargs": { ... }
-            # Other hyperparameters
-            # ...
-        }
+            ## Recursive auto-completion
+            default_hparams = {"a": 1, "b": {"c": 2, "d": 3}}
+            hparams = {"b": {"c": 22}}
+            hparams_ = HParams(hparams, default_hparams)
+            hparams_.todict() == {"a": 1, "b": {"c": 22, "d": 3}}
+                # "a" and "d" are auto-completed
 
-    Here :attr:`"type"` is the name or full path to a function or a class,
-    and :attr:`"kwargs"` is the arguments for the function or the
-    constructor of the class.
+            ## All Texar modules have built-in `default_hparams`
+            hparams = {"dropout_rate": 0.1}
+            emb = tx.modules.WordEmbedder(hparams=hparams, ...)
+            emb.hparams.todict() == {
+                "dropout_rate": 0.1,  # provided value
+                "dim": 100            # default value
+                ...
+            }
 
-    - The default hyperparameters in :attr:`"kwargs"` are used (for typecheck \
-    and complementing missing hyperparameters) only when :attr:`"type"` \
-    takes default value (i.e., missing in :attr:`hparams` or set to \
-    the same value with the default). In this case :attr:`kwargs` allows to \
-    contain new keys not included in :attr:`default_hparams["kwargs"]`.
-    - If :attr:`"type"` is set to an other \
-    value and :attr:`"kwargs"` is missing in :attr:`hparams`, \
-    :attr:`"kwargs"` is set to an empty dictionary.
-    - :attr:`"type"` in :attr:`hparams` is not type-checked. Typically it \
-    can be a string as with the default value, or directly the function or \
-    the class instance (rather than the name or path). In the latter case, \
-    :attr:`"kwargs"` is typically ignored in usage.
+    - **Automatic typecheck.** For most hyperparameters, provided value must\
+    have the same or compatible dtype with the default value. HParams does\
+    necessary typecheck, and raises Error if improper dtype is provided.\
+    Also, hyperparameters not listed in `default_hparams` are not allowed,\
+    except for "kwargs" as detailed below.
+
+    - **Flexible dtype for specified hyperparameters.**  Some hyperparameters\
+    may allow different dtypes of values.
+
+        - Hyperparameters named "type" are not typechecked.\
+        For example, in :func:`~texar.core.get_rnn_cell`, hyperparameter \
+        `"type"` can take value of an RNNCell class, its string name of module \
+        path, or an RNNCell class instance. (String name or module path is \
+        allowd so that users can specify the value in YAML config files.)
+
+        - For other hyperparameters, list them\
+        in the "@no_typecheck" field in `default_hparams` to skip typecheck. \
+        For example, in :func:`~texar.core.get_rnn_cell`, hyperparameter \
+        "*_keep_prob" can be set to either a `float` or a `tf.placeholder`.
+
+    - **Special flexibility of keyword argument hyparameters.** \
+    Hyperparameters named "kwargs" are used as keyword arguments for a class\
+    constructor or a function call. Such hyperparameters take a `dict`, and \
+    users can add arbitrary valid keyword arguments to the dict. For example:
+
+        .. code-block:: python
+
+            default_rnn_cell_hparams = {
+                "type": "BasicLSTMCell",
+                "kwargs": { "num_units": 256 }
+                # Other hyperparameters
+                ...
+            }
+            my_hparams = {
+                "kwargs" {
+                    "num_units": 123,
+                    "forget_bias": 0.0         # Other valid keyword arguments
+                    "activation": "tf.nn.relu" # for BasicLSTMCell constructor
+                }
+            }
+            _ = HParams(my_hparams, default_rnn_cell_hparams)
+
+    - **Rich interfaces.** An HParams instance provides rich interfaces for\
+    accessing, updating, or adding hyperparameters.
+
+        .. code-block:: python
+
+            hparams = HParams(my_hparams, default_hparams)
+            # Access
+            hparams.type == hparams["type"]
+            # Update
+            hparams.type = "GRUCell"
+            hparams.kwargs = { "num_units": 100 }
+            hparams.kwargs.num_units == 100
+            # Add new
+            hparams.add_hparam("index", 1)
+            hparams.index == 1
+
+            # Convert to `dict` (recursively)
+            type(hparams.todic()) == dict
+
+            # I/O
+            pickle.dump(hparams, "hparams.dump")
+            with open("hparams.dump", 'rb') as f:
+                hparams_loaded = pickle.load(f)
+
 
     Args:
         hparams: A `dict` or an `HParams` instance containing hyperparameters.
@@ -72,9 +135,18 @@ class HParams(object):
             Hyperparameters are fully defined by :attr:`hparams`.
         allow_new_hparam (bool): If `False` (default), :attr:`hparams` cannot
             contain hyperparameters that are not included in
-            :attr:`default_hparams`, except the case of :attr:`"kwargs"` as
+            :attr:`default_hparams`, except for the case of :attr:`"kwargs"` as
             above.
     """
+    # - The default hyperparameters in :attr:`"kwargs"` are used (for typecheck\
+    # and complementing missing hyperparameters) only when :attr:`"type"` \
+    # takes default value (i.e., missing in :attr:`hparams` or set to \
+    # the same value with the default). In this case :attr:`kwargs` allows to \
+    # contain new keys not included in :attr:`default_hparams["kwargs"]`.
+    #
+    # - If :attr:`"type"` is set to an other \
+    # value and :attr:`"kwargs"` is missing in :attr:`hparams`, \
+    # :attr:`"kwargs"` is set to an empty dictionary.
 
     def __init__(self, hparams, default_hparams, allow_new_hparam=False):
         if isinstance(hparams, HParams):

@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Base class for seq2seq models.
 """
@@ -17,15 +29,21 @@ from texar import HParams
 from texar.utils import utils
 from texar.utils.variables import collect_trainable_variables
 
+# pylint: disable=too-many-instance-attributes, unused-argument,
+# pylint: disable=too-many-arguments, no-self-use
+
 __all__ = [
     "Seq2seqBase"
 ]
 
 class Seq2seqBase(ModelBase):
     """Base class inherited by all seq2seq model classes.
+
+    .. document private functions
+    .. automethod:: _build
     """
 
-    def __init__(self, data_hparams ,hparams=None):
+    def __init__(self, data_hparams, hparams=None):
         ModelBase.__init__(self, hparams)
 
         self._data_hparams = HParams(data_hparams,
@@ -42,6 +60,82 @@ class Seq2seqBase(ModelBase):
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
+
+        .. code-block:: python
+
+            {
+                "source_embedder": "WordEmbedder",
+                "source_embedder_hparams": {},
+                "target_embedder": "WordEmbedder",
+                "target_embedder_hparams": {},
+                "embedder_share": True,
+                "embedder_hparams_share": True,
+                "encoder": "UnidirectionalRNNEncoder",
+                "encoder_hparams": {},
+                "decoder": "BasicRNNDecoder",
+                "decoder_hparams": {},
+                "decoding_strategy_train": "train_greedy",
+                "decoding_strategy_infer": "infer_greedy",
+                "beam_search_width": 0,
+                "connector": "MLPTransformConnector",
+                "connector_hparams": {},
+                "optimization": {},
+                "name": "seq2seq",
+            }
+
+        Here:
+
+        "source_embedder" : str or class or instance
+            Word embedder for source text. Can be a class, its name or module
+            path, or a class instance.
+
+        "source_embedder_hparams" : dict
+            Hyperparameters for constructing the source embedder. E.g.,
+            See :meth:`~texar.modules.WordEmbedder.default_hparams` for
+            hyperparameters of :class:`~texar.modules.WordEmbedder`. Ignored
+            if "source_embedder" is an instance.
+
+        "target_embedder", "target_embedder_hparams" :
+            Same as "source_embedder" and "source_embedder_hparams" but for
+            target text embedder.
+
+        "embedder_share" : bool
+            Whether to share the source and target embedder. If `True`,
+            source embedder will be used to embed target text.
+
+        "embedder_hparams_share" : bool
+            Whether to share the embedder configurations. If `True`,
+            target embedder will be created with "source_embedder_hparams".
+            But the two embedders have different set of trainable variables.
+
+        "encoder", "encoder_hparams" :
+            Same as "source_embedder" and "source_embedder_hparams" but for
+            encoder.
+
+        "decoder", "decoder_hparams" :
+            Same as "source_embedder" and "source_embedder_hparams" but for
+            decoder.
+
+        "decoding_strategy_train" : str
+            The decoding strategy in training mode. See
+            :meth:`~texar.modules.RNNDecoderBase._build` for details.
+
+        "decoding_strategy_infer" : str
+            The decoding strategy in eval/inference mode.
+
+        "beam_search_width" : int
+            Beam width. If > 1, beam search is used in eval/inference mode.
+
+        "connector", "connector_hparams" :
+            The connector class and hyperparameters. A connector transforms
+            an encoder final state to a decoder initial state.
+
+        "optimization" : dict
+            Hyperparameters of optimizating the model. See
+            :func:`~texar.core.default_optimization_hparams` for details.
+
+        "name" : str
+            Name of the model.
         """
         hparams = ModelBase.default_hparams()
         hparams.update({
@@ -193,7 +287,7 @@ class Seq2seqBase(ModelBase):
             train_op=train_op,
             eval_metric_ops=eval_metric_ops)
 
-    def get_input_fn(self, mode, hparams=None):
+    def get_input_fn(self, mode, hparams=None): #pylint:disable=arguments-differ
         """Creates an input function `input_fn` that provides input data
         for the model in an :tf_main:`Estimator <estimator/Estimator>`.
         See, e.g., :tf_main:`tf.estimator.train_and_evaluate
@@ -202,7 +296,7 @@ class Seq2seqBase(ModelBase):
         Args:
             mode: One of members in
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`.
-            hparams: A `dict` or an :class:`~texar.hparams.HParams` instance
+            hparams: A `dict` or an :class:`~texar.HParams` instance
                 containing the hyperparameters of
                 :class:`~texar.data.PairedTextData`. See
                 :meth:`~texar.data.PairedTextData.default_hparams` for the
@@ -210,7 +304,10 @@ class Seq2seqBase(ModelBase):
 
         Returns:
             An input function that returns a tuple `(features, labels)`
-            when called.
+            when called. `features` contains data fields that are related
+            to source text, and `labels` contains data fields related
+            to target text. See :class:`~texar.data.PairedTextData` for
+            all data fields.
         """
         def _input_fn():
             data = PairedTextData(hparams)

@@ -1,27 +1,25 @@
 .. role:: hidden
-    :class: hidden
+    :class: hidden-section
 
 Models
-****
+********
 
-.. automodule:: texar.models
+ModelBase
+=============
 
-Model Bases
-======
-
-.. automodule:: texar.models.model_base
+.. autoclass:: texar.models.ModelBase
     :members:
 
+Seq2seqBase
+===============
 
-Seq2seq Bases
-======
-
-.. automodule:: texar.models.seq2seq.seq2seq_base
+.. autoclass:: texar.models.Seq2seqBase
     :members:
+    :inherited-members:
 
-Basic Seq2seq
-======
+BasicSeq2seq
+==============
 
-.. automodule:: texar.models.seq2seq.basic_seq2seq
+.. autoclass:: texar.models.BasicSeq2seq
     :members:
-
+    :inherited-members:
