@@ -322,14 +322,11 @@ class DQNAgent(EpisodicAgentBase):
         if self._timestep > self._cold_start_steps and train_policy:
             self._train_qnet(feed_dict)
 
-        action = self._action
-        observ = self._observ
-
         action_one_hot = [0.] * self._num_actions
-        action_one_hot[action] = 1.
+        action_one_hot[self._action] = 1.
 
         self._replay_memory.add(dict(
-            observ=observ,
+            observ=self._observ,
             action=action_one_hot,
             reward=reward,
             terminal=terminal,
@@ -387,7 +384,7 @@ class DQNAgent(EpisodicAgentBase):
     def _update_observ_action(self, observ, action):
         self._observ = observ
         self._action = action
-        if self._replay_memory.size() >= 1:
+        if self._replay_memory.size() > 0:
             self._replay_memory.last()['next_observ'] = self._observ
 
     def _get_action(self, observ, feed_dict=None):

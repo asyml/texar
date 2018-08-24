@@ -18,6 +18,7 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+import numpy as np
 
 from texar.agents.episodic_agent_base import EpisodicAgentBase
 from texar.utils import utils
@@ -108,7 +109,7 @@ class ActorCriticAgent(EpisodicAgentBase):
                     module_paths=['texar.agents', 'texar.custom'])
             self._critic = critic
 
-            if self._actor._discount_factor == self._critic._discount_factor:
+            if self._actor._discount_factor != self._critic._discount_factor:
                 raise ValueError('discount_factor of the actor and the critic '
                                  'must be the same.')
             self._discount_factor = self._actor._discount_factor
@@ -168,63 +169,41 @@ class ActorCriticAgent(EpisodicAgentBase):
             'actor_hparams': None,
             'critic_type': 'DQNAgent',
             'critic_hparams': None,
-            'name': 'actor_critic_agent'
+            'name': 'actor_critic_agents'
         }
 
     def _reset(self):
         self._actor._reset()
         self._critic._reset()
 
-        self._observs = []
-        self._actions = []
-        self._rewards = []
-
     def _observe(self, reward, terminal, train_policy, feed_dict):
-        self._rewards.append(reward)
-        if len(self._observs) >= 2:
-            self._train_actor(
-                observ=self._observs[-2],
-                action=self._actions[-1],
-                reward=self._rewards[-1],
-                next_observ=self._observs[-1],
-                feed_dict=feed_dict)
+        self._train_actor(
+            observ=self._observ,
+            action=self._action,
+            feed_dict=feed_dict)
         self._critic._observe(reward, terminal, train_policy, feed_dict)
 
-    def _train_actor(self, observ, action, reward, next_observ, feed_dict):
-        feed_dict_ = {self._critic._observ_inputs: [next_observ]}
-        feed_dict_.update(feed_dict)
-        next_step_qvalues = self._critic._qvalues_from_qnet(next_observ)
-
-        action_one_hot = [0.] * self._num_actions
-        action_one_hot[action] = 1.
-        feed_dict_ = {
-            self._critic._observ_inputs: [observ],
-            self._critic._y_inputs:
-                [reward + self._discount_factor * next_step_qvalues[0][action]],
-            self._critic._action_inputs: [action_one_hot]
-        }
-        feed_dict_.update(feed_dict)
-        td_errors = self._critic._sess.run(
-            self._critic._td_error, feed_dict=feed_dict_)
+    def _train_actor(self, observ, action, feed_dict):
+        qvalues = self._critic._qvalues_from_target(observ=observ)
+        advantage = qvalues[0][action] - np.mean(qvalues)
+        # TODO (bowen)
 
         feed_dict_ = {
             self._actor._observ_inputs: [observ],
             self._actor._action_inputs: [action],
-            self._actor._advantage_inputs: td_errors
+            self._actor._advantage_inputs: [advantage]
         }
         feed_dict_.update(feed_dict)
 
         self._actor._train_policy(feed_dict=feed_dict_)
 
-    def _get_action(self, observ, feed_dict=None):
-        self._observs.append(observ)
-        self._actions.append(self._actor.get_action(
-            observ, feed_dict=feed_dict))
+    def get_action(self, observ, feed_dict=None):
+        self._observ = observ
+        self._action = self._actor.get_action(observ, feed_dict=feed_dict)
 
-        self._critic._update_observ_action(
-            self._observs[-1], self._actions[-1])
+        self._critic._update_observ_action(self._observ, self._action)
 
-        return self._actions[-1]
+        return self._action
 
     @property
     def sess(self):
@@ -237,4 +216,3 @@ class ActorCriticAgent(EpisodicAgentBase):
         self._sess = session
         self._actor._sess = session
         self._critic._sess = session
-
