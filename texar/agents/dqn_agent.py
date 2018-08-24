@@ -39,7 +39,36 @@ __all__ = [
 class DQNAgent(EpisodicAgentBase):
     """Deep Q learning agent.
 
-    TODO
+    Args:
+        env_config: An instance of :class:`~texar.agents.EnvConfig` specifying
+            action space, observation space, and reward range, etc. Use
+            :func:`~texar.agents.get_gym_env_config` to create an EnvConfig
+            from a gym environment.
+        sess (optional): A tf session.
+            Can be `None` here and set later with `agent.sess = session`.
+        qnet (optional): A qvalue-net used for predict q-values.
+        target (optional): A qvalue-net used for follow qnet as in DeepMind's 
+            paper of DQN.
+        qnet_kwargs (dict, optional): Keyword arguments for qnet
+            constructor. Note that the `hparams` argument for network
+            constructor is specified in the "policy_hparams" field of
+            :attr:`hparams` and should not be included in `policy_kwargs`.
+            Ignored if :attr:`qnet` is given.
+        qnet_caller_kwargs (dict, optional): Keyword arguments for
+            calling the qnet to get actions. The qnet is called with
+            :python:`outputs=qnet(inputs=observation, **qnet_caller_kwargs)`
+        replay_memory (optional): A replay memory used in the algorithm.
+        replay_memory_kwargs (dict, optional): Keyword arguments for 
+            replay_memory constructor.
+            Ignored if :attr:`replay_memory` is given.
+        exploration (optional): A exploration used in the algorithm.
+        exploration_kwargs (dict, optional): Keyword arguments for exploration
+            constructor. Ignored if :attr:`exploration` is given.
+        hparams (dict or HParams, optional): Hyperparameters. Missing
+            hyperparamerter will be set to default values. See
+            :meth:`default_hparams` for the hyperparameter sturcture and
+            default values.
+         
     """
     def __init__(self,
                  env_config,
@@ -60,7 +89,7 @@ class DQNAgent(EpisodicAgentBase):
         self._sample_batch_size = self._hparams.sample_batch_size
         self._update_period = self._hparams.update_period
         self._discount_factor = self._hparams.discount_factor
-        self._update_type = self._hparams.update_type
+        self._target_update_strategy = self._hparams.target_update_strategy
         self._num_actions = self._env_config.action_space.high - \
                             self._env_config.action_space.low
 
@@ -106,8 +135,87 @@ class DQNAgent(EpisodicAgentBase):
 
     @staticmethod
     def default_hparams():
-        """
-        TODO
+        """Returns a dictionary of hyperparameters with default values:
+
+        .. role:: python(code)
+           :language: python
+
+        .. code-block:: python
+
+            {
+                'qnet_type': 'CategoricalQNet',
+                'qnet_hparams': None,
+                'replay_memory_type': 'DequeReplayMemory',
+                'replay_memory_hparams': None,
+                'exploration_type': 'EpsilonLinearDecayExploration',
+                'exploration_hparams': None,
+                'optimization': opt.default_optimization_hparams(),
+                'target_update_strategy': 'copy',
+                'cold_start_steps': 100,
+                'sample_batch_size': 32,
+                'update_period': 100,
+                'discount_factor': 0.95,
+                'name': 'dqn_agent'
+            }
+
+        Here:
+
+        "qnet_type" : str or class or instance qvalue-net. Can be class, its 
+            name or module path, or a class instance. If class name is given,
+            the class must be from module :mod:`texar.modules` or 
+            :mod:`texar.custom`. Ignored if a `qnet` is given to 
+            the agent constructor.
+
+        "qnet_hparams" : dict, optional
+            Hyperparameters for the qvalue-net. With the :attr:`qnet_kwargs`
+            argument to the constructor, a network is created with
+            :python:`qnet_class(**qnet_kwargs, hparams=qnet_hparams)`.
+
+        "replay_memory_type" : str or class or instance qvalue-net.
+            Can be class, its name or module path, or a class instance.
+            If class name is given, the class must be from module
+            :mod:`texar.modules` or :mod:`texar.custom`.
+            Ignored if a `replay_memory` is given to the agent constructor.
+
+        "replay_memory_hparams" : dict, optional
+            Hyperparameters for the qvalue-net. With the 
+            :attr:`replay_memory_kwargs` argument to the constructor, 
+            a network is created with 
+            :python:`replay_memory_class(
+            **replay_memory_kwargs, hparams=replay_memory_hparams)`.
+
+        "exploration_type" : str or class or instance qvalue-net. Can be class,
+            its name or module path, or a class instance. If class name is
+            given, the class must be from module :mod:`texar.modules` or
+            :mod:`texar.custom`. Ignored if a `exploration` is given to 
+            the agent constructor.
+
+        "exploration_hparams" : dict, optional
+            Hyperparameters for the qvalue-net.
+            With the :attr:`exploration_kwargs` argument to the constructor,
+            a network is created with :python:`exploration_class(
+            **exploration_kwargs, hparams=exploration_hparams)`.
+
+        "cold_start_steps": int
+            In the beginning, qnet do not be trained in the number of steps.
+
+        "sample_batch_size": int
+            The number of samples taken in replay memory when training.
+
+        "target_update_strategy": string
+            if it is ```"copy"```, target will be assigned with the parameter of
+            qnet every update_period steps.
+            if it is ```"tau"```, target will be assigned as
+            ``` (1 - 1/update_period)tau + 1/update_period * qnet```
+
+        "update_period": int
+            the parameter used in updating target.
+
+        "discount_factor" : float
+            The discount factor of reward.
+
+        "name" : str
+            Name of the agent.
         """
         return {
             'qnet_type': 'CategoricalQNet',
@@ -117,7 +225,7 @@ class DQNAgent(EpisodicAgentBase):
             'exploration_type': 'EpsilonLinearDecayExploration',
             'exploration_hparams': None,
             'optimization': opt.default_optimization_hparams(),
-            'update_type': 'copy', # Rename to `target_update_strategy` ?
+            'target_update_strategy': 'copy',
             'cold_start_steps': 100,
             'sample_batch_size': 32,
             'update_period': 100,
@@ -149,9 +257,9 @@ class DQNAgent(EpisodicAgentBase):
                 y=self._y_inputs)
             self._train_op = self._get_train_op()
 
-            if self._update_type == 'copy':
+            if self._target_update_strategy == 'copy':
                 self._update_op = self._get_copy_update_op()
-            elif self._update_type == 'tau':
+            elif self._target_update_strategy == 'tau':
                 self._update_op = self._get_tau_update_op()
 
     def _get_qnet_outputs(self, state_inputs):
@@ -236,8 +344,8 @@ class DQNAgent(EpisodicAgentBase):
         self._update_target(feed_dict)
 
     def _update_target(self, feed_dict):
-        if self._update_type == 'tau' or (
-                self._update_type == 'copy' and
+        if self._target_update_strategy == 'tau' or (
+                self._target_update_strategy == 'copy' and
                 self._timestep % self._update_period == 0):
             self._sess.run(self._update_op, feed_dict=feed_dict)
 
