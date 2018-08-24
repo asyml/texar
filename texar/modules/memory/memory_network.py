@@ -121,17 +121,27 @@ class MemNetBase(ModuleBase):
             (Sukhbaatar et al.)
             If not provided, a default embedding operation is created as
             specified in :attr:`hparams`. See
-            :func:`~texar.modules.default_memnet_embed_fn` for details.
+            :meth:`~texar.modules.MemNetBase.get_default_embed_fn`
+            for details.
         output_embed_fn (optional): A callable that embeds raw memory entries
             as outputs.
             This corresponds to the `C` embedding operation in
             (Sukhbaatar et al.)
             If not provided, a default embedding operation is created as
             specified in :attr:`hparams`. See
-            :func:`~texar.modules.default_memnet_embed_fn` for details.
+            :meth:`~texar.modules.MemNetBase.get_default_embed_fn`
+            for details.
         query_embed_fn (optional): A callable that embeds query.
             This corresponds to the `B` embedding operation in
-            (Sukhbaatar et al.)
+            (Sukhbaatar et al.). If not provided and "use_B" is True
+            in :attr:`hparams`, a default embedding operation is created as
+            specified in :attr:`hparams`. See
+            :meth:`~texar.modules.MemNetBase.get_default_embed_fn`
+            for details.
+            Notice: If you'd like to customize this callable, please follow
+            the same number and style of dimensions as in `input_embed_fn` or
+            `output_embed_fn`, and assume that the 2nd dimension of its
+            input and output (which corresponds to `memory_size`) is 1.
         hparams (dict or HParams, optional): Hyperparameters. Missing
             hyperparamerter will be set to default values. See
             :meth:`default_hparams` for the hyperparameter sturcture and
@@ -168,12 +178,14 @@ class MemNetBase(ModuleBase):
 
         A = input_embed_fn
         if input_embed_fn is None:
-            A, mdim_A = self.get_default_embed_fn(self._hparams.A)
+            A, mdim_A = self.get_default_embed_fn(
+                self._memory_size, self._hparams.A)
             memory_dim = mdim_A
 
         C = output_embed_fn
         if output_embed_fn is None:
-            C, mdim_C = self.get_default_embed_fn(self._hparams.C)
+            C, mdim_C = self.get_default_embed_fn(
+                self._memory_size, self._hparams.C)
             if mdim_A is not None and mdim_A != mdim_C:
                 raise ValueError('Embedding config `A` and `C` must have '
                                  'the same output dimension.')
@@ -181,7 +193,7 @@ class MemNetBase(ModuleBase):
 
         B = query_embed_fn
         if query_embed_fn is None and self._hparams.use_B:
-            B, mdim_B = self.get_default_embed_fn(self._hparams.B)
+            B, mdim_B = self.get_default_embed_fn(1, self._hparams.B)
             if mdim_A is not None and mdim_A != mdim_B:
                 raise ValueError('Embedding config `A` and `B` must have '
                                  'the same output dimension.')
@@ -193,7 +205,7 @@ class MemNetBase(ModuleBase):
         return A, C, B, memory_dim
 
 
-    def get_default_embed_fn(self, embed_fn_hparams):
+    def get_default_embed_fn(self, memory_size, embed_fn_hparams):
         """Creates a default embedding function. Can be used for A, C, or B
         operation.
 
@@ -240,7 +252,7 @@ class MemNetBase(ModuleBase):
         )
         # temporal embedder
         temporal_embedder = PositionEmbedder(
-            position_size=self._memory_size,
+            position_size=memory_size,
             hparams=embed_fn_hparams["temporal_embedding"]
         )
 
@@ -266,7 +278,7 @@ class MemNetBase(ModuleBase):
             embedded_memory = embedder(
                 ids=memory, soft_ids=soft_memory, mode=mode)
             temporal_embedded = temporal_embedder(
-                sequence_length=tf.constant([self._memory_size]), mode=mode)
+                sequence_length=tf.constant([memory_size]), mode=mode)
             temporal_embedded = tf.tile(
                 temporal_embedded, [tf.shape(embedded_memory)[0], 1, 1])
 
@@ -413,6 +425,10 @@ class MemNetRNNLike(MemNetBase):
             specified in :attr:`hparams`. See
             :meth:`~texar.modules.MemNetBase.get_default_embed_fn`
             for details.
+            Notice: If you'd like to customize this callable, please follow
+            the same number and style of dimensions as in `input_embed_fn` or
+            `output_embed_fn`, and assume that the 2nd dimension of its
+            input and output (which corresponds to `memory_size`) is 1.
         hparams (dict or HParams, optional): Hyperparameters. Missing
             hyperparamerter will be set to default values. See
             :meth:`default_hparams` for the hyperparameter sturcture and
@@ -520,9 +536,12 @@ class MemNetRNNLike(MemNetBase):
             query (optional): Query vectors as the intial input of the memory
                 network.
                 If you'd like to apply some transformation (e.g., embedding)
-                on it before it's fed into the network, please add
-                `query_embed_fn` when constructing this instance.
-                If you do not provide `query_embed_fn`, it should be of shape
+                on it before it's fed into the network, please set `use_B` to
+                True and add `query_embed_fn` when constructing this instance.
+                If `query_embed_fn` is set to
+                :meth:`~texar.modules.MemNetBase.get_default_embed_fn`,
+                it should be of shape `[batch_size]`.
+                If `use_B` is not set, it should be of shape
                 `[batch_size, memory_dim]`.
             soft_memory (optional): Soft memory used in A/C operations. By
                 default, it should be a tensor of shape
@@ -532,22 +551,24 @@ class MemNetRNNLike(MemNetBase):
                 this option can also be used.
             soft_query (optional): Query vectors as the intial input of the
                 memory network.
+                If you'd like to apply some transformation (e.g., embedding)
+                on it before it's fed into the network, please set `use_B` to
+                True and add `query_embed_fn` when constructing this instance.
                 Similar to :attr:`soft_memory`, if `query_embed_fn` is set to
                 :meth:`~texar.modules.MemNetBase.get_default_embed_fn`,
-                then it must be of shape
-                `[batch_size, memory_size, raw_memory_dim]`.
-                If you'd like to apply some transformation (e.g., embedding)
-                on it before it's fed into the network, please add
-                `query_embed_fn` when constructing this instance.
-                If you do not provide `query_embed_fn`, it should be of shape
-                `[batch_size, memory_dim]`.
+                then it must be of shape `[batch_size, raw_memory_dim]`.
+                Ignored if `use_B` is not set.
             mode (optional): A tensor taking value in
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
                 `TRAIN`, `EVAL`, and `PREDICT`. If `None`, dropout is
                 controlled by :func:`texar.global_mode`.
         """
         if self._B is not None:
-            query = self._B(query, soft_query, mode=mode)
+            def _unsqueeze(x):
+                return x if x is None else tf.expand_dims(x, 1)
+            query = tf.squeeze(
+                self._B(_unsqueeze(query), _unsqueeze(soft_query), mode=mode),
+                1)
         self._u = [query]
         self._m = self._A(memory, soft_memory, mode=mode)
         self._c = self._C(memory, soft_memory, mode=mode)

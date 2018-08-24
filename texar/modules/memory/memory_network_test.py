@@ -19,12 +19,12 @@ class MemNetRNNLikeTest(tf.test.TestCase):
     """
 
     def _test_memory_dim(self, combine_mode='add', soft_memory=False,
-                         soft_query=False):
+                         soft_query=False, use_B=False):
         """Tests :attr:`memory_dim` in the :attr:`combine_mode` and soft
         options.
         """
-        print('testing: combine_mode={}, soft_memory={}, soft_query={}'.format(
-              combine_mode, soft_memory, soft_query))
+        print('testing: combine_mode={}, soft_memory={}, soft_query={}, '
+              'use_B={}'.format(combine_mode, soft_memory, soft_query, use_B))
 
         n_hops = 3
         if combine_mode == 'add' or combine_mode is None:
@@ -40,7 +40,6 @@ class MemNetRNNLikeTest(tf.test.TestCase):
                 "combine_mode = {} is not recognized".format(combine_mode))
         relu_dim = 13
         memory_size = 7
-        query_memory_size = 5
         raw_memory_dim = 11
         batch_size = 2
         embed_hparams = {
@@ -58,7 +57,8 @@ class MemNetRNNLikeTest(tf.test.TestCase):
             "memory_size": memory_size,
             "A": embed_hparams,
             "C": embed_hparams,
-            # TODO: add soft query hparams
+            "B": embed_hparams,
+            "use_B": use_B,
         }
         
         memnet = MemNetRNNLike(raw_memory_dim=raw_memory_dim,
@@ -70,9 +70,13 @@ class MemNetRNNLikeTest(tf.test.TestCase):
         else:
             kwargs['memory'] = tf.tile(tf.expand_dims(
                 tf.range(memory_size, dtype=tf.int32), 0), [batch_size, 1])
-        if soft_query:
-            kwargs['soft_query'] = tf.random_uniform(
-                [batch_size, query_memory_size, raw_memory_dim])
+        if use_B:
+            if soft_query:
+                kwargs['soft_query'] = tf.random_uniform(
+                    [batch_size, raw_memory_dim])
+            else:
+                kwargs['query'] = tf.random_uniform(
+                    [batch_size], maxval=raw_memory_dim, dtype=tf.int32)
         else:
             kwargs['query'] = tf.random_uniform([batch_size, memory_dim])
         logits = memnet(**kwargs)
@@ -86,9 +90,10 @@ class MemNetRNNLikeTest(tf.test.TestCase):
         """
         for combine_mode in ['add', 'concat']:
             for soft_memory in [False, True]:
-                for soft_query in [False]: # TODO: add soft_query
-                    self._test_memory_dim(combine_mode, soft_memory,
-                                          soft_query)
+                for use_B in [False, True]:
+                    for soft_query in ([False, True] if use_B else [False]):
+                        self._test_memory_dim(combine_mode, soft_memory,
+                                              soft_query, use_B)
 
 if __name__ == "__main__":
     tf.test.main()
