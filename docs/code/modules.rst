@@ -72,6 +72,9 @@ Encoders
 .. autoclass:: texar.modules.RNNEncoderBase
     :members:
 
+:hidden:`default_transformer_poswise_net_hparams`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.modules.default_transformer_poswise_net_hparams
 
 Decoders
 ========
@@ -110,6 +113,16 @@ Decoders
 :hidden:`beam_search_decode`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.modules.beam_search_decode
+
+:hidden:`TransformerDecoder`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.TransformerDecoder
+    :members:
+
+:hidden:`TransformerDecoderOutput`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.TransformerDecoderOutput
+    :members:
 
 :hidden:`SoftmaxEmbeddingHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -205,30 +218,23 @@ Networks
 Memory
 ======
 
-MemNetSingleLayer
---------------------------------------
-
-.. autoclass:: texar.modules.memory.MemNetSingleLayer
+:hidden:`MemNetBase`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.MemNetBase
     :members:
+    :inherited-members:
 
-MemNetBase
---------------------------------------
-
-.. autoclass:: texar.modules.memory.MemNetBase
+:hidden:`MemNetRNNLike`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.MemNetRNNLike
     :members:
+    :inherited-members:
 
-MemNetRNNLike
---------------------------------------
+:hidden:`default_memnet_embed_fn_hparams`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.modules.default_memnet_embed_fn_hparams
 
-.. autoclass:: texar.modules.memory.MemNetRNNLike
-    :members:
-
-default_embedder_fn
---------------------------------------
-
-.. autofunction:: texar.modules.memory.default_embedder_fn
-
-Policies
+Policy
 =========
 
 :hidden:`PolicyNetBase`
