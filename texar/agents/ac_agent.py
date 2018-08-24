@@ -169,7 +169,7 @@ class ActorCriticAgent(EpisodicAgentBase):
             'actor_hparams': None,
             'critic_type': 'DQNAgent',
             'critic_hparams': None,
-            'name': 'actor_critic_agents'
+            'name': 'actor_critic_agent'
         }
 
     def _reset(self):
