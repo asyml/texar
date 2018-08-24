@@ -33,17 +33,17 @@ class PGAgent(EpisodicAgentBase):
     **un-batched** training, i.e., each time generates one action, takes one
     observation, and updates the policy.
 
-    The policy must takes in an observation of shape `[1] + observation_shape`,
-    where the first dimension 1 is for batch dimension, and output a `dict`
+    The policy must take in an observation of shape `[1] + observation_shape`,
+    where the first dimension 1 stands for batch dimension, and output a `dict`
     containing:
 
     - Key **"action"** whose value is a Tensor of shape \
     `[1] + action_shape` containing a single action.
     - One of keys "log_prob" or "dist":
 
-        - **log_prob**: A Tensor of shape `[1]`, the log probability of the \
+        - **"log_prob"**: A Tensor of shape `[1]`, the log probability of the \
         "action".
-        - **dist**: A \
+        - **"dist"**: A \
         tf_main:`tf.distributions.Distribution <distributions/Distribution>`\
         with the `log_prob` interface and \
         `log_prob = dist.log_prob(outputs["action"])`.
@@ -60,6 +60,7 @@ class PGAgent(EpisodicAgentBase):
             Can be `None` here and set later with `agent.sess = session`.
         policy (optional): A policy net that takes in observation and outputs
             actions and probabilities.
+            If not given, a policy network is created based on :attr:`hparams`.
         policy_kwargs (dict, optional): Keyword arguments for policy
             constructor. Note that the `hparams` argument for network
             constructor is specified in the "policy_hparams" field of

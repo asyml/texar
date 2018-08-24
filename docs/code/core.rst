@@ -112,10 +112,20 @@ Exploration
 .. autoclass:: texar.core.EpsilonLinearDecayExploration
     :members:
 
+:hidden:`ExplorationBase`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.core.ExplorationBase
+    :members:
+
 Replay Memories
 ================
 
 :hidden:`DequeReplayMemory`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.core.DequeReplayMemory
+    :members:
+
+:hidden:`ReplayMemoryBase`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.core.ReplayMemoryBase
     :members:

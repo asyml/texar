@@ -24,6 +24,10 @@ import random
 
 from texar.hyperparams import HParams
 
+__all__ = [
+    "ReplayMemoryBase",
+    "DequeReplayMemory"
+]
 
 class ReplayMemoryBase(object):
     """Base class of replay memory inheritted by all replay memory classes.
@@ -35,16 +39,6 @@ class ReplayMemoryBase(object):
     """
     def __init__(self, hparams=None):
         self._hparams = HParams(hparams, self.default_hparams())
-
-    def add(self, element):
-        """Inserts a memory entry
-        """
-        raise NotImplementedError
-
-    def get(self, size):
-        """Pops a memory entry.
-        """
-        raise NotImplementedError
 
     @staticmethod
     def default_hparams():
@@ -59,6 +53,16 @@ class ReplayMemoryBase(object):
         return {
             'name': 'replay_memory'
         }
+
+    def add(self, element):
+        """Inserts a memory entry
+        """
+        raise NotImplementedError
+
+    def get(self, size):
+        """Pops a memory entry.
+        """
+        raise NotImplementedError
 
     def last(self):
         """Returns the latest element in the memeory.

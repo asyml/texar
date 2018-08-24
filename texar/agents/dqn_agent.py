@@ -35,9 +35,21 @@ __all__ = [
 ]
 
 
-# TODO(zhiting): only support discrete actions?
 class DQNAgent(EpisodicAgentBase):
-    """Deep Q learning agent.
+    """Deep Q learning agent for episodic setting.
+
+    A Q learning algorithm consists of several components:
+
+        - A **Q-net** takes in a state and returns Q-value for action sampling.\
+        See :class:`~texar.modules.CategoricalQNet` for an example Q-net class\
+        and required interface.
+        - A **replay memory** manages past experience for Q-net updates. See\
+        :class:`~texar.core.DequeReplayMemory` for an example replay memory\
+        class and required interface.
+        - An **exploration** that specifies the exploration strategy used\
+        to train the Q-net. See\
+        :class:`~texar.core.EpsilonLinearDecayExploration` for an example\
+        class and required interface.
 
     Args:
         env_config: An instance of :class:`~texar.agents.EnvConfig` specifying
@@ -46,29 +58,31 @@ class DQNAgent(EpisodicAgentBase):
             from a gym environment.
         sess (optional): A tf session.
             Can be `None` here and set later with `agent.sess = session`.
-        qnet (optional): A qvalue-net used for predict q-values.
-        target (optional): A qvalue-net used for follow qnet as in DeepMind's 
-            paper of DQN.
+        qnet (optional): A Q network that predicts Q values given states.
+            If not given, a Q network is created based on :attr:`hparams`.
+        target (optional): A target network to compute target Q values.
         qnet_kwargs (dict, optional): Keyword arguments for qnet
             constructor. Note that the `hparams` argument for network
             constructor is specified in the "policy_hparams" field of
             :attr:`hparams` and should not be included in `policy_kwargs`.
             Ignored if :attr:`qnet` is given.
         qnet_caller_kwargs (dict, optional): Keyword arguments for
-            calling the qnet to get actions. The qnet is called with
+            calling `qnet` to get Q values. The `qnet` is called with
             :python:`outputs=qnet(inputs=observation, **qnet_caller_kwargs)`
-        replay_memory (optional): A replay memory used in the algorithm.
-        replay_memory_kwargs (dict, optional): Keyword arguments for 
+        replay_memory (optional): A replay memory instance.
+            If not given, a replay memory is created based on :attr:`hparams`.
+        replay_memory_kwargs (dict, optional): Keyword arguments for
             replay_memory constructor.
             Ignored if :attr:`replay_memory` is given.
-        exploration (optional): A exploration used in the algorithm.
+        exploration (optional): An exploration instance used in the algorithm.
+            If not given, an exploration instance is created based on
+            :attr:`hparams`.
         exploration_kwargs (dict, optional): Keyword arguments for exploration
-            constructor. Ignored if :attr:`exploration` is given.
+            class constructor. Ignored if :attr:`exploration` is given.
         hparams (dict or HParams, optional): Hyperparameters. Missing
-            hyperparamerter will be set to default values. See
+            hyperparamerters will be set to default values. See
             :meth:`default_hparams` for the hyperparameter sturcture and
             default values.
-         
     """
     def __init__(self,
                  env_config,
@@ -160,56 +174,66 @@ class DQNAgent(EpisodicAgentBase):
 
         Here:
 
-        "qnet_type" : str or class or instance qvalue-net. Can be class, its 
+        "qnet_type" : str or class or instance
+            Q-value net. Can be class, its
             name or module path, or a class instance. If class name is given,
-            the class must be from module :mod:`texar.modules` or 
-            :mod:`texar.custom`. Ignored if a `qnet` is given to 
+            the class must be from module :mod:`texar.modules` or
+            :mod:`texar.custom`. Ignored if a `qnet` is given to
             the agent constructor.
 
         "qnet_hparams" : dict, optional
-            Hyperparameters for the qvalue-net. With the :attr:`qnet_kwargs`
+            Hyperparameters for the Q net. With the :attr:`qnet_kwargs`
             argument to the constructor, a network is created with
             :python:`qnet_class(**qnet_kwargs, hparams=qnet_hparams)`.
 
-        "replay_memory_type" : str or class or instance qvalue-net.
-            Can be class, its name or module path, or a class instance.
+        "replay_memory_type" : str or class or instance
+            Replay memory class. Can be class, its name or module path,
+            or a class instance.
             If class name is given, the class must be from module
-            :mod:`texar.modules` or :mod:`texar.custom`.
+            :mod:`texar.core` or :mod:`texar.custom`.
             Ignored if a `replay_memory` is given to the agent constructor.
 
         "replay_memory_hparams" : dict, optional
-            Hyperparameters for the qvalue-net. With the 
-            :attr:`replay_memory_kwargs` argument to the constructor, 
-            a network is created with 
+            Hyperparameters for the replay memory. With the
+            :attr:`replay_memory_kwargs` argument to the constructor,
+            a network is created with
             :python:`replay_memory_class(
             **replay_memory_kwargs, hparams=replay_memory_hparams)`.
 
-        "exploration_type" : str or class or instance qvalue-net. Can be class,
+        "exploration_type" : str or class or instance
+            Exploration class. Can be class,
             its name or module path, or a class instance. If class name is
-            given, the class must be from module :mod:`texar.modules` or
-            :mod:`texar.custom`. Ignored if a `exploration` is given to 
+            given, the class must be from module :mod:`texar.core` or
+            :mod:`texar.custom`. Ignored if a `exploration` is given to
             the agent constructor.
 
         "exploration_hparams" : dict, optional
-            Hyperparameters for the qvalue-net.
+            Hyperparameters for the exploration class.
             With the :attr:`exploration_kwargs` argument to the constructor,
             a network is created with :python:`exploration_class(
             **exploration_kwargs, hparams=exploration_hparams)`.
 
+        "optimization" : dict
+            Hyperparameters of optimization for updating the Q-net.
+            See :func:`~texar.core.default_optimization_hparams` for details.
+
         "cold_start_steps": int
-            In the beginning, qnet do not be trained in the number of steps.
+            In the beginning, Q-net is not trained in the first few steps.
 
         "sample_batch_size": int
             The number of samples taken in replay memory when training.
 
         "target_update_strategy": string
-            if it is ```"copy"```, target will be assigned with the parameter of
-            qnet every update_period steps.
-            if it is ```"tau"```, target will be assigned as
-            ``` (1 - 1/update_period)tau + 1/update_period * qnet```
+
+            - If **"copy"**, the target network is assigned with the parameter \
+            of Q-net every :attr:`"update_period"` steps.
+
+            - If **"tau"**, target will be updated by assigning as
+            ``` (1 - 1/update_period) * target + 1/update_period * qnet ```
 
         "update_period": int
-            the parameter used in updating target.
+            Frequecy of updating the target network, i.e., updating
+            the target once for every "update_period" steps.
 
         "discount_factor" : float
             The discount factor of reward.
@@ -243,7 +267,6 @@ class DQNAgent(EpisodicAgentBase):
                 dtype=self._env_config.action_dtype,
                 shape=[None, self._num_actions],
                 name='action_inputs')
-            # TODO(zhiting): the name `y` is not readable.
             self._y_inputs = tf.placeholder(
                 dtype=tf.float32,
                 shape=[None, ],
@@ -289,10 +312,10 @@ class DQNAgent(EpisodicAgentBase):
         tau = 1. / self._update_period
         op = []
         for i in range(len(self._qnet.trainable_variables)):
+            value_ = (1. - tau) * self._target.trainable_variables[i] + \
+                    tau * self._qnet.trainable_variables[i]
             op.append(tf.assign(
-                ref=self._target.trainable_variables[i],
-                value=(1. - tau) * self._target.trainable_variables[i] +
-                      tau * self._qnet.trainable_variables[i]))
+                ref=self._target.trainable_variables[i], value=value_))
         return op
 
     def _observe(self, reward, terminal, train_policy, feed_dict):
@@ -332,7 +355,7 @@ class DQNAgent(EpisodicAgentBase):
             if not terminal_batch[i]:
                 y_batch[i] += self._discount_factor * np.max(target_qvalue[i])
 
-        feed_dict_= {
+        feed_dict_ = {
             self._observ_inputs: observ_batch,
             self._y_inputs: y_batch,
             self._action_inputs: action_batch

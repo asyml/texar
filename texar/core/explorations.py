@@ -23,6 +23,11 @@ from texar.hyperparams import HParams
 
 # pylint: disable=invalid-name
 
+__all__ = [
+    "ExplorationBase",
+    "EpsilonLinearDecayExploration"
+]
+
 class ExplorationBase(object):
     """Base class inherited by all exploration classes.
 
