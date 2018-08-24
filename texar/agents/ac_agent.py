@@ -186,7 +186,7 @@ class ActorCriticAgent(EpisodicAgentBase):
     def _train_actor(self, observ, action, feed_dict):
         qvalues = self._critic._qvalues_from_target(observ=observ)
         advantage = qvalues[0][action] - np.mean(qvalues)
-        # TODO (bowen)
+        # TODO (bowen): should be a funciton to customize?
 
         feed_dict_ = {
             self._actor._observ_inputs: [observ],
