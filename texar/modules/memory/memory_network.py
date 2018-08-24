@@ -55,17 +55,16 @@ class MemNetSingleLayer(ModuleBase):
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
-        Returns:
-            .. code-block:: python
+        .. code-block:: python
 
-                {
-                    "name": "memnet_single_layer"
-                }
+            {
+                "name": "memnet_single_layer"
+            }
 
-            Here:
+        Here:
 
-            "name": str
-                Name of the memory network single layer.
+        "name": str
+            Name of the memory network single layer.
         """
         return {
             "name": "memnet_single_layer"
@@ -209,9 +208,14 @@ class MemNetBase(ModuleBase):
         """Creates a default embedding function. Can be used for A, C, or B
         operation.
 
+        For B operation (i.e., query_embed_fn), :attr:`memory_size` must be 1.
+
         The function is a combination of both memory embedding and temporal
         embedding, with the combination method specified by "combine_mode" in
         the `embed_fn_hparams`.
+
+        .. role:: python(code)
+           :language: python
 
         Args:
             embed_fn_hparams (dict or HParams): Hyperparameter of the
@@ -219,31 +223,35 @@ class MemNetBase(ModuleBase):
                 :func:`~texar.modules.default_memnet_embed_fn` for details.
 
         Returns:
-            A tuple `(embed_fn, memory_dim)`, where `memory_dim` is the
-            dimension of embedded a memory entry inferred from
-            :attr:`embed_fn_hparams`.
+            A tuple `(embed_fn, memory_dim)`, where
 
-            `embed_fn` is an embedding function that takes in memory and returns
-            memory embedding. Specifically, the function has the following
-            inputs and outputs.
+            - **`memory_dim`** is the dimension of memory entry embedding, \
+            inferred from :attr:`embed_fn_hparams`.
+
+                - If `combine_mode` == 'add', `memory_dim` is the \
+                embedder dimension.
+                - If `combine_mode` == 'concat', `memory_dim` is the sum \
+                of the memory embedder dimension and the temporal embedder \
+                dimension.
+
+            - **`embed_fn`** is an embedding function that takes in memory \
+            and returns memory embedding. \
+            Specifically, the function has signature \
+            :python:`memory_embedding= embed_fn(memory=None, soft_memory=None)`\
+            where one of `memory` and `soft_memory` is provided (but not both).
 
             Args:
-                memory: An `int` Tensor of shape `[batch_size, memory_size]`
+                memory: An `int` Tensor of shape
+                    `[batch_size, memory_size]`
                     containing memory indexes used for embedding lookup.
                 soft_memory: A Tensor of shape
                     `[batch_size, memory_size, raw_memory_dim]`
                     containing soft weights used to mix the embedding vectors.
 
             Returns:
-                A Tensor of shape `[batch_size, memory_size, memory_dim]`.
+                A Tensor of shape `[batch_size, memory_size, memory_dim]`
+                containing the memory entry embeddings.
 
-                For the default embedding function:
-
-                    - If `combine_mode` == 'add', `memory_dim` is the \
-                    embedder dimension.
-                    - If `combine_mode` == 'concat', `memory_dim` is the sum \
-                    of the memory embedder dimension and the temporal embedder \
-                    dimension.
         """
         # memory embedder
         embedder = WordEmbedder(
@@ -425,10 +433,9 @@ class MemNetRNNLike(MemNetBase):
             specified in :attr:`hparams`. See
             :meth:`~texar.modules.MemNetBase.get_default_embed_fn`
             for details.
-            Notice: If you'd like to customize this callable, please follow
-            the same number and style of dimensions as in `input_embed_fn` or
-            `output_embed_fn`, and assume that the 2nd dimension of its
-            input and output (which corresponds to `memory_size`) is 1.
+            For customized query_embed_fn, note that the function must follow
+            the signature of the default embed_fn where `memory_size` must
+            be 1.
         hparams (dict or HParams, optional): Hyperparameters. Missing
             hyperparamerter will be set to default values. See
             :meth:`default_hparams` for the hyperparameter sturcture and

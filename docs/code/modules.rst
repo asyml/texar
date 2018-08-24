@@ -229,6 +229,7 @@ Memory
 .. autoclass:: texar.modules.MemNetRNNLike
     :members:
     :inherited-members:
+    :exclude-members: get_default_embed_fn 
 
 :hidden:`default_memnet_embed_fn_hparams`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
