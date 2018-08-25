@@ -2,6 +2,7 @@
 
 This example builds a bi-directional LSTM-CNN model for NER task and trains on CoNLL-2003 data. Model and training are described in   
 >[(Ma et al.) End-to-end Sequence Labeling via Bi-directional LSTM-CNNs-CRF](http://www.cs.cmu.edu/~xuezhem/publications/P16-1101.pdf)
+
 The top CRF layer is not used here.
 
 ## Dataset ##
