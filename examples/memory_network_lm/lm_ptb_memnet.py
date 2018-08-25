@@ -31,10 +31,6 @@ $ python lm_ptb_memnet.py --data_path=simple-examples/data \
 
 This code will automatically save and restore from directory `ckpt/`.
 If the directory doesn't exist, it will be created automatically.
-
-At the beginning of running, you will be asked to input an initial learning
-rate. You can just press enter and it will use the initial learning rate
-designated in config file.
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -58,7 +54,6 @@ flags.DEFINE_string("data_path", "./",
                     "the directory will be created and PTB raw data will "
                     "be downloaded.")
 flags.DEFINE_string("config", "config", "The config to use.")
-flags.DEFINE_float("lr", None, "Initial learning rate")
 
 FLAGS = flags.FLAGS
 
@@ -92,9 +87,7 @@ def _main(_):
     mle_loss = tf.reduce_sum(mle_loss)
 
     # Use global_step to pass epoch, for lr decay
-    lr = FLAGS.lr
-    if lr is None:
-        lr = config.opt["optimizer"]["kwargs"]["learning_rate"]
+    lr = config.opt["optimizer"]["kwargs"]["learning_rate"]
     learning_rate = tf.placeholder(tf.float32, [], name="learning_rate")
     global_step = tf.Variable(0, dtype=tf.int32, name="global_step")
     increment_global_step = tf.assign_add(global_step, 1)

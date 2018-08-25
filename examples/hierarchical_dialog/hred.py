@@ -185,8 +185,7 @@ def main():
                 references = [[ref[:ref.index(b'<EOS>')] for ref in refs[:cnt]]
                     for refs, cnt in zip(references.tolist(), refs_cnt)]
 
-                from tqdm import tqdm
-                for beam, refs in tqdm(zip(beam_samples, references)):
+                for beam, refs in zip(beam_samples, references):
                     bleu_scores = np.array([[bleus(ref, sample)
                         for i, ref in enumerate(refs)]
                         for j, sample in enumerate(beam)])
