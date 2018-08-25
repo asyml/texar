@@ -62,7 +62,6 @@ opt = {
                    "momentum": 0.9,
                    "use_nesterov": True}
     },
-    #TODO(haoran) is it necessary to set the gradient clipping?
     "learning_rate_decay": {
         "type": "inverse_time_decay",
         "kwargs": {

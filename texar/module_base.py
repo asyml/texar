@@ -171,7 +171,7 @@ class ModuleBase(object):
 
     @property
     def hparams(self):
-        """A :class:`~texar.HParams` instance. The hyperparameters
+        """An :class:`~texar.HParams` instance. The hyperparameters
         of the module.
         """
         return self._hparams

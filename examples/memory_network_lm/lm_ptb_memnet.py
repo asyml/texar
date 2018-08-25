@@ -30,12 +30,7 @@ $ python lm_ptb_memnet.py --data_path=simple-examples/data \
   --config=config
 
 This code will automatically save and restore from directory `ckpt/`.
-If the directory doesn't exist, then it will create it and initialize model.
-If the directory exists, then it will restore from the directory.
-
-At the beginning of running, you will be asked to input an initial learning
-rate. You can just press enter and it will use the initial learning rate
-designated in config file.
+If the directory doesn't exist, it will be created automatically.
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -47,7 +42,6 @@ import importlib
 import numpy as np
 import tensorflow as tf
 import texar as tx
-import argparse
 
 from ptb_reader import prepare_data
 from ptb_reader import ptb_iterator_memnet as ptb_iterator
@@ -60,7 +54,6 @@ flags.DEFINE_string("data_path", "./",
                     "the directory will be created and PTB raw data will "
                     "be downloaded.")
 flags.DEFINE_string("config", "config", "The config to use.")
-flags.DEFINE_float("lr", None, "Initial learning rate")
 
 FLAGS = flags.FLAGS
 
@@ -86,7 +79,7 @@ def _main(_):
                                           hparams=config.memnet)
         queries = tf.fill([tf.shape(inputs)[0], config.dim],
                           config.query_constant)
-        logits = memnet(queries, inputs)
+        logits = memnet(inputs, queries)
 
     # Losses & train ops
     mle_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -94,9 +87,7 @@ def _main(_):
     mle_loss = tf.reduce_sum(mle_loss)
 
     # Use global_step to pass epoch, for lr decay
-    lr = FLAGS.lr
-    if lr is None:
-        lr = config.opt["optimizer"]["kwargs"]["learning_rate"]
+    lr = config.opt["optimizer"]["kwargs"]["learning_rate"]
     learning_rate = tf.placeholder(tf.float32, [], name="learning_rate")
     global_step = tf.Variable(0, dtype=tf.int32, name="global_step")
     increment_global_step = tf.assign_add(global_step, 1)
@@ -107,7 +98,7 @@ def _main(_):
         increment_global_step=False,
         hparams=config.opt)
 
-    def _run_epoch(sess, data_iter, epoch, is_train=False, verbose=False):
+    def _run_epoch(sess, data_iter, epoch, is_train=False):
         loss = 0.
         iters = 0
 
@@ -121,7 +112,7 @@ def _main(_):
                 if is_train
                 else tf.estimator.ModeKeys.EVAL)
 
-        for step, (x, y) in enumerate(data_iter):
+        for _, (x, y) in enumerate(data_iter):
             batch_size = x.shape[0]
             feed_dict = {
                 inputs: x, targets: y, learning_rate: lr,
@@ -154,18 +145,22 @@ def _main(_):
         while True:
             if lr < terminating_learning_rate:
                 break
+
             epoch = sess.run(global_step)
             if epoch >= config.num_epochs:
                 print('Too many epochs!')
                 break
+
             print('epoch: {} learning_rate: {:.6f}'.format(epoch, lr))
+
             # Train
             train_data_iter = ptb_iterator(
                 data["train_text_id"], batch_size, memory_size)
             train_ppl = _run_epoch(
-                sess, train_data_iter, epoch, is_train=True, verbose=True)
+                sess, train_data_iter, epoch, is_train=True)
             print("Train Perplexity: {:.3f}".format(train_ppl))
             sess.run(increment_global_step)
+
             # checkpoint
             if epoch % 5 == 0:
                 try:
@@ -173,12 +168,14 @@ def _main(_):
                     print("saved checkpoint.")
                 except:
                     print("save checkpoint failed.")
+
             # Valid
             valid_data_iter = ptb_iterator(
                 data["valid_text_id"], batch_size, memory_size)
             valid_ppl = _run_epoch(sess, valid_data_iter, epoch)
             print("Valid Perplexity: {:.3f}".format(valid_ppl))
-            # learning rate annealing
+
+            # Learning rate decay
             if last_valid_ppl:
                 if heuristic_lr_decay:
                     if valid_ppl > last_valid_ppl * config.heuristic_threshold:
@@ -195,8 +192,10 @@ def _main(_):
             else:
                 last_valid_ppl = valid_ppl
             print("last_valid_ppl: {:.6f}".format(last_valid_ppl))
+
         epoch = sess.run(global_step)
-        print('Terminate after epoch', epoch)
+        print('Terminate after epoch ', epoch)
+
         # Test
         test_data_iter = ptb_iterator(data["test_text_id"], 1, memory_size)
         test_ppl = _run_epoch(sess, test_data_iter, 0)

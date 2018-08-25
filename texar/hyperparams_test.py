@@ -46,7 +46,7 @@ class HParamsTest(tf.test.TestCase):
         names = []
         for name, _ in hparams_.items():
             names.append(name)
-        self.assertEqual(names, default_hparams.keys())
+        self.assertEqual(names, list(default_hparams.keys()))
 
         hparams = {
             "dict": {"key1": "new_value"},

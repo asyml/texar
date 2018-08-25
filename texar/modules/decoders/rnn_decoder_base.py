@@ -150,6 +150,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
               :attr:`(embedding, start_tokens, end_token)` are \
               required for this strategy, and argument \
               :attr:`max_decoding_length` is optional.
+
           This argument is used only when argument :attr:`helper` is `None`.
 
           Example:
@@ -188,6 +189,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             - :class:`~texar.modules.SoftmaxEmbeddingHelper` and \
               :class:`~texar.modules.GumbelSoftmaxEmbeddingHelper` for \
               soft decoding and gradient backpropagation.
+
           This means gives the maximal flexibility of configuring the decoding\
           strategy.
 
@@ -249,7 +251,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                         # PREDICT mode also shuts down dropout
 
         Args:
-            decoding_strategy (str, optional): A string specifying the decoding
+            decoding_strategy (str): A string specifying the decoding
                 strategy. Different arguments are required based on the
                 strategy.
                 Ignored if :attr:`helper` is given.

@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 A class that executes training, evaluation, prediction, export of estimators.
 """
@@ -9,6 +21,8 @@ from __future__ import print_function
 import tensorflow as tf
 
 from texar.utils.dtypes import maybe_hparams_to_dict
+
+# pylint: disable=too-many-instance-attributes, too-many-arguments
 
 __all__ = [
     "Executor"
@@ -41,6 +55,21 @@ class Executor(object):
         session_config (optional): An instance of
             :tf_main:`tf.ConfigProto <ConfigProto>`, used as the :attr:`config`
             argument of :tf_main:`tf session <Session>`.
+
+    Example:
+
+        .. code-block:: python
+
+            model = BasicSeq2seq(data_hparams, model_hparams)
+            exor = Executor(
+                model=model,
+                data_hparams=data_hparams,
+                config=run_config)
+            exor.train_and_evaluate(
+                max_train_steps=10000,
+                eval_steps=100)
+
+    See `bin/train.py` for the usage in detail.
     """
 
     def __init__(self,

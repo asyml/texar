@@ -4,6 +4,9 @@
 Context
 ********
 
+Global Mode
+===========
+
 :hidden:`global_mode`
 ~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.global_mode

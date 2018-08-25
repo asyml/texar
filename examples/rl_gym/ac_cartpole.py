@@ -49,7 +49,7 @@ if __name__ == '__main__':
 
         feed_dict = {tx.global_mode(): tf.estimator.ModeKeys.TRAIN}
 
-        for e in range(500):
+        for e in range(5000):
             reward_sum = 0.
             observ = env.reset()
             agent.reset()

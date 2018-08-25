@@ -13,7 +13,9 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   tutorial.rst
+   tutorials/tutorial.rst
+   examples.md
+   code/hyperparams.rst
    code/data.rst
    code/core.rst
    code/modules.rst
@@ -21,6 +23,6 @@ Contents:
    code/losses.rst
    code/evals.rst
    code/models.rst
+   code/run.rst
    code/context.rst
-   code/hyperparams.rst
    code/utils.rst

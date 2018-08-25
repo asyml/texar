@@ -4,8 +4,9 @@
 Core
 ****
 
-Layers
-======
+
+Cells
+=====
 
 :hidden:`default_rnn_cell_hparams`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -18,6 +19,9 @@ Layers
 :hidden:`get_rnn_cell_trainable_variables`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.core.get_rnn_cell_trainable_variables
+
+Layers
+======
 
 :hidden:`get_layer`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -108,10 +112,20 @@ Exploration
 .. autoclass:: texar.core.EpsilonLinearDecayExploration
     :members:
 
+:hidden:`ExplorationBase`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.core.ExplorationBase
+    :members:
+
 Replay Memories
 ================
 
 :hidden:`DequeReplayMemory`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.core.DequeReplayMemory
+    :members:
+
+:hidden:`ReplayMemoryBase`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.core.ReplayMemoryBase
     :members:

@@ -22,7 +22,7 @@ from __future__ import print_function
 import tensorflow as tf
 
 from texar.core import layers
-from texar.utils import transformer_attentions as attentions
+from texar.utils import transformer_attentions as attn
 from texar.modules.embedders.position_embedders import SinusoidsPositionEmbedder
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.networks.networks import FeedForwardNetwork
@@ -33,8 +33,78 @@ from texar.utils.mode import is_train_mode
 # pylint: disable=too-many-locals, invalid-name
 
 __all__ = [
+    "default_transformer_poswise_net_hparams",
     "TransformerEncoder"
 ]
+
+def default_transformer_poswise_net_hparams():
+    """Returns default hyperparameters of a
+    :class:`~texar.modules.FeedForwardNetwork` as a pos-wise network used
+    in :class:`~texar.modules.TransformerEncoder` and
+    :class:`~texar.modules.TransformerDecoder`.
+
+    This is a 2-layer dense network with dropout in-between.
+
+    .. code-block:: python
+
+        {
+            "layers": [
+                {
+                    "type":"Dense",
+                    "kwargs": {
+                        "name":"conv1",
+                        "units":2048,
+                        "activation":"relu",
+                        "use_bias":True,
+                    }
+                },
+                {
+                    "type":"Dropout",
+                    "kwargs": {
+                        "rate": 0.1,
+                    }
+                },
+                {
+                    "type":"Dense",
+                    "kwargs": {
+                        "name":"conv2",
+                        "units":512,
+                        "use_bias":True,
+                        }
+                }
+            ],
+            "name": "ffn"
+        }
+    """
+    return {
+        "layers": [
+            {
+                "type":"Dense",
+                "kwargs": {
+                    "name":"conv1",
+                    "units":2048,
+                    "activation":"relu",
+                    "use_bias":True,
+                }
+            },
+            {
+                "type":"Dropout",
+                "kwargs": {
+                    "rate": 0.1,
+                }
+            },
+            {
+                "type":"Dense",
+                "kwargs": {
+                    "name":"conv2",
+                    "units":512,
+                    "use_bias":True,
+                    }
+            }
+        ],
+        "name": "ffn"
+    }
+
 
 class TransformerEncoder(EncoderBase):
     """Transformer encoder that applies multi-head self attention for encoding
@@ -75,34 +145,7 @@ class TransformerEncoder(EncoderBase):
                 "embedding_dropout": 0.1,
                 "attention_dropout": 0.1,
                 "residual_dropout": 0.1,
-                'poswise_feedforward': {
-                    'name':'ffn',
-                    'layers':[
-                        {
-                            'type':'Dense',
-                            'kwargs': {
-                                'name':'conv1',
-                                'units':2048,
-                                'activation':'relu',
-                                'use_bias':True,
-                            }
-                        },
-                        {
-                            'type':'Dropout',
-                            'kwargs': {
-                                'rate': 0.1,
-                            }
-                        },
-                        {
-                            'type':'Dense',
-                            'kwargs': {
-                                'name':'conv2',
-                                'units':512,
-                                'use_bias':True,
-                                }
-                        }
-                    ],
-                },
+                'poswise_feedforward': default_transformer_poswise_net_hparams,
                 "initializer": None,
                 "name": "transformer_encoder"
             }
@@ -116,9 +159,9 @@ class TransformerEncoder(EncoderBase):
             Number of heads for attention calculation.
 
         "dim" : int
-            The dimension the embeddings and encoded vectors.
+            Hidden dimension of the encoder.
 
-        "position_embedder_hparams" : dict
+        "position_embedder_hparams" : dict, optional
             Hyperparameters of a
             :class:`~texar.modules.SinusoidsPositionEmbedder` as position
             embedder. If `None`, the
@@ -138,6 +181,9 @@ class TransformerEncoder(EncoderBase):
             Hyperparameters for a feed-forward network used in residual
             connections.
 
+            See :func:`~texar.modules.default_transformer_poswise_net_hparams`
+            for details.
+
         "initializer" : dict, optional
             Hyperparameters of the default initializer that initializes
             variables created in this module.
@@ -154,36 +200,9 @@ class TransformerEncoder(EncoderBase):
             'residual_dropout': 0.1,
             'num_blocks': 6,
             'num_heads': 8,
-            'poswise_feedforward': {
-		'name':'ffn',
-		'layers':[
-		    {
-			'type':'Dense',
-			'kwargs': {
-			    'name':'conv1',
-			    'units':2048,
-			    'activation':'relu',
-			    'use_bias':True,
-			}
-		    },
-		    {
-			'type':'Dropout',
-			'kwargs': {
-			    'rate': 0.1,
-			}
-		    },
-		    {
-			'type':'Dense',
-			'kwargs': {
-			    'name':'conv2',
-			    'units':512,
-			    'use_bias':True,
-			    }
-		    }
-		],
-            },
+            'poswise_feedforward': default_transformer_poswise_net_hparams(),
             'dim': 512,
-            "name": "encoder",
+            "name": "transformer_encoder",
         }
 
     # pylint: disable=arguments-differ
@@ -201,25 +220,18 @@ class TransformerEncoder(EncoderBase):
                 If `None` (default), :func:`texar.global_mode` is used.
 
         Returns:
-            A tuple (encoder_output, encoder_decoder_attention_bias), where
-
-            - **encoder_output**: The encoded vectors, a 3D Tensor of shape
-                `[batch_size, max_time, dim]
-            - **encoder_decoder_attention_bias**: The masks that indicate which\
-            positions in the inputs are not padding.
+            A Tensor of shape `[batch_size, max_time, dim]` containing the
+            encoded vectors.
         """
-        #multiply embedding with the sqrt of its dimention for normalization
+        # Multiply embedding with the sqrt of its dimention for normalization
         inputs = inputs * self._hparams.dim**0.5
 
         _, lengths, _ = shape_list(inputs)
 
-        inputs_padding = 1 - mask_sequences(tf.ones_like(inputs),
-                                            sequence_length,
-                                            tensor_rank=3)[:, :, 0]
-        ignore_padding = attentions.attention_bias_ignore_padding(
-            inputs_padding)
+        inputs_padding = 1 - mask_sequences(
+            tf.ones_like(inputs), sequence_length, tensor_rank=3)[:, :, 0]
+        ignore_padding = attn.attention_bias_ignore_padding(inputs_padding)
         encoder_self_attention_bias = ignore_padding
-        encoder_decoder_attention_bias = ignore_padding
 
         pos_embeds = self.position_embedder(lengths,
                                             self._hparams.dim)
@@ -233,7 +245,7 @@ class TransformerEncoder(EncoderBase):
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("layer_{}".format(i)):
                 with tf.variable_scope('self_attention'):
-                    selfatt_output = attentions.multihead_attention(
+                    selfatt_output = attn.multihead_attention(
                         queries=layers.layer_normalize(x),
                         memory=None,
                         memory_attention_bias=encoder_self_attention_bias,
@@ -255,7 +267,7 @@ class TransformerEncoder(EncoderBase):
                     original_shape = shape_list(y)
                     y = tf.reshape(y, [-1, self._hparams.dim])
                     y = tf.expand_dims(pad_remover.remove(y), axis=0)
-                    #[1, batch_size*seq_length, hidden_dim]
+                    # [1, batch_size*seq_length, hidden_dim]
                     sub_output = tf.layers.dropout(
                         poswise_network(y),
                         rate=self._hparams.residual_dropout,
@@ -272,4 +284,4 @@ class TransformerEncoder(EncoderBase):
             self._add_internal_trainable_variables()
             self._built = True
 
-        return encoder_output, encoder_decoder_attention_bias
+        return encoder_output

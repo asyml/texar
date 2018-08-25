@@ -182,6 +182,7 @@ def default_rnn_cell_hparams():
         },
         "residual": False,
         "highway": False,
+        "@no_typecheck": ["type"]
     }
 
 def get_rnn_cell(hparams=None, mode=None):
