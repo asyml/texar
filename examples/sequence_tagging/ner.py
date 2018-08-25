@@ -11,20 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""Sequence tagging.
+"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 import os
-import sys
-
 import time
 import importlib
 import numpy as np
 import tensorflow as tf
 import texar as tx
-from texar.modules.encoders.conv_encoders import Conv1DEncoder
 
 from examples.sequence_tagging.conll_reader import create_vocabs, read_data, iterate_batch, load_glove, construct_init_word_vecs
 from examples.sequence_tagging.conll_writer import CoNLLWriter
@@ -55,6 +53,7 @@ embedding_path = os.path.join(FLAGS.data_path, FLAGS.embedding)
 EMBEDD_DIM = config.embed_dim
 CHAR_DIM = config.char_dim
 
+# Prepares/loads data
 if config.load_glove:
     print('loading GloVe embedding...')
     glove_dict = load_glove(embedding_path, EMBEDD_DIM)
@@ -75,6 +74,7 @@ if config.load_glove:
 scale = np.sqrt(3.0 / CHAR_DIM)
 char_vecs = np.random.uniform(-scale, scale, [len(char_vocab), CHAR_DIM]).astype(np.float32)
 
+# Builds TF graph
 inputs = tf.placeholder(tf.int64, [None, None])
 chars = tf.placeholder(tf.int64, [None, None, None])
 targets = tf.placeholder(tf.int64, [None, None])
@@ -88,37 +88,18 @@ emb_inputs = embedder(inputs)
 char_size = len(char_vecs)
 char_embedder = tx.modules.WordEmbedder(vocab_size=char_size, init_value=char_vecs, hparams=config.char_emb)
 emb_chars = char_embedder(chars)
-# [batch, length, char_length, char_dim]
-char_shape = tf.shape(emb_chars)
+char_shape = tf.shape(emb_chars) # [batch, length, char_length, char_dim]
 emb_chars = tf.reshape(emb_chars, (-1, char_shape[2], CHAR_DIM))
-char_encoder = Conv1DEncoder(config.conv)
+char_encoder = tx.modules.Conv1DEncoder(config.conv)
 char_outputs = char_encoder(emb_chars)
 char_outputs = tf.reshape(char_outputs, (char_shape[0], char_shape[1], config.conv['filters']))
 
 emb_inputs = tf.concat([emb_inputs, char_outputs], axis=2)
 emb_inputs = tf.nn.dropout(emb_inputs, keep_prob=0.67)
 
-if config.encoder == 'transformer':
-    print('here we use transformer encoder')
-    encoder = tx.modules.TransformerEncoder(
-        embedding=embedder._embedding,
-        hparams=config.encoder_hparams)
-    print('the encoder has been initialized')
-    # 1 is pad idx
-    # _inputs = tf.Print(inputs, [inputs],
-    #    message='inputs', summarize=1024)
-    # _masks = tf.Print(masks, [masks],
-    #    message='mask', summarize=1024)
-    # enc_padding = tf.to_float(tf.equal(inputs, 1))
-    enc_padding = 1 - masks
-    outputs, _ = encoder(inputs, encoder_padding=enc_padding)
-elif config.encoder:
-    raise NotImplementedError
-else:
-    print('here we use BLSTM encoder')
-    encoder = tx.modules.BidirectionalRNNEncoder(hparams={"rnn_cell_fw": config.cell, "rnn_cell_bw": config.cell})
-    outputs, _ = encoder(emb_inputs, sequence_length=seq_lengths)
-    outputs = tf.concat(outputs, axis=2)
+encoder = tx.modules.BidirectionalRNNEncoder(hparams={"rnn_cell_fw": config.cell, "rnn_cell_bw": config.cell})
+outputs, _ = encoder(emb_inputs, sequence_length=seq_lengths)
+outputs = tf.concat(outputs, axis=2)
 
 rnn_shape = tf.shape(outputs)
 outputs = tf.reshape(outputs, (-1, 2 * config.hidden_size))
@@ -146,6 +127,7 @@ train_op = tx.core.get_train_op(
     mle_loss, global_step=global_step, increment_global_step=False,
     hparams=config.opt)
 
+# Training/eval processes
 
 def _train_epoch(sess, epoch):
     start_time = time.time()
@@ -218,6 +200,8 @@ with tf.Session() as sess:
     test_acc = 0.0
     test_prec = 0.0
     test_recall = 0.0
+
+    tx.utils.maybe_create_dir('./tmp')
 
     for epoch in range(config.num_epochs):
         _train_epoch(sess, epoch)

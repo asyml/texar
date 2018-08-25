@@ -1,5 +1,17 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
-"""SeqGAN for Text Generation.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""SeqGAN for language modeling
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -145,7 +157,7 @@ def _main(_):
         iterator.switch_to_train_data(sess)
         while True:
             try:
-                if mode_string == 'update':
+                if mode_string == 'train':
                     fetches = {
                         'mean_rwd': mean_reward,
                         'exp_rwd_loss': exp_reward_loss,
@@ -154,7 +166,7 @@ def _main(_):
                         'exp_rwd': expected_reward,
                         'step': global_step
                     }
-                elif mode_string == 'train':
+                elif mode_string == 'pretrain':
                     fetches = {
                         'mle_loss': mle_loss,
                         'num_steps': num_steps,
@@ -163,12 +175,12 @@ def _main(_):
                     }
                 else:
                     raise ValueError(
-                        "Expect mode_string to be one of ['train', 'update'], "
-                        "got %s" % mode_string)
+                        "Expect mode_string to be one of "
+                        "['pretrain', 'train'], got %s" % mode_string)
                 rtns = sess.run(fetches)
                 step = rtns['step']
                 if step % 200 == 1:
-                    if mode_string == 'train':
+                    if mode_string == 'pretrain':
                         ppl = np.exp(rtns['mle_loss'] / rtns["num_steps"])
                         rst = "G {0:6s} epoch {1:3d}, step {2:3d}:" \
                               " train_ppl: {3:6f}".format(mode_string,
@@ -183,7 +195,7 @@ def _main(_):
                     log.write(rst + '\n')
                     log.flush()
                     print(rst)
-                    if mode_string == 'update':  # a batch per adversarial epoch
+                    if mode_string == 'train':  # a batch per adversarial epoch
                         break
             except tf.errors.OutOfRangeError:
                 break
@@ -213,19 +225,27 @@ def _main(_):
                 if mode_string == 'test':
                     fetches['target_sample_id'] = data_batch["text_ids"]
                     fetches['infer_sample_id'] = infer_sample_ids
+
                 feed_dict = {tx.global_mode(): tf.estimator.ModeKeys.EVAL}
+
                 rtns = sess.run(fetches, feed_dict)
+
                 loss += rtns['mle_loss']
                 steps += rtns['num_steps']
+
                 if mode_string == 'test':
                     targets = _id2word_map(rtns['target_sample_id'].tolist())
                     for tgt in targets:
                         target_list.extend(tgt.split('<EOS>')[0].strip().split())
+
                     inferences = _id2word_map(rtns['infer_sample_id'].tolist())
                     for inf in inferences:
-                        inference_list.extend(inf.split('<EOS>')[0].strip().split()[1:])  # remove <BOS>
+                        inference_list.extend( # remove <BOS>
+                            inf.split('<EOS>')[0].strip().split()[1:])
+
             except tf.errors.OutOfRangeError:
                 break
+
         ppl = np.exp(loss / steps)
         rst = "G {0:6s} epoch {1:3d}, step {2:3s}:" \
               " {3:5s}_ppl: {4:6f}"\
@@ -233,11 +253,12 @@ def _main(_):
         log.write(rst + '\n')
         log.flush()
         print(rst)
+
         if mode_string == 'test':
-            bleu_test = \
-                tx.evals.sentence_bleu_moses(references=[target_list],
-                                             hypothesis=inference_list,
-                                             lowercase=True, return_all=True)
+            bleu_test = tx.evals.sentence_bleu_moses(
+                references=[target_list],
+                hypothesis=inference_list,
+                lowercase=True, return_all=True)
             rst_test = "epoch %d BLEU1~4 on test dataset:\n" \
                        "%f\n%f\n%f\n%f\n\n" % \
                        (epoch, bleu_test[1], bleu_test[2],
@@ -245,9 +266,10 @@ def _main(_):
             print(rst_test)
             bleu_log.write(rst_test)
             bleu_log.flush()
+
         return
 
-    def _d_run_epoch(sess, epoch, mode_string='train'):
+    def _d_run_epoch(sess, epoch, mode_string='pretrain'):
         iterator.switch_to_train_data(sess)
         step = 0
         while True:
@@ -269,7 +291,7 @@ def _main(_):
                     log.flush()
                     print(rst)
                 step += 1
-                if step == 15 and mode_string == 'update':
+                if step == 15 and mode_string == 'train':
                     break
             except tf.errors.OutOfRangeError:
                 break
@@ -281,27 +303,30 @@ def _main(_):
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
 
+        # Generator pre-training
         for g_epoch in range(config.generator_pretrain_epoch):
-            _g_train_epoch(sess, g_epoch, 'train')
+            _g_train_epoch(sess, g_epoch, 'pretrain')
             if g_epoch % 10 == 0 or \
                     g_epoch == config.generator_pretrain_epoch - 1:
                 _g_test_epoch(sess, g_epoch, 'valid')
                 _g_test_epoch(sess, g_epoch, 'test')
 
+        # Discriminator pre-training
         for d_epoch in range(config.discriminator_pretrain_epoch):
             _d_run_epoch(sess, d_epoch)
 
+        # Adversarial training
         for update_epoch in range(config.adversial_epoch):
             cur_epoch = update_epoch + config.generator_pretrain_epoch
-            _g_train_epoch(sess, cur_epoch, 'update')
-            _d_run_epoch(sess, cur_epoch, mode_string='update')
+            _g_train_epoch(sess, cur_epoch, 'train')
+            _d_run_epoch(sess, cur_epoch, mode_string='train')
             if update_epoch % 10 == 0 or \
                     update_epoch == config.adversial_epoch - 1:
                 _g_test_epoch(sess, cur_epoch, 'valid')
                 _g_test_epoch(sess, cur_epoch, 'test')
+
     log.close()
     bleu_log.close()
-
 
 if __name__ == '__main__':
     tf.app.run(main=_main)

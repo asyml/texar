@@ -17,14 +17,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-# pylint: disable=invalid-name, too-many-locals
-import sys
-from collections import defaultdict
-import tensorflow as tf
-from tensorflow.gfile import Open
-import numpy as np
-
 import re
+from collections import defaultdict
+import numpy as np
+import tensorflow as tf
+
+
+# pylint: disable=invalid-name, too-many-locals
 
 MAX_CHAR_LENGTH = 45
 NUM_CHAR_PAD = 2
@@ -158,7 +157,7 @@ def load_glove(filename, emb_dim, normalize_digits=True):
         The updated :attr:`word_vecs`.
     """
     glove_dict = dict()
-    with Open(filename) as fin:
+    with tf.gfile.Open(filename) as fin:
         for line in fin:
             vec = line.strip().split()
             if len(vec) == 0:
