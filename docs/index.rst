@@ -13,7 +13,8 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   tutorial.rst
+   tutorials/tutorial.rst
+   examples.md
    code/hyperparams.rst
    code/data.rst
    code/core.rst
