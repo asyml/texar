@@ -40,7 +40,6 @@ if __name__ == "__main__":
     fh.setFormatter(
         logging.Formatter('%(asctime)s:%(levelname)s:%(message)s'))
     logger.addHandler(fh)
-
     train_data, dev_data, test_data = utils.data_reader.load_data_numpy(\
         args.input, args.filename_prefix)
     with open(args.vocab_file, 'rb') as f: args.id2w = pickle.load(f)
@@ -166,8 +165,10 @@ if __name__ == "__main__":
         logger.info('eval_bleu %f in epoch %d)' % (eval_bleu, epoch))
         if eval_bleu > best_score:
             logger.info('%s epoch, highest bleu %s',epoch, eval_bleu)
+            model_path = args.log_dir + 'my-model-highest_bleu.ckpt'
+            logger.info('saveing model in %s', model_path)
             best_score, best_epoch = eval_bleu, epoch
-            eval_saver.save(sess, args.log_dir + 'my-model-highest_bleu.ckpt')
+            eval_saver.save(sess, model_path)
 
     def _train_epoch(cur_sess, cur_epoch):
         global train_data, train_finished, global_step_py
@@ -247,7 +248,7 @@ if __name__ == "__main__":
         sess.run(tf.tables_initializer())
         writer = tf.summary.FileWriter(args.log_dir, graph=sess.graph)
         if args.mode == 'train_and_evaluate':
-            for epoch in range(args.start_epoch, args.epoch):
+            for epoch in range(args.start_epoch, args.max_train_epoch):
                 _train_epoch(sess, epoch)
         elif args.mode == 'test':
             cur_mname = tf.train.latest_checkpoint(args.log_dir).split('/')[-1]

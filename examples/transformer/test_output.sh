@@ -28,7 +28,7 @@ else
     batch_size=2048
 fi
 
-max_epoch=70
+max_epoch=20
 lr_constant=2
 warmup_steps=16000
 

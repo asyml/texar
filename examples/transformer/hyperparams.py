@@ -15,7 +15,6 @@ def load_hyperparams():
     args = Hyperparams()
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--wbatchsize', type=int, default=3000)
-    argparser.add_argument('--epoch', type=int, default=40)
     argparser.add_argument('--start_epoch', type=int, default=0)
     argparser.add_argument('--mode', type=str,
                            default='train_and_evaluate',
