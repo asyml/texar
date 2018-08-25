@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://asyml.github.io/texar_web/images/logo_h.png"><br><br>
+  <img src="https://asyml.github.io/texar_web/images/logo_h_05.png"><br><br>
 </div>
 
 -----------------
