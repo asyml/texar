@@ -65,8 +65,10 @@ if __name__ == "__main__":
         tf.expand_dims(1 - src_inputs_padding, 2)
     )
     src_lens = tf.reduce_sum(1 - src_inputs_padding, axis=1)
+    print('src_lens:{} ??iterable?'.format(src_lens.shape))
     encoder_output, encoder_decoder_attention_bias = \
-        encoder(src_inputs_embedding, src_lens)
+        encoder(inputs=src_inputs_embedding,
+                sequence_length=src_lens)
 
     # In the decoder, share the word embeddings with projection layer.
     tgt_embeds = tf.concat([
@@ -82,6 +84,8 @@ if __name__ == "__main__":
         word_embedder(decoder_input),
         tf.expand_dims(1 - tgt_inputs_padding, 2)
     )
+    batch_size = shape_list(encoder_output)[0]
+    start_tokens = tf.fill([batch_size], 1)
     output, _ = decoder(
         memory=encoder_output,
         memory_sequence_length=src_lens,
@@ -100,8 +104,9 @@ if __name__ == "__main__":
         inputs_length=None,
         decoding_strategy='infer_greedy',
         beam_width=beam_width,
-        start_token=1,
+        start_tokens=start_tokens,
         end_token=2,
+        max_decoding_length=args.max_decode_len,
         mode=tf.estimator.ModeKeys.PREDICT
     )
     if beam_width <= 1:
