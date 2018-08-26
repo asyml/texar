@@ -4,17 +4,23 @@
    contain the root `toctree` directive.
 
 Welcome to Texar's documentation!
-==================================
+*********************************
 
-TxtGen is a flexible TensorFlow library to generate text.
+Texar is a flexible TensorFlow library to generate text.
 
-Contents:
 
 .. toctree::
    :maxdepth: 2
 
    tutorials/tutorial.rst
    examples.md
+
+API
+====
+
+.. toctree::
+   :maxdepth: 2
+
    code/hyperparams.rst
    code/data.rst
    code/core.rst
