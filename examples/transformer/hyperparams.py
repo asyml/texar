@@ -102,9 +102,9 @@ def load_hyperparams():
         },
     }
     decoder_hparams = copy.deepcopy(encoder_hparams)
-    decoder_hparams['share_embed_and_transform'] = True
-    decoder_hparams['transform_with_bias'] = args.affine_bias
-    decoder_hparams['maximum_decode_length'] = args.max_decode_len
+    decoder_hparams['embedding_tie'] = True
+    decoder_hparams['output_layer_bias'] = args.affine_bias
+    decoder_hparams['max_decoding_length'] = args.max_decode_len
     loss_hparams = {
         'label_confidence': 0.9,
     }
