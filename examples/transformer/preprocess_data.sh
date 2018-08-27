@@ -17,9 +17,9 @@
 TF=$(pwd)
 
 export PATH=$PATH:$TF/../../bin/utils/
-encoder=spm
-src_language=$1
-tgt_language=$2
+encoder=$1
+src_language=$2
+tgt_language=$3
 
 # update these variables
 data=${TF}"/data/${src_language}_${tgt_language}"

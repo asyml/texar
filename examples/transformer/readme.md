@@ -16,16 +16,15 @@ The task is IWSLT'15 English-Vietnamese dataset. For more information, please re
 
 ## Obtain the dataset
 ```
-mkdir data/en_vi
-cp your train.en train.vi dev.en dev.vi test.en test.vi into this directory.
+bash iwslt15_en_vi.sh
 ```
 Feel free to try on different datasets as long as they are parallel text corpora and the file paths are set correctly.
 
 ## Preprocessing the dataset and generate encoded vocabulary
 ```
-bash preprocess_data.sh en vi
+bash preprocess_data.sh spm en vi
 ```
-By default, we use SentencePiece encoder to keep consistent with tensor2tensor, you could also change the `encoder` variable in `preprocess_data.sh` to `bpe` to use BytePairwise Encoding.
+By default, we use SentencePiece encoder to keep consistent with tensor2tensor.
 
 ## Training and evaluating the model
 
@@ -62,6 +61,7 @@ You could get ~28.4 BLEU_cased and ~28.97 BLEU_uncased with our implementation. 
 
 The model can converge within 5 hours (~15 epochs).
 
+
 # We also give a sample script for wmt14 en-de task with Byte Pairwise Encoding here.
 
 ## Obtain the dataset
@@ -73,8 +73,7 @@ You will obtain the dataset in the `./data/en_de/` directory
 
 ## Preprocessing the dataset and generate encoded vocabulary
 ```
-#Modify the `encoder` in `preprocess_data.sh` to `bpe` to use Byte Pairwise Encoding.
-bash preprocess_data.sh en de
+bash preprocess_data.sh bpe en de
 ```
 You will obtain the processed dataset in `./temp/data/run_en_de_bpe/data/` directory
 
