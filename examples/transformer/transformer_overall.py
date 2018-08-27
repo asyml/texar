@@ -21,6 +21,7 @@ from torchtext import data
 import utils.data_reader
 from utils.data_writer import write_words
 from utils.helpers import set_random_seed, batch_size_fn, adjust_lr
+from texar.utils.shapes import shape_list
 
 if __name__ == "__main__":
     hparams = hyperparams.load_hyperparams()
@@ -65,10 +66,7 @@ if __name__ == "__main__":
         tf.expand_dims(1 - src_inputs_padding, 2)
     )
     src_lens = tf.reduce_sum(1 - src_inputs_padding, axis=1)
-    print('src_lens:{} ??iterable?'.format(src_lens.shape))
-    encoder_output, encoder_decoder_attention_bias = \
-        encoder(inputs=src_inputs_embedding,
-                sequence_length=src_lens)
+    encoder_output = encoder(inputs=src_inputs_embedding, sequence_length=src_lens)
 
     # In the decoder, share the word embeddings with projection layer.
     tgt_embeds = tf.concat([
@@ -86,12 +84,11 @@ if __name__ == "__main__":
     )
     batch_size = shape_list(encoder_output)[0]
     start_tokens = tf.fill([batch_size], 1)
-    output, _ = decoder(
+    output = decoder(
         memory=encoder_output,
         memory_sequence_length=src_lens,
         memory_attention_bias=None,
         inputs=tgt_inputs_embedding,
-        inputs_length=tgt_lens,
         decoding_strategy='train_greedy',
         mode=tf.estimator.ModeKeys.TRAIN
     )
@@ -101,7 +98,6 @@ if __name__ == "__main__":
         memory_sequence_length=src_lens,
         memory_attention_bias=None,
         inputs=None,
-        inputs_length=None,
         decoding_strategy='infer_greedy',
         beam_width=beam_width,
         start_tokens=start_tokens,
@@ -112,7 +108,7 @@ if __name__ == "__main__":
     if beam_width <= 1:
         infered_ids = predictions[0].sample_id #predictions[0] is the OutputTuple
     else:
-        infered_ids = predictions['sampled_ids'][:, :, 0]
+        infered_ids = predictions['sample_id'][:, :, 0]
 
     mle_loss = transformer_utils.smoothing_cross_entropy(logits, \
         labels, args.n_vocab, loss_hparams['label_confidence'])
