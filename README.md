@@ -1,10 +1,10 @@
 <div align="center">
    <img src="https://asyml.github.io/texar_web/images/logo_h_035.png"><br><br>
- </div>
+</div>
  
- -----------------
+-----------------
  
- **Texar** is an open-source toolkit based on Tensorflow, aiming to support a broad set of machine learning especially **text generation tasks**, such as machine translation, dialog, summarization, content manipulation, language modeling, and so on. Texar is design for both researchers and practitoners for fast prototyping and experimentation.
+**Texar** is an open-source toolkit based on Tensorflow, aiming to support a broad set of machine learning especially **text generation tasks**, such as machine translation, dialog, summarization, content manipulation, language modeling, and so on. Texar is design for both researchers and practitoners for fast prototyping and experimentation.
  
 With the design goals of **modularity, versatility, and extensibility** in mind, Texar extacts the common patterns underlying the diverse tasks and methodologies, creates a library of highly reusable modules and functionalities, and facilitates **arbitrary model architectures and algorithmic paradigms**, e.g., 
    * encoder(s) to decoder(s), sequential- and self-attentions, memory, hierarchical models, classifiers... 
@@ -13,7 +13,7 @@ With the design goals of **modularity, versatility, and extensibility** in mind,
 With Texar, cutting-edge complex models can be easily constructed, freely enriched with best modeling/training practices, readily fitted into standard training/evaluation pipelines, and fastly experimented and evolved by, e.g., plugging-in and swapping-out different modules.
 
 <div align="center">
-   <img src="https://asyml.github.io/texar_web/images/texar_stack_01.png"><br><br>
+   <img src="https://asyml.github.io/texar_web/images/texar_stack_015.png"><br><br>
 </div> 
 
 ### Key Features
