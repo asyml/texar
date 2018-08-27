@@ -15,7 +15,7 @@ import tensorflow as tf
 import texar as tx
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.utils import transformer_utils
-import hyperparams
+import config_model
 import bleu_tool
 from torchtext import data
 import utils.data_reader
@@ -24,7 +24,7 @@ from utils.helpers import set_random_seed, batch_size_fn, adjust_lr
 from texar.utils.shapes import shape_list
 
 if __name__ == "__main__":
-    hparams = hyperparams.load_hyperparams()
+    hparams = config_model.load_hyperparams()
     encoder_hparams, decoder_hparams, opt_hparams, loss_hparams, args = \
         hparams['encoder_hparams'], hparams['decoder_hparams'], \
         hparams['opt_hparams'], hparams['loss_hparams'], hparams['args']
@@ -235,8 +235,8 @@ if __name__ == "__main__":
             rwords.append([args.id2w[y] for y in refer])
             hwords.append([args.id2w[y] for y in hypo])
         outputs_tmp_filename = args.log_dir + \
-            '{}.test.beam{}alpha{}.outputs.decodes'.format(\
-            cur_mname, args.beam_width, args.alpha)
+            'test.outputs'.format(\
+            cur_mname)
         refer_tmp_filename = args.log_dir + 'test_reference.tmp'
         write_words(hwords, outputs_tmp_filename)
         write_words(rwords, refer_tmp_filename)

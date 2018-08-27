@@ -31,16 +31,21 @@ By default, we use SentencePiece encoder to keep consistent with tensor2tensor, 
 
 ```
 #train
-bash run_model.sh 1 train_and_evaluate en vi
+#LOG_DISK_DIR=/space/hzt/shr/transformer_spm
+python transformer_overall.py --mode=train_and_evaluate --pre_encoding=spm --src_language=en --tgt_languege=vi --log_disk=$LOG_DISK_DIR
 
 #test
-bash run_model 1 test en vi
+python transformer_overall.py --mode=test --pre_encoding=spm --src_language=en --tgt_language=vi --log_disk=$LOG_DISK_DIR
+
+# The decoded file path will be in $LOG_DISK_DIR/${SRC_LANGUAGE}_${TGT_LANGUAGE/}/test.outputs
 
 #evaluate with BLEU score
-bash test_output.sh en vi
-```
+export PATH=$PATH:../../bin/utils/
+spm_decode --model temp/run_en_vi_spm/data/spm-codes.32000.model --input_format=piece < ${test.outputs} > test.out
 
-The `1` indicates one hparams set for en-vi task: `max_train_epoch=70 max_training_steps=125000 batch_size=2048 test_batch_size=64 beam_width=5 alpha=0.6 ...`. You need to manually set the `log_disk_dir` parameter to control the output path of the tensorflow logging file. Read the `run_model.sh` for more details.
+#in case of BPE encoding, run cat ${test.outputs} | sed -E 's/@@ //g' > test.out
+python bleu_tool.py --reference=data/en_vi/test.vi --translation=test.out
+```
 
 ## Result
 
@@ -77,8 +82,8 @@ You will obtain the processed dataset in `./temp/data/run_en_de_bpe/data/` direc
 
 ```
 #Modify the `encoder` in `run_model.sh` to `bpe`
-
-bash run_model 2 train_and_evaluate en de
+#LOG_DIR=/space/hzt/shr/transformer_spm
+python transformer_overall.py --mode=train_and_evaluate --pre_encoding=spm --src_language=en --tgt_language=de --log_disk_dir=$LOG_DIR --wbatchsize=3072
 ```
 Here `2` denotes one hparams set for wmt14 en-de task (model with more
 parameters compared to `1` hparams set).
