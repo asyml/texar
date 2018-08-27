@@ -55,7 +55,7 @@ loss = tx.losses.sequence_sparse_softmax_cross_entropy(
     sequence_length=batch['target_length']-1) # Automatic masks
 
 # Beam search decoding
-output_bs, _, _ = tx.modules.beam_search_decode(
+outputs_bs, _, _ = tx.modules.beam_search_decode(
     decoder,
     embedding=embedder,
     start_tokens=[data.target_vocab.bos_token_id]*num_samples,
