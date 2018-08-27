@@ -39,7 +39,7 @@ batch = iterator.get_next() # A data mini-batch
 # Model architecture
 embedder = tx.modules.WordEmbedder(data.target_vocab.size, hparams=hparams_emb)
 encoder = tx.modules.TransformerEncoder(hparams=hparams_encoder)
-outputs_enc = encoder(inputs=embedder(batch['soource_text_ids']),
+outputs_enc = encoder(inputs=embedder(batch['source_text_ids']),
                       sequence_length=batch['source_length'])
                       
 decoder = tx.modules.AttentionRNNDecoder(memory=output_enc, 
