@@ -92,7 +92,6 @@ python transformer_overall.py --mode=test --pre_encoding=bpe --src_language=en -
 TEST_OUTPUT=${LOG_DISK_DIR}/en_de/test.output
 cat ${TEST_OUTPUT} | sed -E 's/@@ //g' > test.out
 
-export PATH=$PATH:../../bin/utils/
 python bleu_tool.py --reference=data/en_de/test.de --translation=test.out
 ```
 
