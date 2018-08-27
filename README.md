@@ -13,7 +13,7 @@ With the design goals of **modularity, versatility, and extensibility** in mind,
 With Texar, cutting-edge complex models can be easily constructed, freely enriched with best modeling/training practices, readily fitted into standard training/evaluation pipelines, and fastly experimented and evolved by, e.g., plugging-in and swapping-out different modules.
 
 <div align="center">
-   <img src="https://www.cs.cmu.edu/~zhitingh/temp/texar_stack.png" height="301" width="673"><br><br>
+   <img src="https://www.cs.cmu.edu/~zhitingh/temp/texar_stack.png"><br><br>
 </div> 
 
 ### Key Features
