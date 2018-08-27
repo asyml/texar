@@ -107,6 +107,10 @@ class TransformerDecoderTest(tf.test.TestCase):
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
             outputs_ = sess.run(outputs)
+            self.assertEqual(outputs_['log_prob'].shape,
+                             (self._batch_size, 5))
+            self.assertEqual(outputs_['sample_id'].shape,
+                             (self._batch_size, self._max_decode_len, 5))
 
 if __name__ == "__main__":
     tf.test.main()
