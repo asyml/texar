@@ -31,7 +31,8 @@ By default, we use SentencePiece encoder to keep consistent with tensor2tensor.
 ```
 #train
 #LOG_DISK_DIR=/space/hzt/shr/transformer_spm
-python transformer_overall.py --mode=train_and_evaluate --pre_encoding=spm --src_language=en --tgt_languege=vi --log_disk=$LOG_DISK_DIR
+#change the LOG_DISK_DIR to your own path to save tensorboard logging information and trained model.
+python transformer_overall.py --mode=train_and_evaluate --pre_encoding=spm --src_language=en --tgt_language=vi --log_disk=$LOG_DISK_DIR
 
 #test
 python transformer_overall.py --mode=test --pre_encoding=spm --src_language=en --tgt_language=vi --log_disk=$LOG_DISK_DIR
@@ -75,24 +76,24 @@ You will obtain the dataset in the `./data/en_de/` directory
 ```
 bash preprocess_data.sh bpe en de
 ```
-You will obtain the processed dataset in `./temp/data/run_en_de_bpe/data/` directory
+
+You will obtain the BPE-encoded dataset in `./temp/data/run_en_de_bpe/data/` directory
 
 ## Training the model
 
 ```
-#Modify the `encoder` in `run_model.sh` to `bpe`
-#LOG_DIR=/space/hzt/shr/transformer_spm
-python transformer_overall.py --mode=train_and_evaluate --pre_encoding=spm --src_language=en --tgt_language=de --log_disk_dir=$LOG_DIR --wbatchsize=3072
+python transformer_overall.py --mode=train_and_evaluate --pre_encoding=bpe --src_language=en --tgt_language=de --log_disk_dir=$LOG_DISK_DIR --wbatchsize=3072
 ```
-Here `2` denotes one hparams set for wmt14 en-de task (model with more
-parameters compared to `1` hparams set).
 
 ## Test and evaluation
 ```
-bash run_model.sh 2 test en de
 
-#Modify the `encoder` in `test_output.sh` to `bpe`
-bash test_output.sh en de
+python transformer_overall.py --mode=test --pre_encoding=bpe --src_language=en --tgt_language=de --log_disk_dir=$LOG_DISK_DIR --wbatchsize=3072
+TEST_OUTPUT=${LOG_DISK_DIR}/en_de/test.output
+cat ${TEST_OUTPUT} | sed -E 's/@@ //g' > test.out
+
+export PATH=$PATH:../../bin/utils/
+python bleu_tool.py --reference=data/en_de/test.de --translation=test.out
 ```
 
 ## Result

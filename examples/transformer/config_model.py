@@ -28,9 +28,9 @@ def load_hyperparams():
     argparser.add_argument('--test_batch_size', type=int, default=64)
     argparser.add_argument('--eval_steps', type=int, default=2000)
     argparser.add_argument('--max_training_steps', type=int, default=500000,\
-        help='max training steps. In most cases, the model can converge in
+        help='''max training steps. In most cases, the model can converge in
              the small default max_train_epoch epoches,
-             so this argument is not used.')
+             so this argument is not use.''')
     argparser.add_argument('--warmup_steps', type=int, default=16000)
     argparser.add_argument('--lr_constant', type=float, default=2)
     argparser.add_argument('--max_train_epoch', type=int, default=20)
