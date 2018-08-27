@@ -27,7 +27,6 @@ class TransformerDecoderTest(tf.test.TestCase):
         self._max_time = 10
         self._emb_dim = 512
         self._max_decode_len = 32
-        # TODO(haoran): keep consistent with decoders
         self._inputs = tf.random_uniform(
             [self._batch_size, self._max_time, self._emb_dim],
             maxval=1, dtype=tf.float32)
