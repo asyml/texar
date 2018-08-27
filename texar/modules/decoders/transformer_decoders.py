@@ -111,7 +111,7 @@ class TransformerDecoder(ModuleBase):
                 "initializer": None,
                 # Additional for TransformerDecoder
                 "embedding_tie": True,
-                "output_layer_bias": True,
+                "output_layer_bias": False,
                 "max_decoding_length": 1e10,
                 "alpha": 0,
                 "name": "transformer_decoder"
@@ -184,7 +184,7 @@ class TransformerDecoder(ModuleBase):
             "initializer": None,
             "position_embedder_hparams": None,
             "embedding_tie": True,
-            "output_layer_bias": True,
+            "output_layer_bias": False,
             "max_decoding_length": 1e10,
             "embedding_dropout": 0.1,
             "attention_dropout": 0.1,
