@@ -27,7 +27,7 @@ Users can construct their own models at a high conceptual level just like assemb
 * Clean, detailed [documentations](.) and rich [examples](.).
 
 ### Library API Example
-Builds a (self-)attentional sequence encoder-decoder model:
+Builds a (self-)attentional sequence encoder-decoder model, with different learning algorithms:
 ```python
 import texar as tx
 
@@ -48,7 +48,7 @@ decoder = tx.modules.AttentionRNNDecoder(memory=output_enc,
 outputs, _, _ = decoder(inputs=embedder(batch['target_text_ids']),
                         sequence_length=batch['target_length']-1)
                         
-# Loss
+# Loss for maximum likelihood learning
 loss = tx.losses.sequence_sparse_softmax_cross_entropy(
     labels=batch['target_text_ids'][:, 1:],
     logits=outputs.logits,
@@ -60,6 +60,13 @@ outputs_bs, _, _ = tx.modules.beam_search_decode(
     embedding=embedder,
     start_tokens=[data.target_vocab.bos_token_id]*num_samples,
     end_token=data.target_vocab.eos_token_id)
+```
+```python
+# Policy gradient agent for RL learning
+agent = tx.agents.SeqPGAgent(samples=outputs.sample_id,
+                             logits=outputs.logits,
+                             sequence_length=batch['target_length']-1,
+                             hparams=config_model.agent)
 ```
 Many more examples are available [here](.)
   
