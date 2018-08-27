@@ -10,7 +10,7 @@
 # If output directory is not specified, "./iwslt15" will be used as the default
 # output directory.
 
-OUT_DIR="${1:-data/en_vi}"
+OUT_DIR="${1:-../data/en_vi}"
 SITE_PREFIX="https://nlp.stanford.edu/projects/nmt/data"
 
 mkdir -v -p $OUT_DIR
