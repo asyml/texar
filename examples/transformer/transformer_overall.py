@@ -28,6 +28,8 @@ if __name__ == "__main__":
     encoder_hparams, decoder_hparams, opt_hparams, loss_hparams, args = \
         hparams['encoder_hparams'], hparams['decoder_hparams'], \
         hparams['opt_hparams'], hparams['loss_hparams'], hparams['args']
+    train_data, dev_data, test_data = utils.data_reader.load_data_numpy(\
+        args.input, args.filename_prefix)
     set_random_seed(args.random_seed)
     beam_width = args.beam_width
     bos_idx, eos_idx = 1, 2
@@ -41,8 +43,6 @@ if __name__ == "__main__":
     fh.setFormatter(
         logging.Formatter('%(asctime)s:%(levelname)s:%(message)s'))
     logger.addHandler(fh)
-    train_data, dev_data, test_data = utils.data_reader.load_data_numpy(\
-        args.input, args.filename_prefix)
     with open(args.vocab_file, 'rb') as f: args.id2w = pickle.load(f)
     args.n_vocab = len(args.id2w)
     logger.info('begin logging')

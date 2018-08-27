@@ -1,6 +1,6 @@
 import numpy as np
-from chainer.dataset import convert
 import os
+import six
 
 def load_data_numpy(input_dir, prefix):
     train_data = np.load(os.path.join(input_dir,\
@@ -38,8 +38,8 @@ def seq2seq_pad_concat_convert(xy_batch, device=-1,
     """
 
     x_seqs, y_seqs = zip(*xy_batch)
-    x_block = convert.concat_examples(x_seqs, device, padding=0)
-    y_block = convert.concat_examples(y_seqs, device, padding=0)
+    x_block = _concat_examples(x_seqs, device, padding=0)
+    y_block = _concat_examples(y_seqs, device, padding=0)
 
     # Add EOS
     x_block = np.pad(x_block, ((0, 0), (0, 1)), 'constant',
@@ -60,7 +60,7 @@ def seq2seq_pad_concat_convert(xy_batch, device=-1,
 def source_pad_concat_convert(x_seqs,
     eos_id=2,
     bos_id=1):
-    x_block = convert.concat_examples(x_seqs, device=-1, padding=0)
+    x_block = _concat_examples(x_seqs, device=-1, padding=0)
     """
     This function is used when testing the model without target input.
     """
@@ -69,6 +69,27 @@ def source_pad_concat_convert(x_seqs,
     for i_batch, seq in enumerate(x_seqs):
         x_block[i_batch, len(seq)] = eos_id
     return x_block
+
+
+def _concat_examples(arrays, device=-1, padding=0):
+    if len(arrays) == 0:
+        raise ValueError('batch is empty')
+
+    first_elem = arrays[0]
+    assert isinstance(first_elem, np.ndarray)
+
+    shape = np.array(arrays[0].shape, dtype=int)
+    for array in arrays[1:]:
+        if np.any(shape != array.shape):
+            np.maximum(shape, array.shape, shape)
+    shape = tuple(np.insert(shape, 0, len(arrays)))
+
+    result = np.full(shape, padding, dtype=arrays[0].dtype)
+    for i in six.moves.range(len(arrays)):
+        src = arrays[i]
+        slices = tuple(slice(dim) for dim in src.shape)
+        result[(i,) + slices] = src
+    return result
 
 if __name__ == "__main__":
     pass
