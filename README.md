@@ -13,7 +13,7 @@ With the design goals of **modularity, versatility, and extensibility** in mind,
 With Texar, cutting-edge complex models can be easily constructed, freely enriched with best modeling/training practices, readily fitted into standard training/evaluation pipelines, and fastly experimented and evolved by, e.g., plugging-in and swapping-out different modules.
 
 <div align="center">
-   <img src="https://asyml.github.io/texar_web/images/texar_stack_015.png"><br><br>
+   <img src="https://www.cs.cmu.edu/~zhitingh/temp/texar_stack.png" height="301" width="673"><br><br>
 </div> 
 
 ### Key Features
@@ -38,7 +38,7 @@ batch = iterator.get_next() # A data mini-batch
 
 # Model architecture
 embedder = tx.modules.WordEmbedder(data.target_vocab.size, hparams=hparams_emb)
-encoder = tx.modules.TransformerEncoder(hparams=hparams_enc)
+encoder = tx.modules.TransformerEncoder(hparams=hparams_encoder)
 outputs_enc = encoder(inputs=embedder(batch['soource_text_ids']),
                       sequence_length=batch['source_length'])
                       
@@ -55,10 +55,10 @@ loss = tx.losses.sequence_sparse_softmax_cross_entropy(
     sequence_length=batch['target_length']-1) # Automatic masks
 
 # Beam search decoding
-output_bs, _, _ = tx.modules.beam_search_decode(
+outputs_bs, _, _ = tx.modules.beam_search_decode(
     decoder,
     embedding=embedder,
-    start_tokens=[data.target_vocab.bos_token_id]*100,
+    start_tokens=[data.target_vocab.bos_token_id]*num_samples,
     end_token=data.target_vocab.eos_token_id)
 ```
 Many more examples are available [here](.)
