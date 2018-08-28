@@ -224,7 +224,8 @@ if __name__ == "__main__":
                 logger.info('step:%s targets:%s loss:%s', \
                     global_step_py, target.shape, loss)
             writer.add_summary(mgd, global_step=global_step_py)
-            if global_step_py == config_data.max_training_steps:
+            if config.data.max_training_steps and \
+                global_step_py == config_data.max_training_steps:
                 print('reach max training step, loss:{}'.format(loss))
                 train_finished = True
             if global_step_py % config_data.eval_steps == 0:
