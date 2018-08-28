@@ -64,7 +64,7 @@ case ${encoder} in
         cp ${test_tgt} ${out}/test/test.${tgt_language} ;;
 esac
 
-python ${TF}/preprocess.py -i ${out}/data \
+python ${TF}/utils/preprocess.py -i ${out}/data \
     --src ${src_language}.${encoder} \
     --tgt ${tgt_language}.${encoder} \
     --save_data processed. \

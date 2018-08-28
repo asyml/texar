@@ -17,7 +17,7 @@ The task is IWSLT'15 English-Vietnamese dataset. For more information, please re
 ## Obtain the dataset
 
 ```
-bash iwslt15_en_vi.sh
+bash scripts/iwslt15_en_vi.sh
 ```
 Feel free to try on different datasets as long as they are parallel text corpora and the file paths are set correctly.
 
@@ -71,7 +71,7 @@ The model can converge within 5 hours (~15 epochs).
 ## Obtain the dataset
 ```
 #change the DOWNLOADED_DATA_DIR in the wmt14_en_de.sh to your own path.
-bash wmt14_en_de.sh
+bash scripts/wmt14_en_de.sh
 ```
 You will obtain the dataset in the `./data/en_de/` directory
 
