@@ -94,7 +94,7 @@ python transformer_overall.py --mode=train_and_evaluate --config_data=config_wmt
 python transformer_overall.py --run_mode=test --config_data=config_wmt14 --log_dir=$LOG_DISK_DIR
 
 TEST_OUTPUT=${LOG_DISK_DIR}/en_de/test.output
-cat ${TEST_OUTPUT} | sed -E 's/@@ //g' > test.out
+cat ${TEST_OUTPUT} | sed -E 's/(@@ )|(@@ ?$)//g' > test.out
 
 python bleu_tool.py --reference=data/en_de/test.de --translation=test.out
 ```
