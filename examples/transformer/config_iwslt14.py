@@ -6,3 +6,4 @@ max_train_epoch = 20
 max_training_steps = 500000
 max_decode_len = 256
 input_dir = 'temp/run_en_vi_spm/data'
+vocab_file = input_dir + '/processed.vocab.pickle'

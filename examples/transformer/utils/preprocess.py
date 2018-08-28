@@ -11,7 +11,7 @@ import os
 import numpy as np
 import pickle
 import argparse
-
+from io import open
 #pylint:disable=invalid-name
 
 split_pattern = re.compile(r'([.,!?"\':;)(])')
@@ -38,7 +38,7 @@ def split_sentence(s, tok=False):
 
 def open_file(path):
     """more robust open function"""
-    return io.open(path, encoding='utf-8', errors='ignore')
+    return open(path, encoding='utf-8')
 
 def read_file(path, tok=False):
     """a generator to generate each line of file."""
@@ -200,23 +200,23 @@ if __name__ == "__main__":
         as f:
         pickle.dump(id2w, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-    with open(train_src_output, 'w+') as fsrc, \
-        open(train_tgt_output, 'w+') as ftgt:
+    with open(train_src_output, 'w+', encoding='utf-8') as fsrc, \
+        open(train_tgt_output, 'w+', encoding='utf-8') as ftgt:
         for words in train_data:
             fsrc.write('{}\n'.format(' '.join(words[0])))
             ftgt.write('{}\n'.format(' '.join(words[1])))
-    with open(dev_src_output, 'w+') as fsrc, \
-        open(dev_tgt_output, 'w+') as ftgt:
+    with open(dev_src_output, 'w+', encoding='utf-8') as fsrc, \
+        open(dev_tgt_output, 'w+', encoding='utf-8') as ftgt:
         for words in valid_data:
             fsrc.write('{}\n'.format(' '.join(words[0])))
             ftgt.write('{}\n'.format(' '.join(words[1])))
-    with open(test_src_output, 'w+') as fsrc, \
-        open(test_tgt_output, 'w+') as ftgt:
+    with open(test_src_output, 'w+', encoding='utf-8') as fsrc, \
+        open(test_tgt_output, 'w+', encoding='utf-8') as ftgt:
         for words in test_data:
             fsrc.write('{}\n'.format(' '.join(words[0])))
             ftgt.write('{}\n'.format(' '.join(words[1])))
     with open(os.path.join(args.input_dir, \
-            args.save_data + args.pre_encoding + '.vocab.text'), 'w+') as f:
+            args.save_data + args.pre_encoding + '.vocab.text'), 'w+', encoding='utf-8') as f:
         max_size = len(id2w)
         for idx in range(4, max_size):
             f.write('{}\n'.format(id2w[idx]))

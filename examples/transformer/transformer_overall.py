@@ -10,6 +10,7 @@ import random
 import logging
 import codecs
 import os
+import importlib
 
 import tensorflow as tf
 import texar as tx
@@ -30,33 +31,36 @@ flags.DEFINE_string("run_mode", "train_and_evaluate",
     """choose between train_and_evaluate and test.""")
 flags.DEFINE_string("log_dir", "",
     "The path to save the trained model and tensorflow logging.")
-flags = flags.FLAGS
+
+FLAGS = flags.FLAGS
 
 config_model = importlib.import_module(FLAGS.config_model)
 config_data = importlib.import_module(FLAGS.config_data)
 
 if __name__ == "__main__":
-    hparams = config_model.load_hyperparams()
-    encoder_hparams, decoder_hparams, opt_hparams, loss_hparams = \
+    word_embedding_hparams, encoder_hparams, decoder_hparams, \
+        opt_hparams, loss_hparams = \
+        config_model.word_embedding_hparams, \
         config_model.encoder_hparams, config_model.decoder_hparams, \
         config_model.opt_hparams, config_model.loss_hparams
     train_data, dev_data, test_data = utils.data_reader.load_data_numpy(\
-        config_data.input_dir, args.filename_prefix)
+        config_data.input_dir, config_data.filename_prefix)
     set_random_seed(config_model.random_seed)
     beam_width = config_model.beam_width
     bos_idx, eos_idx = 1, 2
     # configure the logging module
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
-    logging_file = os.path.join(flags.log_dir, 'logging.txt')
+    logging_file = os.path.join(FLAGS.log_dir, 'logging.txt')
     print('logging file is saved in :{}'.format(logging_file))
     fh = logging.FileHandler(logging_file)
     fh.setLevel(logging.DEBUG)
     fh.setFormatter(
         logging.Formatter('%(asctime)s:%(levelname)s:%(message)s'))
     logger.addHandler(fh)
-    with open(args.vocab_file, 'rb') as f: args.id2w = pickle.load(f)
-    args.n_vocab = len(args.id2w)
+    with open(config_data.vocab_file, 'rb') as f:
+        id2w = pickle.load(f)
+    n_vocab = len(id2w)
     logger.info('begin logging')
 
     encoder_input = tf.placeholder(tf.int64, shape=(None, None))
@@ -67,8 +71,8 @@ if __name__ == "__main__":
     learning_rate = tf.placeholder(tf.float64, shape=(), name='lr')
     istarget = tf.to_float(tf.not_equal(labels, 0))
     word_embedder = tx.modules.WordEmbedder(
-        vocab_size=args.n_vocab,
-        hparams=args.word_embedding_hparams,
+        vocab_size=n_vocab,
+        hparams=word_embedding_hparams,
     )
     encoder = TransformerEncoder(
         hparams=encoder_hparams)
@@ -123,7 +127,7 @@ if __name__ == "__main__":
         infered_ids = predictions['sample_id'][:, :, 0]
 
     mle_loss = transformer_utils.smoothing_cross_entropy(logits, \
-        labels, args.n_vocab, loss_hparams['label_confidence'])
+        labels, n_vocab, loss_hparams['label_confidence'])
     mle_loss = tf.reduce_sum(mle_loss * istarget) / tf.reduce_sum(istarget)
     tf.summary.scalar('mle_loss', mle_loss)
     acc = tf.reduce_sum(
@@ -147,8 +151,8 @@ if __name__ == "__main__":
     def _eval_epoch(cur_sess, epoch):
         references, hypotheses = [], []
         global best_score, best_epoch
-        for i in range(0, len(dev_data), args.test_batch_size):
-            sources, targets = zip(*dev_data[i:i+args.test_batch_size])
+        for i in range(0, len(dev_data), config_data.test_batch_size):
+            sources, targets = zip(*dev_data[i:i+config_data.test_batch_size])
             references.extend(t.tolist() for t in targets)
             x_block = utils.data_reader.source_pad_concat_convert(sources)
             _feed_dict = {
@@ -160,10 +164,10 @@ if __name__ == "__main__":
             }
             _fetches = sess.run(fetches, feed_dict=_feed_dict)
             hypotheses.extend(h.tolist() for h in _fetches['predictions'])
-        outputs_tmp_filename = flags.log_dir + \
+        outputs_tmp_filename = FLAGS.log_dir + \
             'eval.output'.format(\
-            epoch, args.beam_width, args.alpha)
-        refer_tmp_filename = os.path.join(flags.log_dir, 'eval.refer')
+            epoch, config_model.beam_width, config_model.alpha)
+        refer_tmp_filename = os.path.join(FLAGS.log_dir, 'eval.refer')
         with codecs.open(outputs_tmp_filename, 'w+', 'utf-8') as tmpfile, \
             codecs.open(refer_tmp_filename, 'w+', 'utf-8') as tmpref:
             for hyp, tgt in zip(hypotheses, references):
@@ -178,7 +182,7 @@ if __name__ == "__main__":
         logger.info('eval_bleu %f in epoch %d)' % (eval_bleu, epoch))
         if eval_bleu > best_score:
             logger.info('%s epoch, highest bleu %s',epoch, eval_bleu)
-            model_path = flags.log_dir + 'my-model.ckpt'
+            model_path = FLAGS.log_dir + 'my-model.ckpt'
             logger.info('saveing model in %s', model_path)
             best_score, best_epoch = eval_bleu, epoch
             eval_saver.save(sess, model_path)
@@ -188,7 +192,7 @@ if __name__ == "__main__":
         random.shuffle(train_data)
         train_iter = data.iterator.pool(
             train_data,
-            args.wbatchsize,
+            config_data.wbatchsize,
             key=lambda x: (len(x[0]), len(x[1])),
             batch_size_fn=batch_size_fn,
             random_shuffler=
@@ -227,9 +231,9 @@ if __name__ == "__main__":
 
     def _test_epoch(cur_sess):
         references, hypotheses, rwords, hwords = [], [], [], []
-        for i in range(0, len(test_data), args.test_batch_size):
+        for i in range(0, len(test_data), config_data.test_batch_size):
             sources, targets = \
-                zip(*test_data[i: i + args.test_batch_size])
+                zip(*test_data[i: i + config_data.test_batch_size])
             references.extend(t.tolist() for t in targets)
             x_block = utils.data_reader.source_pad_concat_convert(sources)
             _feed_dict = {
@@ -244,12 +248,12 @@ if __name__ == "__main__":
         for refer, hypo in zip(references, hypotheses):
             if eos_idx in hypo:
                 hypo = hypo[:hypo.index(eos_idx)]
-            rwords.append([args.id2w[y] for y in refer])
-            hwords.append([args.id2w[y] for y in hypo])
-        outputs_tmp_filename = flags.log_dir + \
+            rwords.append([id2w[y] for y in refer])
+            hwords.append([id2w[y] for y in hypo])
+        outputs_tmp_filename = FLAGS.log_dir + \
             'test.output'.format(\
             cur_mname)
-        refer_tmp_filename = flags.log_dir + 'test.refer'
+        refer_tmp_filename = FLAGS.log_dir + 'test.refer'
         write_words(hwords, outputs_tmp_filename)
         write_words(rwords, refer_tmp_filename)
         logger.info('test finished. The output is in %s' % \
@@ -259,11 +263,11 @@ if __name__ == "__main__":
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
-        writer = tf.summary.FileWriter(flags.log_dir, graph=sess.graph)
-        if args.mode == 'train_and_evaluate':
-            for epoch in range(args.start_epoch, config_data.max_train_epoch):
+        writer = tf.summary.FileWriter(FLAGS.log_dir, graph=sess.graph)
+        if FLAGS.run_mode == 'train_and_evaluate':
+            for epoch in range(config_data.max_train_epoch):
                 _train_epoch(sess, epoch)
-        elif args.mode == 'test':
-            cur_mname = tf.train.latest_checkpoint(flags.log_dir).split('/')[-1]
-            eval_saver.restore(sess, tf.train.latest_checkpoint(flags.log_dir))
+        elif FLAGS.run_mode == 'test':
+            cur_mname = tf.train.latest_checkpoint(FLAGS.log_dir).split('/')[-1]
+            eval_saver.restore(sess, tf.train.latest_checkpoint(FLAGS.log_dir))
             _test_epoch(sess)

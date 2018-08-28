@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import copy
 random_seed = 1234
 beam_width = 5
 alpha = 0.6
