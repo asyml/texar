@@ -15,32 +15,35 @@ run `pip install -r requirements` to install the dependencies for transformer tr
 The task is IWSLT'15 English-Vietnamese dataset. For more information, please refer to https://nlp.stanford.edu/projects/nmt/
 
 ## Obtain the dataset
+
 ```
 bash iwslt15_en_vi.sh
 ```
 Feel free to try on different datasets as long as they are parallel text corpora and the file paths are set correctly.
 
 ## Preprocessing the dataset and generate encoded vocabulary
+
 ```
 bash preprocess_data.sh spm en vi
 ```
+
 By default, we use SentencePiece encoder to keep consistent with tensor2tensor.
 
 ## Training and evaluating the model
 
 ```
 #train
-#LOG_DISK_DIR=/space/hzt/shr/transformer_spm
+#LOG_DISK_DIR=YOUR_CUSTOM_DIR/en_vi/
 #change the LOG_DISK_DIR to your own path to save tensorboard logging information and trained model.
-python transformer_overall.py --mode=train_and_evaluate --pre_encoding=spm --src_language=en --tgt_language=vi --log_disk=$LOG_DISK_DIR
+python transformer_overall.py --run_mode=train_and_evaluate --config_data=config_iwslt14 --log_dir=${LOG_DISK_DIR}
 
 #test
-python transformer_overall.py --mode=test --pre_encoding=spm --src_language=en --tgt_language=vi --log_disk=$LOG_DISK_DIR
+python transformer_overall.py --run_mode=test --config_data=config_iwslt14 --log_dir=${LOG_DISK_DIR}
 
-# The decoded file path will be in $LOG_DISK_DIR/${SRC_LANGUAGE}_${TGT_LANGUAGE/}/test.outputs
-
+# The decoded file path will be in $LOG_DISK_DIR/test.output
 #evaluate with BLEU score
 export PATH=$PATH:../../bin/utils/
+test.outputs=${LOG_DISK_DIR}/test.output
 spm_decode --model temp/run_en_vi_spm/data/spm-codes.32000.model --input_format=piece < ${test.outputs} > test.out
 
 #in case of BPE encoding, run cat ${test.outputs} | sed -E 's/@@ //g' > test.out
@@ -82,13 +85,14 @@ You will obtain the BPE-encoded dataset in `./temp/data/run_en_de_bpe/data/` dir
 ## Training the model
 
 ```
-python transformer_overall.py --mode=train_and_evaluate --pre_encoding=bpe --src_language=en --tgt_language=de --log_disk_dir=$LOG_DISK_DIR --wbatchsize=3072
+#LOG_DISK_DIR=YOUR_CUSTOM_DIR/en_de/
+python transformer_overall.py --mode=train_and_evaluate --config_data=config_wmt14 --log_dir=$LOG_DISK_DIR --wbatchsize=3072
 ```
 
 ## Test and evaluation
 ```
+python transformer_overall.py --mode=test --config_data=config_wmt14 --log_dir=$LOG_DISK_DIR
 
-python transformer_overall.py --mode=test --pre_encoding=bpe --src_language=en --tgt_language=de --log_disk_dir=$LOG_DISK_DIR --wbatchsize=3072
 TEST_OUTPUT=${LOG_DISK_DIR}/en_de/test.output
 cat ${TEST_OUTPUT} | sed -E 's/@@ //g' > test.out
 

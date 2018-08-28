@@ -18,7 +18,7 @@
 # limitations under the License.
 
 set -e
-OUTPUT_DIR="../data/en_de/"
+OUTPUT_DIR="data/en_de/"
 DOWNLOADED_DATA_DIR="data/en_de_temp/"
 OUTPUT_DIR_CACHE="${DOWNLOADED_DATA_DIR}/cache"
 echo "Writing to ${OUTPUT_DIR_CACHE}. To change this, set the OUTPUT_DIR environment variable."

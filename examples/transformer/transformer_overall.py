@@ -23,20 +23,32 @@ from utils.data_writer import write_words
 from utils.helpers import set_random_seed, batch_size_fn, adjust_lr
 from texar.utils.shapes import shape_list
 
+flags = tf.flags
+flags.DEFINE_string("config_model", "config_model", "The model config.")
+flags.DEFINE_string("config_data", "config_iwslt14", "The dataset config.")
+flags.DEFINE_string("run_mode", "train_and_evaluate",
+    """choose between train_and_evaluate and test.""")
+flags.DEFINE_string("log_dir", "",
+    "The path to save the trained model and tensorflow logging.")
+flags = flags.FLAGS
+
+config_model = importlib.import_module(FLAGS.config_model)
+config_data = importlib.import_module(FLAGS.config_data)
+
 if __name__ == "__main__":
     hparams = config_model.load_hyperparams()
-    encoder_hparams, decoder_hparams, opt_hparams, loss_hparams, args = \
-        hparams['encoder_hparams'], hparams['decoder_hparams'], \
-        hparams['opt_hparams'], hparams['loss_hparams'], hparams['args']
+    encoder_hparams, decoder_hparams, opt_hparams, loss_hparams = \
+        config_model.encoder_hparams, config_model.decoder_hparams, \
+        config_model.opt_hparams, config_model.loss_hparams
     train_data, dev_data, test_data = utils.data_reader.load_data_numpy(\
-        args.input, args.filename_prefix)
-    set_random_seed(args.random_seed)
-    beam_width = args.beam_width
+        config_data.input_dir, args.filename_prefix)
+    set_random_seed(config_model.random_seed)
+    beam_width = config_model.beam_width
     bos_idx, eos_idx = 1, 2
     # configure the logging module
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
-    logging_file = os.path.join(args.log_dir, 'logging.txt')
+    logging_file = os.path.join(flags.log_dir, 'logging.txt')
     print('logging file is saved in :{}'.format(logging_file))
     fh = logging.FileHandler(logging_file)
     fh.setLevel(logging.DEBUG)
@@ -102,7 +114,7 @@ if __name__ == "__main__":
         beam_width=beam_width,
         start_tokens=start_tokens,
         end_token=2,
-        max_decoding_length=args.max_decode_len,
+        max_decoding_length=config_data.max_decode_len,
         mode=tf.estimator.ModeKeys.PREDICT
     )
     if beam_width <= 1:
@@ -148,10 +160,10 @@ if __name__ == "__main__":
             }
             _fetches = sess.run(fetches, feed_dict=_feed_dict)
             hypotheses.extend(h.tolist() for h in _fetches['predictions'])
-        outputs_tmp_filename = args.log_dir + \
-            'my_model_epoch{}.beam{}alpha{}.outputs.tmp'.format(\
+        outputs_tmp_filename = flags.log_dir + \
+            'eval.output'.format(\
             epoch, args.beam_width, args.alpha)
-        refer_tmp_filename = os.path.join(args.log_dir, 'val_refer.tmp')
+        refer_tmp_filename = os.path.join(flags.log_dir, 'eval.refer')
         with codecs.open(outputs_tmp_filename, 'w+', 'utf-8') as tmpfile, \
             codecs.open(refer_tmp_filename, 'w+', 'utf-8') as tmpref:
             for hyp, tgt in zip(hypotheses, references):
@@ -166,7 +178,7 @@ if __name__ == "__main__":
         logger.info('eval_bleu %f in epoch %d)' % (eval_bleu, epoch))
         if eval_bleu > best_score:
             logger.info('%s epoch, highest bleu %s',epoch, eval_bleu)
-            model_path = args.log_dir + 'my-model-highest_bleu.ckpt'
+            model_path = flags.log_dir + 'my-model.ckpt'
             logger.info('saveing model in %s', model_path)
             best_score, best_epoch = eval_bleu, epoch
             eval_saver.save(sess, model_path)
@@ -207,10 +219,10 @@ if __name__ == "__main__":
                 logger.info('step:%s targets:%s loss:%s', \
                     global_step_py, target.shape, loss)
             writer.add_summary(mgd, global_step=global_step_py)
-            if global_step_py == opt_hparams['max_training_steps']:
+            if global_step_py == config_data.max_training_steps:
                 print('reach max training step, loss:{}'.format(loss))
                 train_finished = True
-            if global_step_py % args.eval_steps == 0:
+            if global_step_py % config_data.eval_steps == 0:
                 _eval_epoch(cur_sess, cur_epoch)
 
     def _test_epoch(cur_sess):
@@ -234,10 +246,10 @@ if __name__ == "__main__":
                 hypo = hypo[:hypo.index(eos_idx)]
             rwords.append([args.id2w[y] for y in refer])
             hwords.append([args.id2w[y] for y in hypo])
-        outputs_tmp_filename = args.log_dir + \
-            'test.outputs'.format(\
+        outputs_tmp_filename = flags.log_dir + \
+            'test.output'.format(\
             cur_mname)
-        refer_tmp_filename = args.log_dir + 'test_reference.tmp'
+        refer_tmp_filename = flags.log_dir + 'test.refer'
         write_words(hwords, outputs_tmp_filename)
         write_words(rwords, refer_tmp_filename)
         logger.info('test finished. The output is in %s' % \
@@ -247,11 +259,11 @@ if __name__ == "__main__":
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
-        writer = tf.summary.FileWriter(args.log_dir, graph=sess.graph)
+        writer = tf.summary.FileWriter(flags.log_dir, graph=sess.graph)
         if args.mode == 'train_and_evaluate':
-            for epoch in range(args.start_epoch, args.max_train_epoch):
+            for epoch in range(args.start_epoch, config_data.max_train_epoch):
                 _train_epoch(sess, epoch)
         elif args.mode == 'test':
-            cur_mname = tf.train.latest_checkpoint(args.log_dir).split('/')[-1]
-            eval_saver.restore(sess, tf.train.latest_checkpoint(args.log_dir))
+            cur_mname = tf.train.latest_checkpoint(flags.log_dir).split('/')[-1]
+            eval_saver.restore(sess, tf.train.latest_checkpoint(flags.log_dir))
             _test_epoch(sess)
