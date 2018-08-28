@@ -85,7 +85,7 @@ You will obtain the BPE-encoded dataset in `./temp/data/run_en_de_bpe/data/` dir
 
 ```
 #LOG_DISK_DIR=YOUR_CUSTOM_DIR/en_de/
-python transformer_overall.py --mode=train_and_evaluate --config_data=config_wmt14 --log_dir=$LOG_DISK_DIR --wbatchsize=3072
+python transformer_overall.py --mode=train_and_evaluate --config_data=config_wmt14 --log_dir=$LOG_DISK_DIR
 ```
 
 ## Test and evaluation
