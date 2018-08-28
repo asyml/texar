@@ -19,3 +19,4 @@ max_train_epoch = 10
 max_training_steps = 0
 max_decode_len = 256
 input_dir = 'temp/run_en_de_bpe/data'
+vocab_file = input_dir + '/processed.vocab.pickle'
