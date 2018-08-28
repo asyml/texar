@@ -51,6 +51,7 @@ if __name__ == "__main__":
     # configure the logging module
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
+    if not os.path.exists(FLAGS.log_dir): os.makedirs(FLAGS.log_dir)
     logging_file = os.path.join(FLAGS.log_dir, 'logging.txt')
     print('logging file is saved in :{}'.format(logging_file))
     fh = logging.FileHandler(logging_file)

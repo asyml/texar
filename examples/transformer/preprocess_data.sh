@@ -46,12 +46,12 @@ echo "Learning Word Piece or Byte Pairwise on source and target combined"
 case ${encoder} in
     'spm')
         spm_train --input=${train_src},${train_tgt} --vocab_size ${vocab_size} --model_prefix=$out/data/spm-codes.${vocab_size}
-        spm_encode --model $out/data/spm-codes.${vocab_size}.model --output_format=piece < $train_src > $out/data/train.${src_language}.spm
-        spm_encode --model $out/data/spm-codes.${vocab_size}.model --output_format=piece < $valid_src > $out/data/valid.${src_language}.spm
-        spm_encode --model $out/data/spm-codes.${vocab_size}.model --output_format=piece < $test_src > $out/data/test.${src_language}.spm
-        spm_encode --model $out/data/spm-codes.${vocab_size}.model --output_format=piece <  $train_tgt > $out/data/train.${tgt_language}.spm
-        spm_encode --model $out/data/spm-codes.${vocab_size}.model --output_format=piece <  $valid_tgt > $out/data/valid.${tgt_language}.spm
-        spm_encode --model $out/data/spm-codes.${vocab_size}.model --output_format=piece < ${test_tgt} > $out/data/test.${tgt_language}.spm
+        spm_encode --model $out/data/spm-codes.${vocab_size}.model --output_format=piece --infile $train_src --outfile $out/data/train.${src_language}.spm
+        spm_encode --model $out/data/spm-codes.${vocab_size}.model --output_format=piece --infile $valid_src --outfile $out/data/valid.${src_language}.spm
+        spm_encode --model $out/data/spm-codes.${vocab_size}.model --output_format=piece --infile $test_src --outfile $out/data/test.${src_language}.spm
+        spm_encode --model $out/data/spm-codes.${vocab_size}.model --output_format=piece --infile $train_tgt --outfile $out/data/train.${tgt_language}.spm
+        spm_encode --model $out/data/spm-codes.${vocab_size}.model --output_format=piece --infile $valid_tgt --outfile $out/data/valid.${tgt_language}.spm
+        spm_encode --model $out/data/spm-codes.${vocab_size}.model --output_format=piece --infile ${test_tgt} --outfile $out/data/test.${tgt_language}.spm
         cp ${test_tgt} ${out}/test/test.${tgt_language} ;;
     'bpe'):
         cat ${train_src} ${train_tgt} | learn_bpe -s ${vocab_size} > ${out}/data/bpe-codes.${vocab_size}

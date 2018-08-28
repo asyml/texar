@@ -3,13 +3,14 @@
 import sys
 from argparse import ArgumentParser
 import sentencepiece as spm
-
+from io import open
 
 parser = ArgumentParser(description='SentencePiece Train')
 parser.add_argument('--output_format', type=str)
 parser.add_argument('--model', type=str)
+parser.add_argument('--infile', type=str)
+parser.add_argument('--outfile', type=str)
 args = parser.parse_args()
-
 
 sp = spm.SentencePieceProcessor()
 sp.Load("{}".format(args.model))
@@ -18,7 +19,8 @@ if args.output_format == 'piece':
     func = sp.EncodeAsPieces
 else:
     func = sp.EncodeAsIds
-
-for line in sys.stdin:
-    line = line.strip()
-    print(' '.join(map(str, func(line))))
+with open(args.infile, encoding='utf-8') as infile, \
+    open(args.outfile, 'w+', encoding='utf-8') as outfile:
+    for line in infile.readlines():
+        line = line.strip()
+        outfile.write('{}\n'.format(' '.join(map(str, func(line)))))

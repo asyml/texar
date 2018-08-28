@@ -3,13 +3,14 @@
 import sys
 from argparse import ArgumentParser
 import sentencepiece as spm
-
+from io import open
 
 parser = ArgumentParser(description='SentencePiece Train')
 parser.add_argument('--input_format', type=str)
 parser.add_argument('--model', type=str)
+parser.add_argument('--infile', type=str)
+parser.add_argument('--outfile', type=str)
 args = parser.parse_args()
-
 
 sp = spm.SentencePieceProcessor()
 sp.Load("{}".format(args.model))
@@ -21,8 +22,10 @@ else:
     func = sp.DecodeIds
     map_func = int
 
-for line in sys.stdin:
-    line = line.strip().split()
-    if map_func:
-        line = list(map(map_func, line))
-    print(func(line))
+with open(args.infile, encoding='utf-8') as infile, \
+    open(args.outfile, 'w+', encoding='utf-8') as outfile:
+    for line in infile.readlines():
+        line = line.strip().split()
+        if map_func:
+            line = list(map(map_func, line))
+        outfile.write('{}\n'.format(func(line)))

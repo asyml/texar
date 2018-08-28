@@ -44,9 +44,8 @@ python transformer_overall.py --run_mode=test --config_data=config_iwslt14 --log
 #evaluate with BLEU score
 export PATH=$PATH:../../bin/utils/
 test.outputs=${LOG_DISK_DIR}/test.output
-spm_decode --model temp/run_en_vi_spm/data/spm-codes.32000.model --input_format=piece < ${test.outputs} > test.out
+../../bin/utils/spm_decode --model temp/run_en_vi_spm/data/spm-codes.32000.model --input_format=piece --infile ${test.outputs} --outfile test.out
 
-#in case of BPE encoding, run cat ${test.outputs} | sed -E 's/@@ //g' > test.out
 python bleu_tool.py --reference=data/en_vi/test.vi --translation=test.out
 ```
 
@@ -69,10 +68,11 @@ The model can converge within 5 hours (~15 epochs).
 # We also give a sample script for wmt14 en-de task with Byte Pairwise Encoding here.
 
 ## Obtain the dataset
+
 ```
-#change the DOWNLOADED_DATA_DIR in the wmt14_en_de.sh to your own path.
 bash scripts/wmt14_en_de.sh
 ```
+
 You will obtain the dataset in the `./data/en_de/` directory
 
 ## Preprocessing the dataset and generate encoded vocabulary
