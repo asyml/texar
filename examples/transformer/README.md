@@ -17,7 +17,7 @@ Two example datasets are provided:
 - IWSLT'15 **EN-VI** for English-Vietnamese translation
 - WMT'14 **EN-DE** for English-German translation
 
-Download and pre-process the IWSLT'15 EN-VI data with the following cmds: 
+Download and pre-process the **IWSLT'15 EN-VI** data with the following cmds: 
 ```
 sh scripts/iwslt15_en_vi.sh 
 sh preprocess_data.sh spm en vi
@@ -25,7 +25,7 @@ sh preprocess_data.sh spm en vi
 By default, the downloaded dataset is in `./data/en_vi`. 
 As with the [official implementation](https://github.com/tensorflow/tensor2tensor/blob/master/tensor2tensor/models/transformer.py), `spm` (`sentencepiece`) encoding is used to encode the raw text as data pre-processing. The encoded data is by default in `./temp/run_en_vi_spm`. 
 
-For the WMT'14 **EN-DE** data, download and pre-process with:
+For the **WMT'14 EN-DE** data, download and pre-process with:
 ```
 sh scripts/wmt14_en_de.sh
 sh preprocess_data.sh bpe en de
@@ -49,7 +49,7 @@ To only evaluate a model checkpoint without training, first load the checkpoint 
 ```
 python transformer_main.py --run_mode=test --config_data=config_iwslt15 --model_dir=./outputs
 ```
-The latest checkpoint in `./outputs` is used. Samples are in the file `./outputs/test.output`. 
+The latest checkpoint in `./outputs` is used. Generated samples are in the file `./outputs/test.output`. 
 
 Next, decode the samples with respective decoder, and evaluate with `bleu_tool`:
 ```
@@ -62,8 +62,10 @@ For WMT'14, the corresponding cmds are:
 ```
 # Loads model and generates samples
 python transformer_main.py --run_mode=test --config_data=config_wmt14 --log_dir=./outputs
+
 # BPE decoding
 cat outputs/test.output | sed -E 's/(@@ )|(@@ ?$)//g' > temp/test.output.bpe
+
 # Evaluates BLEU
 python bleu_tool.py --reference=data/en_de/test.de --translation=temp/test.output.bpe
 ```
