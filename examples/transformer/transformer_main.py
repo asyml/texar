@@ -99,6 +99,7 @@ def main():
         [tf.zeros(shape=[1, embedder.dim]), embedder.embedding[1:, :]], axis=0)
     decoder = TransformerDecoder(embedding=tgt_embedding,
                                  hparams=config_model.decoder)
+    # For training
     outputs = decoder(
         memory=encoder_output,
         memory_sequence_length=encoder_input_length,
@@ -114,7 +115,7 @@ def main():
 
     train_op = tx.core.get_train_op(
         mle_loss,
-        learning_rate=learning_rate, 
+        learning_rate=learning_rate,
         global_step=global_step,
         hparams=config_model.opt)
 
@@ -122,8 +123,7 @@ def main():
     tf.summary.scalar('mle_loss', mle_loss)
     summary_merged = tf.summary.merge_all()
 
-    saver = tf.train.Saver(max_to_keep=5)
-
+    # For inference
     start_tokens = tf.fill([tx.utils.get_batch_size(encoder_input)],
                            bos_token_id)
     predictions = decoder(
@@ -144,20 +144,21 @@ def main():
         inferred_ids = predictions['sample_id'][:, :, 0]
 
 
+    saver = tf.train.Saver(max_to_keep=5)
     best_results = {'score': 0, 'epoch': -1}
 
     def _eval_epoch(sess, epoch, mode):
-        references, hypotheses = [], []
         if mode == 'eval':
-            exp_data = dev_data
+            eval_data = dev_data
         elif mode == 'test':
-            exp_data = test_data
+            eval_data = test_data
         else:
-            raise ValueError('mode should be eval or test')
+            raise ValueError('`mode` should be either "eval" or "test".')
+
+        references, hypotheses = [], []
         bsize = config_data.test_batch_size
-        for i in range(0, len(exp_data), bsize):
-            sources, targets = \
-                zip(*exp_data[i:i+bsize])
+        for i in range(0, len(eval_data), bsize):
+            sources, targets = zip(*eval_data[i:i+bsize])
             x_block = data_utils.source_pad_concat_convert(sources)
             feed_dict = {
                 encoder_input: x_block,
@@ -167,23 +168,26 @@ def main():
                 'inferred_ids': inferred_ids,
             }
             fetches_ = sess.run(fetches, feed_dict=feed_dict)
+
             hypotheses.extend(h.tolist() for h in fetches_['inferred_ids'])
             references.extend(r.tolist() for r in targets)
             hypotheses = utils.list_strip_eos(hypotheses, eos_token_id)
             references = utils.list_strip_eos(references, eos_token_id)
-            
+
         if mode == 'eval':
+            # Writes results to files to evaluate BLEU
+            # For 'eval' mode, the BLEU is based on token ids (rather than
+            # text tokens) and serves only as a surrogate metric to monitor
+            # the training process
             fname = os.path.join(FLAGS.model_dir, 'tmp.eval')
             hypotheses = tx.utils.str_join(hypotheses)
             references = tx.utils.str_join(references)
             hyp_fn, ref_fn = tx.utils.write_paired_text(
-                hypotheses, references, fname, append=False, mode='s')
+                hypotheses, references, fname, mode='s')
             eval_bleu = bleu_wrapper(ref_fn, hyp_fn, case_sensitive=True)
             eval_bleu = 100. * eval_bleu
             logger.info('epoch: %d, eval_bleu %.4f', epoch, eval_bleu)
             print('epoch: %d, eval_bleu %.4f' % (epoch, eval_bleu))
-            hypotheses = tx.utils.str_join(hypotheses)
-            references = tx.utils.str_join(references)
 
             if eval_bleu > best_results['score']:
                 logger.info('epoch: %d, best bleu: %.4f', epoch, eval_bleu)
@@ -193,7 +197,10 @@ def main():
                 logger.info('saving model to %s', model_path)
                 print('saving model to %s' % model_path)
                 saver.save(sess, model_path)
+
         elif mode == 'test':
+            # For 'test' mode, together with the cmds in README.md, BLEU
+            # is evaluated based on text tokens, which is the standard metric.
             fname = os.path.join(FLAGS.model_dir, 'test.output')
             hwords, rwords = [], []
             for hyp, ref in zip(hypotheses, references):
@@ -202,10 +209,9 @@ def main():
             hwords = tx.utils.str_join(hwords)
             rwords = tx.utils.str_join(rwords)
             hyp_fn, ref_fn = tx.utils.write_paired_text(
-                hwords, rwords, fname, append=False, mode='s')
-            logger.info('test finished. The output is in %s', hyp_fn)
-            print('test finished. The output is in %s' % \
-                hyp_fn)
+                hwords, rwords, fname, mode='s')
+            logger.info('Test output writtn to file: %s', hyp_fn)
+            print('Test output writtn to file: %s' % hyp_fn)
 
     def _train_epoch(sess, epoch, step, smry_writer):
         random.shuffle(train_data)
@@ -233,7 +239,7 @@ def main():
 
             fetches_ = sess.run(fetches, feed_dict=feed_dict)
 
-            step, loss = fetches_['step'],  fetches_['loss']
+            step, loss = fetches_['step'], fetches_['loss']
             if step and step % config_data.display_steps == 0:
                 logger.info('step: %d, loss: %.4f', step, loss)
                 print('step: %d, loss: %.4f' % (step, loss))
@@ -257,9 +263,8 @@ def main():
                 step = _train_epoch(sess, epoch, step, smry_writer)
 
         elif FLAGS.run_mode == 'test':
-            ckpt_fn = tf.train.latest_checkpoint(FLAGS.model_dir).split('/')[-1]
             saver.restore(sess, tf.train.latest_checkpoint(FLAGS.model_dir))
-            _eval_epoch(sess, ckpt_fn, mode='test')
+            _eval_epoch(sess, 0, mode='test')
 
 
 if __name__ == '__main__':
