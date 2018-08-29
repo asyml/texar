@@ -3,6 +3,9 @@
 </div>
  
 -----------------
+
+[![Documentation Status](https://readthedocs.org/projects/texar/badge/?version=latest)](https://texar.readthedocs.io/en/latest/?badge=latest)
+
  
 **Texar** is an open-source toolkit based on Tensorflow, aiming to support a broad set of machine learning especially **text generation tasks**, such as machine translation, dialog, summarization, content manipulation, language modeling, and so on. Texar is designed for both researchers and practitioners for fast prototyping and experimentation.
  
@@ -24,7 +27,7 @@ Users can construct their own models at a high conceptual level just like assemb
 * Interfaces with different functionality levels. Users can customize a model through 1) simple **Python/YAML configuration files** of provided model templates/examples; 2) programming with **Python Library APIs** for maximal customizability.
 * Easy-to-use APIs: 1) Convenient automatic variable re-use---no worry about the complicated TF variable scopes; 2) Pytorch-like callable modules; 3) Rich configuration options for each module, all with default values; ...
 * Well-structured high-quality code of uniform design patterns and consistent styles. 
-* Clean, detailed [documentation](.) and rich [examples](./examples).
+* Clean, detailed [documentation](https://texar.readthedocs.io) and rich [examples](./examples).
 
 ### Library API Example
 Builds a (self-)attentional sequence encoder-decoder model, with different learning algorithms:
@@ -77,7 +80,7 @@ pip install texar
 
 ### Getting Started
 * [Examples](./examples)
-* [Documentations](.)
+* [Documentation](https://texar.readthedocs.io)
 
 ### Reference
 If you use Texar, please cite the [report](.) with the following BibTex entry:
