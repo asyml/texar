@@ -1,107 +1,87 @@
 # Transformer for Machine Translation #
 
-This example gives an implementation of [Vaswani, Ashish, et al. "Attention is all you need."](http://papers.nips.cc/paper/7181-attention-is-all-you-need.pdf), based on self-attention mechanism for language understanding.
+This is an implementation of the Transformer model described in [Vaswani, Ashish, et al. "Attention is all you need."](http://papers.nips.cc/paper/7181-attention-is-all-you-need.pdf).
 
-Here we give the experimental results on two dataset, while it's safe for you to try on your datasets.
+## Usage ##
 
-- EN-VI: IWSLT'15 English-Vietnamese dataset.
-- EN-DE: WMT14 English-German dataset.
+### Prerequisites ###
 
-# Prerequisites
-
-In addition to installing the dependency for texar library, you need to
-run `pip install -r requirements.txt` to install the dependencies for transformer translation model.
-
-# For EN-VI dataset.
-
-The task is IWSLT'15 English-Vietnamese dataset. For more information, please refer to https://nlp.stanford.edu/projects/nmt/
-
-## Obtain the dataset
-
+Run the following cmd to install necessary packages for the example: 
 ```
-bash scripts/iwslt15_en_vi.sh
-```
-Feel free to try on different datasets as long as they are parallel text corpora and the file paths are set correctly.
-
-## Preprocessing the dataset and generate encoded vocabulary
-
-```
-bash preprocess_data.sh spm en vi
+pip install -r requirements.txt
 ```
 
-By default, we use SentencePiece encoder to keep consistent with tensor2tensor.
+### Datasets ###
 
-## Training and evaluating the model
+Two example datasets are provided:
+- IWSLT'15 **EN-VI** for English-Vietnamese translation
+- WMT'14 **EN-DE** for English-German translation
 
+Download and pre-process the IWSLT'15 EN-VI data with the following cmds: 
 ```
-#train
-#LOG_DISK_DIR=YOUR_CUSTOM_DIR/en_vi/
-#change the LOG_DISK_DIR to your own path to save tensorboard logging information and trained model.
-python transformer_overall.py --run_mode=train_and_evaluate --config_data=config_iwslt14 --log_dir=${LOG_DISK_DIR}
-
-#test
-python transformer_overall.py --run_mode=test --config_data=config_iwslt14 --log_dir=${LOG_DISK_DIR}
-
-# The decoded file path will be in $LOG_DISK_DIR/test.output
-#evaluate with BLEU score
-test.outputs=${LOG_DISK_DIR}/test.output
-../../bin/utils/spm_decode --model temp/run_en_vi_spm/data/spm-codes.32000.model --input_format=piece --infile ${test.outputs} --outfile test.out
-
-python bleu_tool.py --reference=data/en_vi/test.vi --translation=test.out
+sh scripts/iwslt15_en_vi.sh 
+sh preprocess_data.sh spm en vi
 ```
+By default, the downloaded dataset is in `./data/en_vi`. 
+As with the [official implementation](https://github.com/tensorflow/tensor2tensor/blob/master/tensor2tensor/models/transformer.py), `spm` (`sentencepiece`) encoding is used to encode the raw text as data pre-processing. The encoded data is by default in `./temp/run_en_vi_spm`. 
 
-## Result
-
-You could get ~28.22 BLEU_cased and ~28.98 BLEU_uncased with our implementation. With tensor2tensor, the results are 28.12 and 28.97 claimed in https://github.com/tensorflow/tensor2tensor/pull/611.
-
-## Training log sample:
-
+For the WMT'14 **EN-DE** data, download and pre-process with:
 ```
-11:59:46,112:INFO:step:0 source:(44, 63) targets:(44, 67) loss:10.917707
-12:02:02,686:INFO:step:500 source:(47, 62) targets:(47, 62) loss:7.2396936
-12:04:20,035:INFO:step:1000 source:(48, 61) targets:(48, 57) loss:6.0277987
-12:06:37,550:INFO:step:1500 source:(43, 52) targets:(43, 69) loss:5.589434
+sh scripts/wmt14_en_de.sh
+sh preprocess_data.sh bpe en de
 ```
+By default, the downloaded dataset is in `./data/en_de`.
+Note that for this dataset, `bpe` encoding (Byte pair encoding) is used instead. The encoded data is by default in `./temp/run_en_de_bpe`. 
 
-The model can converge within 5 hours (~15 epochs).
 
+### Train and evaluate the model ###
 
-# We also give a sample script for wmt14 en-de task with Byte Pairwise Encoding here.
-
-## Obtain the dataset
-
+Train the model with the cmd:
 ```
-bash scripts/wmt14_en_de.sh
+python transformer_main.py --run_mode=train_and_evaluate --config_model=config_model --config_data=config_iwslt15
 ```
+* You can also specify `--model_dir` to dump model checkpoints, training logs, and tensorboard summaries to a desired directory. By default it is set to `./outputs`. 
+* Specify `--config_data=config_wmt14` to train on the WMT'14 data.
 
-You will obtain the dataset in the `./data/en_de/` directory
+### Test a trained model ###
 
-## Preprocessing the dataset and generate encoded vocabulary
+To only evaluate a model checkpoint without training, first load the checkpoint and generate samples: 
 ```
-bash preprocess_data.sh bpe en de
+python transformer_main.py --run_mode=test --config_data=config_iwslt15 --model_dir=./outputs
+```
+The latest checkpoint in `./outputs` is used. Samples are in the file `./outputs/test.output`. 
+
+Next, decode the samples with respective decoder, and evaluate with `bleu_tool`:
+```
+../../bin/utils/spm_decode --infile ./outputs/test.output --outfile temp/test.output.spm --model temp/run_en_vi_spm/data/spm-codes.32000.model --input_format=piece 
+
+python bleu_tool.py --reference=data/en_vi/test.vi --translation=temp/test.output.spm
 ```
 
-You will obtain the BPE-encoded dataset in `./temp/data/run_en_de_bpe/data/` directory
-
-## Training the model
-
+For WMT'14, the corresponding cmds are:
 ```
-#LOG_DISK_DIR=YOUR_CUSTOM_DIR/en_de/
-python transformer_overall.py --mode=train_and_evaluate --config_data=config_wmt14 --log_dir=$LOG_DISK_DIR
-```
-
-## Test and evaluation
-```
-python transformer_overall.py --run_mode=test --config_data=config_wmt14 --log_dir=$LOG_DISK_DIR
-
-TEST_OUTPUT=${LOG_DISK_DIR}/en_de/test.output
-cat ${TEST_OUTPUT} | sed -E 's/(@@ )|(@@ ?$)//g' > test.out
-
-python bleu_tool.py --reference=data/en_de/test.de --translation=test.out
+# Loads model and generates samples
+python transformer_main.py --run_mode=test --config_data=config_wmt14 --log_dir=./outputs
+# BPE decoding
+cat outputs/test.output | sed -E 's/(@@ )|(@@ ?$)//g' > temp/test.output.bpe
+# Evaluates BLEU
+python bleu_tool.py --reference=data/en_de/test.de --translation=temp/test.output.bpe
 ```
 
-## Result
+## Results
 
-You could get ~25.12 BLEU_cased with our implementation. With tensor2tensor, the running result is 25.35 with the setting of base_single_gpu and 3072 batch size.
+* On IWSLT'15, the implementation achieves around `BLEU_cased=28.22` and `BLEU_uncased=28.98` (by [bleu_tool.py](./bleu_tool.py)), which are comparable to the base_single_gpu results by the [official implementation](https://github.com/tensorflow/tensor2tensor/blob/master/tensor2tensor/models/transformer.py) (`28.12` and `28.97`, respectively, as reported [here](https://github.com/tensorflow/tensor2tensor/pull/611)).
 
+* On WMT'14, the implementation achieves around `BLEU_cased=25.12` (setting: base_single_gpu, batch_size=3072).
+
+
+## Training log example:
+
+```
+11:59:46,112:INFO:step:0 loss:10.917707
+12:02:02,686:INFO:step:500 loss:7.2396936
+12:04:20,035:INFO:step:1000 loss:6.0277987
+12:06:37,550:INFO:step:1500 loss:5.589434
+```
+Using an Nvidia GTX 1080Ti, the model usually converges within 5 hours (~15 epochs) on IWSLT'15.
 
