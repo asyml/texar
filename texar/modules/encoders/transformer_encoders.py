@@ -211,8 +211,12 @@ class TransformerEncoder(EncoderBase):
 
         Args:
             inputs: A 3D Tensor of shape `[batch_size, max_time, dim]`,
-                containing the word embeddings of input sequences.
-            sequence_length: A 1D Tensor of shape `[batch_size]`
+                containing the word embeddings of input sequences. Note that
+                the embedding dimension `dim` must equal "dim" in
+                :attr:`hparams`.
+            sequence_length: A 1D Tensor of shape `[batch_size]`. Input tokens
+                beyond respective sequence lengths are masked out
+                automatically.
             mode (optional): A tensor taking value in
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`,
                 including `TRAIN`, `EVAL`, and `PREDICT`. Used to toggle
@@ -223,13 +227,18 @@ class TransformerEncoder(EncoderBase):
             A Tensor of shape `[batch_size, max_time, dim]` containing the
             encoded vectors.
         """
-        # Multiply embedding with the sqrt of its dimention for normalization
+        # Multiply input embedding with the sqrt of its dimension for
+        # normalization
         inputs = inputs * self._hparams.dim**0.5
+
+        inputs = mask_sequences(inputs, sequence_length, tensor_rank=3)
 
         _, lengths, _ = shape_list(inputs)
 
-        inputs_padding = 1 - mask_sequences(
-            tf.ones_like(inputs), sequence_length, tensor_rank=3)[:, :, 0]
+        #inputs_padding = 1 - mask_sequences(
+        #    tf.ones_like(inputs), sequence_length, tensor_rank=3)[:, :, 0]
+        inputs_padding = 1 - tf.sequence_mask(
+            sequence_length, tf.shape(inputs)[1], dtype=tf.float32)
         ignore_padding = attn.attention_bias_ignore_padding(inputs_padding)
         encoder_self_attention_bias = ignore_padding
 

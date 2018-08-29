@@ -10,9 +10,13 @@ Texar is a flexible TensorFlow library to generate text.
 
 
 .. toctree::
+   :maxdepth: 1
+
+   get_started.md
+
+.. toctree::
    :maxdepth: 2
 
-   tutorials/tutorial.rst
    examples.md
 
 API

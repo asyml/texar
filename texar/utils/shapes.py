@@ -35,7 +35,8 @@ __all__ = [
     "mask_sequences",
     "_mask_sequences_tensor",
     "_mask_sequences_py",
-    "flatten"
+    "flatten",
+    "shape_list"
 ]
 
 
@@ -272,16 +273,16 @@ def flatten(tensor, preserve_dims, flattened_dim=None):
     return tensor_
 
 def shape_list(x):
-    """Returns the tensor shape.
+    """Returns **static** shape of the input Tensor whenever possible.
 
-    Returns static shape when possible.
+    Args:
+        x: A Tensor.
 
     Returns:
-
         - If the rank of :attr:`x` is unknown, returns the dynamic shape: \
         `tf.shape(x)`
         - Otherwise, returns a list of dims, each of which is either an `int` \
-        whenever it can be statically determined, or a scalar Tensor.
+        whenever it can be statically determined, or a scalar Tensor otherwise.
     """
     x = tf.convert_to_tensor(x)
     # If unknown rank, return dynamic shape

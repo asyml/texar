@@ -35,7 +35,7 @@ from texar.modules.encoders.transformer_encoders import \
         default_transformer_poswise_net_hparams
 from texar.utils import beam_search
 from texar.utils.shapes import shape_list, mask_sequences
-from texar.utils import transformer_attentions as attentions
+from texar.utils import transformer_attentions as attn
 from texar.utils.mode import is_train_mode
 
 
@@ -234,6 +234,7 @@ class TransformerDecoder(ModuleBase):
                memory_sequence_length=None,
                memory_attention_bias=None,
                inputs=None,
+               sequence_length=None,
                decoding_strategy='train_greedy',
                beam_width=1,
                start_tokens=None,
@@ -249,7 +250,8 @@ class TransformerDecoder(ModuleBase):
           (i.e., feeding \
           ground truth to decode the next step), and for each step sample \
           is obtained by taking the `argmax` of logits. \
-          Argument :attr:`inputs` is required for this strategy.
+          Argument :attr:`inputs` is required for this strategy. \
+          :attr:`sequence_length` is optional.
         - **"infer_greedy"**: decoding in inference fashion (i.e., feeding \
           `generated` sample to decode the next step), and for each
           step sample is obtained by taking the `argmax` of logits.\
@@ -285,6 +287,11 @@ class TransformerDecoder(ModuleBase):
                 shape `[batch_size, target_max_time, emb_dim]` containing the
                 target sequence word embeddings.
                 Used when :attr:`decoding_strategy` is set to "train_greedy".
+            sequence_length (optional): A Tensor of shape `[batch_size]`,
+                containing the sequence length of :attr:`inputs`.
+                Tokens beyond the respective sequence length are masked out.
+                Used when :attr:`decoding_strategy` is set to
+                "train_greedy".
             decoding_strategy (str): A string specifying the decoding
                 strategy, including "train_greedy", "infer_greedy",
                 "infer_sample".
@@ -335,16 +342,24 @@ class TransformerDecoder(ModuleBase):
         """
         if memory_attention_bias is None:
             if memory_sequence_length is None:
-                raise ValueError
-            enc_padding = 1 - mask_sequences(tf.ones_like(memory),
-                                             memory_sequence_length,
-                                             tensor_rank=3)[:, :, 0]
-            memory_attention_bias = attentions.attention_bias_ignore_padding(
+                raise ValueError(
+                    "`memory_sequence_length` is required if "
+                    "`memory_attention_bias` is not given.")
+
+            #enc_padding = 1 - mask_sequences(tf.ones_like(memory),
+            #                                 memory_sequence_length,
+            #                                 tensor_rank=3)[:, :, 0]
+            enc_padding = 1 - tf.sequence_mask(
+                memory_sequence_length, tf.shape(memory)[1], dtype=tf.float32)
+            memory_attention_bias = attn.attention_bias_ignore_padding(
                 enc_padding)
 
         if beam_width <= 1 and decoding_strategy == 'train_greedy':
+            if sequence_length is not None:
+                inputs = mask_sequences(inputs, sequence_length, tensor_rank=3)
+
             decoder_self_attention_bias = (
-                attentions.attention_bias_lower_triangle(
+                attn.attention_bias_lower_triangle(
                     shape_list(inputs)[1]))
             target_inputs = inputs * self._hparams.dim**0.5
 
@@ -434,7 +449,7 @@ class TransformerDecoder(ModuleBase):
             layer_cache = cache[layer_name] if cache is not None else None
             with tf.variable_scope(layer_name):
                 with tf.variable_scope("self_attention"):
-                    selfatt_output = attentions.multihead_attention(
+                    selfatt_output = attn.multihead_attention(
                         queries=layers.layer_normalize(x),
                         memory=None,
                         memory_attention_bias=decoder_self_attention_bias,
@@ -451,7 +466,7 @@ class TransformerDecoder(ModuleBase):
                     )
                 if memory is not None:
                     with tf.variable_scope('encdec_attention'):
-                        encdec_output = attentions.multihead_attention(
+                        encdec_output = attn.multihead_attention(
                             queries=layers.layer_normalize(x),
                             memory=memory,
                             memory_attention_bias=memory_attention_bias,

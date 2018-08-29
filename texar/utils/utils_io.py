@@ -156,7 +156,7 @@ def write_paired_text(src, tgt, fname, append=False, mode='h', sep='\t'):
 
     Args:
         src: A list (or array) of `str` source text.
-        ttg: A list (or array) of `str` target text.
+        tgt: A list (or array) of `str` target text.
         fname (str): The output filename.
         append (bool): Whether append content to the end of the file if exists.
         mode (str): The mode of writing, with the following options:

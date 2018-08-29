@@ -116,6 +116,10 @@ Shape
 ~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.utils.get_rank
 
+:hidden:`shape_list`
+~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.utils.shape_list
+
 :hidden:`flatten`
 ~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.utils.flatten

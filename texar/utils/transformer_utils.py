@@ -21,6 +21,7 @@ This script is adapted from the tensor2tensor repository.
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
+from __future__ import unicode_literals
 
 import tensorflow as tf
 
@@ -147,10 +148,9 @@ def smoothing_cross_entropy(logits,
             <BOS> token in the vocabulary.
 
     Returns:
-        the cross entropy loss.
+        A float scalar Tensor containing the cross entropy loss.
     """
-    with tf.name_scope("smoothing_cross_entropy",
-                       values=[logits, labels]):
+    with tf.name_scope("smoothing_cross_entropy", values=[logits, labels]):
         # Low confidence is given to all non-true labels, uniformly.
         if zero_pad:
             low_confidence = (1.0 - confidence) / tf.to_float(
@@ -186,5 +186,6 @@ def smoothing_cross_entropy(logits,
         else:
             cross_entropy_fn = tf.nn.softmax_cross_entropy_with_logits
 
-    return cross_entropy_fn(logits=logits, labels=soft_targets)
+    return cross_entropy_fn(
+        logits=logits, labels=tf.stop_gradient(soft_targets))
 

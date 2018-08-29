@@ -1,3 +1,5 @@
+# Transformer for Machine Translation #
+
 This example gives an implementation of [Vaswani, Ashish, et al. "Attention is all you need."](http://papers.nips.cc/paper/7181-attention-is-all-you-need.pdf), based on self-attention mechanism for language understanding.
 
 Here we give the experimental results on two dataset, while it's safe for you to try on your datasets.
@@ -8,7 +10,7 @@ Here we give the experimental results on two dataset, while it's safe for you to
 # Prerequisites
 
 In addition to installing the dependency for texar library, you need to
-run `pip install -r requirements` to install the dependencies for transformer translation model.
+run `pip install -r requirements.txt` to install the dependencies for transformer translation model.
 
 # For EN-VI dataset.
 

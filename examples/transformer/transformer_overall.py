@@ -11,278 +11,274 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Example pipeline. This is a minimal example of transformer model.
+"""Transformer model.
 """
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import pickle
 import random
-import logging
-import codecs
 import os
 import importlib
-
+from torchtext import data
 import tensorflow as tf
 import texar as tx
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.utils import transformer_utils
-import bleu_tool
-from torchtext import data
-import utils.data_reader
-from utils.data_writer import write_words
-from utils.helpers import set_random_seed, batch_size_fn, adjust_lr
-from texar.utils.shapes import shape_list
+
+from utils import data_utils
+from utils  import utils
+from bleu_tool import bleu_wrapper
+
+# pylint: disable=invalid-name, too-many-locals
 
 flags = tf.flags
 
 flags.DEFINE_string("config_model", "config_model", "The model config.")
 flags.DEFINE_string("config_data", "config_iwslt14", "The dataset config.")
 flags.DEFINE_string("run_mode", "train_and_evaluate",
-    """choose between train_and_evaluate and test.""")
-flags.DEFINE_string("log_dir", "",
-    "The path to save the trained model and tensorflow logging.")
+                    "Either train_and_evaluate or test.")
+flags.DEFINE_string("model_dir", "./outputs",
+                    "Directory to save the trained model and logs.")
 
 FLAGS = flags.FLAGS
 
 config_model = importlib.import_module(FLAGS.config_model)
 config_data = importlib.import_module(FLAGS.config_data)
 
-if __name__ == "__main__":
-    word_embedding_hparams, encoder_hparams, decoder_hparams, \
-        opt_hparams, loss_hparams = \
-        config_model.word_embedding_hparams, \
-        config_model.encoder_hparams, config_model.decoder_hparams, \
-        config_model.opt_hparams, config_model.loss_hparams
-    train_data, dev_data, test_data = utils.data_reader.load_data_numpy(\
+utils.set_random_seed(config_model.random_seed)
+
+def main():
+    """Entrypoint.
+    """
+    # Load data
+    train_data, dev_data, test_data = data_utils.load_data_numpy(
         config_data.input_dir, config_data.filename_prefix)
-    set_random_seed(config_model.random_seed)
-    beam_width = config_model.beam_width
-    bos_idx, eos_idx = 1, 2
-    # configure the logging module
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
-    if not os.path.exists(FLAGS.log_dir): os.makedirs(FLAGS.log_dir)
-    logging_file = os.path.join(FLAGS.log_dir, 'logging.txt')
-    print('logging file is saved in :{}'.format(logging_file))
-    fh = logging.FileHandler(logging_file)
-    fh.setLevel(logging.DEBUG)
-    fh.setFormatter(
-        logging.Formatter('%(asctime)s:%(levelname)s:%(message)s'))
-    logger.addHandler(fh)
     with open(config_data.vocab_file, 'rb') as f:
         id2w = pickle.load(f)
-    n_vocab = len(id2w)
-    logger.info('begin logging')
+    vocab_size = len(id2w)
+    bos_token_id, eos_token_id = 1, 2
 
+    beam_width = config_model.beam_width
+
+    # Create logging
+    tx.utils.maybe_create_dir(FLAGS.model_dir)
+    logging_file = os.path.join(FLAGS.model_dir, 'logging.txt')
+    logger = utils.get_logger(logging_file)
+    logger.info('logging file is saved in: %s', logging_file)
+
+    # Build model graph
     encoder_input = tf.placeholder(tf.int64, shape=(None, None))
     decoder_input = tf.placeholder(tf.int64, shape=(None, None))
-    labels = tf.placeholder(tf.int64, shape=(None, None))
-    global_step = tf.Variable(0, dtype=tf.int64, trainable=False)
-    global_step_py, best_score, best_epoch = 0, 0, -1
-    learning_rate = tf.placeholder(tf.float64, shape=(), name='lr')
-    istarget = tf.to_float(tf.not_equal(labels, 0))
-    word_embedder = tx.modules.WordEmbedder(
-        vocab_size=n_vocab,
-        hparams=word_embedding_hparams,
-    )
-    encoder = TransformerEncoder(
-        hparams=encoder_hparams)
-    src_inputs_padding = tf.to_float(tf.equal(encoder_input, 0))
-    src_inputs_embedding = tf.multiply(
-        word_embedder(encoder_input),
-        tf.expand_dims(1 - src_inputs_padding, 2)
-    )
-    src_lens = tf.reduce_sum(1 - src_inputs_padding, axis=1)
-    encoder_output = encoder(inputs=src_inputs_embedding, sequence_length=src_lens)
+    # (text sequence length excluding padding)
+    encoder_input_length = tf.reduce_sum(
+        1 - tf.to_int32(tf.equal(encoder_input, 0)), axis=1)
+    decoder_input_length = tf.reduce_sum(
+        1 - tf.to_int32(tf.equal(decoder_input, 0)), axis=1)
 
-    # In the decoder, share the word embeddings with projection layer.
-    tgt_embeds = tf.concat([
-        tf.zeros(shape=[1, encoder_hparams['dim']]),
-        word_embedder._embedding[1:, :]], 0
-    )
-    decoder = TransformerDecoder(
-        embedding=tgt_embeds,
-        hparams=decoder_hparams)
-    tgt_inputs_padding = tf.to_float(tf.equal(decoder_input, 0))
-    tgt_lens = tf.reduce_sum(1 - tgt_inputs_padding, axis=1)
-    tgt_inputs_embedding = tf.multiply(
-        word_embedder(decoder_input),
-        tf.expand_dims(1 - tgt_inputs_padding, 2)
-    )
-    batch_size = shape_list(encoder_output)[0]
-    start_tokens = tf.fill([batch_size], 1)
-    output = decoder(
+    labels = tf.placeholder(tf.int64, shape=(None, None))
+    is_target = tf.to_float(tf.not_equal(labels, 0))
+
+    global_step = tf.Variable(0, dtype=tf.int64, trainable=False)
+    learning_rate = tf.placeholder(tf.float64, shape=(), name='lr')
+
+    embedder = tx.modules.WordEmbedder(
+        vocab_size=vocab_size, hparams=config_model.emb)
+    encoder = TransformerEncoder(hparams=config_model.encoder)
+
+    encoder_output = encoder(inputs=embedder(encoder_input),
+                             sequence_length=encoder_input_length)
+
+    # The decoder ties the input word embedding with the output logit layer.
+    # As the decoder masks out <PAD>'s embedding, which in effect means
+    # <PAD> has all-zero embedding, so here we explicitly set <PAD>'s embedding
+    # to all-zero.
+    tgt_embedding = tf.concat(
+        [tf.zeros(shape=[1, embedder.dim]), embedder.embedding[1:, :]], axis=0)
+    decoder = TransformerDecoder(embedding=tgt_embedding,
+                                 hparams=config_model.decoder)
+    outputs = decoder(
         memory=encoder_output,
-        memory_sequence_length=src_lens,
-        memory_attention_bias=None,
-        inputs=tgt_inputs_embedding,
+        memory_sequence_length=encoder_input_length,
+        inputs=embedder(decoder_input),
+        sequence_length=decoder_input_length,
         decoding_strategy='train_greedy',
         mode=tf.estimator.ModeKeys.TRAIN
     )
-    logits, preds = output.logits, output.sample_id
+
+    mle_loss = transformer_utils.smoothing_cross_entropy(
+        outputs.logits, labels, vocab_size, config_model.loss_label_confidence)
+    mle_loss = tf.reduce_sum(mle_loss * is_target) / tf.reduce_sum(is_target)
+
+    train_op = tx.core.get_train_op(
+        mle_loss, learning_rate=learning_rate, hparams=config_model.opt)
+
+    #optimizer = tf.train.AdamOptimizer(
+    #    learning_rate=learning_rate,
+    #    beta1=config_model.opt['Adam_beta1'],
+    #    beta2=config_model.opt['Adam_beta2'],
+    #    epsilon=config_model.opt['Adam_epsilon'],
+    #)
+    #train_op = optimizer.minimize(mle_loss, global_step)
+
+    tf.summary.scalar('lr', learning_rate)
+    tf.summary.scalar('mle_loss', mle_loss)
+    summary_merged = tf.summary.merge_all()
+
+    saver = tf.train.Saver(max_to_keep=5)
+
+    start_tokens = tf.fill([tx.utils.get_batch_size(encoder_input)],
+                           bos_token_id)
     predictions = decoder(
         memory=encoder_output,
-        memory_sequence_length=src_lens,
-        memory_attention_bias=None,
-        inputs=None,
+        memory_sequence_length=encoder_input_length,
         decoding_strategy='infer_greedy',
         beam_width=beam_width,
         start_tokens=start_tokens,
-        end_token=2,
-        max_decoding_length=config_data.max_decode_len,
+        end_token=eos_token_id,
+        max_decoding_length=config_data.max_decoding_length,
         mode=tf.estimator.ModeKeys.PREDICT
     )
     if beam_width <= 1:
-        infered_ids = predictions[0].sample_id #predictions[0] is the OutputTuple
+        inferred_ids = predictions[0].sample_id
     else:
-        infered_ids = predictions['sample_id'][:, :, 0]
+        # Uses the best sample by beam search
+        inferred_ids = predictions['sample_id'][:, :, 0]
 
-    mle_loss = transformer_utils.smoothing_cross_entropy(logits, \
-        labels, n_vocab, loss_hparams['label_confidence'])
-    mle_loss = tf.reduce_sum(mle_loss * istarget) / tf.reduce_sum(istarget)
-    tf.summary.scalar('mle_loss', mle_loss)
-    acc = tf.reduce_sum(
-        tf.to_float(tf.equal(tf.to_int64(preds), labels)) * istarget) \
-        / tf.to_float(tf.reduce_sum(istarget))
-    tf.summary.scalar('acc', acc)
-    optimizer = tf.train.AdamOptimizer(
-        learning_rate=learning_rate,
-        beta1=opt_hparams['Adam_beta1'],
-        beta2=opt_hparams['Adam_beta2'],
-        epsilon=opt_hparams['Adam_epsilon'],
-    )
-    train_op = optimizer.minimize(mle_loss, global_step)
-    tf.summary.scalar('lr', learning_rate)
-    merged = tf.summary.merge_all()
-    eval_saver = tf.train.Saver(max_to_keep=5)
-    config = tf.ConfigProto(allow_soft_placement=True)
-    config.gpu_options.allow_growth = True
-    train_finished = False
 
-    def _eval_epoch(cur_sess, epoch):
+    best_results = {'score': 0, 'epoch': -1}
+
+    def _eval_epoch(sess, epoch):
         references, hypotheses = [], []
-        global best_score, best_epoch
         for i in range(0, len(dev_data), config_data.test_batch_size):
             sources, targets = zip(*dev_data[i:i+config_data.test_batch_size])
-            references.extend(t.tolist() for t in targets)
-            x_block = utils.data_reader.source_pad_concat_convert(sources)
-            _feed_dict = {
+            x_block = data_utils.source_pad_concat_convert(sources)
+
+            feed_dict = {
                 encoder_input: x_block,
                 tx.global_mode(): tf.estimator.ModeKeys.EVAL,
             }
             fetches = {
-                'predictions': infered_ids,
+                'inferred_ids': inferred_ids,
             }
-            _fetches = sess.run(fetches, feed_dict=_feed_dict)
-            hypotheses.extend(h.tolist() for h in _fetches['predictions'])
-        outputs_tmp_filename = FLAGS.log_dir + \
-            'eval.output'.format(\
-            epoch, config_model.beam_width, config_model.alpha)
-        refer_tmp_filename = os.path.join(FLAGS.log_dir, 'eval.refer')
-        with codecs.open(outputs_tmp_filename, 'w+', 'utf-8') as tmpfile, \
-            codecs.open(refer_tmp_filename, 'w+', 'utf-8') as tmpref:
-            for hyp, tgt in zip(hypotheses, references):
-                if eos_idx in hyp:
-                    hyp = hyp[:hyp.index(eos_idx)]
-                if eos_idx in tgt:
-                    tgt = tgt[:tgt.index(eos_idx)]
-                tmpfile.write(' '.join([str(i) for i in hyp]) + '\n')
-                tmpref.write(' '.join([str(i) for i in tgt]) + '\n')
-        eval_bleu = float(100 * bleu_tool.bleu_wrapper(\
-            refer_tmp_filename, outputs_tmp_filename, case_sensitive=True))
-        logger.info('eval_bleu %f in epoch %d)' % (eval_bleu, epoch))
-        if eval_bleu > best_score:
-            logger.info('%s epoch, highest bleu %s',epoch, eval_bleu)
-            model_path = FLAGS.log_dir + 'my-model.ckpt'
-            logger.info('saveing model in %s', model_path)
-            best_score, best_epoch = eval_bleu, epoch
-            eval_saver.save(sess, model_path)
 
-    def _train_epoch(cur_sess, cur_epoch):
-        global train_data, train_finished, global_step_py
+            fetches_ = sess.run(fetches, feed_dict=feed_dict)
+
+            hypotheses.extend(hyp.tolist() for hyp in fetches_['inferred_ids'])
+            references.extend(ref.tolist() for ref in targets)
+
+        hypotheses = utils.list_strip_eos(hypotheses, eos_token_id)
+        hypotheses = tx.utils.str_join(hypotheses)
+        references = utils.list_strip_eos(references, eos_token_id)
+        references = tx.utils.str_join(references)
+
+        fname = os.path.join(FLAGS.model_dir, 'eval')
+        hyp_fn, ref_fn = tx.utils.write_paired_text( # TODO(zhiting): append=True ?
+            hypotheses, references, fname, append=True, mode='s')
+
+        eval_bleu = bleu_wrapper(ref_fn, hyp_fn, case_sensitive=True)
+        eval_bleu = 100. * eval_bleu
+        logger.info('epoch: %d, eval_bleu %.4f', epoch, eval_bleu)
+        print('epoch: %d, eval_bleu %.4f' % (epoch, eval_bleu))
+
+        if eval_bleu > best_results['score']:
+            logger.info('epoch: %d, best bleu: %.4f', epoch, eval_bleu)
+            best_results['score'] = eval_bleu
+            best_results['epoch'] = epoch
+            model_path = os.path.join(FLAGS.model_dir, 'best-model.ckpt')
+            logger.info('saving model to %s', model_path)
+            print('saving model to %s' % model_path)
+            saver.save(sess, model_path)
+
+
+    def _train_epoch(sess, epoch, smry_writer):
         random.shuffle(train_data)
         train_iter = data.iterator.pool(
             train_data,
-            config_data.wbatchsize,
+            config_data.batch_size,
             key=lambda x: (len(x[0]), len(x[1])),
-            batch_size_fn=batch_size_fn,
-            random_shuffler=
-            data.iterator.RandomShuffler()
-        )
-        for num_steps, train_batch in enumerate(train_iter):
-            in_arrays = utils.data_reader.seq2seq_pad_concat_convert(\
-                train_batch, -1)
-            _feed_dict = {
+            batch_size_fn=utils.batch_size_fn,
+            random_shuffler=data.iterator.RandomShuffler())
+
+        step = 0
+        for _, train_batch in enumerate(train_iter):
+            in_arrays = data_utils.seq2seq_pad_concat_convert(train_batch)
+            feed_dict = {
                 encoder_input: in_arrays[0],
                 decoder_input: in_arrays[1],
                 labels: in_arrays[2],
-                tx.global_mode():tf.estimator.ModeKeys.TRAIN,
-                learning_rate: adjust_lr(global_step_py, opt_hparams)
+                learning_rate: utils.get_lr(step, config_model.lr)
             }
             fetches = {
-                'target': labels,
                 'step': global_step,
                 'train_op': train_op,
-                'mgd': merged,
+                'smry': summary_merged,
                 'loss': mle_loss,
             }
-            _fetches = sess.run(fetches, feed_dict=_feed_dict)
-            global_step_py, loss, mgd, target = \
-                _fetches['step'], _fetches['loss'], _fetches['mgd'], \
-                _fetches['target']
-            if global_step_py % 500 == 0:
-                logger.info('step:%s targets:%s loss:%s', \
-                    global_step_py, target.shape, loss)
-            writer.add_summary(mgd, global_step=global_step_py)
-            if config.data.max_training_steps and \
-                global_step_py == config_data.max_training_steps:
-                print('reach max training step, loss:{}'.format(loss))
-                train_finished = True
-            if global_step_py % config_data.eval_steps == 0:
-                _eval_epoch(cur_sess, cur_epoch)
 
-    def _test_epoch(cur_sess):
+            fetches_ = sess.run(fetches, feed_dict=feed_dict)
+
+            step = fetches_['step']
+
+            if step % config_data.display_steps == 0:
+                logger.info('step: %d, loss: %.4f', step, fetches_['loss'])
+                print('step: %d, loss: %.4f' % (step, fetches_['loss']))
+                smry_writer.add_summary(fetches_['smry'], global_step=step)
+
+            if step % config_data.eval_steps == 0:
+                _eval_epoch(sess, epoch)
+
+
+    # TODO(zhiting): delete the func
+    def _test_epoch(sess, ckpt_fn):
         references, hypotheses, rwords, hwords = [], [], [], []
         for i in range(0, len(test_data), config_data.test_batch_size):
             sources, targets = \
                 zip(*test_data[i: i + config_data.test_batch_size])
             references.extend(t.tolist() for t in targets)
-            x_block = utils.data_reader.source_pad_concat_convert(sources)
-            _feed_dict = {
+            x_block = data_utils.source_pad_concat_convert(sources)
+            feed_dict = {
                 encoder_input: x_block,
                 tx.global_mode(): tf.estimator.ModeKeys.EVAL,
             }
             fetches = {
-                'predictions': infered_ids,
+                'predictions': inferred_ids,
             }
-            _fetches = sess.run(fetches, feed_dict=_feed_dict)
-            hypotheses.extend(h.tolist() for h in _fetches['predictions'])
+            fetches_ = sess.run(fetches, feed_dict=feed_dict)
+            hypotheses.extend(h.tolist() for h in fetches_['predictions'])
         for refer, hypo in zip(references, hypotheses):
-            if eos_idx in hypo:
-                hypo = hypo[:hypo.index(eos_idx)]
+            if eos_token_id in hypo:
+                hypo = hypo[:hypo.index(eos_token_id)]
             rwords.append([id2w[y] for y in refer])
             hwords.append([id2w[y] for y in hypo])
-        outputs_tmp_filename = FLAGS.log_dir + \
+        outputs_tmp_filename = FLAGS.model_dir + \
             'test.output'.format(\
-            cur_mname)
-        refer_tmp_filename = FLAGS.log_dir + 'test.refer'
-        write_words(hwords, outputs_tmp_filename)
-        write_words(rwords, refer_tmp_filename)
+            ckpt_fn) # TODO(zhiting): error: `Too many arguments for format string`
+        refer_tmp_filename = FLAGS.model_dir + 'test.refer'
+        data_utils.write_words(hwords, outputs_tmp_filename)
+        data_utils.write_words(rwords, refer_tmp_filename)
         logger.info('test finished. The output is in %s' % \
             (outputs_tmp_filename))
 
+    # Run the graph
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
-        writer = tf.summary.FileWriter(FLAGS.log_dir, graph=sess.graph)
+
+        smry_writer = tf.summary.FileWriter(FLAGS.model_dir, graph=sess.graph)
+
         if FLAGS.run_mode == 'train_and_evaluate':
             for epoch in range(config_data.max_train_epoch):
-                _train_epoch(sess, epoch)
+                _train_epoch(sess, epoch, smry_writer)
+
         elif FLAGS.run_mode == 'test':
-            cur_mname = tf.train.latest_checkpoint(FLAGS.log_dir).split('/')[-1]
-            eval_saver.restore(sess, tf.train.latest_checkpoint(FLAGS.log_dir))
-            _test_epoch(sess)
+            ckpt_fn = tf.train.latest_checkpoint(FLAGS.model_dir).split('/')[-1]
+            saver.restore(sess, tf.train.latest_checkpoint(FLAGS.model_dir))
+            _test_epoch(sess, ckpt_fn)
+
+
+if __name__ == '__main__':
+    main()

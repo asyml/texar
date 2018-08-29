@@ -242,3 +242,6 @@ simple-examples.tgz
 /examples/text_style_transfer/yelp.zip
 /examples/vae_text/simple-examples/
 /examples/vae_text/data/
+/examples/transformer/data/
+/examples/transformer/temp/
+/examples/transformer/outputs/
