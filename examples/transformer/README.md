@@ -77,7 +77,7 @@ python bleu_tool.py --reference=data/en_de/test.de --translation=temp/test.outpu
 * On WMT'14, the implementation achieves around `BLEU_cased=25.12` (setting: base_single_gpu, batch_size=3072).
 
 
-## Training log example:
+## Example training log
 
 ```
 11:59:46,112:INFO:step:0 loss:10.917707
