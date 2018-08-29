@@ -4,9 +4,9 @@
  
 -----------------
  
-**Texar** is an open-source toolkit based on Tensorflow, aiming to support a broad set of machine learning especially **text generation tasks**, such as machine translation, dialog, summarization, content manipulation, language modeling, and so on. Texar is design for both researchers and practitoners for fast prototyping and experimentation.
+**Texar** is an open-source toolkit based on Tensorflow, aiming to support a broad set of machine learning especially **text generation tasks**, such as machine translation, dialog, summarization, content manipulation, language modeling, and so on. Texar is designed for both researchers and practitioners for fast prototyping and experimentation.
  
-With the design goals of **modularity, versatility, and extensibility** in mind, Texar extacts the common patterns underlying the diverse tasks and methodologies, creates a library of highly reusable modules and functionalities, and facilitates **arbitrary model architectures and algorithmic paradigms**, e.g., 
+With the design goals of **modularity, versatility, and extensibility** in mind, Texar extracts the common patterns underlying the diverse tasks and methodologies, creates a library of highly reusable modules and functionalities, and facilitates **arbitrary model architectures and algorithmic paradigms**, e.g., 
    * encoder(s) to decoder(s), sequential- and self-attentions, memory, hierarchical models, classifiers... 
    * maximum likelihood learning, reinforcement learning, adversarial learning, probabilistic modeling, ... 
 
@@ -19,12 +19,12 @@ With Texar, cutting-edge complex models can be easily constructed, freely enrich
 ### Key Features
 * **Versatility**. Texar contains a wide range of modules and functionalities for composing arbitrary model architectures and implementing various learning algorithms, as well as for data processing, evaluation, prediction, etc.
 * **Modularity**. Texar decomposes diverse complex machine learning models/algorithms into a set of highly-reusable modules. In particular, model **architecture, losses, and learning processes** are fully decomposed.  
-Users can construct their own models at a high conceptual level just like assembling building blocks. It is convenient to plug-in or swap-out moduels, and configure rich options of each module. For example, switching between maximum likelihood learning and reinforcement learning involves only changing several lines of code.
-* **Extensibility**. It is straightforward to integrate any user-customized, external modules. Also, Texar is fully compatible with the native Tensorflow interfaces, and can take advantage of the rich Tensorflow features, and resources from the vibrant open-source community.
+Users can construct their own models at a high conceptual level just like assembling building blocks. It is convenient to plug-ins or swap-out modules, and configure rich options of each module. For example, switching between maximum likelihood learning and reinforcement learning involves only changing several lines of code.
+* **Extensibility**. It is straightforward to integrate any user-customized, external modules. Also, Texar is fully compatible with the native Tensorflow interfaces and can take advantage of the rich Tensorflow features, and resources from the vibrant open-source community.
 * Interfaces with different functionality levels. Users can customize a model through 1) simple **Python/YAML configuration files** of provided model templates/examples; 2) programming with **Python Library APIs** for maximal customizability.
 * Easy-to-use APIs: 1) Convenient automatic variable re-use---no worry about the complicated TF variable scopes; 2) Pytorch-like callable modules; 3) Rich configuration options for each module, all with default values; ...
 * Well-structured high-quality code of uniform design patterns and consistent styles. 
-* Clean, detailed [documentations](.) and rich [examples](./examples).
+* Clean, detailed [documentation](.) and rich [examples](./examples).
 
 ### Library API Example
 Builds a (self-)attentional sequence encoder-decoder model, with different learning algorithms:
