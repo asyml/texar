@@ -39,7 +39,7 @@ More examples are continuously added...
 
 * [memory_network_lm](./memory_network_lm): End-to-end memory network for language modeling
 
-### Classifier / Predictions ##  
+### Classifier / Sequence Prediction ###  
 
 * [sentence_classifier](./sentence_classifier): Basic CNN-based sentence classifier
 * [sequence_tagging](./sequence_tagging): BiLSTM-CNN model for Named Entity Recognition (NER)
