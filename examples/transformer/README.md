@@ -53,7 +53,7 @@ The latest checkpoint in `./outputs` is used. Generated samples are in the file 
 
 Next, decode the samples with respective decoder, and evaluate with `bleu_tool`:
 ```
-../../bin/utils/spm_decode --infile ./outputs/test.output --outfile temp/test.output.spm --model temp/run_en_vi_spm/data/spm-codes.32000.model --input_format=piece 
+../../bin/utils/spm_decode --infile ./outputs/test.output.src --outfile temp/test.output.spm --model temp/run_en_vi_spm/data/spm-codes.32000.model --input_format=piece 
 
 python bleu_tool.py --reference=data/en_vi/test.vi --translation=temp/test.output.spm
 ```
@@ -64,7 +64,7 @@ For WMT'14, the corresponding cmds are:
 python transformer_main.py --run_mode=test --config_data=config_wmt14 --log_dir=./outputs
 
 # BPE decoding
-cat outputs/test.output | sed -E 's/(@@ )|(@@ ?$)//g' > temp/test.output.bpe
+cat outputs/test.output.src | sed -E 's/(@@ )|(@@ ?$)//g' > temp/test.output.bpe
 
 # Evaluates BLEU
 python bleu_tool.py --reference=data/en_de/test.de --translation=temp/test.output.bpe
