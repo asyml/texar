@@ -113,7 +113,6 @@ class TransformerDecoder(ModuleBase):
                 "embedding_tie": True,
                 "output_layer_bias": False,
                 "max_decoding_length": 1e10,
-                "alpha": 0,
                 "name": "transformer_decoder"
             }
 
@@ -170,7 +169,6 @@ class TransformerDecoder(ModuleBase):
             Ignored if provided in :meth:`_build` or
             "train_greedy" decoding is used.
 
-        "alpha" : float
             Length penalty coefficient. Refer to
             https://arxiv.org/abs/1609.08144 for more details.
 
@@ -180,7 +178,6 @@ class TransformerDecoder(ModuleBase):
         return {
             "num_heads": 8,
             "num_blocks": 6,
-            "alpha": 0,
             "initializer": None,
             "position_embedder_hparams": None,
             "embedding_tie": True,
@@ -237,6 +234,7 @@ class TransformerDecoder(ModuleBase):
                sequence_length=None,
                decoding_strategy='train_greedy',
                beam_width=1,
+               alpha=0,
                start_tokens=None,
                end_token=None,
                max_decoding_length=None,
@@ -299,7 +297,10 @@ class TransformerDecoder(ModuleBase):
                 strategy. See above for details. Ignored if
                 :attr:`beam_width` > 1.
             beam_width (int): Set to > 1 to use beam search.
-            start_tokens (optional): An int Tensor of shape `[batch_size]`,
+            alpha (float): Length penalty coefficient.
+                Refer to https://arxiv.org/abs/1609.08144
+                for more details.
+            tart_tokens (optional): An int Tensor of shape `[batch_size]`,
                 containing the start tokens.
                 Used when `decoding_strategy` = "infer_greedy" or
                 "infer_sample", or `beam_width` > 1.
@@ -409,6 +410,7 @@ class TransformerDecoder(ModuleBase):
                     start_tokens,
                     end_token,
                     beam_width=beam_width,
+                    alpha=alpha,
                     decode_length=max_decoding_length,
                     memory=memory,
                     memory_attention_bias=memory_attention_bias,
@@ -617,7 +619,8 @@ class TransformerDecoder(ModuleBase):
                      memory,
                      memory_attention_bias,
                      decode_length=256,
-                     beam_width=5):
+                     beam_width=5,
+                     alpha=0.6):
         cache = self._init_cache(memory, memory_attention_bias)
         symbols_to_logits_fn = self._symbols_to_logits_fn(embedding_fn, \
             max_length=decode_length+1)
@@ -627,7 +630,7 @@ class TransformerDecoder(ModuleBase):
             beam_width,
             decode_length,
             self._vocab_size,
-            self._hparams.alpha,
+            alpha,
             states=cache,
             eos_id=end_token)
 

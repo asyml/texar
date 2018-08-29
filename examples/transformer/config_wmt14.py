@@ -3,7 +3,7 @@ test_batch_size = 64
 
 max_train_epoch = 10
 display_steps = 500
-eval_steps = 1000
+eval_steps = 2000
 
 max_decoding_length= 256
 

@@ -54,6 +54,7 @@ def get_logger(log_path):
         log_path (str): Path to the log file.
     """
     logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
     fh = logging.FileHandler(log_path)
     fh.setLevel(logging.DEBUG)
     fh.setFormatter(

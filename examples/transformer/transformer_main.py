@@ -37,7 +37,7 @@ from bleu_tool import bleu_wrapper
 flags = tf.flags
 
 flags.DEFINE_string("config_model", "config_model", "The model config.")
-flags.DEFINE_string("config_data", "config_iwslt14", "The dataset config.")
+flags.DEFINE_string("config_data", "config_iwslt15", "The dataset config.")
 flags.DEFINE_string("run_mode", "train_and_evaluate",
                     "Either train_and_evaluate or test.")
 flags.DEFINE_string("model_dir", "./outputs",
@@ -67,7 +67,7 @@ def main():
     tx.utils.maybe_create_dir(FLAGS.model_dir)
     logging_file = os.path.join(FLAGS.model_dir, 'logging.txt')
     logger = utils.get_logger(logging_file)
-    logger.info('logging file is saved in: %s', logging_file)
+    print('logging file is saved in: %s', logging_file)
 
     # Build model graph
     encoder_input = tf.placeholder(tf.int64, shape=(None, None))
@@ -113,15 +113,10 @@ def main():
     mle_loss = tf.reduce_sum(mle_loss * is_target) / tf.reduce_sum(is_target)
 
     train_op = tx.core.get_train_op(
-        mle_loss, learning_rate=learning_rate, hparams=config_model.opt)
-
-    #optimizer = tf.train.AdamOptimizer(
-    #    learning_rate=learning_rate,
-    #    beta1=config_model.opt['Adam_beta1'],
-    #    beta2=config_model.opt['Adam_beta2'],
-    #    epsilon=config_model.opt['Adam_epsilon'],
-    #)
-    #train_op = optimizer.minimize(mle_loss, global_step)
+        mle_loss,
+        learning_rate=learning_rate, 
+        global_step=global_step,
+        hparams=config_model.opt)
 
     tf.summary.scalar('lr', learning_rate)
     tf.summary.scalar('mle_loss', mle_loss)
@@ -136,6 +131,7 @@ def main():
         memory_sequence_length=encoder_input_length,
         decoding_strategy='infer_greedy',
         beam_width=beam_width,
+        alpha=config_model.alpha,
         start_tokens=start_tokens,
         end_token=eos_token_id,
         max_decoding_length=config_data.max_decoding_length,
@@ -150,12 +146,19 @@ def main():
 
     best_results = {'score': 0, 'epoch': -1}
 
-    def _eval_epoch(sess, epoch):
+    def _eval_epoch(sess, epoch, mode):
         references, hypotheses = [], []
-        for i in range(0, len(dev_data), config_data.test_batch_size):
-            sources, targets = zip(*dev_data[i:i+config_data.test_batch_size])
+        if mode == 'eval':
+            exp_data = dev_data
+        elif mode == 'test':
+            exp_data = test_data
+        else:
+            raise ValueError('mode should be eval or test')
+        bsize = config_data.test_batch_size
+        for i in range(0, len(exp_data), bsize):
+            sources, targets = \
+                zip(*exp_data[i:i+bsize])
             x_block = data_utils.source_pad_concat_convert(sources)
-
             feed_dict = {
                 encoder_input: x_block,
                 tx.global_mode(): tf.estimator.ModeKeys.EVAL,
@@ -163,37 +166,48 @@ def main():
             fetches = {
                 'inferred_ids': inferred_ids,
             }
-
             fetches_ = sess.run(fetches, feed_dict=feed_dict)
+            hypotheses.extend(h.tolist() for h in fetches_['inferred_ids'])
+            references.extend(r.tolist() for r in targets)
+            hypotheses = utils.list_strip_eos(hypotheses, eos_token_id)
+            references = utils.list_strip_eos(references, eos_token_id)
+            
+        if mode == 'eval':
+            fname = os.path.join(FLAGS.model_dir, 'tmp.eval')
+            hypotheses = tx.utils.str_join(hypotheses)
+            references = tx.utils.str_join(references)
+            hyp_fn, ref_fn = tx.utils.write_paired_text(
+                hypotheses, references, fname, append=False, mode='s')
+            eval_bleu = bleu_wrapper(ref_fn, hyp_fn, case_sensitive=True)
+            eval_bleu = 100. * eval_bleu
+            logger.info('epoch: %d, eval_bleu %.4f', epoch, eval_bleu)
+            print('epoch: %d, eval_bleu %.4f' % (epoch, eval_bleu))
+            hypotheses = tx.utils.str_join(hypotheses)
+            references = tx.utils.str_join(references)
 
-            hypotheses.extend(hyp.tolist() for hyp in fetches_['inferred_ids'])
-            references.extend(ref.tolist() for ref in targets)
+            if eval_bleu > best_results['score']:
+                logger.info('epoch: %d, best bleu: %.4f', epoch, eval_bleu)
+                best_results['score'] = eval_bleu
+                best_results['epoch'] = epoch
+                model_path = os.path.join(FLAGS.model_dir, 'best-model.ckpt')
+                logger.info('saving model to %s', model_path)
+                print('saving model to %s' % model_path)
+                saver.save(sess, model_path)
+        elif mode == 'test':
+            fname = os.path.join(FLAGS.model_dir, 'test.output')
+            hwords, rwords = [], []
+            for hyp, ref in zip(hypotheses, references):
+                hwords.append([id2w[y] for y in hyp])
+                rwords.append([id2w[y] for y in ref])
+            hwords = tx.utils.str_join(hwords)
+            rwords = tx.utils.str_join(rwords)
+            hyp_fn, ref_fn = tx.utils.write_paired_text(
+                hwords, rwords, fname, append=False, mode='s')
+            logger.info('test finished. The output is in %s', hyp_fn)
+            print('test finished. The output is in %s' % \
+                hyp_fn)
 
-        hypotheses = utils.list_strip_eos(hypotheses, eos_token_id)
-        hypotheses = tx.utils.str_join(hypotheses)
-        references = utils.list_strip_eos(references, eos_token_id)
-        references = tx.utils.str_join(references)
-
-        fname = os.path.join(FLAGS.model_dir, 'eval')
-        hyp_fn, ref_fn = tx.utils.write_paired_text( # TODO(zhiting): append=True ?
-            hypotheses, references, fname, append=True, mode='s')
-
-        eval_bleu = bleu_wrapper(ref_fn, hyp_fn, case_sensitive=True)
-        eval_bleu = 100. * eval_bleu
-        logger.info('epoch: %d, eval_bleu %.4f', epoch, eval_bleu)
-        print('epoch: %d, eval_bleu %.4f' % (epoch, eval_bleu))
-
-        if eval_bleu > best_results['score']:
-            logger.info('epoch: %d, best bleu: %.4f', epoch, eval_bleu)
-            best_results['score'] = eval_bleu
-            best_results['epoch'] = epoch
-            model_path = os.path.join(FLAGS.model_dir, 'best-model.ckpt')
-            logger.info('saving model to %s', model_path)
-            print('saving model to %s' % model_path)
-            saver.save(sess, model_path)
-
-
-    def _train_epoch(sess, epoch, smry_writer):
+    def _train_epoch(sess, epoch, step, smry_writer):
         random.shuffle(train_data)
         train_iter = data.iterator.pool(
             train_data,
@@ -202,7 +216,6 @@ def main():
             batch_size_fn=utils.batch_size_fn,
             random_shuffler=data.iterator.RandomShuffler())
 
-        step = 0
         for _, train_batch in enumerate(train_iter):
             in_arrays = data_utils.seq2seq_pad_concat_convert(train_batch)
             feed_dict = {
@@ -220,47 +233,15 @@ def main():
 
             fetches_ = sess.run(fetches, feed_dict=feed_dict)
 
-            step = fetches_['step']
-
-            if step % config_data.display_steps == 0:
-                logger.info('step: %d, loss: %.4f', step, fetches_['loss'])
-                print('step: %d, loss: %.4f' % (step, fetches_['loss']))
+            step, loss = fetches_['step'],  fetches_['loss']
+            if step and step % config_data.display_steps == 0:
+                logger.info('step: %d, loss: %.4f', step, loss)
+                print('step: %d, loss: %.4f' % (step, loss))
                 smry_writer.add_summary(fetches_['smry'], global_step=step)
 
-            if step % config_data.eval_steps == 0:
-                _eval_epoch(sess, epoch)
-
-
-    # TODO(zhiting): delete the func
-    def _test_epoch(sess, ckpt_fn):
-        references, hypotheses, rwords, hwords = [], [], [], []
-        for i in range(0, len(test_data), config_data.test_batch_size):
-            sources, targets = \
-                zip(*test_data[i: i + config_data.test_batch_size])
-            references.extend(t.tolist() for t in targets)
-            x_block = data_utils.source_pad_concat_convert(sources)
-            feed_dict = {
-                encoder_input: x_block,
-                tx.global_mode(): tf.estimator.ModeKeys.EVAL,
-            }
-            fetches = {
-                'predictions': inferred_ids,
-            }
-            fetches_ = sess.run(fetches, feed_dict=feed_dict)
-            hypotheses.extend(h.tolist() for h in fetches_['predictions'])
-        for refer, hypo in zip(references, hypotheses):
-            if eos_token_id in hypo:
-                hypo = hypo[:hypo.index(eos_token_id)]
-            rwords.append([id2w[y] for y in refer])
-            hwords.append([id2w[y] for y in hypo])
-        outputs_tmp_filename = FLAGS.model_dir + \
-            'test.output'.format(\
-            ckpt_fn) # TODO(zhiting): error: `Too many arguments for format string`
-        refer_tmp_filename = FLAGS.model_dir + 'test.refer'
-        data_utils.write_words(hwords, outputs_tmp_filename)
-        data_utils.write_words(rwords, refer_tmp_filename)
-        logger.info('test finished. The output is in %s' % \
-            (outputs_tmp_filename))
+            if step and step % config_data.eval_steps == 0:
+                _eval_epoch(sess, epoch, mode='eval')
+        return step
 
     # Run the graph
     with tf.Session() as sess:
@@ -271,13 +252,14 @@ def main():
         smry_writer = tf.summary.FileWriter(FLAGS.model_dir, graph=sess.graph)
 
         if FLAGS.run_mode == 'train_and_evaluate':
+            step = 0
             for epoch in range(config_data.max_train_epoch):
-                _train_epoch(sess, epoch, smry_writer)
+                step = _train_epoch(sess, epoch, step, smry_writer)
 
         elif FLAGS.run_mode == 'test':
             ckpt_fn = tf.train.latest_checkpoint(FLAGS.model_dir).split('/')[-1]
             saver.restore(sess, tf.train.latest_checkpoint(FLAGS.model_dir))
-            _test_epoch(sess, ckpt_fn)
+            _eval_epoch(sess, ckpt_fn, mode='test')
 
 
 if __name__ == '__main__':

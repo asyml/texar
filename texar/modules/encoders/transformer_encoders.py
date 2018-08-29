@@ -235,8 +235,6 @@ class TransformerEncoder(EncoderBase):
 
         _, lengths, _ = shape_list(inputs)
 
-        #inputs_padding = 1 - mask_sequences(
-        #    tf.ones_like(inputs), sequence_length, tensor_rank=3)[:, :, 0]
         inputs_padding = 1 - tf.sequence_mask(
             sequence_length, tf.shape(inputs)[1], dtype=tf.float32)
         ignore_padding = attn.attention_bias_ignore_padding(inputs_padding)

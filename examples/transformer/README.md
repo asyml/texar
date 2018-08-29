@@ -44,7 +44,7 @@ python transformer_overall.py --run_mode=test --config_data=config_iwslt14 --log
 
 # The decoded file path will be in $LOG_DISK_DIR/test.output
 #evaluate with BLEU score
-test.outputs=${LOG_DISK_DIR}/test.output
+test.outputs=${LOG_DISK_DIR}/test.output.src
 ../../bin/utils/spm_decode --model temp/run_en_vi_spm/data/spm-codes.32000.model --input_format=piece --infile ${test.outputs} --outfile test.out
 
 python bleu_tool.py --reference=data/en_vi/test.vi --translation=test.out
@@ -52,7 +52,7 @@ python bleu_tool.py --reference=data/en_vi/test.vi --translation=test.out
 
 ## Result
 
-You could get ~28.22 BLEU_cased and ~28.98 BLEU_uncased with our implementation. With tensor2tensor, the results are 28.12 and 28.97 claimed in https://github.com/tensorflow/tensor2tensor/pull/611.
+You could get ~28.54 BLEU_cased and ~29.30 BLEU_uncased with our implementation. With tensor2tensor, the results are 28.12 and 28.97 claimed in https://github.com/tensorflow/tensor2tensor/pull/611.
 
 ## Training log sample:
 
