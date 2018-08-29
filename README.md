@@ -96,14 +96,3 @@ Zhiting Hu, Haoran Shi, Zichao Yang, Bowen Tan, Tiancheng Zhao, Junxian He, Went
 ### License
 [Apache License 2.0](.)
 
-
-### Related toolkit
-
-Several other toolkit for text generation or neural machine translation:
-
-* [OpenNMT](http://opennmt.net/)
-* [Tensor2Tensor](https://github.com/tensorflow/tensor2tensor)
-* [XNMT](https://github.com/neulab/xnmt)
-* [Google seq2seq](https://github.com/google/seq2seq)
-
-
