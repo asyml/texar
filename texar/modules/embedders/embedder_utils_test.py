@@ -21,7 +21,7 @@ class GetEmbeddingTest(tf.test.TestCase):
         """Tests :func:`~texar.modules.embedder.embedder_utils.get_embedding`.
         """
         vocab_size = 100
-        emb = embedder_utils.get_embedding(vocab_size=vocab_size)
+        emb = embedder_utils.get_embedding(num_embeds=vocab_size)
         self.assertEqual(emb.shape[0].value, vocab_size)
         self.assertEqual(emb.shape[1].value,
                          embedder_utils.default_embedding_hparams()["dim"])
@@ -36,7 +36,7 @@ class GetEmbeddingTest(tf.test.TestCase):
             }
         }
         emb = embedder_utils.get_embedding(
-            hparams=hparams, vocab_size=vocab_size)
+            hparams=hparams, num_embeds=vocab_size)
         self.assertEqual(emb.shape[0].value, vocab_size)
         self.assertEqual(emb.shape[1].value,
                          embedder_utils.default_embedding_hparams()["dim"])

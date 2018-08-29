@@ -386,13 +386,15 @@ def get_initializer(hparams=None):
             :tf_main:`tf.initializers <initializers>`,
             :tf_main:`tf.keras.initializers <keras/initializers>`,
             :tf_main:`tf < >`, and :mod:`texar.custom`. The class is created
-            by :python:`initializer_class(**kwargs)`.
+            by :python:`initializer_class(**kwargs)`. If a class instance
+            is given, "kwargs" is ignored and can be omitted.
 
             Besides, the "type" field can also be an initialization function
             called with :python:`initialization_fn(**kwargs)`. In this case
             "type" can be the function, or its name or module path. If
             function name is provided, the function must be from one of the
-            above modules or module `tf.contrib.layers`.
+            above modules or module `tf.contrib.layers`. If no
+            keyword argument is required, "kwargs" can be omitted.
 
     Returns:
         An initializer instance. `None` if :attr:`hparams` is `None`.
@@ -400,7 +402,7 @@ def get_initializer(hparams=None):
     if hparams is None:
         return None
 
-    kwargs = hparams["kwargs"]
+    kwargs = hparams.get("kwargs", {})
     if isinstance(kwargs, HParams):
         kwargs = kwargs.todict()
     modules = ["tensorflow.initializers", "tensorflow.keras.initializers",
