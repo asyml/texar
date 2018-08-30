@@ -8,41 +8,41 @@ More examples are continuously added...
 
 ### RNN / Seq2seq ###
 
-* [language_model_ptb](./language_model_ptb): Basic RNN language model
-* [seq2seq_attn](./seq2seq_attn): Attentional seq2seq
-* [seq2seq_configs](./seq2seq_configs): Seq2seq implemented with Texar model template.
-* [seq2seq_rl](./seq2seq_rl): Attentional seq2seq trained with policy gradient.
-* [hierarchical_dialog](./hierarchical_dialog): Hierarchical recurrent encoder-decoder model for conversation response generation.
-* [torchtext](./torchtext): Use of torchtext data loader
+* [language_model_ptb](https://github.com/asyml/texar/tree/master/examples/language_model_ptb): Basic RNN language model
+* [seq2seq_attn](https://github.com/asyml/texar/tree/master/examples/seq2seq_attn): Attentional seq2seq
+* [seq2seq_configs](https://github.com/asyml/texar/tree/master/examples/seq2seq_configs): Seq2seq implemented with Texar model template.
+* [seq2seq_rl](https://github.com/asyml/texar/tree/master/examples/seq2seq_rl): Attentional seq2seq trained with policy gradient.
+* [hierarchical_dialog](https://github.com/asyml/texar/tree/master/examples/hierarchical_dialog): Hierarchical recurrent encoder-decoder model for conversation response generation.
+* [torchtext](https://github.com/asyml/texar/tree/master/examples/torchtext): Use of torchtext data loader
 
 ### Transformer (Self-attention) ###
 
-* [transformer](./transformer): Transformer for machine translation
-* [vae_text](./vae_text): VAE with a transformer decoder for improved language modeling 
+* [transformer](https://github.com/asyml/texar/tree/master/examples/transformer): Transformer for machine translation
+* [vae_text](https://github.com/asyml/texar/tree/master/examples/vae_text): VAE with a transformer decoder for improved language modeling 
 
 ### Variational Autoencoder (VAE) ###
 
-* [vae_text](./vae_text): VAE language model
+* [vae_text](https://github.com/asyml/texar/tree/master/examples/vae_text): VAE language model
 
 ### GANs / Discriminiator-supervision ###
 
-* [seqGAN](./seqgan): GANs for text generation
-* [text_style_transfer](./text_style_transfer): Discriminator supervision for controlled text generation
+* [seqGAN](https://github.com/asyml/texar/tree/master/examples/seqgan): GANs for text generation
+* [text_style_transfer](https://github.com/asyml/texar/tree/master/examples/text_style_transfer): Discriminator supervision for controlled text generation
 
 ### Reinforcement Learning ###
 
-* [seq2seq_rl](./seq2seq_rl): Attentional seq2seq trained with policy gradient.
-* [seqGAN](./seqgan): Policy gradient for sequence generation
-* [rl_gym](./rl_gym): Various RL algoritms for games on OpenAI Gym
+* [seq2seq_rl](https://github.com/asyml/texar/tree/master/examples/seq2seq_rl): Attentional seq2seq trained with policy gradient.
+* [seqGAN](https://github.com/asyml/texar/tree/master/examples/seqgan): Policy gradient for sequence generation
+* [rl_gym](https://github.com/asyml/texar/tree/master/examples/rl_gym): Various RL algoritms for games on OpenAI Gym
 
 ### Memory Network ###
 
-* [memory_network_lm](./memory_network_lm): End-to-end memory network for language modeling
+* [memory_network_lm](https://github.com/asyml/texar/tree/master/examples/memory_network_lm): End-to-end memory network for language modeling
 
 ### Classifier / Predictions ##  
 
-* [sentence_classifier](./sentence_classifier): Basic CNN-based sentence classifier
-* [sequence_tagging](./sequence_tagging): BiLSTM-CNN model for Named Entity Recognition (NER)
+* [sentence_classifier](https://github.com/asyml/texar/tree/master/examples/sentence_classifier): Basic CNN-based sentence classifier
+* [sequence_tagging](https://github.com/asyml/texar/tree/master/examples/sequence_tagging): BiLSTM-CNN model for Named Entity Recognition (NER)
 
 ---
 
@@ -50,34 +50,34 @@ More examples are continuously added...
 
 ### Language Modeling ###
 
-* [language_model_ptb](./language_model_ptb): Basic RNN language model
-* [vae_text](./vae_text): VAE language model
-* [seqGAN](./seqgan): GAN + policy gradient
-* [memory_network_lm](./memory_network_lm): End-to-end memory network for language modeling
+* [language_model_ptb](https://github.com/asyml/texar/tree/master/examples/language_model_ptb): Basic RNN language model
+* [vae_text](https://github.com/asyml/texar/tree/master/examples/vae_text): VAE language model
+* [seqGAN](https://github.com/asyml/texar/tree/master/examples/seqgan): GAN + policy gradient
+* [memory_network_lm](https://github.com/asyml/texar/tree/master/examples/memory_network_lm): End-to-end memory network for language modeling
 
 ### Machine Translation ###
 
-* [seq2seq_attn](./seq2seq_attn): Attentional seq2seq
-* [seq2seq_configs](./seq2seq_configs): Seq2seq implemented with Texar model template.
-* [seq2seq_rl](./seq2seq_rl): Attentional seq2seq trained with policy gradient.
-* [transformer](./transformer): Transformer for machine translation
+* [seq2seq_attn](https://github.com/asyml/texar/tree/master/examples/seq2seq_attn): Attentional seq2seq
+* [seq2seq_configs](https://github.com/asyml/texar/tree/master/examples/seq2seq_configs): Seq2seq implemented with Texar model template.
+* [seq2seq_rl](https://github.com/asyml/texar/tree/master/examples/seq2seq_rl): Attentional seq2seq trained with policy gradient.
+* [transformer](https://github.com/asyml/texar/tree/master/examples/transformer): Transformer for machine translation
 
 ### Dialog ###
 
-* [hierarchical_dialog](./hierarchical_dialog): Hierarchical recurrent encoder-decoder model for conversation response generation.
+* [hierarchical_dialog](https://github.com/asyml/texar/tree/master/examples/hierarchical_dialog): Hierarchical recurrent encoder-decoder model for conversation response generation.
 
 ### Text Style Transfer ###
 
-* [text_style_transfer](./text_style_transfer): Discriminator supervision for controlled text generation
+* [text_style_transfer](https://github.com/asyml/texar/tree/master/examples/text_style_transfer): Discriminator supervision for controlled text generation
 
 ### Classification ###
 
-* [sentence_classifier](./sentence_classifier): Basic CNN-based sentence classifier
+* [sentence_classifier](https://github.com/asyml/texar/tree/master/examples/sentence_classifier): Basic CNN-based sentence classifier
 
 ### Sequence Tagging ###
 
-* [sequence_tagging](./sequence_tagging): BiLSTM-CNN model for Named Entity Recognition (NER)
+* [sequence_tagging](https://github.com/asyml/texar/tree/master/examples/sequence_tagging): BiLSTM-CNN model for Named Entity Recognition (NER)
 
 ### Games ###
 
-* [rl_gym](./rl_gym): Various RL algoritms for games on OpenAI Gym
+* [rl_gym](https://github.com/asyml/texar/tree/master/examples/rl_gym): Various RL algoritms for games on OpenAI Gym
