@@ -21,8 +21,8 @@ setuptools.setup(
         'requests',
     ],
     extras_require={
-        'tensorflow': ['tensorflow>=1.6.0'],
-        'tensorflow with gpu': ['tensorflow-gpu>=1.6.0']
+        'tensorflow': ['tensorflow>=1.7.0'],
+        'tensorflow with gpu': ['tensorflow-gpu>=1.7.0']
     },
     classifiers=[
         'Intended Audience :: Developers',
