@@ -46,8 +46,10 @@ class RewardTest(tf.test.TestCase):
 
             r, r_n = sess.run([discounted_reward_, discounted_reward_n_])
 
-            np.testing.assert_array_equal(discounted_reward, r)
-            np.testing.assert_array_equal(discounted_reward_n, r_n)
+            np.testing.assert_array_almost_equal(
+                discounted_reward, r, decimal=6)
+            np.testing.assert_array_almost_equal(
+                discounted_reward_n, r_n, decimal=6)
 
         # 2D
         reward = np.ones([2, 10], dtype=np.float64)
@@ -70,8 +72,10 @@ class RewardTest(tf.test.TestCase):
 
             r, r_n = sess.run([discounted_reward_, discounted_reward_n_])
 
-            np.testing.assert_array_equal(discounted_reward, r)
-            np.testing.assert_array_equal(discounted_reward_n, r_n)
+            np.testing.assert_array_almost_equal(
+                discounted_reward, r, decimal=6)
+            np.testing.assert_array_almost_equal(
+                discounted_reward_n, r_n, decimal=6)
 
     def test_discount_reward_py_1d(self):
         """Tests :func:`texar.losses.rewards._discount_reward_py_1d`

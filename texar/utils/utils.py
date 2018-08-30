@@ -34,6 +34,8 @@ from texar.hyperparams import HParams
 from texar.utils.dtypes import is_str, is_callable, compat_as_text, \
         _maybe_list_to_array
 
+# pylint: disable=anomalous-backslash-in-string
+
 MAX_SEQ_LENGTH = np.iinfo(np.int32).max
 
 ## Some modules cannot be imported directly,
@@ -44,6 +46,7 @@ MAX_SEQ_LENGTH = np.iinfo(np.int32).max
 #}
 
 __all__ = [
+    "_inspect_getargspec",
     "check_or_get_class",
     "get_class",
     "check_or_get_instance",
@@ -80,6 +83,15 @@ def _expand_name(name):
         "tx.xxx" --> "texar.xxx"
     """
     return name
+
+def _inspect_getargspec(fn):
+    """Returns `inspect.getargspec(fn)` for Py2 and `inspect.getfullargspec(fn)`
+    for Py3
+    """
+    try:
+        return inspect.getfullargspec(fn)
+    except AttributeError:
+        return inspect.getargspec(fn)
 
 def check_or_get_class(class_or_name, module_path=None, superclass=None):
     """Returns the class and checks if the class inherits :attr:`superclass`.
@@ -214,14 +226,14 @@ def get_instance(class_or_name, kwargs, module_paths=None):
     if is_str(class_):
         class_ = get_class(class_, module_paths)
     # Check validity of arguments
-    class_args = set(inspect.getargspec(class_.__init__).args)
+    class_args = set(_inspect_getargspec(class_.__init__).args)
     if kwargs is None:
         kwargs = {}
     for key in kwargs.keys():
         if key not in class_args:
             raise ValueError(
-                "Invalid argument for class %s.%s: %s, valid args:%s" %
-                (class_.__module__, class_.__name__, key, class_args))
+                "Invalid argument for class %s.%s: %s, valid args: %s" %
+                (class_.__module__, class_.__name__, key, list(class_args)))
 
     return class_(**kwargs)
 
@@ -293,7 +305,7 @@ def get_instance_with_redundant_kwargs(
 
     # Select valid arguments
     selected_kwargs = {}
-    class_args = set(inspect.getargspec(class_.__init__).args)
+    class_args = set(_inspect_getargspec(class_.__init__).args)
     if kwargs is None:
         kwargs = {}
     for key, value in kwargs.items():
@@ -354,9 +366,9 @@ def call_function_with_redundant_kwargs(fn, kwargs):
         The returned results by calling :attr:`fn`.
     """
     try:
-        fn_args = set(inspect.getargspec(fn).args)
+        fn_args = set(_inspect_getargspec(fn).args)
     except TypeError:
-        fn_args = set(inspect.getargspec(fn.__call__).args)
+        fn_args = set(_inspect_getargspec(fn.__call__).args)
 
     if kwargs is None:
         kwargs = {}
@@ -378,7 +390,7 @@ def get_args(fn):
     Returns:
         list: A list of argument names (str) of the function.
     """
-    argspec = inspect.getargspec(fn)
+    argspec = _inspect_getargspec(fn)
     return argspec.args
 
 def get_default_arg_values(fn):
@@ -393,7 +405,7 @@ def get_default_arg_values(fn):
         dict: A dictionary that maps argument names (str) to their default
         values. The dictionary is empty if no arguments have default values.
     """
-    argspec = inspect.getargspec(fn)
+    argspec = _inspect_getargspec(fn)
     if argspec.defaults is None:
         return {}
     num_defaults = len(argspec.defaults)

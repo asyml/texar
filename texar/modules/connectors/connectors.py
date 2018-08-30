@@ -1,4 +1,16 @@
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Various connectors.
 """
@@ -10,7 +22,7 @@ from __future__ import print_function
 import numpy as np
 
 import tensorflow as tf
-import tensorflow.contrib.distributions as tf_dstr
+from tensorflow import distributions as tf_dstr
 from tensorflow.python.util import nest    # pylint: disable=E0611
 
 from texar.modules.connectors.connector_base import ConnectorBase
@@ -484,10 +496,10 @@ class ReparameterizedStochasticConnector(ConnectorBase):
         `distribution.reparameterization_type = FULLY_REPARAMETERIZED`.
 
         Args:
-            distribution: A
-                :tf_main:`TF Distribution <contrib/distributions/Distribution>`.
-                Can be a class, its name or module path, or an instance of
-                a subclass.
+            distribution: A instance of subclass of
+                :tf_main:`TF Distribution <distributions/Distribution>`,
+                or :tf_hmpg:`tensorflow_probability Distribution <probability>`,
+                Can be a class, its name or module path, or a class instance.
             distribution_kwargs (dict, optional): Keyword arguments for the
                 distribution constructor. Ignored if `distribution` is a
                 class instance.
@@ -515,7 +527,8 @@ class ReparameterizedStochasticConnector(ConnectorBase):
         """
         dstr = check_or_get_instance(
             distribution, distribution_kwargs,
-            ["tensorflow.contrib.distributions", "texar.custom"])
+            ["tensorflow.distributions", "tensorflow_probability.distributions",
+             "texar.custom"])
 
         if dstr.reparameterization_type == tf_dstr.NOT_REPARAMETERIZED:
             raise ValueError(
@@ -614,10 +627,10 @@ class StochasticConnector(ConnectorBase):
         cannot be back-propagate through the samples.
 
         Args:
-            distribution: A
-                :tf_main:`TF Distribution <contrib/distributions/Distribution>`.
-                Can be a class, its name or module path, or an instance of
-                a subclass.
+            distribution: A instance of subclass of
+                :tf_main:`TF Distribution <distributions/Distribution>`,
+                or :tf_hmpg:`tensorflow_probability Distribution <probability>`.
+                Can be a class, its name or module path, or a class instance.
             distribution_kwargs (dict, optional): Keyword arguments for the
                 distribution constructor. Ignored if `distribution` is a
                 class instance.
@@ -644,7 +657,8 @@ class StochasticConnector(ConnectorBase):
         """
         dstr = check_or_get_instance(
             distribution, distribution_kwargs,
-            ["tensorflow.contrib.distributions", "texar.custom"])
+            ["tensorflow.distributions", "tensorflow_probability.distributions",
+             "tensorflow.contrib.distributions", "texar.custom"])
 
         if num_samples:
             output = dstr.sample(num_samples)

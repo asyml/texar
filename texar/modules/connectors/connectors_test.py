@@ -9,7 +9,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import tensorflow as tf
-import tensorflow.contrib.distributions as tfds
+from tensorflow_probability import distributions as tfpd
 from tensorflow.python.util import nest    # pylint: disable=E0611
 
 from texar.core import layers
@@ -85,8 +85,8 @@ class TestConnectors(tf.test.TestCase):
         var = tf.ones([self._batch_size, variable_size])
         mu_vec = tf.zeros([variable_size])
         var_vec = tf.ones([variable_size])
-        gauss_ds = tfds.MultivariateNormalDiag(loc=mu, scale_diag=var)
-        gauss_ds_vec = tfds.MultivariateNormalDiag(loc=mu_vec,
+        gauss_ds = tfpd.MultivariateNormalDiag(loc=mu, scale_diag=var)
+        gauss_ds_vec = tfpd.MultivariateNormalDiag(loc=mu_vec,
                                                    scale_diag=var_vec)
         gauss_connector = ReparameterizedStochasticConnector(state_size)
         gauss_connector_ts = ReparameterizedStochasticConnector(state_size_ts)

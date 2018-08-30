@@ -214,6 +214,8 @@ docs/_build
 ### IntelliJ ###
 *.iml
 
+### pytest ###
+/.pytest_cache/
 
 ### Project ###
 /data/

@@ -326,6 +326,9 @@ extlinks = {'tf_main': (
             'tf_r0.12': (
                 'https://www.tensorflow.org/versions/r0.12/api_docs/python/%s',
                 None),
+            'tf_hmpg': (
+                'https://www.tensorflow.org/%s',
+                None),
             'gym': (
                 'https://gym.openai.com/docs/%s',
                 None),

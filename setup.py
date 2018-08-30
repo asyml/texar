@@ -7,10 +7,10 @@ import setuptools
 
 setuptools.setup(
     name="texar",
-    version="0.0.1",
-    url="https://github.com/ZhitingHu/txtgen",
+    version="0.1",
+    url="https://github.com/asyml/texar",
 
-    description="An open and flexible framework for text generation.",
+    description="Toolkit for Text Generation and Beyond",
 
     packages=setuptools.find_packages(),
     platforms='any',

@@ -67,10 +67,15 @@ class HierarchicalRNNEncoderTest(tf.test.TestCase):
             minval=-1,
             dtype=tf.float32)
 
-        outputs, state = encoder(inputs, order='btu', time_major=False)
-        outputs, state = encoder(inputs, order='utb', time_major=True)
-        outputs, state = encoder(inputs, order='tbu', time_major_major=True)
-        outputs, state = encoder(inputs, order='ubt', time_major_minor=True)
+        outputs_1, state_1 = encoder(inputs, order='btu')
+        outputs_2, state_2 = encoder(inputs, order='utb')
+        outputs_3, state_3 = encoder(inputs, order='tbu')
+        outputs_4, state_4 = encoder(inputs, order='ubt')
+
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            sess.run([outputs_1, state_1, outputs_2, state_2,
+                      outputs_3, state_3, outputs_4, state_4])
 
     def test_depack(self):
         hparams = {

@@ -773,6 +773,9 @@ class MergeLayer(tf.layers.Layer):
                 else:
                     self._layers.append(get_layer(hparams=layer))
 
+        # Keep tracks of whether trainable variables have been created
+        self._vars_built = False
+
     def compute_output_shape(self, input_shape):
         if self._layers is None:
             _shapes = input_shape
@@ -870,8 +873,9 @@ class MergeLayer(tf.layers.Layer):
         else:
             raise ValueError("Unknown merge mode: '%s'" % self._mode)
 
-        if not self.built:
+        if not self.built or not self._vars_built:
             self._collect_weights()
+            self._vars_built = True
 
         return outputs
 
@@ -881,11 +885,6 @@ class MergeLayer(tf.layers.Layer):
         """
         return self._layers
 
-    def build(self, _):
-        """Dumb method.
-        """
-        # Does not set :attr:`self.built` as this point.
-        pass
 
 class SequentialLayer(tf.layers.Layer):
     """A subclass of :tf_main:`tf.layers.Layer <layers/Layer>`.
@@ -914,6 +913,9 @@ class SequentialLayer(tf.layers.Layer):
                 self._layers.append(layer)
             else:
                 self._layers.append(get_layer(hparams=layer))
+
+        # Keep tracks of whether trainable variables have been created
+        self._vars_built = False
 
     def compute_output_shape(self, input_shape):
         input_shape = tf.TensorShape(input_shape)
@@ -947,8 +949,9 @@ class SequentialLayer(tf.layers.Layer):
                 outputs = layer(inputs)
             inputs = outputs
 
-        if not self.built:
+        if not self.built or not self._vars_built:
             self._collect_weights()
+            self._vars_built = True
 
         return outputs
 
@@ -958,11 +961,6 @@ class SequentialLayer(tf.layers.Layer):
         """
         return self._layers
 
-    def build(self, _):
-        """Dumb method.
-        """
-        # Does not set :attr:`self.built` as this point.
-        pass
 
 def _common_default_conv_dense_kwargs():
     """Returns the default keyword argument values that are common to

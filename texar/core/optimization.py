@@ -19,8 +19,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
-import inspect
-
 import tensorflow as tf
 
 from texar.hyperparams import HParams
@@ -216,7 +214,7 @@ def get_optimizer_fn(hparams=None):
 
     def _get_opt(learning_rate=None):
         opt_kwargs = hparams["kwargs"].todict()
-        fn_args = set(inspect.getargspec(opt_class.__init__).args)
+        fn_args = set(utils.get_args(opt_class.__init__))
         if 'learning_rate' in fn_args and learning_rate is not None:
             opt_kwargs["learning_rate"] = learning_rate
         return opt_class(**opt_kwargs)
@@ -319,7 +317,7 @@ def get_gradient_clip_fn(hparams=None):
 
     fn_modules = ["tensorflow", "texar.custom"]
     clip_fn = utils.get_function(fn_type, fn_modules)
-    clip_fn_args = inspect.getargspec(clip_fn).args
+    clip_fn_args = utils.get_args(clip_fn)
     fn_kwargs = hparams["kwargs"]
     if isinstance(fn_kwargs, HParams):
         fn_kwargs = fn_kwargs.todict()
