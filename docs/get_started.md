@@ -68,12 +68,15 @@ Many more examples are available [here](https://github.com/asyml/texar/tree/mast
   
 ### Installtion
 ```
-pip install texar
+git clone https://github.com/asyml/texar.git
+cd texar
+pip install -e .
 ```
 
 ### Getting Started
 * [Examples](https://github.com/asyml/texar/tree/master/examples)
 * [Documentations](https://texar.readthedocs.io)
+* [GitHub](https://github.com/asyml/texar)
 
 ### Reference
 If you use Texar, please cite the [report](.) with the following BibTex entry:

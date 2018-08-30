@@ -75,7 +75,9 @@ Many more examples are available [here](./examples)
   
 ### Installtion
 ```
-pip install texar
+git clone https://github.com/asyml/texar.git
+cd texar
+pip install -e .
 ```
 
 ### Getting Started
