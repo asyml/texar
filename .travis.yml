@@ -1,0 +1,14 @@
+sudo: required
+language: python
+python:
+  - "3.6"
+
+install:
+  pip install -e .[tensorflow-cpu]
+
+script:
+  # units test
+  - pytest
+
+notifications:
+  email: false
