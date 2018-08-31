@@ -230,7 +230,9 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
             "attention": {
                 "kwargs": {
                     "num_units": self._attention_dim,
-                    "probability_fn": "sparsemax"
+                    # Note: to use sparsemax in TF-CPU, it looks
+                    # `memory_sequence_length` must equal max_time.
+                    #"probability_fn": "sparsemax"
                 }
             }
         }
