@@ -10,3 +10,6 @@ install:
 script:
   # units test
   - pytest
+
+notifications:
+  email: false
