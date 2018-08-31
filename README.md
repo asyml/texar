@@ -4,6 +4,7 @@
  
 -----------------
 
+[![Build Status](https://travis-ci.org/asyml/texar.svg?branch=master)](https://travis-ci.org/asyml/texar)
 [![Documentation Status](https://readthedocs.org/projects/texar/badge/?version=latest)](https://texar.readthedocs.io/en/latest/?badge=latest)
 
  
