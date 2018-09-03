@@ -34,7 +34,8 @@ class ModuleBase(object):
     """Base class inherited by modules that create Variables and are
     configurable through hyperparameters.
 
-    A Texar module inheriting :class:`~texar.ModuleBase` has two key features:
+    A Texar module inheriting :class:`~texar.ModuleBase` has following key
+    features:
 
         - **Convenient variable re-use**: A module instance creates \
         its own sets of variables, and automatically re-uses its variables on \
