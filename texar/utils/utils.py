@@ -65,6 +65,7 @@ __all__ = [
     "flatten_dict",
     "strip_token",
     "strip_eos",
+    "strip_bos",
     "strip_special_tokens",
     "str_join",
     "map_ids_to_strs",
@@ -605,52 +606,92 @@ def uniquify_str(str_, str_set):
                 return unique_str
     raise ValueError("Fails to uniquify string: " + str_)
 
-def strip_token(str_, token, compat=True):
-    """Returns a copy of the strings with leading and trailing tokens
-    removed.
 
-    Assumes tokens in the strings are separated with the space character.
+def _recur_split(s, dtype_as):
+    """Splits (possibly nested list of) strings recursively.
+    """
+    if is_str(s):
+        return _maybe_list_to_array(s.split(), dtype_as)
+    else:
+        s_ = [_recur_split(si, dtype_as) for si in s]
+        return _maybe_list_to_array(s_, s)
+
+
+def strip_token(str_, token, is_token_list=False, compat=True):
+    """Returns a copy of strings with leading and trailing tokens removed.
+
+    Note that besides :attr:`token`, all leading and trailing whitespace
+    characters are also removed.
+
+    If :attr:`is_token_list` is False, then the function assumes tokens in
+    :attr:`str_` are separated with whitespace character.
 
     Args:
         str\_: A `str`, or an `n`-D numpy array or (possibly nested)
             list of `str`.
         token (str): The token to strip, e.g., the '<PAD>' token defined in
             :class:`~texar.data.SpecialTokens`.PAD
+        is_token_list (bool): Whether each sentence in :attr:`str_` is a list
+            of tokens. If False, each sentence in :attr:`str_` is assumed to
+            contain tokens separated with space character.
         compat (bool): Whether to convert tokens into `unicode` (Python 2)
             or `str` (Python 3).
 
     Returns:
         The stripped strings of the same structure/shape as :attr:`str_`.
+
+    Example:
+
+        .. code-block:: python
+
+            str_ = '<PAD> a sentence <PAD> <PAD>  '
+            str_stripped = strip_token(str_, '<PAD>')
+            # str_stripped == 'a sentence'
+
+            str_ = ['<PAD>', 'a', 'sentence', '<PAD>', '<PAD>', '', '']
+            str_stripped = strip_token(str_, '<PAD>', is_token_list=True)
+            # str_stripped == 'a sentence'
     """
     def _recur_strip(s):
         if is_str(s):
-            return ' '.join(s.strip().split()).\
-                replace(' '+token, '').replace(token+' ', '')
+            if token == "":
+                return ' '.join(s.strip().split())
+            else:
+                return ' '.join(s.strip().split()).\
+                    replace(' '+token, '').replace(token+' ', '')
         else:
             s_ = [_recur_strip(si) for si in s]
             return _maybe_list_to_array(s_, s)
 
+    s = str_
+
     if compat:
-        str_ = compat_as_text(str_)
+        s = compat_as_text(s)
 
-    strp_str = _recur_strip(str_)
+    if is_token_list:
+        s = str_join(s, compat=False)
 
-    #if isinstance(str_, (list, tuple)):
-    #    return type(str_)(strp_str)
-    #else:
-    #    return np.asarray(strp_str)
+    strp_str = _recur_strip(s)
+
+    if is_token_list:
+        strp_str = _recur_split(strp_str, str_)
+
     return strp_str
 
-def strip_eos(str_, eos_token='<EOS>', compat=True):
+def strip_eos(str_, eos_token='<EOS>', is_token_list=False, compat=True):
     """Remove the EOS token and all subsequent tokens.
 
-    Assumes tokens in the strings are separated with the space character.
+    If :attr:`is_token_list` is False, then the function assumes tokens in
+    :attr:`str_` are separated with whitespace character.
 
     Args:
         str\_: A `str`, or an `n`-D numpy array or (possibly nested)
             list of `str`.
         eos_token (str): The EOS token. Default is '<EOS>' as defined in
             :class:`~texar.data.SpecialTokens`.EOS
+        is_token_list (bool): Whether each sentence in :attr:`str_` is a list
+            of tokens. If False, each sentence in :attr:`str_` is assumed to
+            contain tokens separated with space character.
         compat (bool): Whether to convert tokens into `unicode` (Python 2)
             or `str` (Python 3).
 
@@ -668,28 +709,39 @@ def strip_eos(str_, eos_token='<EOS>', compat=True):
             s_ = [_recur_strip(si) for si in s]
             return _maybe_list_to_array(s_, s)
 
+    s = str_
+
     if compat:
-        str_ = compat_as_text(str_)
+        s = compat_as_text(s)
 
-    strp_str = _recur_strip(str_)
+    if is_token_list:
+        s = str_join(s, compat=False)
 
-    #if isinstance(str_, (list, tuple)):
-    #    return type(str_)(strp_str)
-    #else:
-    #    return np.asarray(strp_str)
+    strp_str = _recur_strip(s)
+
+    if is_token_list:
+        strp_str = _recur_split(strp_str, str_)
+
     return strp_str
 _strip_eos_ = strip_eos
 
-def strip_bos(str_, bos_token='<BOS>', compat=True):
-    """Remove the leading BOS token.
+def strip_bos(str_, bos_token='<BOS>', is_token_list=False, compat=True):
+    """Remove all leading BOS tokens.
 
-    Assumes tokens in the strings are separated with the space character.
+    Note that besides :attr:`bos_token`, all leading and trailing whitespace
+    characters are also removed.
+
+    If :attr:`is_token_list` is False, then the function assumes tokens in
+    :attr:`str_` are separated with whitespace character.
 
     Args:
         str\_: A `str`, or an `n`-D numpy array or (possibly nested)
             list of `str`.
         bos_token (str): The BOS token. Default is '<BOS>' as defined in
             :class:`~texar.data.SpecialTokens`.BOS
+        is_token_list (bool): Whether each sentence in :attr:`str_` is a list
+            of tokens. If False, each sentence in :attr:`str_` is assumed to
+            contain tokens separated with space character.
         compat (bool): Whether to convert tokens into `unicode` (Python 2)
             or `str` (Python 3).
 
@@ -698,30 +750,40 @@ def strip_bos(str_, bos_token='<BOS>', compat=True):
     """
     def _recur_strip(s):
         if is_str(s):
-            return ' '.join(s.strip().split()).replace(bos_token+' ', '')
+            if bos_token == '':
+                return ' '.join(s.strip().split())
+            else:
+                return ' '.join(s.strip().split()).replace(bos_token+' ', '')
         else:
             s_ = [_recur_strip(si) for si in s]
             return _maybe_list_to_array(s_, s)
 
+    s = str_
+
     if compat:
-        str_ = compat_as_text(str_)
+        s = compat_as_text(s)
 
-    strp_str = _recur_strip(str_)
+    if is_token_list:
+        s = str_join(s, compat=False)
 
-    #if isinstance(str_, (list, tuple)):
-    #    return type(str_)(strp_str)
-    #else:
-    #    return np.asarray(strp_str)
+    strp_str = _recur_strip(s)
+
+    if is_token_list:
+        strp_str = _recur_split(strp_str, str_)
+
     return strp_str
 _strip_bos_ = strip_bos
 
 def strip_special_tokens(str_, strip_pad='<PAD>', strip_bos='<BOS>',
-                         strip_eos='<EOS>', compat=True):
-    """Removes special tokens of strings, including:
+                         strip_eos='<EOS>', is_token_list=False, compat=True):
+    """Removes special tokens in strings, including:
 
         - Removes EOS and all subsequent tokens
         - Removes leading and and trailing PAD tokens
         - Removes leading BOS tokens
+
+    Note that besides the special tokens, all leading and trailing whitespace
+    characters are also removed.
 
     This is a joint function of :func:`strip_eos`, :func:`strip_pad`, and
     :func:`strip_bos`
@@ -744,25 +806,36 @@ def strip_special_tokens(str_, strip_pad='<PAD>', strip_bos='<BOS>',
             Default is '<EOS>' as defined in
             :class:`~texar.data.SpecialTokens`.EOS.
             Set to `None` or `False` to disable the stripping.
+        is_token_list (bool): Whether each sentence in :attr:`str_` is a list
+            of tokens. If False, each sentence in :attr:`str_` is assumed to
+            contain tokens separated with space character.
         compat (bool): Whether to convert tokens into `unicode` (Python 2)
             or `str` (Python 3).
 
     Returns:
         Strings of the same shape of :attr:`str_` with special tokens stripped.
     """
+    s = str_
+
     if compat:
-        str_ = compat_as_text(str_)
+        s = compat_as_text(s)
+
+    if is_token_list:
+        s = str_join(s, compat=False)
 
     if strip_eos is not None and strip_eos is not False:
-        str_ = _strip_eos_(str_, strip_eos, compat=False)
+        s = _strip_eos_(s, strip_eos, is_token_list=False, compat=False)
 
     if strip_pad is not None and strip_pad is not False:
-        str_ = strip_token(str_, strip_pad, compat=False)
+        s = strip_token(s, strip_pad, is_token_list=False, compat=False)
 
     if strip_bos is not None and strip_bos is not False:
-        str_ = _strip_bos_(str_, strip_bos, compat=False)
+        s = _strip_bos_(s, strip_bos, is_token_list=False, compat=False)
 
-    return str_
+    if is_token_list:
+        s = _recur_split(s, str_)
+
+    return s
 
 def str_join(tokens, sep=' ', compat=True):
     """Concats :attr:`tokens` along the last dimension with intervening
@@ -791,16 +864,12 @@ def str_join(tokens, sep=' ', compat=True):
 
     str_ = _recur_join(tokens)
 
-    #if isinstance(tokens, (list, tuple)):
-    #    return type(tokens)(str_)
-    #else:
-    #    return np.asarray(str_)
     return str_
 
 def map_ids_to_strs(ids, vocab, join=True, strip_pad='<PAD>',
                     strip_bos='<BOS>', strip_eos='<EOS>', compat=True):
-    """Transforms `int` indexes to strings by id-token mapping, token concat,
-    and special token stripping, etc.
+    """Transforms `int` indexes to strings by mapping ids to tokens,
+    concatenating tokens into sentences, and stripping special tokens, etc.
 
     Args:
         ids: An n-D numpy array or (possibly nested) list of `int` indexes.
@@ -844,6 +913,8 @@ def map_ids_to_strs(ids, vocab, join=True, strip_pad='<PAD>',
             #          ['<BOS>', 'parsed', 'from', 'ids', '<EOS>', '<PAD>']]
     """
     tokens = vocab.map_ids_to_tokens_py(ids)
+    if isinstance(ids, (list, tuple)):
+        tokens = tokens.tolist()
 
     if compat:
         tokens = compat_as_text(tokens)
@@ -854,17 +925,10 @@ def map_ids_to_strs(ids, vocab, join=True, strip_pad='<PAD>',
         str_, strip_pad=strip_pad, strip_bos=strip_bos, strip_eos=strip_eos,
         compat=False)
 
-    def _recur_split(s):
-        if is_str(s):
-            return _maybe_list_to_array(s.split(), str_)
-        else:
-            s_ = [_recur_split(si) for si in s]
-            return _maybe_list_to_array(s_, s)
-
     if join:
         return str_
     else:
-        return _recur_split(str_)
+        return _recur_split(str_, ids)
 
 def ceildiv(a, b):
     """Divides with ceil.

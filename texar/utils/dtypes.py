@@ -110,8 +110,10 @@ def maybe_hparams_to_dict(hparams):
 def _maybe_list_to_array(str_list, dtype_as):
     if isinstance(dtype_as, (list, tuple)):
         return type(dtype_as)(str_list)
-    else:
+    elif isinstance(dtype_as, np.ndarray):
         return np.array(str_list)
+    else:
+        return str_list
 
 def compat_as_text(str_):
     """Converts strings into `unicode` (Python 2) or `str` (Python 3).
