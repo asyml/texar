@@ -86,7 +86,7 @@ pip install -e .
 * [Documentation](https://texar.readthedocs.io)
 
 ### Reference
-If you use Texar, please cite the [report](.) with the following BibTex entry:
+If you use Texar, please cite the [report](http://www.cs.cmu.edu/~zhitingh/data/hu18texar.pdf) with the following BibTex entry:
 ```
 Texar: A Modularized, Versatile, and Extensible Toolkit for Text Generation
 Zhiting Hu, Haoran Shi, Zichao Yang, Bowen Tan, Tiancheng Zhao, Junxian He, Wentao Wang, Xingjiang Yu, Lianhui Qin, Di Wang, Xuezhe Ma, Hector Liu, Xiaodan Liang, Wanrong Zhu, Devendra Singh Sachan, Eric P. Xing
