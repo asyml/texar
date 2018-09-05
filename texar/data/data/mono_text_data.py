@@ -125,16 +125,18 @@ class MonoTextData(TextDataBase):
         .. code-block:: python
 
             hparams={
-                'dataset': { 'files': 'data.txt', 'vocab': 'vocab.txt' },
+                'dataset': { 'files': 'data.txt', 'vocab_file': 'vocab.txt' },
                 'batch_size': 1
             }
             data = MonoTextData(hparams)
             iterator = DataIterator(data)
             batch = iterator.get_next()
+
+            iterator.switch_to_dataset(sess) # initializes the dataset
             batch_ = sess.run(batch)
             # batch_ == {
             #    'text': [['<BOS>', 'example', 'sequence', '<EOS>']],
-            #    'text_ids': [['1', '5', '10', '2']],
+            #    'text_ids': [[1, 5, 10, 2]],
             #    'length': [4]
             # }
     """

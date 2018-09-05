@@ -78,6 +78,8 @@ class ScalarData(DataBase):
             data = ScalarData(hparams)
             iterator = DataIterator(data)
             batch = iterator.get_next()
+
+            iterator.switch_to_dataset(sess) # initializes the dataset
             batch_ = sess.run(batch)
             # batch_ == {
             #     'label': [2, 9]

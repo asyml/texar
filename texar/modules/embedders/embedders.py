@@ -72,7 +72,7 @@ class WordEmbedder(EmbedderBase):
             ## Use with Texar data module
             hparams={
                 'dataset': {
-                    'embedding_init': {'files': 'word2vec.txt'}
+                    'embedding_init': {'file': 'word2vec.txt'}
                     ...
                 },
             }

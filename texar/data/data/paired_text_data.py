@@ -115,21 +115,23 @@ class PairedTextData(TextDataBase):
         .. code-block:: python
 
             hparams={
-                'source_dataset': {'files': './s', 'vocab': './vs'},
-                'source_dataset': {'files': ['./t1', './t2'], 'vocab': './vt'},
+                'source_dataset': {'files': 's', 'vocab_file': 'vs'},
+                'target_dataset': {'files': ['t1', 't2'], 'vocab_file': 'vt'},
                 'batch_size': 1
             }
             data = PairedTextData(hparams)
             iterator = DataIterator(data)
             batch = iterator.get_next()
+
+            iterator.switch_to_dataset(sess) # initializes the dataset
             batch_ = sess.run(batch)
             # batch_ == {
             #    'source_text': [['source', 'sequence', '<EOS>']],
-            #    'source_text_ids': [['5', '10', '2']],
+            #    'source_text_ids': [[5, 10, 2]],
             #    'source_length': [3]
             #    'target_text': [['<BOS>', 'target', 'sequence', '1', '<EOS>']],
-            #    'target_text_ids': [['1', '6', '10', '20', '2']],
-            #    'target_length': [4]
+            #    'target_text_ids': [[1, 6, 10, 20, 2]],
+            #    'target_length': [5]
             # }
 
     """

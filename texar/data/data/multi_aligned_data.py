@@ -94,8 +94,8 @@ class MultiAlignedData(TextDataBase):
 
             hparams={
                 'datasets': [
-                    {'files': 'a.txt', 'vocab': 'va.txt', 'data_name': 'x'},
-                    {'files': 'b.txt', 'vocab': 'vb.txt', 'data_name': 'y'},
+                    {'files': 'a.txt', 'vocab_file': 'v.a', 'data_name': 'x'},
+                    {'files': 'b.txt', 'vocab_file': 'v.b', 'data_name': 'y'},
                     {'files': 'c.txt', 'data_type': 'int', 'data_name': 'z'}
                 ]
                 'batch_size': 1
@@ -103,14 +103,16 @@ class MultiAlignedData(TextDataBase):
             data = MultiAlignedData(hparams)
             iterator = DataIterator(data)
             batch = iterator.get_next()
+
+            iterator.switch_to_dataset(sess) # initializes the dataset
             batch_ = sess.run(batch)
             # batch_ == {
             #    'x_text': [['<BOS>', 'x', 'sequence', '<EOS>']],
             #    'x_text_ids': [['1', '5', '10', '2']],
-            #    'x_length': [3]
+            #    'x_length': [4]
             #    'y_text': [['<BOS>', 'y', 'sequence', '1', '<EOS>']],
             #    'y_text_ids': [['1', '6', '10', '20', '2']],
-            #    'y_length': [4],
+            #    'y_length': [5],
             #    'z': [1000]
             # }
 
