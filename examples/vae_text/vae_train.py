@@ -150,7 +150,6 @@ def _main(_):
             inputs=output_embed,
             sequence_length=data_batch["length"]-1)
     else:
-        dcdr_shape = tf.shape(dcdr_states)
         outputs = decoder(
             inputs=output_embed,
             memory=dcdr_states,
