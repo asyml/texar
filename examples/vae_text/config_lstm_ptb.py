@@ -78,7 +78,7 @@ emb_hparams = {
 # KL annealing
 kl_anneal_hparams={
     "warm_up": 10,
-    "start": 0.01
+    "start": 0.1
 }
 
 train_data_hparams = {
