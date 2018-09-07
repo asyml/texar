@@ -17,11 +17,12 @@
 
 # pylint: disable=invalid-name, too-few-public-methods, missing-docstring
 
-num_epochs = 50
+dataset = "yahoo"
+num_epochs = 100
 hidden_size = 512
 enc_keep_prob_in = 1.0
 enc_keep_prob_out = 1.0
-dec_keep_prob_in = 0.5
+dec_keep_prob_in = 1.0
 batch_size = 32
 embed_dim = 512
 
@@ -29,8 +30,9 @@ latent_dims = 32
 
 lr_decay_hparams = {
     "init_lr": 0.001,
-    "threshold": 1,
-    "rate": 0.1
+    "threshold": 2,
+    "decay_factor": 0.5,
+    "max_decay": 5
 }
 
 
@@ -68,23 +70,13 @@ emb_hparams = {
 
 # due to the residual connection, the embed_dim should be equal to hidden_size
 trans_hparams = {
-    'share_embed_and_transform': True,
-    'transform_with_bias': False,
-    'beam_width': 1,
-    'multiply_embedding_mode': 'sqrt_depth',
+    'output_layer_bias': False,
     'embedding_dropout': embedding_dropout,
     'attention_dropout': attention_dropout,
     'residual_dropout': residual_dropout,
-    'position_embedder': {
-        'name': 'sinusoids',
-        'hparams': None,
-    },
-    'sinusoid': True,
     'num_heads': 8,
     'num_blocks': num_blocks,
-    'num_units': hidden_size,
-    'zero_pad': False,
-    'bos_pad': False,
+    'dim': hidden_size,
     'initializer': {
         'type': 'variance_scaling_initializer',
         'kwargs': {

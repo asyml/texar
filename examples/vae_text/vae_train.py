@@ -71,6 +71,21 @@ def _main(_):
         'kl_weight': config.kl_anneal_hparams["start"]
     }
 
+    decay_cnt = 0
+    max_decay = config.lr_decay_hparams["max_decay"]
+    decay_factor = config.lr_decay_hparams["decay_factor"]
+    decay_ts = config.lr_decay_hparams["threshold"]
+
+    save_dir = "./models/%s" % config.dataset
+
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    suffix = "%s_%sDecoder.ckpt" % \
+            (config.dataset, config.decoder_hparams["type"])
+
+    save_path = os.path.join(save_dir, suffix)
+
     # KL term annealing rate
     anneal_r = 1.0 / (config.kl_anneal_hparams["warm_up"] * \
         (train_data.dataset_size() / config.batch_size))
@@ -80,7 +95,8 @@ def _main(_):
         vocab_size=train_data.vocab.size, hparams=config.emb_hparams)
 
 
-    output_embed = input_embed = embedder(data_batch["text_ids"])
+    input_embed = embedder(data_batch["text_ids"])
+    output_embed = embedder(data_batch["text_ids"][:, :-1])
 
     if config.enc_keep_prob_in < 1:
         input_embed = tf.nn.dropout(
@@ -133,15 +149,15 @@ def _main(_):
             decoding_strategy="train_greedy",
             inputs=output_embed,
             sequence_length=data_batch["length"]-1)
-        logits = outputs.logits
     else:
-        logits, _ = decoder(
-            decoder_input=data_batch["text_ids"][:, :-1],
-            encoder_output=dcdr_states,
-            encoder_decoder_attention_bias=None)
+        outputs = decoder(
+            inputs=output_embed,
+            memory=dcdr_states,
+            memory_sequence_length=tf.ones(tf.shape(dcdr_states)[0]))
 
-    seq_lengths = data_batch["length"]-1
+    logits = outputs.logits
 
+    seq_lengths = data_batch["length"] - 1
     # Losses & train ops
     rc_loss = tx.losses.sequence_sparse_softmax_cross_entropy(
         labels=data_batch["text_ids"][:, 1:],
@@ -155,7 +171,7 @@ def _main(_):
 
     learning_rate = \
         tf.placeholder(dtype=tf.float32, shape=(), name='learning_rate')
-    train_op = tx.core.get_train_op(nll, learning_rate=learning_rate, 
+    train_op = tx.core.get_train_op(nll, learning_rate=learning_rate,
         hparams=config.opt_hparams)
 
     def _run_epoch(sess, epoch, mode_string, display=10):
@@ -229,6 +245,7 @@ def _main(_):
         return nll_ / num_sents, np.exp(nll_ / num_words)
 
 
+    saver = tf.train.Saver()
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
@@ -258,16 +275,21 @@ def _main(_):
                 opt_vars['steps_not_improved'] = 0
                 best_nll = test_nll
                 best_ppl = test_ppl
+                saver.save(sess, save_path)
             else:
                 opt_vars['steps_not_improved'] += 1
-                if opt_vars['steps_not_improved'] == \
-                config.lr_decay_hparams["threshold"]:
+                if opt_vars['steps_not_improved'] == decay_ts:
                     old_lr = opt_vars['learning_rate']
-                    opt_vars['learning_rate'] *= config.lr_decay_hparams["rate"]
+                    opt_vars['learning_rate'] *= decay_factor
                     opt_vars['steps_not_improved'] = 0
                     new_lr = opt_vars['learning_rate']
                     print('-----\nchange lr, old lr: %f, new lr: %f\n-----' %
                           (old_lr, new_lr))
+                    saver.restore(sess, save_path)
+                    decay_cnt += 1
+                    if decay_cnt == max_decay:
+                        break
+
 
         print('\nbest testing nll: %.4f, best testing ppl %.4f\n' %
               (best_nll, best_ppl))
