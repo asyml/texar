@@ -27,8 +27,8 @@ from __future__ import division
 from __future__ import print_function
 
 # pylint: disable=invalid-name, no-member, too-many-locals
+# pylint: disable=too-many-branches, too-many-statements, redefined-variable-type
 
-import os
 import sys
 import time
 import importlib
@@ -94,22 +94,23 @@ def _main(_):
         hparams={"rnn_cell": config.enc_cell_hparams})
 
     if config.decoder_hparams["type"] == "lstm":
-        decoder = tx.modules.BasicRNNDecoder(vocab_size=train_data.vocab.size,
+        decoder = tx.modules.BasicRNNDecoder(
+            vocab_size=train_data.vocab.size,
             hparams={"rnn_cell": config.dec_cell_hparams})
         decoder_initial_state_size = decoder.cell.state_size
     elif config.decoder_hparams["type"] == 'transformer':
         decoder = tx.modules.TransformerDecoder(
-            embedding=embedder._embedding,
+            embedding=embedder.embedding,
             hparams=config.trans_hparams)
-        decoder_initial_state_size = tf.TensorShape([1,
-            config.emb_hparams["dim"]])
+        decoder_initial_state_size = tf.TensorShape(
+            [1, config.emb_hparams["dim"]])
     else:
         raise NotImplementedError
 
-    connector_mlp = tx.modules.connectors.MLPTransformConnector(
+    connector_mlp = tx.modules.MLPTransformConnector(
         config.latent_dims * 2)
 
-    connector_stoch = tx.modules.connectors.ReparameterizedStochasticConnector(
+    connector_stoch = tx.modules.ReparameterizedStochasticConnector(
         decoder_initial_state_size)
 
     _, ecdr_states = encoder(
@@ -148,15 +149,16 @@ def _main(_):
         logits=logits,
         sequence_length=data_batch["length"]-1)
 
-    # annealing
+    # KL annealing
     kl_weight = tf.placeholder(tf.float32, shape=())
 
     nll = rc_loss + kl_weight * kl_loss
 
-    learning_rate = \
-        tf.placeholder(dtype=tf.float32, shape=(), name='learning_rate')
-    train_op = tx.core.get_train_op(nll, learning_rate=learning_rate, 
-        hparams=config.opt_hparams)
+    learning_rate = tf.placeholder(dtype=tf.float32, shape=(),
+                                   name='learning_rate')
+    train_op = tx.core.get_train_op(nll, learning_rate=learning_rate,
+                                    hparams=config.opt_hparams)
+
 
     def _run_epoch(sess, epoch, mode_string, display=10):
         if mode_string == 'train':
@@ -181,14 +183,14 @@ def _main(_):
 
                 if mode_string == 'train':
                     fetches["train_op"] = train_op
-                    opt_vars["kl_weight"] = min(1.0,
-                        opt_vars["kl_weight"] + anneal_r)
+                    opt_vars["kl_weight"] = min(
+                        1.0, opt_vars["kl_weight"] + anneal_r)
 
                     kl_weight_ = opt_vars["kl_weight"]
                 else:
                     kl_weight_ = 1.0
 
-                mode = (tf.estimator.ModeKeys.TRAIN if mode_string=='train'
+                mode = (tf.estimator.ModeKeys.TRAIN if mode_string == 'train'
                         else tf.estimator.ModeKeys.EVAL)
 
                 feed = {tx.global_mode(): mode,
@@ -234,23 +236,21 @@ def _main(_):
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
 
-        # count trainable parameters
+        # Counts trainable parameters
         total_parameters = 0
         for variable in tf.trainable_variables():
-            # shape is an array of tf.Dimension
-            shape = variable.get_shape()
+            shape = variable.get_shape() # shape is an array of tf.Dimension
             variable_parameters = 1
             for dim in shape:
                 variable_parameters *= dim.value
             total_parameters += variable_parameters
-
         print("%d total parameters" % total_parameters)
 
         best_nll = best_ppl = 0.
 
         for epoch in range(config.num_epochs):
-            train_nll, train_ppl = _run_epoch(sess, epoch, 'train', display=200)
-            val_nll, val_ppl = _run_epoch(sess, epoch, 'valid')
+            _, _ = _run_epoch(sess, epoch, 'train', display=200)
+            val_nll, _ = _run_epoch(sess, epoch, 'valid')
             test_nll, test_ppl = _run_epoch(sess, epoch, 'test')
 
             if val_nll < opt_vars['best_valid_nll']:
@@ -261,7 +261,7 @@ def _main(_):
             else:
                 opt_vars['steps_not_improved'] += 1
                 if opt_vars['steps_not_improved'] == \
-                config.lr_decay_hparams["threshold"]:
+                        config.lr_decay_hparams["threshold"]:
                     old_lr = opt_vars['learning_rate']
                     opt_vars['learning_rate'] *= config.lr_decay_hparams["rate"]
                     opt_vars['steps_not_improved'] = 0
