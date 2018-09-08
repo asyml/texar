@@ -134,7 +134,8 @@ def _main(_):
         tf.one_hot(infer_sample_ids, vocab_size), 1e-20, 1)
 
     expected_reward = tf.Variable(tf.zeros((config.max_num_steps,)))
-    reward = tf.squeeze(f_logits) - expected_reward[:tf.shape(f_logits)[1]]
+    f_logits = tf.reshape(f_logits, shape=(batch_size, -1))
+    reward = f_logits - expected_reward[:tf.shape(f_logits)[1]]
     mean_reward = tf.reduce_mean(reward)
     exp_reward_loss = -tf.reduce_mean(tf.abs(reward))
     exp_reward_loss.set_shape(())
@@ -259,6 +260,8 @@ def _main(_):
                 references=[target_list],
                 hypothesis=inference_list,
                 lowercase=True, return_all=True)
+            if not isinstance(bleu_test, np.ndarray):  # might return 0.0 if inference_list is null
+                bleu_test = [bleu_test] * 5
             rst_test = "epoch %d BLEU1~4 on test dataset:\n" \
                        "%f\n%f\n%f\n%f\n\n" % \
                        (epoch, bleu_test[1], bleu_test[2],
@@ -302,7 +305,7 @@ def _main(_):
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
-
+        
         # Generator pre-training
         for g_epoch in range(config.generator_pretrain_epoch):
             _g_train_epoch(sess, g_epoch, 'pretrain')
@@ -330,3 +333,4 @@ def _main(_):
 
 if __name__ == '__main__':
     tf.app.run(main=_main)
+
