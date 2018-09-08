@@ -17,7 +17,8 @@
 
 # pylint: disable=invalid-name, too-few-public-methods, missing-docstring
 
-num_epochs = 50
+dataset = "ptb"
+num_epochs = 100
 hidden_size = 256
 dec_keep_prob_in = 0.5
 dec_keep_prob_out = 0.5
@@ -31,8 +32,9 @@ latent_dims = 32
 
 lr_decay_hparams = {
     "init_lr": 0.001,
-    "threshold": 5,
-    "rate": 0.5
+    "threshold": 2,
+    "decay_factor": 0.5,
+    "max_decay": 5
 }
 
 
@@ -76,7 +78,7 @@ emb_hparams = {
 # KL annealing
 kl_anneal_hparams={
     "warm_up": 10,
-    "start": 0.01
+    "start": 0.1
 }
 
 train_data_hparams = {

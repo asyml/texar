@@ -32,6 +32,6 @@ Here:
 
 |Dataset    |Metrics   | VAE-LSTM |VAE-Transformer |
 |---------------|-------------|----------------|------------------------|
-|Yahoo | Test PPL<br>Test NLL | 68.31<br>337.36 |59.56<br>326.41|
-|PTB | Test PPL<br>Test NLL | 105.48<br>102.10 | 102.53<br>101.48 |
+|Yahoo | Test PPL<br>Test NLL | 68.11<br>337.13 |59.95<br>326.93|
+|PTB | Test PPL<br>Test NLL | 104.61<br>101.92 | 103.68<br>101.72 |
 
