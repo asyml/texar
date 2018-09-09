@@ -134,7 +134,8 @@ def _main(_):
         tf.one_hot(infer_sample_ids, vocab_size), 1e-20, 1)
 
     expected_reward = tf.Variable(tf.zeros((config.max_num_steps,)))
-    reward = tf.reshape(f_logits, shape=(batch_size, -1)) - expected_reward[:tf.shape(f_logits)[1]]
+    reward = tf.reshape(f_logits, shape=(batch_size, -1)) - \
+            expected_reward[:tf.shape(f_logits)[1]]
     mean_reward = tf.reduce_mean(reward)
     exp_reward_loss = -tf.reduce_mean(tf.abs(reward))
     exp_reward_loss.set_shape(())
@@ -235,8 +236,8 @@ def _main(_):
 
                 if mode_string == 'test':
                     targets = _id2word_map(rtns['target_sample_id'].tolist())
-                    for tgt in targets:
-                        target_list.extend(tgt.split('<EOS>')[0].strip().split())
+                    for t in targets:
+                        target_list.extend(t.split('<EOS>')[0].strip().split())
 
                     inferences = _id2word_map(rtns['infer_sample_id'].tolist())
                     for inf in inferences:
