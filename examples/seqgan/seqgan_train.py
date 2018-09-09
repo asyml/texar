@@ -134,8 +134,7 @@ def _main(_):
         tf.one_hot(infer_sample_ids, vocab_size), 1e-20, 1)
 
     expected_reward = tf.Variable(tf.zeros((config.max_num_steps,)))
-    f_logits = tf.reshape(f_logits, shape=(batch_size, -1))
-    reward = f_logits - expected_reward[:tf.shape(f_logits)[1]]
+    reward = tf.reshape(f_logits, shape=(batch_size, -1)) - expected_reward[:tf.shape(f_logits)[1]]
     mean_reward = tf.reduce_mean(reward)
     exp_reward_loss = -tf.reduce_mean(tf.abs(reward))
     exp_reward_loss.set_shape(())
@@ -305,7 +304,7 @@ def _main(_):
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
-        
+
         # Generator pre-training
         for g_epoch in range(config.generator_pretrain_epoch):
             _g_train_epoch(sess, g_epoch, 'pretrain')
