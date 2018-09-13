@@ -163,8 +163,9 @@ def read_words(filename, newline_token=None):
 
     Args:
         filename (str): Path to the file.
-        newline_token (str): The token to replace the original newline
-            token `\n`. For example, `newline_token=tx.data.SpecialTokens.EOS`.
+        newline_token (str, optional): The token to replace the original newline
+            token "\\\\n". For example,
+            `newline_token=tx.data.SpecialTokens.EOS`.
             If `None`, no replacement is performed.
 
     Returns:
@@ -193,8 +194,9 @@ def make_vocab(filenames, max_vocab_size=-1,
         max_vocab_size (int): Maximum size of the vocabulary. Low frequency
             words that exceeding the limit will be discarded.
             Set to `-1` (default) if no truncation is wanted.
-        newline_token (str): The token to replace the original newline
-            token `\n`. For example, `newline_token=tx.data.SpecialTokens.EOS`.
+        newline_token (str, optional): The token to replace the original newline
+            token "\\\\n". For example,
+            `newline_token=tx.data.SpecialTokens.EOS`.
             If `None`, no replacement is performed.
         return_type (str): Either "list" or "dict". If "list" (default), this
             function returns a list of words sorted by frequency. If "dict",
