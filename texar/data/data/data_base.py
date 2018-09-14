@@ -78,7 +78,10 @@ class DataBase(object):
             "allow_smaller_final_batch" : bool
                Whether to allow the final batch to be smaller if there are
                insufficient elements left. If `False`, the final batch is
-               discarded if it is smaller than batch size.
+               discarded if it is smaller than batch size. Note that,
+               if `True`, `output_shapes` of the resulting dataset
+               will have a a **static** batch_size dimension equal to
+               "batch_size".
 
             "shuffle" : bool
                 Whether to randomly shuffle the elements of the dataset.

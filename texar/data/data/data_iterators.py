@@ -135,9 +135,9 @@ class DataIterator(DataIteratorBase):
 
         self._variable_scope = get_unique_named_variable_scope('data_iterator')
         with tf.variable_scope(self._variable_scope):
-            arb_dataset = self._datasets[next(iter(self._datasets))]
+            first_dataset = self._datasets[sorted(self.dataset_names)[0]]
             self._iterator = tf.data.Iterator.from_structure(
-                arb_dataset.output_types, arb_dataset.output_shapes)
+                first_dataset.output_types, first_dataset.output_shapes)
             self._iterator_init_ops = {
                 name: self._iterator.make_initializer(d)
                 for name, d in self._datasets.items()
@@ -324,10 +324,10 @@ class FeedableDataIterator(DataIteratorBase):
             'feedable_data_iterator')
         with tf.variable_scope(self._variable_scope):
             self._handle = tf.placeholder(tf.string, shape=[], name='handle')
-            arb_dataset = self._datasets[next(iter(self._datasets))]
+            first_dataset = self._datasets[sorted(self.dataset_names)[0]]
             self._iterator = tf.data.Iterator.from_string_handle(
-                self._handle, arb_dataset.output_types,
-                arb_dataset.output_shapes)
+                self._handle, first_dataset.output_types,
+                first_dataset.output_shapes)
 
             self._dataset_iterators = {
                 name: dataset.make_initializable_iterator()
