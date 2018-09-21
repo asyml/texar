@@ -1,9 +1,16 @@
-### *[Byte Pair Encoding](https://arxiv.org/abs/1508.07909)* (BPE) pipeline
+
+This directory contains several utilities for, e.g., data pre-processing. 
+
+Instructions of using BPE and WPM encoding are as follows. 
+See [examples/transformer](https://github.com/asyml/texar/tree/master/examples/transformer)
+for a real example of using these encoding.
+
+### *[Byte Pair Encoding (BPE)](https://arxiv.org/abs/1508.07909)* pipeline
 
 * Add `bin` directory to `PATH` env variable
 ```bash
-TXTGEN=$(pwd)  
-export PATH=$PATH:$TXTGEN/bin
+TEXAR=$(pwd)  
+export PATH=$PATH:$TEXAR/bin
 ```
 
 * Learning BPE vocab on source and target combined
@@ -26,12 +33,12 @@ mv test.out test.out.bpe
 cat test.out.bpe | sed -E 's/(@@ )|(@@ ?$)//g' > test.out
 ```
 
-##### Evaluate Using t2t-Bleu
+##### Evaluate Using t2t-bleu
 ```bash
 t2t-bleu --translation=test.out --reference=test.tgt
 ```
 
-### Word Piece Model (WPM)
+### Word Piece Model (WPM) pipeline
 
 * This requires installation of *[sentencepiece](https://github.com/google/sentencepiece#python-module) library
 ```bash

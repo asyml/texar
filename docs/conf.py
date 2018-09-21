@@ -255,7 +255,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'texar.tex', u'Texar Documentation',
-     u'TxtGen', 'manual'),
+     u'Texar', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
