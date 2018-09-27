@@ -8,7 +8,7 @@
 [![Documentation Status](https://readthedocs.org/projects/texar/badge/?version=latest)](https://texar.readthedocs.io/en/latest/?badge=latest)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/asyml/texar/blob/master/LICENSE)
  
-**Texar** is an open-source toolkit based on Tensorflow, aiming to support a broad set of machine learning especially **text generation tasks**, such as machine translation, dialog, summarization, content manipulation, language modeling, and so on. Texar is designed for both researchers and practitioners for fast prototyping and experimentation.
+**Texar** is an open-source toolkit based on TensorFlow, aiming to support a broad set of machine learning especially **text generation tasks**, such as machine translation, dialog, summarization, content manipulation, language modeling, and so on. Texar is designed for both researchers and practitioners for fast prototyping and experimentation.
  
 With the design goals of **modularity, versatility, and extensibility** in mind, Texar extracts the common patterns underlying the diverse tasks and methodologies, creates a library of highly reusable modules and functionalities, and facilitates **arbitrary model architectures and algorithmic paradigms**, e.g., 
    * encoder(s) to decoder(s), sequential- and self-attentions, memory, hierarchical models, classifiers... 
@@ -24,7 +24,7 @@ With Texar, cutting-edge complex models can be easily constructed, freely enrich
 * **Versatility**. Texar contains a wide range of modules and functionalities for composing arbitrary model architectures and implementing various learning algorithms, as well as for data processing, evaluation, prediction, etc.
 * **Modularity**. Texar decomposes diverse complex machine learning models/algorithms into a set of highly-reusable modules. In particular, model **architecture, losses, and learning processes** are fully decomposed.  
 Users can construct their own models at a high conceptual level just like assembling building blocks. It is convenient to plug-ins or swap-out modules, and configure rich options of each module. For example, switching between maximum likelihood learning and reinforcement learning involves only changing several lines of code.
-* **Extensibility**. It is straightforward to integrate any user-customized, external modules. Also, Texar is fully compatible with the native Tensorflow interfaces and can take advantage of the rich Tensorflow features, and resources from the vibrant open-source community.
+* **Extensibility**. It is straightforward to integrate any user-customized, external modules. Also, Texar is fully compatible with the native TensorFlow interfaces and can take advantage of the rich TensorFlow features, and resources from the vibrant open-source community.
 * Interfaces with different functionality levels. Users can customize a model through 1) simple **Python/YAML configuration files** of provided model templates/examples; 2) programming with **Python Library APIs** for maximal customizability.
 * Easy-to-use APIs: 1) Convenient automatic variable re-use---no worry about the complicated TF variable scopes; 2) Pytorch-like callable modules; 3) Rich configuration options for each module, all with default values; ...
 * Well-structured high-quality code of uniform design patterns and consistent styles. 
@@ -74,7 +74,7 @@ agent = tx.agents.SeqPGAgent(samples=outputs.sample_id,
 ```
 Many more examples are available [here](./examples)
   
-### Installtion
+### Installation
 ```
 git clone https://github.com/asyml/texar.git
 cd texar
