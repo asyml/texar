@@ -33,12 +33,12 @@ embedder = {
 # --------------------- Encoder --------------------- #
 encoder = {
     'rnn_cell_fw': {
-        'type': 'BasicLSTMCell',
+        'type': 'LSTMCell',
         'kwargs': {
             'num_units': num_units,
             'forget_bias': 1.0,
             'activation': None,
-            # Other arguments go here for tf.contrib.rnn.BasicLSTMCell
+            # Other arguments go here for tf.nn.rnn_cell.LSTMCell
             # ...
         },
         'num_layers': 1,
@@ -78,12 +78,12 @@ encoder = {
 # --------------------- Decoder --------------------- #
 decoder = {
     'rnn_cell': {
-        'type': 'BasicLSTMCell',
+        'type': 'LSTMCell',
         'kwargs': {
             'num_units': num_units,
             'forget_bias': 1.0,
             'activation': None,
-            # Other arguments go here for tf.contrib.rnn.BasicLSTMCell
+            # Other arguments go here for tf.nn.rnn_cell.LSTMCell
             # ...
         },
         'num_layers': 1,

@@ -47,7 +47,7 @@ conv = {
 }
 
 cell = {
-    "type": "BasicLSTMCell",
+    "type": "LSTMCell",
     "kwargs": {
         "num_units": hidden_size,
         "forget_bias": 1.

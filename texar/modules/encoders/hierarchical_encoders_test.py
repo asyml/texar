@@ -122,7 +122,7 @@ class HierarchicalRNNEncoderTest(tf.test.TestCase):
             },
             "encoder_major_hparams": {
                 "rnn_cell": {
-                    "type": "BasicLSTMCell",
+                    "type": "LSTMCell",
                     "kwargs": {
                         "num_units": 200
                     }

@@ -89,8 +89,8 @@ class HParams(object):
         .. code-block:: python
 
             default_rnn_cell_hparams = {
-                "type": "BasicLSTMCell",
-                "kwargs": { "num_units": 256 }
+                "type": "LSTMCell",
+                "kwargs": {"num_units": 256}
                 # Other hyperparameters
                 ...
             }
@@ -98,7 +98,7 @@ class HParams(object):
                 "kwargs" {
                     "num_units": 123,
                     "forget_bias": 0.0         # Other valid keyword arguments
-                    "activation": "tf.nn.relu" # for BasicLSTMCell constructor
+                    "activation": "tf.nn.relu" # for LSTMCell constructor
                 }
             }
             _ = HParams(my_hparams, default_rnn_cell_hparams)

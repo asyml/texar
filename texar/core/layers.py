@@ -78,7 +78,7 @@ def default_rnn_cell_hparams():
     .. code-block:: python
 
         {
-            "type": "BasicLSTMCell",
+            "type": "LSTMCell",
             "kwargs": {
                 "num_units": 256
             }
@@ -99,9 +99,10 @@ def default_rnn_cell_hparams():
     "type" : str or cell class or cell instance
         The RNN cell type. This can be
 
-        - The string name or full module path of a cell class. If the class \
+        - The string name or full module path of a cell class. If class \
         name is provided, the class must be in module \
-        :tf_main:`tf.contrib.rnn <contrib/rnn>` or :mod:`texar.custom`.
+        :tf_main:`tf.nn.rnn_cell <nn/rnn_cell/LSTMCell>`, \
+        :tf_main:`tf.contrib.rnn <contrib/rnn>`, or :mod:`texar.custom`.
         - A cell class.
         - An instance of a cell class. This is not valid if \
         "num_layers" > 1.
@@ -110,10 +111,10 @@ def default_rnn_cell_hparams():
 
         .. code-block:: python
 
-            "type": "BasicLSTMCell" # class name
+            "type": "LSTMCell" # class name
             "type": "tensorflow.contrib.rnn.Conv1DLSTMCell" # module path
             "type": "my_module.MyCell" # module path
-            "type": tf.contrib.rnn.GRUCell # class
+            "type": tf.nn.rnn_cell.GRUCell # class
             "type": BasicRNNCell(num_units=100) # cell instance
             "type": MyCell(...) # cell instance
 
@@ -145,7 +146,7 @@ def default_rnn_cell_hparams():
         .. code-block:: python
 
             # Assume embedding_dim = 100
-            "type": "BasicLSTMCell",
+            "type": "LSTMCell",
             "kwargs": { "num_units": 123 },
             "num_layers": 3
             "dropout": {
@@ -165,7 +166,7 @@ def default_rnn_cell_hparams():
         "num_layers"==1.
     """
     return {
-        "type": "BasicLSTMCell",
+        "type": "LSTMCell",
         "kwargs": {
             "num_units": 256,
         },
@@ -230,7 +231,8 @@ def get_rnn_cell(hparams=None, mode=None):
                 raise ValueError(
                     "If 'num_layers'>1, then 'type' must be a cell class or "
                     "its name/module path, rather than a cell instance.")
-        cell_modules = ['tensorflow.contrib.rnn', 'texar.custom']
+        cell_modules = ['tensorflow.nn.rnn_cell', 'tensorflow.contrib.rnn',
+                        'texar.custom']
         cell = utils.check_or_get_instance(
             cell_type, cell_kwargs, cell_modules, rnn.RNNCell)
 
@@ -278,8 +280,7 @@ def get_rnn_cell_trainable_variables(cell):
     """Returns the list of trainable variables of an RNN cell.
 
     Args:
-        cell: an instance of
-            :tf_main:`tf.contrib.rnn.RNNCell <contrib/rnn/RNNCell>`.
+        cell: an instance of :tf_main:`RNNCell <nn/rnn_cell/RNNCell>`.
 
     Returns:
         list: trainable variables of the cell.

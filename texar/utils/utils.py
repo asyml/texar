@@ -226,8 +226,10 @@ def get_instance(class_or_name, kwargs, module_paths=None):
     class_ = class_or_name
     if is_str(class_):
         class_ = get_class(class_, module_paths)
+
     # Check validity of arguments
     class_args = set(_inspect_getargspec(class_.__init__).args)
+
     if kwargs is None:
         kwargs = {}
     for key in kwargs.keys():

@@ -33,18 +33,18 @@ class GetRNNCellTest(tf.test.TestCase):
 
         # Given instance
         hparams = {
-            "type": rnn.BasicLSTMCell(num_units)
+            "type": rnn.LSTMCell(num_units)
         }
         cell = layers.get_rnn_cell(hparams)
-        self.assertTrue(isinstance(cell, rnn.BasicLSTMCell))
+        self.assertTrue(isinstance(cell, rnn.LSTMCell))
 
         # Given class
         hparams = {
-            "type": rnn.BasicLSTMCell,
-            "kwargs": { "num_units": 10 }
+            "type": rnn.LSTMCell,
+            "kwargs": {"num_units": 10}
         }
         cell = layers.get_rnn_cell(hparams)
-        self.assertTrue(isinstance(cell, rnn.BasicLSTMCell))
+        self.assertTrue(isinstance(cell, rnn.LSTMCell))
 
         # Given string, and complex hyperparameters
         keep_prob_x = tf.placeholder(
