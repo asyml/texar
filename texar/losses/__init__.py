@@ -27,3 +27,4 @@ from texar.losses.pg_losses import *
 from texar.losses.adv_losses import *
 from texar.losses.rewards import *
 from texar.losses.entropy import *
+from texar.losses.differentiable_expected_bleu import *
