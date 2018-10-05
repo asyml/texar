@@ -61,10 +61,12 @@ def build_model(batch, train_data):
             train_data.target_vocab.bos_token_id
     end_token = train_data.target_vocab.eos_token_id
 
-    helper = tx.modules.GumbelSoftmaxEmbeddingHelper(
+    helper = tx.modules.TeacherMaskSoftmaxEmbeddingHelper(
+        inputs=batch['target_text_ids'],
+        sequence_length=batch['target_length']-1,
         embedding=target_embedder,
-        start_tokens=start_tokens,
-        end_token=end_token,
+        n_unmask=1,
+        n_mask=0,
         tau=config_train.tau)
 
     training_outputs, _, _ = decoder(
@@ -75,8 +77,8 @@ def build_model(batch, train_data):
         tx.losses.differentiable_expected_bleu(
             #TODO: decide whether to include BOS
             labels=batch['target_text_ids'][:, 1:],
-            logits=training_outputs.logits,
-            sequence_length=batch['target_length'] - 1))
+            probs=training_outputs.sample_id,
+            sequence_length=batch['target_length']-1))
 
     beam_search_outputs, _, _ = \
         tx.modules.beam_search_decode(

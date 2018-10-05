@@ -38,6 +38,7 @@ __all__ = [
     "_get_training_helper",
     "GumbelSoftmaxEmbeddingHelper",
     "SoftmaxEmbeddingHelper",
+    "TeacherMaskSoftmaxEmbeddingHelper",
 ]
 
 def default_helper_train_hparams():
@@ -185,6 +186,17 @@ def _get_training_helper( #pylint: disable=invalid-name
     return helper
 
 
+def get_embedding_and_fn(embedding):
+    if isinstance(embedding, EmbedderBase):
+        embedding = embedding.embedding
+
+    if callable(embedding):
+        raise ValueError("`embedding` must be an embedding tensor or an "
+                         "instance of subclass of `EmbedderBase`.")
+    else:
+        return embedding, (lambda ids: tf.nn.embedding_lookup(embedding, ids))
+
+
 class SoftmaxEmbeddingHelper(TFHelper):
     """A helper that feeds softmax probabilities over vocabulary
     to the next step.
@@ -215,17 +227,7 @@ class SoftmaxEmbeddingHelper(TFHelper):
 
     def __init__(self, embedding, start_tokens, end_token, tau,
                  stop_gradient=False, use_finish=True):
-        if isinstance(embedding, EmbedderBase):
-            embedding = embedding.embedding
-
-        if callable(embedding):
-            raise ValueError("`embedding` must be an embedding tensor or an "
-                             "instance of subclass of `EmbedderBase`.")
-        else:
-            self._embedding = embedding
-            self._embedding_fn = (
-                lambda ids: tf.nn.embedding_lookup(embedding, ids))
-
+        self._embedding, self._embedding_fn = get_embedding_and_fn(embedding)
         self._start_tokens = tf.convert_to_tensor(
             start_tokens, dtype=tf.int32, name="start_tokens")
         self._end_token = tf.convert_to_tensor(
@@ -326,3 +328,83 @@ class GumbelSoftmaxEmbeddingHelper(SoftmaxEmbeddingHelper):
             sample_ids = tf.stop_gradient(sample_ids_hard - sample_ids) \
                          + sample_ids
         return sample_ids
+
+
+class TeacherMaskSoftmaxEmbeddingHelper(TFTrainingHelper):
+    def __init__(self, inputs, sequence_length, embedding, n_unmask,
+                 n_mask, tau=1., time_major=False, seed=None,
+                 stop_gradient=False):
+        super(TeacherMaskSoftmaxEmbeddingHelper, self).__init__(
+            inputs=inputs,
+            sequence_length=sequence_length,
+            time_major=time_major)
+
+        self._embedding, self._embedding_fn = get_embedding_and_fn(embedding)
+        self._tau = tau
+        self._seed = seed
+        self._stop_gradient = stop_gradient
+
+        self._zero_next_inputs = tf.zeros_like(
+            self._embedding_fn(self._zero_inputs))
+
+        self._n_unmask = tf.Variable(n_unmask, name='n_unmask')
+        self._n_mask = tf.Variable(n_mask, name='n_mask')
+        self._n_cycle = tf.add(self._n_unmask, self._n_mask, name='n_cycle')
+        self._new_n_unmask = tf.placeholder(shape=[], dtype=tf.int32)
+        self._new_n_mask = tf.placeholder(shape=[], dtype=tf.int32)
+        self._assign_n_unmask = tf.assign(self._n_unmask, self._new_n_unmask)
+        self._assign_n_mask = tf.assign(self._n_mask, self._new_n_mask)
+        self._n_shift = tf.random_uniform(
+            [], maxval=self._n_cycle, dtype=self._n_cycle.dtype,
+            seed=self._seed, name='n_shift')
+
+    @property
+    def sample_ids_dtype(self):
+        return tf.float32
+
+    @property
+    def sample_ids_shape(self):
+        return self._embedding.get_shape()[:1]
+
+    def assign_mask_pattern(self, n_unmask, n_mask, sess):
+        sess.run([self._assign_n_unmask, self._assign_n_mask],
+                 feed_dict={self._new_n_unmask: n_unmask,
+                            self._new_n_mask: n_mask})
+
+    def _is_masked(self, time):
+        return time % self._n_cycle < self._n_mask
+
+    def initialize(self, name=None):
+        finished = tf.equal(0, self._sequence_length)
+        all_finished = tf.reduce_all(finished)
+        next_inputs = tf.cond(
+            all_finished,
+            lambda: self._zero_next_inputs,
+            lambda: self._embedding_fn(self._input_tas.read(0)))
+        return (finished, next_inputs)
+
+    def sample(self, time, outputs, state, name=None):
+        """Returns `sample_id` of shape `[batch_size, vocab_size]`.
+        """
+        next_time = time + 1
+        sample_ids = tf.cond(
+            self._is_masked(next_time),
+            lambda: tf.one_hot(self._input_tas.read(next_time),
+                               self._embedding.get_shape()[0]),
+            lambda: tf.nn.softmax(outputs / self._tau))
+        return sample_ids
+
+    def next_inputs(self, time, outputs, state, sample_ids, name=None):
+        next_time = time + 1
+        finished = (next_time >= self._sequence_length)
+        all_finished = tf.reduce_all(finished)
+        if self._stop_gradient:
+            sample_ids = tf.stop_gradient(sample_ids)
+        next_inputs = tf.cond(
+            all_finished,
+            lambda: self._zero_next_inputs,
+            lambda: tf.cond(  # for efficiency
+                self._is_masked(next_time),
+                lambda: self._embedding_fn(self._input_tas.read(next_time)),
+                lambda: tf.matmul(sample_ids, self._embedding)))
+        return (finished, next_inputs, state)
