@@ -1,12 +1,8 @@
-
-num_epochs = 15
-display = 500
-
-source_vocab_file = './data/iwslt14/vocab.de'
-target_vocab_file = './data/iwslt14/vocab.en'
+source_vocab_file = 'data/iwslt14/vocab.de'
+target_vocab_file = 'data/iwslt14/vocab.en'
 
 train = {
-    'batch_size': 32,
+    'batch_size': 80,
     'allow_smaller_final_batch': False,
     'source_dataset': {
         "files": 'data/iwslt14/train.de',
@@ -17,10 +13,11 @@ train = {
         'files': 'data/iwslt14/train.en',
         'vocab_file': target_vocab_file,
         'max_seq_length': 50
-    }
+    },
+    'allow_smaller_final_batch': False,
 }
 val = {
-    'batch_size': 32,
+    'batch_size': 80,
     'shuffle': False,
     'source_dataset': {
         "files": 'data/iwslt14/valid.de',
@@ -29,10 +26,10 @@ val = {
     'target_dataset': {
         'files': 'data/iwslt14/valid.en',
         'vocab_file': target_vocab_file,
-    }
+    },
 }
 test = {
-    'batch_size': 32,
+    'batch_size': 80,
     'shuffle': False,
     'source_dataset': {
         "files": 'data/iwslt14/test.de',
@@ -41,5 +38,5 @@ test = {
     'target_dataset': {
         'files': 'data/iwslt14/test.en',
         'vocab_file': target_vocab_file,
-    }
+    },
 }

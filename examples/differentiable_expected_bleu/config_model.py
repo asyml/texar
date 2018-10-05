@@ -1,11 +1,11 @@
 # Attentional Seq2seq model.
 # Hyperparameters not specified here will take the default values.
 
-num_units = 256
-beam_width = 10
+num_units = 1000
+embedding_dim = 500
 
 embedder = {
-    'dim': num_units
+    'dim': embedding_dim
 }
 encoder = {
     'rnn_cell_fw': {
