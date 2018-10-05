@@ -366,7 +366,7 @@ class TeacherMaskSoftmaxEmbeddingHelper(TFTrainingHelper):
     def sample_ids_shape(self):
         return self._embedding.get_shape()[:1]
 
-    def assign_mask_pattern(self, n_unmask, n_mask, sess):
+    def assign_mask_pattern(self, sess, n_unmask, n_mask):
         sess.run([self._assign_n_unmask, self._assign_n_mask],
                  feed_dict={self._new_n_unmask: n_unmask,
                             self._new_n_mask: n_mask})
