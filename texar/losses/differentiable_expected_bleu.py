@@ -29,7 +29,7 @@ __all__ = [
 ]
 
 def differentiable_expected_bleu(labels,
-                                 logits,
+                                 probs,
                                  sequence_length,
                                  time_major=False,
                                  min_fn=lambda x: tf.minimum(1., x),
@@ -82,7 +82,7 @@ def differentiable_expected_bleu(labels,
 
     """ # TODO: rewrite example
     with tf.name_scope(name, "sequence_sparse_softmax_cross_entropy"):
-        X = logits
+        X = probs
         Y = labels
 
         if time_major:
