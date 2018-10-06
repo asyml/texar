@@ -125,7 +125,7 @@ def default_optimization_hparams():
         :tf_main:`tf.clip_by_average_norm <clip_by_average_norm>`, etc.
 
         "type" specifies the gradient clip function, and can be a function,
-        or its name or mudule path. If function name is provided, the
+        or its name or module path. If function name is provided, the
         function must be from module :tf_main:`tf < >` or :mod:`texar.custom`.
 
         "kwargs" specifies keyword arguments to the function, except arguments
