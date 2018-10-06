@@ -21,6 +21,7 @@ from __future__ import division
 #pylint: disable=invalid-name, too-many-arguments, too-many-locals
 
 import importlib
+import os
 import tensorflow as tf
 import texar as tx
 
@@ -74,7 +75,8 @@ def build_model(batch, train_data):
         tx.losses.sequence_sparse_softmax_cross_entropy(
             labels=batch['target_text_ids'][:, 1:],
             logits=tf_outputs.logits,
-            sequence_length=batch['target_length']-1))
+            sequence_length=batch['target_length']-1),
+        hparams=config_train.train_xe)
 
     # teacher mask + DEBLEU fine-tuning
     tm_helper = tx.modules.TeacherMaskSoftmaxEmbeddingHelper(
@@ -93,7 +95,8 @@ def build_model(batch, train_data):
             #TODO: decide whether to include BOS
             labels=batch['target_text_ids'][:, 1:],
             probs=tm_outputs.sample_id,
-            sequence_length=batch['target_length']-1))
+            sequence_length=batch['target_length']-1),
+        hparams=config_train.train_debleu)
 
     # inference: beam search decoding
     start_tokens = tf.ones_like(batch['target_length']) * \
@@ -122,21 +125,29 @@ def main():
 
     data_batch = data_iterator.get_next()
 
+    global_step = tf.train.create_global_step()
+
     train_xe_op, train_debleu_op, infer_outputs = \
         build_model(data_batch, train_data)
 
-    def _train_epoch(sess):
+    merged_summary = tf.summary.merge_all()
+
+    saver = tf.train.Saver(max_to_keep=None)
+
+    def _train_epoch(sess, summary_writer):
         data_iterator.restart_dataset(sess, 'train')
         feed_dict = {
             tx.global_mode(): tf.estimator.ModeKeys.TRAIN,
             data_iterator.handle: data_iterator.get_handle(sess, 'train')
         }
 
-        for batch_i, batch in \
-                enumerate(get_data_loader(sess, data_batch, feed_dict)):
-            loss = sess.run(train_xe_op, feed_dict=feed_dict)
+        for loss, summary, step in get_data_loader(
+                sess, (train_xe_op, merged_summary, global_step), feed_dict):
+            summary_writer.add_summary(summary, step)
+            if step % config_train.steps_per_eval == 0:
+                _eval_epoch(sess, summary_writer, 'val')
 
-    def _eval_epoch(sess, mode):
+    def _eval_epoch(sess, summary_writer, mode):
         data_iterator.restart_dataset(sess, mode)
         feed_dict = {
             tx.global_mode(): tf.estimator.ModeKeys.EVAL,
@@ -145,7 +156,7 @@ def main():
 
         ref_hypo_pairs = []
         fetches = [
-            batch['target_text'][:, 1:],
+            data_batch['target_text'][:, 1:],
             infer_outputs.predicted_ids[:, :, 0]
         ]
         for target_texts_ori, output_ids in \
@@ -158,22 +169,42 @@ def main():
                 zip(map(lambda x: [x], target_texts), output_texts))
 
         refs, hypos = zip(*ref_hypo_pairs)
-        return tx.evals.corpus_bleu_moses(list_of_references=refs,
+        bleu = tx.evals.corpus_bleu_moses(list_of_references=refs,
                                           hypotheses=hypos)
+        step = tf.train.global_step(sess, global_step)
+        summary = tf.Summary()
+        summary.value.add(tag='{}/BLEU'.format(mode), simple_value=bleu)
+        summary_writer.add_summary(summary, step)
+        return bleu
 
+    best_val_bleu = -1
     with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-        sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
+        ckpt_name = 'ckpt/model.ckpt'
+        if os.path.exists('ckpt') and tf.train.checkpoint_exists(ckpt_name):
+            print('restoring from {} ...'.format(ckpt_name))
+            saver.restore(sess, ckpt_name)
+        else:
+            sess.run(tf.global_variables_initializer())
+            sess.run(tf.local_variables_initializer())
+
+        summary_writer = tf.summary.FileWriter('log', sess.graph)
 
         epoch = 0
         while epoch < config_train.max_epochs:
-            _train_epoch(sess)
+            val_bleu = _eval_epoch(sess, summary_writer, 'val')
+            if val_bleu > best_val_bleu:
+                best_val_bleu = val_bleu
+                print('epoch: {}, step: {}, best val bleu: {}'.format(
+                    epoch,
+                    tf.train.global_step(sess, global_step),
+                    best_val_bleu))
+                saved_path = saver.save(sess, 'ckpt/best.ckpt')
+                print('saved to {}'.format(saved_path))
+            _train_epoch(sess, summary_writer)
             epoch += 1
-
-            val_bleu = _eval_epoch(sess, 'val')
-
-            test_bleu = _eval_epoch(sess, 'test')
+            saved_path = saver.save(sess, 'ckpt/model.ckpt')
+            print('saved to {}'.format(saved_path))
 
 
 if __name__ == '__main__':
