@@ -28,6 +28,73 @@ __all__ = [
     "differentiable_expected_bleu",
 ]
 
+def batch_gather(params, indices, name=None):
+  """This function is copied and modified from tensorflow 11.0.
+  Gather slices from `params` according to `indices` with leading batch dims.
+  This operation assumes that the leading dimensions of `indices` are dense,
+  and the gathers on the axis corresponding to the last dimension of `indices`.
+  More concretely it computes:
+  result[i1, ..., in] = params[i1, ..., in-1, indices[i1, ..., in]]
+  Therefore `params` should be a Tensor of shape [A1, ..., AN, B1, ..., BM],
+  `indices` should be a Tensor of shape [A1, ..., AN-1, C] and `result` will be
+  a Tensor of size `[A1, ..., AN-1, C, B1, ..., BM]`.
+  In the case in which indices is a 1D tensor, this operation is equivalent to
+  `tf.gather`.
+  See also `tf.gather` and `tf.gather_nd`.
+  Args:
+    params: A Tensor. The tensor from which to gather values.
+    indices: A Tensor. Must be one of the following types: int32, int64. Index
+        tensor. Must be in range `[0, params.shape[axis]`, where `axis` is the
+        last dimension of `indices` itself.
+    name: A name for the operation (optional).
+  Returns:
+    A Tensor. Has the same type as `params`.
+  Raises:
+    ValueError: if `indices` has an unknown shape.
+  """
+
+  with tf.name_scope(name):
+    indices = tf.convert_to_tensor(indices, name="indices")
+    params = tf.convert_to_tensor(params, name="params")
+    indices_shape = tf.shape(indices)
+    params_shape = tf.shape(params)
+
+    ndims = indices.shape.ndims
+    if ndims is None:
+      raise ValueError("batch_gather does not allow indices with unknown "
+                       "shape.")
+    batch_indices = indices
+    indices_dtype = indices.dtype.base_dtype
+    accum_dim_value = tf.ones((), dtype=indices_dtype)
+    # Use correct type for offset index computation
+    casted_params_shape = tf.cast(params_shape, indices_dtype)
+    for dim in range(ndims-1, 0, -1):
+      dim_value = casted_params_shape[dim-1]
+      accum_dim_value *= casted_params_shape[dim]
+      start = tf.zeros((), dtype=indices_dtype)
+      step = tf.ones((), dtype=indices_dtype)
+      dim_indices = tf.range(start, dim_value, step)
+      dim_indices *= accum_dim_value
+      dim_shape = tf.stack([1] * (dim - 1) + [dim_value] + [1] * (ndims - dim),
+                           axis=0)
+      batch_indices += tf.reshape(dim_indices, dim_shape)
+
+    flat_indices = tf.reshape(batch_indices, [-1])
+    outer_shape = params_shape[ndims:]
+    flat_inner_shape = tf.reduce_prod(params_shape[:ndims])
+
+    flat_params = tf.reshape(
+        params, tf.concat([[flat_inner_shape], outer_shape], axis=0))
+    flat_result = tf.gather(flat_params, flat_indices)
+    result = tf.reshape(
+        flat_result, tf.concat([indices_shape, outer_shape], axis=0))
+    final_shape = indices.get_shape()[:ndims-1].merge_with(
+        params.get_shape()[:ndims -1])
+    final_shape = final_shape.concatenate(indices.get_shape()[ndims-1])
+    final_shape = final_shape.concatenate(params.get_shape()[ndims:])
+    result.set_shape(final_shape)
+    return result
+
 def differentiable_expected_bleu(labels,
                                  probs,
                                  sequence_length,
@@ -92,7 +159,7 @@ def differentiable_expected_bleu(labels,
         sizeX = tf.shape(X)[1]
         sizeY = tf.shape(Y)[1]
 
-        XY = tf.batch_gather(X, tf.tile(tf.expand_dims(tf.to_int32(Y), 1), [1, sizeX, 1]))
+        XY = batch_gather(X, tf.tile(tf.expand_dims(Y, 1), [1, sizeX, 1]))
         YY = tf.to_float(tf.equal(tf.expand_dims(Y, 2), tf.expand_dims(Y, 1)))
 
         maskX = tf.sequence_mask(
@@ -107,8 +174,10 @@ def differentiable_expected_bleu(labels,
         o = []
 
         for order in range(max_order):
-            matchXY = XY[:, : sizeX - order, : sizeY - order] * matchXY[:, 1:, 1:]
-            matchYY = YY[:, : sizeY - order, : sizeY - order] * matchYY[:, 1:, 1:]
+            matchXY = XY[:, : sizeX - order, : sizeY - order] * \
+                      matchXY[:, 1:, 1:]
+            matchYY = YY[:, : sizeY - order, : sizeY - order] * \
+                      matchYY[:, 1:, 1:]
             cntYX = tf.reduce_sum(matchXY, 1, keepdims=True)
             cntYY = tf.reduce_sum(matchYY, 1, keepdims=True)
             o_order = tf.reduce_sum(tf.reduce_sum(
