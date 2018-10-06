@@ -14,7 +14,6 @@ train = {
         'vocab_file': target_vocab_file,
         'max_seq_length': 50
     },
-    'allow_smaller_final_batch': False,
 }
 val = {
     'batch_size': 80,
@@ -40,3 +39,4 @@ test = {
         'vocab_file': target_vocab_file,
     },
 }
+val = test
