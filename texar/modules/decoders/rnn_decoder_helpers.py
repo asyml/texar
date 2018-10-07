@@ -403,8 +403,5 @@ class TeacherMaskSoftmaxEmbeddingHelper(TFTrainingHelper):
         next_inputs = tf.cond(
             all_finished,
             lambda: self._zero_next_inputs,
-            lambda: tf.cond(  # for efficiency
-                self._is_masked(next_time),
-                lambda: self._embedding_fn(self._input_tas.read(next_time)),
-                lambda: tf.matmul(sample_ids, self._embedding)))
+            lambda: tf.matmul(sample_ids, self._embedding))
         return (finished, next_inputs, state)

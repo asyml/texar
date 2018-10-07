@@ -24,19 +24,23 @@ import importlib
 import os
 import tensorflow as tf
 import texar as tx
+from triggers import BestEverConvergenceTrigger
 
 flags = tf.flags
 
 flags.DEFINE_string("config_train", "config_train", "The training config.")
 flags.DEFINE_string("config_model", "config_model", "The model config.")
 flags.DEFINE_string("config_data", "config_iwslt14", "The dataset config.")
+flags.DEFINE_boolean("pretraining", False, "whether pretraining")
 
 FLAGS = flags.FLAGS
 
 config_train = importlib.import_module(FLAGS.config_train)
 config_model = importlib.import_module(FLAGS.config_model)
 config_data = importlib.import_module(FLAGS.config_data)
+pretraining = FLAGS.pretraining
 
+mask_patterns = config_train.mask_patterns
 
 def get_data_loader(sess, fetches, feed_dict):
     while True:
@@ -80,11 +84,12 @@ def build_model(batch, train_data):
 
     # teacher mask + DEBLEU fine-tuning
     tm_helper = tx.modules.TeacherMaskSoftmaxEmbeddingHelper(
-        inputs=batch['target_text_ids'][:, :-1],
+        # must not remove last token, since it may be used as mask
+        inputs=batch['target_text_ids'],
         sequence_length=batch['target_length']-1,
         embedding=target_embedder,
-        n_unmask=1,
-        n_mask=0,
+        n_unmask=mask_patterns[0][0],
+        n_mask=mask_patterns[0][1],
         tau=config_train.tau)
 
     tm_outputs, _, _ = decoder(
@@ -111,7 +116,7 @@ def build_model(batch, train_data):
         beam_width=config_train.infer_beam_width,
         max_decoding_length=config_train.infer_max_decoding_length)
 
-    return train_xe_op, train_debleu_op, bs_outputs
+    return train_xe_op, train_debleu_op, tm_helper, bs_outputs
 
 
 def main():
@@ -127,14 +132,15 @@ def main():
 
     global_step = tf.train.create_global_step()
 
-    train_xe_op, train_debleu_op, infer_outputs = \
+    train_xe_op, train_debleu_op, tm_helper, infer_outputs = \
         build_model(data_batch, train_data)
+    train_op = train_xe_op if pretraining else train_debleu_op
 
     merged_summary = tf.summary.merge_all()
 
     saver = tf.train.Saver(max_to_keep=None)
 
-    def _train_epoch(sess, summary_writer):
+    def _train_epoch(sess, summary_writer, train_op, trigger):
         data_iterator.restart_dataset(sess, 'train')
         feed_dict = {
             tx.global_mode(): tf.estimator.ModeKeys.TRAIN,
@@ -142,12 +148,12 @@ def main():
         }
 
         for loss, summary, step in get_data_loader(
-                sess, (train_xe_op, merged_summary, global_step), feed_dict):
+                sess, (train_op, merged_summary, global_step), feed_dict):
             summary_writer.add_summary(summary, step)
             if step % config_train.steps_per_eval == 0:
-                _eval_epoch(sess, summary_writer, 'val')
+                _eval_epoch(sess, summary_writer, 'val', trigger)
 
-    def _eval_epoch(sess, summary_writer, mode):
+    def _eval_epoch(sess, summary_writer, mode, trigger):
         data_iterator.restart_dataset(sess, mode)
         feed_dict = {
             tx.global_mode(): tf.estimator.ModeKeys.EVAL,
@@ -171,10 +177,17 @@ def main():
         refs, hypos = zip(*ref_hypo_pairs)
         bleu = tx.evals.corpus_bleu_moses(list_of_references=refs,
                                           hypotheses=hypos)
+
         step = tf.train.global_step(sess, global_step)
         summary = tf.Summary()
         summary.value.add(tag='{}/BLEU'.format(mode), simple_value=bleu)
         summary_writer.add_summary(summary, step)
+
+        if trigger is not None:
+            triggered, _ = trigger(step, bleu)
+            if triggered:
+                print('triggered!')
+
         return bleu
 
     best_val_bleu = -1
@@ -190,9 +203,22 @@ def main():
 
         summary_writer = tf.summary.FileWriter('log', sess.graph)
 
+        if pretraining:
+            trigger = None
+        else:
+            action = map(
+                lambda pattern: tm_helper.assign_mask_pattern(
+                    sess, pattern[0], pattern[1]),
+                mask_patterns[1:])
+            trigger = BestEverConvergenceTrigger(
+                action,
+                config_train.threshold_steps,
+                config_train.wait_steps,
+                default=None)
+
         epoch = 0
         while epoch < config_train.max_epochs:
-            val_bleu = _eval_epoch(sess, summary_writer, 'val')
+            val_bleu = _eval_epoch(sess, summary_writer, 'val', trigger)
             if val_bleu > best_val_bleu:
                 best_val_bleu = val_bleu
                 print('epoch: {}, step: {}, best val bleu: {}'.format(
@@ -201,7 +227,7 @@ def main():
                     best_val_bleu))
                 saved_path = saver.save(sess, 'ckpt/best.ckpt')
                 print('saved to {}'.format(saved_path))
-            _train_epoch(sess, summary_writer)
+            _train_epoch(sess, summary_writer, train_op, trigger)
             epoch += 1
             saved_path = saver.save(sess, 'ckpt/model.ckpt')
             print('saved to {}'.format(saved_path))
