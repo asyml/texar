@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Creates vocabulary from a set of data files.
+
+Example usage:
+
+$ python make_vocab.py --files './data/train*'
+
+Note that if the file path is a pattern, wrap it with quotation masks.
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -31,8 +37,10 @@ flags = tf.flags
 
 flags.DEFINE_string("files", "./train.txt",
                     "Path to the data files. Can be a pattern, e.g., "
-                    "'/path/to/train*', '/path/to/train[12]'. Wrap the path "
-                    "with quotation marks if a pattern is provided.")
+                    "'/path/to/train*', '/path/to/train[12]'. "
+                    "Caution: If the path is a pattern, you must wrap the path "
+                    "with quotation marks. e.g., "
+                    "python make_vocab.py --files './data/*'")
 flags.DEFINE_integer("max_vocab_size", -1,
                      "Maximum size of the vocabulary. Low frequency words "
                      "that exceeding the limit will be discarded. "
