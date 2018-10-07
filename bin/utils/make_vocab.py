@@ -29,7 +29,7 @@ Py3 = sys.version_info[0] == 3
 
 flags = tf.flags
 
-flags.DEFINE_string("files", "./",
+flags.DEFINE_string("files", "./train.txt",
                     "Path to the data files. Can be a pattern, e.g., "
                     "'/path/to/train*', '/path/to/train[12]'. Wrap the path "
                     "with quotation marks if a pattern is provided.")
