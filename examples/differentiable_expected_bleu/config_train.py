@@ -7,6 +7,9 @@ infer_max_decoding_length = 50
 train_xe = {
     "optimizer": {
         "type": "AdamOptimizer",
+        "kwargs": {
+            "learning_rate": 1e-5,
+        }
     },
     "gradient_clip": {
         "type": "clip_by_global_norm",
@@ -19,6 +22,9 @@ train_xe = {
 train_debleu = {
     "optimizer": {
         "type": "AdamOptimizer",
+        "kwargs": {
+            "learning_rate": 1e-5,
+        }
     },
     "gradient_clip": {
         "type": "clip_by_global_norm",
