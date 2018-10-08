@@ -168,7 +168,7 @@ def main():
 
     merged_summary = tf.summary.merge_all()
 
-    saver = tf.train.Saver(max_to_keep=None)
+    saver = tf.train.Saver(max_to_keep=0)
 
     def _train_epoch(sess, summary_writer, train_op, trigger):
         print('in _train_epoch')
@@ -232,10 +232,11 @@ def main():
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
         ckpt_path = os.path.join(expr_name, 'ckpt')
-        ckpt_name = os.path.join(ckpt_path, 'model.ckpt')
-        if os.path.exists(ckpt_path) and tf.train.checkpoint_exists(ckpt_name):
-            print('restoring from {} ...'.format(ckpt_name))
-            optimistic_restore(sess, ckpt_name)
+        ckpt_model = os.path.join(ckpt_path, 'model.ckpt')
+        ckpt_best = os.path.join(ckpt_path, 'best.ckpt')
+        if os.path.exists(ckpt_path) and tf.train.checkpoint_exists(ckpt_model):
+            print('restoring from {} ...'.format(ckpt_model))
+            optimistic_restore(sess, ckpt_model)
             print('done.')
 
         summary_writer = tf.summary.FileWriter(
@@ -262,11 +263,11 @@ def main():
                     epoch,
                     tf.train.global_step(sess, global_step),
                     best_val_bleu))
-                saved_path = saver.save(sess, 'ckpt/best.ckpt')
+                saved_path = saver.save(sess, os.path.join(ckpt_best))
                 print('saved to {}'.format(saved_path))
             _train_epoch(sess, summary_writer, train_op, trigger)
             epoch += 1
-            saved_path = saver.save(sess, 'ckpt/model.ckpt')
+            saved_path = saver.save(sess, ckpt_model)
             print('saved to {}'.format(saved_path))
 
 
