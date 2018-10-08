@@ -171,7 +171,7 @@ def main():
 
     merged_summary = tf.summary.merge_all()
 
-    saver = tf.train.Saver(max_to_keep=0)
+    saver = tf.train.Saver(max_to_keep=None)
 
     def _train_epoch(sess, summary_writer, train_op, trigger):
         print('in _train_epoch')
@@ -262,15 +262,16 @@ def main():
             val_bleu = _eval_epoch(sess, summary_writer, 'val', trigger)
             if val_bleu > best_val_bleu:
                 best_val_bleu = val_bleu
+                step = tf.train.global_step(sess, global_step)
                 print('epoch: {}, step: {}, best val bleu: {}'.format(
-                    epoch,
-                    tf.train.global_step(sess, global_step),
-                    best_val_bleu))
-                saved_path = saver.save(sess, os.path.join(ckpt_best))
+                    epoch, step, best_val_bleu))
+                saved_path = saver.save(
+                    sess, os.path.join(ckpt_best), global_step=step)
                 print('saved to {}'.format(saved_path))
             _train_epoch(sess, summary_writer, train_op, trigger)
             epoch += 1
-            saved_path = saver.save(sess, ckpt_model)
+            step = tf.train.global_step(sess, global_step)
+            saved_path = saver.save(sess, ckpt_model, global_step=step)
             print('saved to {}'.format(saved_path))
 
 
