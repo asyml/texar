@@ -380,7 +380,7 @@ class TeacherMaskSoftmaxEmbeddingHelper(TFTrainingHelper):
                             self._new_n_mask: n_mask})
 
     def _is_masked(self, time):
-        return time % self._n_cycle < self._n_mask
+        return (time + self._n_shift) % self._n_cycle < self._n_mask
 
     def initialize(self, name=None):
         finished = tf.equal(0, self._sequence_length)
