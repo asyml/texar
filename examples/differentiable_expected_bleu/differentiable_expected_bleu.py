@@ -55,6 +55,10 @@ def optimistic_restore(session, save_file, graph=tf.get_default_graph()):
         var_shape = curr_var.get_shape().as_list()
         if var_shape == saved_shapes[saved_var_name]:
             restore_vars.append(curr_var)
+    restore_vars = list(filter(
+        lambda var: var.name.split('/')[0] != 'OptimizeLoss', restore_vars))
+    print('restoring variables:\n{}'.format('\n'.join(
+        var.name for var in restore_vars)))
     opt_saver = tf.train.Saver(restore_vars)
     opt_saver.restore(session, save_file)
 
@@ -124,6 +128,7 @@ def build_model(batch, train_data):
                 probs=tm_outputs.sample_id,
                 sequence_length=batch['target_length']-1),
             hparams=config_train.train_debleu)
+
     else:
         tm_helper = None
         train_debleu_op = None
