@@ -40,7 +40,23 @@ config_model = importlib.import_module(FLAGS.config_model)
 config_data = importlib.import_module(FLAGS.config_data)
 pretraining = FLAGS.pretraining
 
+expr_name = config_train.expr_name
 mask_patterns = config_train.mask_patterns
+
+def optimistic_restore(session, save_file, graph=tf.get_default_graph()):
+    reader = tf.train.NewCheckpointReader(save_file)
+    saved_shapes = reader.get_variable_to_shape_map()
+    var_names = sorted([
+        (var.name, var.name.split(':')[0]) for var in tf.global_variables()
+        if var.name.split(':')[0] in saved_shapes])
+    restore_vars = []
+    for var_name, saved_var_name in var_names:
+        curr_var = graph.get_tensor_by_name(var_name)
+        var_shape = curr_var.get_shape().as_list()
+        if var_shape == saved_shapes[saved_var_name]:
+            restore_vars.append(curr_var)
+    opt_saver = tf.train.Saver(restore_vars)
+    opt_saver.restore(session, save_file)
 
 def get_data_loader(sess, fetches, feed_dict):
     while True:
@@ -69,39 +85,48 @@ def build_model(batch, train_data):
         vocab_size=train_data.target_vocab.size,
         hparams=config_model.decoder)
 
-    # cross-entropy + teacher-forcing pretraining
-    tf_outputs, _, _ = decoder(
-        decoding_strategy='train_greedy',
-        inputs=target_embedder(batch['target_text_ids'][:, :-1]),
-        sequence_length=batch['target_length']-1)
+    if pretraining:
+        # cross-entropy + teacher-forcing pretraining
+        tf_outputs, _, _ = decoder(
+            decoding_strategy='train_greedy',
+            inputs=target_embedder(batch['target_text_ids'][:, :-1]),
+            sequence_length=batch['target_length']-1)
 
-    train_xe_op = tx.core.get_train_op(
-        tx.losses.sequence_sparse_softmax_cross_entropy(
-            labels=batch['target_text_ids'][:, 1:],
-            logits=tf_outputs.logits,
-            sequence_length=batch['target_length']-1),
-        hparams=config_train.train_xe)
+        train_xe_op = tx.core.get_train_op(
+            tx.losses.sequence_sparse_softmax_cross_entropy(
+                labels=batch['target_text_ids'][:, 1:],
+                logits=tf_outputs.logits,
+                sequence_length=batch['target_length']-1),
+            hparams=config_train.train_xe)
+    else:
+        train_xe_op = None
 
-    # teacher mask + DEBLEU fine-tuning
-    tm_helper = tx.modules.TeacherMaskSoftmaxEmbeddingHelper(
-        # must not remove last token, since it may be used as mask
-        inputs=batch['target_text_ids'],
-        sequence_length=batch['target_length']-1,
-        embedding=target_embedder,
-        n_unmask=mask_patterns[0][0],
-        n_mask=mask_patterns[0][1],
-        tau=config_train.tau)
+    if not pretraining:
+        # teacher mask + DEBLEU fine-tuning
+        tm_helper = tx.modules.TeacherMaskSoftmaxEmbeddingHelper(
+            # must not remove last token, since it may be used as mask
+            inputs=batch['target_text_ids'],
+            sequence_length=batch['target_length']-1,
+            embedding=target_embedder,
+            n_unmask=mask_patterns[0][0],
+            n_mask=mask_patterns[0][1],
+            tau=config_train.tau)
+        tf.summary.scalar('tm/n_unmask', tm_helper.n_unmask)
+        tf.summary.scalar('tm/n_mask', tm_helper.n_mask)
 
-    tm_outputs, _, _ = decoder(
-        helper=tm_helper)
+        tm_outputs, _, _ = decoder(
+            helper=tm_helper)
 
-    train_debleu_op = tx.core.get_train_op(
-        tx.losses.differentiable_expected_bleu(
-            #TODO: decide whether to include BOS
-            labels=batch['target_text_ids'][:, 1:],
-            probs=tm_outputs.sample_id,
-            sequence_length=batch['target_length']-1),
-        hparams=config_train.train_debleu)
+        train_debleu_op = tx.core.get_train_op(
+            tx.losses.differentiable_expected_bleu(
+                #TODO: decide whether to include BOS
+                labels=batch['target_text_ids'][:, 1:],
+                probs=tm_outputs.sample_id,
+                sequence_length=batch['target_length']-1),
+            hparams=config_train.train_debleu)
+    else:
+        tm_helper = None
+        train_debleu_op = None
 
     # inference: beam search decoding
     start_tokens = tf.ones_like(batch['target_length']) * \
@@ -141,6 +166,7 @@ def main():
     saver = tf.train.Saver(max_to_keep=None)
 
     def _train_epoch(sess, summary_writer, train_op, trigger):
+        print('in _train_epoch')
         data_iterator.restart_dataset(sess, 'train')
         feed_dict = {
             tx.global_mode(): tf.estimator.ModeKeys.TRAIN,
@@ -153,7 +179,10 @@ def main():
             if step % config_train.steps_per_eval == 0:
                 _eval_epoch(sess, summary_writer, 'val', trigger)
 
+        print('end _train_epoch')
+
     def _eval_epoch(sess, summary_writer, mode, trigger):
+        print('in _eval_epoch with mode {}'.format(mode))
         data_iterator.restart_dataset(sess, mode)
         feed_dict = {
             tx.global_mode(): tf.estimator.ModeKeys.EVAL,
@@ -182,34 +211,36 @@ def main():
         summary = tf.Summary()
         summary.value.add(tag='{}/BLEU'.format(mode), simple_value=bleu)
         summary_writer.add_summary(summary, step)
+        summary_writer.flush()
 
         if trigger is not None:
             triggered, _ = trigger(step, bleu)
             if triggered:
                 print('triggered!')
 
+        print('end _eval_epoch')
         return bleu
 
     best_val_bleu = -1
     with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
-        ckpt_name = 'ckpt/model.ckpt'
-        if os.path.exists('ckpt') and tf.train.checkpoint_exists(ckpt_name):
+        ckpt_path = os.path.join(expr_name, 'ckpt')
+        ckpt_name = os.path.join(ckpt_path, 'model.ckpt')
+        if os.path.exists(ckpt_path) and tf.train.checkpoint_exists(ckpt_name):
             print('restoring from {} ...'.format(ckpt_name))
-            saver.restore(sess, ckpt_name)
-        else:
-            sess.run(tf.global_variables_initializer())
-            sess.run(tf.local_variables_initializer())
+            optimistic_restore(sess, ckpt_name)
+            print('done.')
 
-        summary_writer = tf.summary.FileWriter('log', sess.graph)
+        summary_writer = tf.summary.FileWriter(
+            os.path.join(expr_name, 'log'), sess.graph, flush_secs=30)
 
         if pretraining:
             trigger = None
         else:
-            action = map(
-                lambda pattern: tm_helper.assign_mask_pattern(
-                    sess, pattern[0], pattern[1]),
-                mask_patterns[1:])
+            action = (tm_helper.assign_mask_pattern(sess, n_unmask, n_mask)
+                      for n_unmask, n_mask in mask_patterns[1:])
             trigger = BestEverConvergenceTrigger(
                 action,
                 config_train.threshold_steps,
@@ -218,6 +249,7 @@ def main():
 
         epoch = 0
         while epoch < config_train.max_epochs:
+            print('epoch #{}:'.format(epoch))
             val_bleu = _eval_epoch(sess, summary_writer, 'val', trigger)
             if val_bleu > best_val_bleu:
                 best_val_bleu = val_bleu
