@@ -63,7 +63,8 @@ def build_model(batch, train_data):
         tx.losses.sequence_sparse_softmax_cross_entropy(
             labels=batch['target_text_ids'][:, 1:],
             logits=training_outputs.logits,
-            sequence_length=batch['target_length'] - 1))
+            sequence_length=batch['target_length'] - 1),
+        hparams=config_model.opt)
 
     start_tokens = tf.ones_like(batch['target_length']) * \
             train_data.target_vocab.bos_token_id
