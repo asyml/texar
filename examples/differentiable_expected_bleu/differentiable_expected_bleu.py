@@ -33,6 +33,7 @@ flags.DEFINE_string("config_model", "config_model", "The model config.")
 flags.DEFINE_string("config_data", "config_iwslt14", "The dataset config.")
 flags.DEFINE_boolean("pretraining", False, "Whether pretraining.")
 flags.DEFINE_boolean("restore_adam", False, "Whether to restore Adam states.")
+flags.DEFINE_boolean("restore_mask", False, "Whether to restore mask patterns.")
 
 FLAGS = flags.FLAGS
 
@@ -41,6 +42,7 @@ config_model = importlib.import_module(FLAGS.config_model)
 config_data = importlib.import_module(FLAGS.config_data)
 pretraining = FLAGS.pretraining
 restore_adam = FLAGS.restore_adam
+restore_mask = FLAGS.restore_mask
 
 expr_name = config_train.expr_name
 mask_patterns = config_train.mask_patterns
@@ -59,7 +61,13 @@ def optimistic_restore(session, save_file, graph=tf.get_default_graph()):
             restore_vars.append(curr_var)
     if not restore_adam:
         restore_vars = list(filter(
-            lambda var: var.name.split('/')[0] != 'OptimizeLoss', restore_vars))
+            lambda var: var.name.split(':')[0].split('/')[0] != 'OptimizeLoss',
+            restore_vars))
+    if not restore_mask:
+        restore_vars = list(filter(
+            lambda var: var.name.split(':')[0].split('/')[0] not in \
+                ['n_unmask', 'n_mask'],
+            restore_vars))
     print('restoring variables:\n{}'.format('\n'.join(
         var.name for var in restore_vars)))
     opt_saver = tf.train.Saver(restore_vars)

@@ -38,4 +38,4 @@ train_debleu = {
     },
 }
 
-expr_name = 'xe_1e3_debleu_1e5'
+expr_name = 'en-fr_xe_1e3_xe_1e5_debleu'
