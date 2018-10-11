@@ -125,7 +125,8 @@ def main():
                 target_texts_ori, output_ids = \
                     sess.run(fetches, feed_dict=feed_dict)
 
-                target_texts = tx.utils.strip_special_tokens(target_texts_ori)
+                target_texts = tx.utils.strip_special_tokens(
+                    target_texts_ori, is_token_list=True)
                 output_texts = tx.utils.map_ids_to_strs(
                     ids=output_ids, vocab=val_data.target_vocab)
 
