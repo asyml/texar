@@ -25,85 +25,80 @@ import tensorflow as tf
 # pylint: disable=too-many-arguments
 
 __all__ = [
-    "differentiable_expected_bleu",
+    "debleu",
 ]
 
 def batch_gather(params, indices, name=None):
-  """This function is copied and modified from tensorflow 11.0.
-  Gather slices from `params` according to `indices` with leading batch dims.
-  This operation assumes that the leading dimensions of `indices` are dense,
-  and the gathers on the axis corresponding to the last dimension of `indices`.
-  More concretely it computes:
-  result[i1, ..., in] = params[i1, ..., in-1, indices[i1, ..., in]]
-  Therefore `params` should be a Tensor of shape [A1, ..., AN, B1, ..., BM],
-  `indices` should be a Tensor of shape [A1, ..., AN-1, C] and `result` will be
-  a Tensor of size `[A1, ..., AN-1, C, B1, ..., BM]`.
-  In the case in which indices is a 1D tensor, this operation is equivalent to
-  `tf.gather`.
-  See also `tf.gather` and `tf.gather_nd`.
-  Args:
-    params: A Tensor. The tensor from which to gather values.
-    indices: A Tensor. Must be one of the following types: int32, int64. Index
-        tensor. Must be in range `[0, params.shape[axis]`, where `axis` is the
-        last dimension of `indices` itself.
-    name: A name for the operation (optional).
-  Returns:
-    A Tensor. Has the same type as `params`.
-  Raises:
-    ValueError: if `indices` has an unknown shape.
-  """
+    """This function is copied and modified from tensorflow 11.0. See
+    https://www.tensorflow.org/api_docs/python/tf/batch_gather for details.
+    Gather slices from `params` according to `indices` with leading batch dims.
+    This operation assumes that the leading dimensions of `indices` are dense,
+    and the gathers on the axis corresponding to the last dimension of `indices`.
+    More concretely it computes:
+    result[i1, ..., in] = params[i1, ..., in-1, indices[i1, ..., in]]
+    Therefore `params` should be a Tensor of shape [A1, ..., AN, B1, ..., BM],
+    `indices` should be a Tensor of shape [A1, ..., AN-1, C] and `result` will be
+    a Tensor of size `[A1, ..., AN-1, C, B1, ..., BM]`.
+    In the case in which indices is a 1D tensor, this operation is equivalent to
+    `tf.gather`.
+    See also `tf.gather` and `tf.gather_nd`.
+    Args:
+      params: A Tensor. The tensor from which to gather values.
+      indices: A Tensor. Must be one of the following types: int32, int64. Index
+          tensor. Must be in range `[0, params.shape[axis]`, where `axis` is the
+          last dimension of `indices` itself.
+      name: A name for the operation (optional).
+    Returns:
+      A Tensor. Has the same type as `params`.
+    Raises:
+      ValueError: if `indices` has an unknown shape.
+    """
 
-  with tf.name_scope(name):
-    indices = tf.convert_to_tensor(indices, name="indices")
-    params = tf.convert_to_tensor(params, name="params")
-    indices_shape = tf.shape(indices)
-    params_shape = tf.shape(params)
+    with tf.name_scope(name):
+        indices = tf.convert_to_tensor(indices, name="indices")
+        params = tf.convert_to_tensor(params, name="params")
+        indices_shape = tf.shape(indices)
+        params_shape = tf.shape(params)
 
-    ndims = indices.shape.ndims
-    if ndims is None:
-      raise ValueError("batch_gather does not allow indices with unknown "
-                       "shape.")
-    batch_indices = indices
-    indices_dtype = indices.dtype.base_dtype
-    accum_dim_value = tf.ones((), dtype=indices_dtype)
-    # Use correct type for offset index computation
-    casted_params_shape = tf.cast(params_shape, indices_dtype)
-    for dim in range(ndims-1, 0, -1):
-      dim_value = casted_params_shape[dim-1]
-      accum_dim_value *= casted_params_shape[dim]
-      start = tf.zeros((), dtype=indices_dtype)
-      step = tf.ones((), dtype=indices_dtype)
-      dim_indices = tf.range(start, dim_value, step)
-      dim_indices *= accum_dim_value
-      dim_shape = tf.stack([1] * (dim - 1) + [dim_value] + [1] * (ndims - dim),
-                           axis=0)
-      batch_indices += tf.reshape(dim_indices, dim_shape)
+        ndims = indices.shape.ndims
+        if ndims is None:
+            raise ValueError("batch_gather does not allow indices with unknown "
+                             "shape.")
+        batch_indices = indices
+        indices_dtype = indices.dtype.base_dtype
+        accum_dim_value = tf.ones((), dtype=indices_dtype)
+        # Use correct type for offset index computation
+        casted_params_shape = tf.cast(params_shape, indices_dtype)
+        for dim in range(ndims-1, 0, -1):
+            dim_value = casted_params_shape[dim-1]
+            accum_dim_value *= casted_params_shape[dim]
+            start = tf.zeros((), dtype=indices_dtype)
+            step = tf.ones((), dtype=indices_dtype)
+            dim_indices = tf.range(start, dim_value, step)
+            dim_indices *= accum_dim_value
+            dim_shape = tf.stack(
+                [1] * (dim - 1) + [dim_value] + [1] * (ndims - dim), axis=0)
+            batch_indices += tf.reshape(dim_indices, dim_shape)
 
-    flat_indices = tf.reshape(batch_indices, [-1])
-    outer_shape = params_shape[ndims:]
-    flat_inner_shape = tf.reduce_prod(params_shape[:ndims])
+        flat_indices = tf.reshape(batch_indices, [-1])
+        outer_shape = params_shape[ndims:]
+        flat_inner_shape = tf.reduce_prod(params_shape[:ndims])
 
-    flat_params = tf.reshape(
-        params, tf.concat([[flat_inner_shape], outer_shape], axis=0))
-    flat_result = tf.gather(flat_params, flat_indices)
-    result = tf.reshape(
-        flat_result, tf.concat([indices_shape, outer_shape], axis=0))
-    final_shape = indices.get_shape()[:ndims-1].merge_with(
-        params.get_shape()[:ndims -1])
-    final_shape = final_shape.concatenate(indices.get_shape()[ndims-1])
-    final_shape = final_shape.concatenate(params.get_shape()[ndims:])
-    result.set_shape(final_shape)
-    return result
+        flat_params = tf.reshape(
+            params, tf.concat([[flat_inner_shape], outer_shape], axis=0))
+        flat_result = tf.gather(flat_params, flat_indices)
+        result = tf.reshape(
+            flat_result, tf.concat([indices_shape, outer_shape], axis=0))
+        final_shape = indices.get_shape()[:ndims-1].merge_with(
+            params.get_shape()[:ndims -1])
+        final_shape = final_shape.concatenate(indices.get_shape()[ndims-1])
+        final_shape = final_shape.concatenate(params.get_shape()[ndims:])
+        result.set_shape(final_shape)
+        return result
 
-def differentiable_expected_bleu(labels,
-                                 probs,
-                                 sequence_length,
-                                 time_major=False,
-                                 min_fn=lambda x: tf.minimum(1., x),
-                                 max_order=4,
-                                 weights=[.1, .3, .3, .3],
-                                 smooth_add=1e-9,
-                                 name=None):
+def debleu(labels, probs, sequence_length, time_major=False,
+           min_fn=lambda x: tf.minimum(1., x), max_order=4,
+           weights=[.1, .3, .3, .3], epsilon=1e-9, name=None):
     """Computes sparse softmax cross entropy for each time step of sequence
     predictions.
 
@@ -148,7 +143,7 @@ def differentiable_expected_bleu(labels,
                 sequence_length=data_batch['length']-1)
 
     """ # TODO: rewrite example
-    with tf.name_scope(name, "sequence_sparse_softmax_cross_entropy"):
+    with tf.name_scope(name, "debleu"):
         X = probs
         Y = labels
 
@@ -184,7 +179,7 @@ def differentiable_expected_bleu(labels,
                 min_fn(cntYY / (cntYX - matchXY + 1))
                 * matchXY / tf.maximum(1., cntYY),
                 2), 1)
-            # in order to avoid dividing 0
+            # in order to avoid being divided by 0
             tot_order = tf.maximum(1, sequence_length - order)
             tot.append(tot_order)
             o.append(o_order)
@@ -192,7 +187,7 @@ def differentiable_expected_bleu(labels,
         tot = tf.stack(tot, 1)
         o = tf.stack(o, 1)
         prec = tf.reduce_sum(o, 0) / tf.to_float(tf.reduce_sum(tot, 0))
-        neglog_prec = -tf.log(prec + smooth_add)
+        neglog_prec = -tf.log(prec + epsilon)
         loss = tf.reduce_sum(weights * neglog_prec, 0)
         
         return loss

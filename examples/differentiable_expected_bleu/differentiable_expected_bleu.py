@@ -100,49 +100,42 @@ def build_model(batch, train_data):
         vocab_size=train_data.target_vocab.size,
         hparams=config_model.decoder)
 
-    if pretraining:
-        # cross-entropy + teacher-forcing pretraining
-        tf_outputs, _, _ = decoder(
-            decoding_strategy='train_greedy',
-            inputs=target_embedder(batch['target_text_ids'][:, :-1]),
-            sequence_length=batch['target_length']-1)
+    # cross-entropy + teacher-forcing pretraining
+    tf_outputs, _, _ = decoder(
+        decoding_strategy='train_greedy',
+        inputs=target_embedder(batch['target_text_ids'][:, :-1]),
+        sequence_length=batch['target_length']-1)
 
-        train_xe_op = tx.core.get_train_op(
-            tx.losses.sequence_sparse_softmax_cross_entropy(
-                labels=batch['target_text_ids'][:, 1:],
-                logits=tf_outputs.logits,
-                sequence_length=batch['target_length']-1),
-            hparams=config_train.train_xe)
-    else:
-        train_xe_op = None
+    loss_xe = tx.losses.sequence_sparse_softmax_cross_entropy(
+        labels=batch['target_text_ids'][:, 1:],
+        logits=tf_outputs.logits,
+        sequence_length=batch['target_length']-1)
 
-    if not pretraining:
-        # teacher mask + DEBLEU fine-tuning
-        tm_helper = tx.modules.TeacherMaskSoftmaxEmbeddingHelper(
-            # must not remove last token, since it may be used as mask
-            inputs=batch['target_text_ids'],
-            sequence_length=batch['target_length']-1,
-            embedding=target_embedder,
-            n_unmask=mask_patterns[0][0],
-            n_mask=mask_patterns[0][1],
-            tau=config_train.tau)
-        tf.summary.scalar('tm/n_unmask', tm_helper.n_unmask)
-        tf.summary.scalar('tm/n_mask', tm_helper.n_mask)
+    train_xe_op = tx.core.get_train_op(
+        loss_xe,
+        hparams=config_train.train_xe)
 
-        tm_outputs, _, _ = decoder(
-            helper=tm_helper)
+    # teacher mask + DEBLEU fine-tuning
+    tm_helper = tx.modules.TeacherMaskSoftmaxEmbeddingHelper(
+        # must not remove last token, since it may be used as mask
+        inputs=batch['target_text_ids'],
+        sequence_length=batch['target_length']-1,
+        embedding=target_embedder,
+        n_unmask=mask_patterns[0][0],
+        n_mask=mask_patterns[0][1],
+        tau=config_train.tau)
 
-        train_debleu_op = tx.core.get_train_op(
-            tx.losses.differentiable_expected_bleu(
-                #TODO: decide whether to include BOS
-                labels=batch['target_text_ids'][:, 1:],
-                probs=tm_outputs.sample_id,
-                sequence_length=batch['target_length']-1),
-            hparams=config_train.train_debleu)
+    tm_outputs, _, _ = decoder(
+        helper=tm_helper)
 
-    else:
-        tm_helper = None
-        train_debleu_op = None
+    loss_debleu = tx.losses.debleu(
+        labels=batch['target_text_ids'][:, 1:],
+        probs=tm_outputs.sample_id,
+        sequence_length=batch['target_length']-1)
+
+    train_debleu_op = tx.core.get_train_op(
+        loss_debleu,
+        hparams=config_train.train_debleu)
 
     # inference: beam search decoding
     start_tokens = tf.ones_like(batch['target_length']) * \
@@ -176,6 +169,9 @@ def main():
     train_xe_op, train_debleu_op, tm_helper, infer_outputs = \
         build_model(data_batch, train_data)
     train_op = train_xe_op if pretraining else train_debleu_op
+
+    tf.summary.scalar('tm/n_unmask', tm_helper.n_unmask)
+    tf.summary.scalar('tm/n_mask', tm_helper.n_mask)
 
     merged_summary = tf.summary.merge_all()
 
