@@ -238,12 +238,14 @@ def main():
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
-        ckpt_path = os.path.join(expr_name, 'ckpt')
-        ckpt_model = os.path.join(ckpt_path, 'model.ckpt')
-        ckpt_best = os.path.join(ckpt_path, 'best.ckpt')
-        if os.path.exists(ckpt_path) and tf.train.checkpoint_exists(ckpt_model):
-            print('restoring from {} ...'.format(ckpt_model))
-            optimistic_restore(sess, ckpt_model)
+        dir_model = os.path.join(expr_name, 'ckpt')
+        dir_best = os.path.join(expr_name, 'ckpt-best')
+        ckpt_model = os.path.join(dir_model, 'model.ckpt')
+        ckpt_best = os.path.join(dir_best, 'model.ckpt')
+        if os.path.exists(dir_model):
+            ckpt_path = tf.train.latest_checkpoint(dir_model)
+            print('restoring from {} ...'.format(ckpt_path))
+            optimistic_restore(sess, ckpt_path)
             print('done.')
 
         summary_writer = tf.summary.FileWriter(
