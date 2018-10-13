@@ -259,7 +259,7 @@ def main():
             trigger = BestEverConvergenceTrigger(
                 action,
                 config_train.threshold_steps,
-                config_train.wait_steps,
+                config_train.minimum_interval_steps,
                 default=None)
 
         epoch = 0
