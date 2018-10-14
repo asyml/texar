@@ -1,10 +1,11 @@
 """Configurations of Transformer model
 """
 import copy
+import texar as tx
 
 random_seed = 1234
 beam_width = 5
-alpha = 0.6 
+alpha = 0.6
 hidden_dim = 512
 
 emb = {
@@ -29,6 +30,8 @@ encoder = {
             'distribution': 'uniform',
         },
     },
+    'poswise_feedforward': tx.modules.default_transformer_poswise_net_hparams(
+        output_dim=hidden_dim)
 }
 
 decoder = copy.deepcopy(encoder)
