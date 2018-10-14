@@ -235,22 +235,6 @@ def main():
 
     best_val_bleu = -1
     with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-        sess.run(tf.local_variables_initializer())
-        sess.run(tf.tables_initializer())
-        dir_model = os.path.join(expr_name, 'ckpt')
-        dir_best = os.path.join(expr_name, 'ckpt-best')
-        ckpt_model = os.path.join(dir_model, 'model.ckpt')
-        ckpt_best = os.path.join(dir_best, 'model.ckpt')
-        if os.path.exists(dir_model):
-            ckpt_path = tf.train.latest_checkpoint(dir_model)
-            print('restoring from {} ...'.format(ckpt_path))
-            optimistic_restore(sess, ckpt_path)
-            print('done.')
-
-        summary_writer = tf.summary.FileWriter(
-            os.path.join(expr_name, 'log'), sess.graph, flush_secs=30)
-
         if pretraining:
             trigger = None
         else:
@@ -262,6 +246,33 @@ def main():
                 config_train.minimum_interval_steps,
                 default=None)
 
+        sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
+        sess.run(tf.tables_initializer())
+
+        dir_model = os.path.join(expr_name, 'ckpt')
+        dir_best = os.path.join(expr_name, 'ckpt-best')
+        ckpt_model = os.path.join(dir_model, 'model.ckpt')
+        ckpt_best = os.path.join(dir_best, 'model.ckpt')
+
+        if os.path.exists(dir_model):
+            ckpt_path = tf.train.latest_checkpoint(dir_model)
+            print('restoring from {} ...'.format(ckpt_path))
+            optimistic_restore(sess, ckpt_path)
+
+            if trigger is not None:
+                trigger_path = '{}.trigger'.format(ckpt_path)
+                if os.path.exists(trigger_path):
+                    with open(trigger_path, 'r') as pickle_file:
+                        trigger.restore_from_pickle(pickle_file)
+                else:
+                    print('cannot find previous trigger state.')
+
+            print('done.')
+
+        summary_writer = tf.summary.FileWriter(
+            os.path.join(expr_name, 'log'), sess.graph, flush_secs=30)
+
         epoch = 0
         while epoch < config_train.max_epochs:
             print('epoch #{}:'.format(epoch))
@@ -272,12 +283,24 @@ def main():
                 print('epoch: {}, step: {}, best val bleu: {}'.format(
                     epoch, step, best_val_bleu))
                 saved_path = saver.save(
-                    sess, os.path.join(ckpt_best), global_step=step)
+                    sess, ckpt_best, global_step=step)
+
+                if trigger is not None:
+                    with open('{}.trigger'.format(ckpt_best), 'w') as \
+                            pickle_file:
+                        trigger.save_to_pickle(pickle_file)
+
                 print('saved to {}'.format(saved_path))
+
             _train_epoch(sess, summary_writer, train_op, trigger)
             epoch += 1
             step = tf.train.global_step(sess, global_step)
             saved_path = saver.save(sess, ckpt_model, global_step=step)
+
+            if trigger is not None:
+                with open('{}.trigger'.format(ckpt_model), 'w') as pickle_file:
+                    trigger.save_to_pickle(pickle_file)
+
             print('saved to {}'.format(saved_path))
 
 

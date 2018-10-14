@@ -18,12 +18,14 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
-#pylint: disable=invalid-name, too-many-arguments, too-many-locals
+import pickle
 
 try:
     import queue
 except ImportError:
     import Queue as queue
+
+#pylint: disable=invalid-name, too-many-arguments, too-many-locals
 
 DEFAULT = object()
 
@@ -36,20 +38,49 @@ class Trigger(object):
         """
         self._action = iter(action)
         self._default = default
+        self._triggered_times = 0
 
     def _predicate(self, *args, **kwargs):
         """This function returns True when we think we should do something.
         """
         raise NotImplementedError
 
+    def _next_action(self):
+        return next(self._action) if self._default is DEFAULT else \
+               next(self._action, self._default)
+
     def __call__(self, *args, **kwargs):
         pred = self._predicate(*args, **kwargs)
         if pred:
-            ret = next(self._action) if self._default is DEFAULT else \
-                  next(self._action, self._default)
+            ret = self._next_action()
+            self._triggered_times += 1
         else:
             ret = None
         return pred, ret
+
+    def _make_state(self, names):
+        return {name: getattr(self, name) for name in names}
+
+    @property
+    def _state_names(self):
+        return ['_triggered_times']
+
+    @property
+    def state(self):
+        return self._make_state(self._state_names)
+
+    def restore_from_state(self, state):
+        for name, value in state.items():
+            setattr(self, name, value)
+
+        for t in range(self._triggered_times):
+            self._next_action()
+
+    def save_to_pickle(self, file):
+        pickle.dump(self.state, file)
+
+    def restore_from_pickle(self, file):
+        self.restore_from_state(pickle.load(file))
 
 
 class ScheduledStepsTrigger(Trigger):
@@ -96,6 +127,11 @@ class BestEverConvergenceTrigger(Trigger):
             return True
         return False
 
+    @property
+    def _state_names(self):
+        return super(BestEverConvergenceTrigger, self)._state_names + [
+            '_last_triggered_step', '_best_ever_step', '_best_ever_score']
+
 
 class MovingAverageConvergenceTrigger(Trigger):
 
@@ -130,3 +166,9 @@ class MovingAverageConvergenceTrigger(Trigger):
             self._last_triggered_step = step
             return True
         return False
+
+    @property
+    def _state_names(self):
+        return super(BestEverConvergenceTrigger, self)._state_names + [
+            '_last_triggered_step', '_head_queue', '_head_sum', '_rear_queue',
+            '_rear_sum']
