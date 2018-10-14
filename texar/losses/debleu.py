@@ -144,23 +144,25 @@ def debleu(labels, probs, sequence_length, time_major=False,
 
     """ # TODO: rewrite example
     with tf.name_scope(name, "debleu"):
-        X = probs
-        Y = labels
+        X = probs   # p_theta(y)
+        Y = labels  # y*
 
         if time_major:
             X = tf.transpose(X, [1, 0, 2])
             Y = tf.transpose(Y, [1, 0])
         
-        sizeX = tf.shape(X)[1]
-        sizeY = tf.shape(Y)[1]
+        T_X = tf.shape(X)[1] # max T
+        T_Y = tf.shape(Y)[1] # max T*
 
-        XY = batch_gather(X, tf.tile(tf.expand_dims(Y, 1), [1, sizeX, 1]))
+        # XY denotes p(y_i=y*_j)
+        XY = batch_gather(X, tf.tile(tf.expand_dims(Y, 1), [1, T_X, 1]))
+        # YY denotes 1(y*_j=y*_j')
         YY = tf.to_float(tf.equal(tf.expand_dims(Y, 2), tf.expand_dims(Y, 1)))
 
         maskX = tf.sequence_mask(
-            sequence_length + 1, maxlen=sizeX + 1, dtype=tf.float32)
+            sequence_length + 1, maxlen=T_X + 1, dtype=tf.float32)
         maskY = tf.sequence_mask(
-            sequence_length + 1, maxlen=sizeY + 1, dtype=tf.float32)
+            sequence_length + 1, maxlen=T_Y + 1, dtype=tf.float32)
         matchXY = tf.expand_dims(maskX, 2) * tf.expand_dims(maskY, 1)
         matchYY = tf.minimum(tf.expand_dims(maskY, 2),
                              tf.expand_dims(maskY, 1))
@@ -168,26 +170,29 @@ def debleu(labels, probs, sequence_length, time_major=False,
         tot = []
         o = []
 
-        for order in range(max_order):
-            matchXY = XY[:, : sizeX - order, : sizeY - order] * \
-                      matchXY[:, 1:, 1:]
-            matchYY = YY[:, : sizeY - order, : sizeY - order] * \
-                      matchYY[:, 1:, 1:]
+        for order in range(max_order): # order = n - 1
+            # Eq.20
+            matchXY = XY[:, : T_X - order, : T_Y - order] * matchXY[:, 1:, 1:]
+            matchYY = YY[:, : T_Y - order, : T_Y - order] * matchYY[:, 1:, 1:]
             cntYX = tf.reduce_sum(matchXY, 1, keepdims=True)
             cntYY = tf.reduce_sum(matchYY, 1, keepdims=True)
+            # Eq.14
             o_order = tf.reduce_sum(tf.reduce_sum(
                 min_fn(cntYY / (cntYX - matchXY + 1))
                 * matchXY / tf.maximum(1., cntYY),
                 2), 1)
-            # in order to avoid being divided by 0
+            # calculate (T - n + 1); max(1, .) is to avoid being divided by 0
             tot_order = tf.maximum(1, sequence_length - order)
             tot.append(tot_order)
             o.append(o_order)
 
         tot = tf.stack(tot, 1)
         o = tf.stack(o, 1)
+        # Eq.15
         prec = tf.reduce_sum(o, 0) / tf.to_float(tf.reduce_sum(tot, 0))
+        # add epsilon in order to avoid inf gradient
         neglog_prec = -tf.log(prec + epsilon)
+        # Eq.17; constant about BP is omitted
         loss = tf.reduce_sum(weights * neglog_prec, 0)
         
         return loss
