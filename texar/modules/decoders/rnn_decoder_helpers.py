@@ -333,30 +333,35 @@ class GumbelSoftmaxEmbeddingHelper(SoftmaxEmbeddingHelper):
 class TeacherMaskSoftmaxEmbeddingHelper(TFTrainingHelper):
     def __init__(self, inputs, sequence_length, embedding, n_unmask,
                  n_mask, tau=1., time_major=False, seed=None,
-                 stop_gradient=False):
-        super(TeacherMaskSoftmaxEmbeddingHelper, self).__init__(
-            inputs=inputs,
-            sequence_length=sequence_length,
-            time_major=time_major)
+                 stop_gradient=False, name=None):
+        with tf.name_scope(name, "TeacherMaskSoftmaxEmbeddingHelper",
+                           [embedding, tau, seed, stop_gradient]):
+            super(TeacherMaskSoftmaxEmbeddingHelper, self).__init__(
+                inputs=inputs,
+                sequence_length=sequence_length,
+                time_major=time_major)
 
-        self._embedding, self._embedding_fn = get_embedding_and_fn(embedding)
-        self._tau = tau
-        self._seed = seed
-        self._stop_gradient = stop_gradient
+            self._embedding, self._embedding_fn = get_embedding_and_fn(
+                embedding)
+            self._tau = tau
+            self._seed = seed
+            self._stop_gradient = stop_gradient
 
-        self._zero_next_inputs = tf.zeros_like(
-            self._embedding_fn(self._zero_inputs))
+            self._zero_next_inputs = tf.zeros_like(
+                self._embedding_fn(self._zero_inputs))
 
-        self._n_unmask = tf.Variable(n_unmask, name='n_unmask')
-        self._n_mask = tf.Variable(n_mask, name='n_mask')
-        self._n_cycle = tf.add(self._n_unmask, self._n_mask, name='n_cycle')
-        self._new_n_unmask = tf.placeholder(shape=[], dtype=tf.int32)
-        self._new_n_mask = tf.placeholder(shape=[], dtype=tf.int32)
-        self._assign_n_unmask = tf.assign(self._n_unmask, self._new_n_unmask)
-        self._assign_n_mask = tf.assign(self._n_mask, self._new_n_mask)
-        self._n_shift = tf.random_uniform(
-            [], maxval=self._n_cycle, dtype=self._n_cycle.dtype,
-            seed=self._seed, name='n_shift')
+            self._n_unmask = tf.Variable(n_unmask, name='n_unmask')
+            self._n_mask = tf.Variable(n_mask, name='n_mask')
+            self._n_cycle = tf.add(
+                self._n_unmask, self._n_mask, name='n_cycle')
+            self._new_n_unmask = tf.placeholder(shape=[], dtype=tf.int32)
+            self._new_n_mask = tf.placeholder(shape=[], dtype=tf.int32)
+            self._assign_n_unmask = tf.assign(
+                self._n_unmask, self._new_n_unmask)
+            self._assign_n_mask = tf.assign(self._n_mask, self._new_n_mask)
+            self._n_shift = tf.random_uniform(
+                [], maxval=self._n_cycle, dtype=self._n_cycle.dtype,
+                seed=self._seed, name='n_shift')
 
     @property
     def sample_ids_dtype(self):
