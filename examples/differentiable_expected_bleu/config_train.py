@@ -15,7 +15,7 @@ train_xe = {
     "learning_rate_decay": {
         "type": "piecewise_constant",
         "kwargs": {
-            "boundaries": [160000],
+            "boundaries": [10000],
             "values": [1e-3, 1e-5],
         },
     },
