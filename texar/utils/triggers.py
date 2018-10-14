@@ -27,11 +27,11 @@ except ImportError:
 
 #pylint: disable=invalid-name, too-many-arguments, too-many-locals
 
-DEFAULT = object()
+DEFAULT_ACTION = object()
 
 class Trigger(object):
 
-    def __init__(self, action, default=DEFAULT):
+    def __init__(self, action, default=DEFAULT_ACTION):
         """action is an iterator that iteratively do a sequence of action and
         return result values. default is used as result value when action is
         exhausted.
@@ -46,7 +46,7 @@ class Trigger(object):
         raise NotImplementedError
 
     def _next_action(self):
-        return next(self._action) if self._default is DEFAULT else \
+        return next(self._action) if self._default is DEFAULT_ACTION else \
                next(self._action, self._default)
 
     def __call__(self, *args, **kwargs):
@@ -85,7 +85,7 @@ class Trigger(object):
 
 class ScheduledStepsTrigger(Trigger):
     
-    def __init__(self, action, steps, default=DEFAULT):
+    def __init__(self, action, steps, default=DEFAULT_ACTION):
         """steps should be in increasing order.
         """
         super(ScheduledTrigger, self).__init__(action, default)
@@ -106,7 +106,7 @@ class ScheduledStepsTrigger(Trigger):
 class BestEverConvergenceTrigger(Trigger):
 
     def __init__(self, action, threshold_steps, minimum_interval_steps,
-                 default=DEFAULT):
+                 default=DEFAULT_ACTION):
         super(BestEverConvergenceTrigger, self).__init__(action, default)
         self._threshold_steps = threshold_steps
         self._minimum_interval_steps = minimum_interval_steps
@@ -136,7 +136,7 @@ class BestEverConvergenceTrigger(Trigger):
 class MovingAverageConvergenceTrigger(Trigger):
 
     def __init__(self, action, n, threshold, minimum_interval_steps,
-                 default=DEFAULT):
+                 default=DEFAULT_ACTION):
         super(MovingAverageConvergenceTrigger, self).__init__(action, default)
         self._n = n
         self._threshold = threshold

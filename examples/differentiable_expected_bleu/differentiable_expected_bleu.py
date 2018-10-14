@@ -24,7 +24,6 @@ import importlib
 import os
 import tensorflow as tf
 import texar as tx
-from triggers import BestEverConvergenceTrigger
 
 flags = tf.flags
 
@@ -240,7 +239,7 @@ def main():
         else:
             action = (tm_helper.assign_mask_pattern(sess, n_unmask, n_mask)
                       for n_unmask, n_mask in mask_patterns[1:])
-            trigger = BestEverConvergenceTrigger(
+            trigger = tx.utils.BestEverConvergenceTrigger(
                 action,
                 config_train.threshold_steps,
                 config_train.minimum_interval_steps,
