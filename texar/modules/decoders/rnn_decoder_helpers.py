@@ -331,6 +331,66 @@ class GumbelSoftmaxEmbeddingHelper(SoftmaxEmbeddingHelper):
 
 
 class TeacherMaskSoftmaxEmbeddingHelper(TFTrainingHelper):
+    """A helper that implements the Teacher Mask described in the paper
+    https://openreview.net/pdf?id=S1x2aiRqFX. In an unmasked step, it feeds
+    softmax probabilities over vocabulary to the next step. In a masked step,
+    it feeds the one-hot distribution of the target labels (:attr:`inputs`)
+    to the next step.
+    Uses the softmax probability or one-hot vector to pass through word
+    embeddings to get the next input (i.e., a mixed word embedding).
+    In this implementation, all sequences in a batch shares the same teacher
+    mask.
+
+    A subclass of
+    :tf_main:`TrainingHelper <contrib/seq2seq/TrainingHelper>`.
+    Used as a helper to :class:`~texar.modules.RNNDecoderBase` :meth:`_build`
+    in training mode.
+
+    Args:
+        inputs (2D Tensor): Target sequence token indexes. It should be a tensor
+            of shape `[batch_size, max_time]`. Must append both BOS and EOS
+            tokens to each sequence.
+        sequence_length (1D Tensor): Lengths of input token sequences. These
+            lengths should include the BOS tokens but exclude the EOS tokens.
+        embedding: An embedding argument (:attr:`params`) for
+            :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`, or an
+            instance of subclass of :class:`texar.modules.EmbedderBase`.
+            Note that other callables are not acceptable here.
+        n_unmask: An int scalar tensor denotes the mask pattern together with
+            :attr:`n_mask`. See the paper for details.
+        n_mask: An int scalar tensor denotes the mask pattern together with
+            :attr:`n_unmask`. See the paper for details.
+        tau (float, optional): A float scalar tensor, the softmax temperature.
+            Default to 1. 
+        seed (int, optional): The random seed used to shift the mask.
+        stop_gradient (bool): Whether to stop the gradient backpropagation
+            when feeding softmax vector to the next step.
+        name (str, optional): A name for the module.
+
+    Example:
+
+        .. code-block:: python
+
+            embedder = WordEmbedder(vocab_size=data.vocab.size)
+            decoder = BasicRNNDecoder(vocab_size=data.vocab.size)
+            
+            tm_helper = texar.modules.TeacherMaskSoftmaxEmbeddingHelper(
+                inputs=data_batch['text_ids'],
+                sequence_length=data_batch['length']-1,
+                embedding=embedder,
+                n_unmask=1,
+                n_mask=0,
+                tau=1.)
+
+            outputs, _, _ = decoder(helper=tm_helper)
+
+            loss = debleu(
+                labels=data_batch['text_ids'][:, 1:],
+                probs=outputs.sample_ids,
+                sequence_length=data_batch['length']-1)
+
+    """
+
     def __init__(self, inputs, sequence_length, embedding, n_unmask,
                  n_mask, tau=1., time_major=False, seed=None,
                  stop_gradient=False, name=None):
@@ -397,7 +457,10 @@ class TeacherMaskSoftmaxEmbeddingHelper(TFTrainingHelper):
         return (finished, next_inputs)
 
     def sample(self, time, outputs, state, name=None):
-        """Returns `sample_id` of shape `[batch_size, vocab_size]`.
+        """Returns `sample_id` of shape `[batch_size, vocab_size]`. In an
+        unmasked step, it is softmax distributions over vocabulary with
+        temperature :attr:`tau`; in a masked step, it is one-hot
+        representations of :attr:`input` in the next step.
         """
         next_time = time + 1
         sample_ids = tf.cond(

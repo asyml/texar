@@ -278,3 +278,16 @@ AverageRecorder
 ==========================
 .. autoclass:: texar.utils.AverageRecorder
     :members:
+
+Trigger
+==========================
+
+:hidden:`Trigger`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.utils.Trigger
+    :members:
+
+:hidden:`BestEverConvergenceTrigger`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.utils.BestEverConvergenceTrigger
+    :members:

@@ -27,10 +27,30 @@ except ImportError:
 
 #pylint: disable=invalid-name, too-many-arguments, too-many-locals
 
+__all__ = [
+    "Trigger",
+    "BestEverConvergenceTrigger",
+]
+
+
 DEFAULT_ACTION = object()
 
 
 class Trigger(object):
+    """A trigger can do some action when certain condition is met.
+    Specifically, the user calls the trigger periodically. Every time the
+    trigger is called, it will send all arguments to :meth:`_predicate`, which
+    returns a boolean value indicates whether the condition is met. Once the
+    condition is met, the trigger will then call `next(action)` to do next
+    action and obtain the returned value.
+
+    Args:
+        action (iterable): An iterable which does the action and possibly
+            returns a value.
+        default: The value returned after :attr:`action` stops iteration. If
+            not provided, the trigger will do nothing when StopIteration
+            occurs.
+    """
 
     def __init__(self, action, default=DEFAULT_ACTION):
         """action is an iterator that iteratively do a sequence of action and
@@ -68,9 +88,21 @@ class Trigger(object):
 
     @property
     def state(self):
+        """The current state which can be used to save and restore the trigger.
+        The state records how many times `next(action)` has been called.
+        """
         return self._make_state(self._state_names)
 
     def restore_from_state(self, state):
+        """Restore the trigger state from the previous stored state.
+        Note that this function will call `next(action)` for the exact times
+        that the :py:attr:`state` records how many times `next(action)` had
+        been called. The user should be aware of any possible side effect of
+        this behavior.
+
+        Args:
+            state: The state previously obtained by :py:attr:`state`.
+        """
         for name, value in state.items():
             setattr(self, name, value)
 

@@ -74,10 +74,6 @@ def build_model(batch, train_data):
         logits=tf_outputs.logits,
         sequence_length=batch['target_length']-1)
 
-    #TODO: find a way to reset Adam state at the lr decay point
-    #restore_vars = list(filter(
-    #    lambda var: var.name.split(':')[0].split('/')[0] != 'OptimizeLoss',
-    #    restore_vars))
     train_xe_op = tx.core.get_train_op(
         loss_xe,
         hparams=config_train.train_xe)
