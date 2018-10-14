@@ -270,7 +270,7 @@ def main():
                     sess, ckpt_best, global_step=step)
 
                 if not pretraining:
-                    with open('{}.trigger'.format(ckpt_best), 'w') as \
+                    with open('{}.trigger'.format(saved_path), 'w') as \
                             pickle_file:
                         trigger.save_to_pickle(pickle_file)
 
@@ -285,7 +285,7 @@ def main():
             saved_path = saver.save(sess, ckpt_model, global_step=step)
 
             if not pretraining:
-                with open('{}.trigger'.format(ckpt_model), 'w') as pickle_file:
+                with open('{}.trigger'.format(saved_path), 'w') as pickle_file:
                     trigger.save_to_pickle(pickle_file)
 
             print('saved to {}'.format(saved_path))
