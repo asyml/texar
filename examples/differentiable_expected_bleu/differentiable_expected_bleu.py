@@ -30,54 +30,18 @@ flags = tf.flags
 flags.DEFINE_string("config_train", "config_train", "The training config.")
 flags.DEFINE_string("config_model", "config_model", "The model config.")
 flags.DEFINE_string("config_data", "config_iwslt14", "The dataset config.")
-flags.DEFINE_boolean("pretraining", False, "Whether pretraining.")
-flags.DEFINE_boolean("restore_adam", False, "Whether to restore Adam states.")
-flags.DEFINE_boolean("restore_mask", False, "Whether to restore mask patterns.")
+flags.DEFINE_integer("pretrain_epochs", 8, "Number of pretraining epochs.")
 
 FLAGS = flags.FLAGS
 
 config_train = importlib.import_module(FLAGS.config_train)
 config_model = importlib.import_module(FLAGS.config_model)
 config_data = importlib.import_module(FLAGS.config_data)
-pretraining = FLAGS.pretraining
-restore_adam = FLAGS.restore_adam
-restore_mask = FLAGS.restore_mask
+pretrain_epochs = FLAGS.pretrain_epochs
 
 expr_name = config_train.expr_name
 mask_patterns = config_train.mask_patterns
 
-def optimistic_restore(session, save_file, graph=tf.get_default_graph()):
-    reader = tf.train.NewCheckpointReader(save_file)
-    saved_shapes = reader.get_variable_to_shape_map()
-    var_names = sorted([
-        (var.name, var.name.split(':')[0]) for var in tf.global_variables()
-        if var.name.split(':')[0] in saved_shapes])
-    restore_vars = []
-    for var_name, saved_var_name in var_names:
-        curr_var = graph.get_tensor_by_name(var_name)
-        var_shape = curr_var.get_shape().as_list()
-        if var_shape == saved_shapes[saved_var_name]:
-            restore_vars.append(curr_var)
-    if not restore_adam:
-        restore_vars = list(filter(
-            lambda var: var.name.split(':')[0].split('/')[0] != 'OptimizeLoss',
-            restore_vars))
-    if not restore_mask:
-        restore_vars = list(filter(
-            lambda var: var.name.split(':')[0].split('/')[0] not in \
-                ['n_unmask', 'n_mask'],
-            restore_vars))
-    print('restoring variables:\n{}'.format('\n'.join(
-        var.name for var in restore_vars)))
-    opt_saver = tf.train.Saver(restore_vars)
-    opt_saver.restore(session, save_file)
-
-def get_data_loader(sess, fetches, feed_dict):
-    while True:
-        try:
-            yield sess.run(fetches, feed_dict=feed_dict)
-        except tf.errors.OutOfRangeError:
-            break
 
 def build_model(batch, train_data):
     """Assembles the seq2seq model.
@@ -110,6 +74,10 @@ def build_model(batch, train_data):
         logits=tf_outputs.logits,
         sequence_length=batch['target_length']-1)
 
+    #TODO: find a way to reset Adam state at the lr decay point
+    #restore_vars = list(filter(
+    #    lambda var: var.name.split(':')[0].split('/')[0] != 'OptimizeLoss',
+    #    restore_vars))
     train_xe_op = tx.core.get_train_op(
         loss_xe,
         hparams=config_train.train_xe)
@@ -167,7 +135,6 @@ def main():
 
     train_xe_op, train_debleu_op, tm_helper, infer_outputs = \
         build_model(data_batch, train_data)
-    train_op = train_xe_op if pretraining else train_debleu_op
 
     tf.summary.scalar('tm/n_unmask', tm_helper.n_unmask)
     tf.summary.scalar('tm/n_mask', tm_helper.n_mask)
@@ -178,22 +145,31 @@ def main():
 
     def _train_epoch(sess, summary_writer, train_op, trigger):
         print('in _train_epoch')
+
         data_iterator.restart_dataset(sess, 'train')
         feed_dict = {
             tx.global_mode(): tf.estimator.ModeKeys.TRAIN,
             data_iterator.handle: data_iterator.get_handle(sess, 'train')
         }
 
-        for loss, summary, step in get_data_loader(
-                sess, (train_op, merged_summary, global_step), feed_dict):
-            summary_writer.add_summary(summary, step)
-            if step % config_train.steps_per_eval == 0:
-                _eval_epoch(sess, summary_writer, 'val', trigger)
+        while True:
+            try:
+                loss, summary, step = sess.run(
+                    (train_op, merged_summary, global_step), feed_dict)
+
+                summary_writer.add_summary(summary, step)
+
+                if step % config_train.steps_per_eval == 0:
+                    _eval_epoch(sess, summary_writer, 'val', trigger)
+
+            except tf.errors.OutOfRangeError:
+                break
 
         print('end _train_epoch')
 
     def _eval_epoch(sess, summary_writer, mode, trigger):
         print('in _eval_epoch with mode {}'.format(mode))
+
         data_iterator.restart_dataset(sess, mode)
         feed_dict = {
             tx.global_mode(): tf.estimator.ModeKeys.EVAL,
@@ -205,20 +181,27 @@ def main():
             data_batch['target_text'][:, 1:],
             infer_outputs.predicted_ids[:, :, 0]
         ]
-        for target_texts_ori, output_ids in \
-                get_data_loader(sess, fetches, feed_dict):
-            target_texts = tx.utils.strip_special_tokens(target_texts_ori)
-            output_texts = tx.utils.map_ids_to_strs(
-                ids=output_ids, vocab=val_data.target_vocab)
 
-            ref_hypo_pairs.extend(
-                zip(map(lambda x: [x], target_texts), output_texts))
+        while True:
+            try:
+                target_texts_ori, output_ids = sess.run(fetches, feed_dict)
+                target_texts = tx.utils.strip_special_tokens(target_texts_ori)
+                output_texts = tx.utils.map_ids_to_strs(
+                    ids=output_ids, vocab=val_data.target_vocab)
+
+                ref_hypo_pairs.extend(
+                    zip(map(lambda x: [x], target_texts), output_texts))
+
+            except tf.errors.OutOfRangeError:
+                break
 
         refs, hypos = zip(*ref_hypo_pairs)
         bleu = tx.evals.corpus_bleu_moses(list_of_references=refs,
                                           hypotheses=hypos)
+        print('{} BLEU: {}'.format(mode, bleu))
 
         step = tf.train.global_step(sess, global_step)
+
         summary = tf.Summary()
         summary.value.add(tag='{}/BLEU'.format(mode), simple_value=bleu)
         summary_writer.add_summary(summary, step)
@@ -234,16 +217,13 @@ def main():
 
     best_val_bleu = -1
     with tf.Session() as sess:
-        if pretraining:
-            trigger = None
-        else:
-            action = (tm_helper.assign_mask_pattern(sess, n_unmask, n_mask)
-                      for n_unmask, n_mask in mask_patterns[1:])
-            trigger = tx.utils.BestEverConvergenceTrigger(
-                action,
-                config_train.threshold_steps,
-                config_train.minimum_interval_steps,
-                default=None)
+        action = (tm_helper.assign_mask_pattern(sess, n_unmask, n_mask)
+                  for n_unmask, n_mask in mask_patterns[1:])
+        trigger = tx.utils.BestEverConvergenceTrigger(
+            action,
+            config_train.threshold_steps,
+            config_train.minimum_interval_steps,
+            default=None)
 
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
@@ -257,15 +237,14 @@ def main():
         if os.path.exists(dir_model):
             ckpt_path = tf.train.latest_checkpoint(dir_model)
             print('restoring from {} ...'.format(ckpt_path))
-            optimistic_restore(sess, ckpt_path)
+            saver.restore(sess, ckpt_path)
 
-            if trigger is not None:
-                trigger_path = '{}.trigger'.format(ckpt_path)
-                if os.path.exists(trigger_path):
-                    with open(trigger_path, 'r') as pickle_file:
-                        trigger.restore_from_pickle(pickle_file)
-                else:
-                    print('cannot find previous trigger state.')
+            trigger_path = '{}.trigger'.format(ckpt_path)
+            if os.path.exists(trigger_path):
+                with open(trigger_path, 'r') as pickle_file:
+                    trigger.restore_from_pickle(pickle_file)
+            else:
+                print('cannot find previous trigger state.')
 
             print('done.')
 
@@ -274,29 +253,38 @@ def main():
 
         epoch = 0
         while epoch < config_train.max_epochs:
-            print('epoch #{}:'.format(epoch))
+            pretraining = epoch < pretrain_epochs
+            print('epoch #{}{}:'.format(
+                epoch, ' (pretraining)' if pretraining else ''))
+
             val_bleu = _eval_epoch(sess, summary_writer, 'val', trigger)
+            step = tf.train.global_step(sess, global_step)
+            print('epoch: {}, step: {}, val bleu: {}'.format(
+                epoch, step, val_bleu))
+
             if val_bleu > best_val_bleu:
                 best_val_bleu = val_bleu
-                step = tf.train.global_step(sess, global_step)
-                print('epoch: {}, step: {}, best val bleu: {}'.format(
-                    epoch, step, best_val_bleu))
+                print('update best val bleu: {}'.format(best_val_bleu))
+
                 saved_path = saver.save(
                     sess, ckpt_best, global_step=step)
 
-                if trigger is not None:
+                if not pretraining:
                     with open('{}.trigger'.format(ckpt_best), 'w') as \
                             pickle_file:
                         trigger.save_to_pickle(pickle_file)
 
                 print('saved to {}'.format(saved_path))
 
-            _train_epoch(sess, summary_writer, train_op, trigger)
+            train_op = train_xe_op if pretraining else train_debleu_op
+            _train_epoch(sess, summary_writer, train_op,
+                         None if pretraining else trigger)
             epoch += 1
+
             step = tf.train.global_step(sess, global_step)
             saved_path = saver.save(sess, ckpt_model, global_step=step)
 
-            if trigger is not None:
+            if not pretraining:
                 with open('{}.trigger'.format(ckpt_model), 'w') as pickle_file:
                     trigger.save_to_pickle(pickle_file)
 

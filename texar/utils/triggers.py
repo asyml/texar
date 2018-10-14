@@ -29,6 +29,7 @@ except ImportError:
 
 DEFAULT_ACTION = object()
 
+
 class Trigger(object):
 
     def __init__(self, action, default=DEFAULT_ACTION):
