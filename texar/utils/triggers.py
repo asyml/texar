@@ -37,32 +37,29 @@ DEFAULT_ACTION = object()
 
 
 class Trigger(object):
-    """A trigger can do some action when certain condition is met.
-    Specifically, the user calls the trigger periodically. Every time the
-    trigger is called, it will send all arguments to :meth:`_predicate`, which
-    returns a boolean value indicates whether the condition is met. Once the
-    condition is met, the trigger will then call `next(action)` to do next
-    action and obtain the returned value.
+    """This is the base class of all triggers. A trigger can do some action when
+    certain condition is met. Specifically, the user calls the trigger
+    periodically. Every time the trigger is called, it will send all arguments
+    to :meth:`_predicate`, which returns a boolean value indicates whether the
+    condition is met. Once the condition is met, the trigger will then call
+    `next(action)` to do next action and obtain the returned value.
 
     Args:
-        action (iterable): An iterable which does the action and possibly
-            returns a value.
-        default: The value returned after :attr:`action` stops iteration. If
-            not provided, the trigger will do nothing when StopIteration
+        action (iterable): An iterable which iteratively does the action and
+            possibly returns a value.
+        default (optional): The value returned after :attr:`action` exhausted.
+            If not provided, the trigger will do nothing when `StopIteration`
             occurs.
     """
 
     def __init__(self, action, default=DEFAULT_ACTION):
-        """action is an iterator that iteratively do a sequence of action and
-        return result values. default is used as result value when action is
-        exhausted.
-        """
         self._action = iter(action)
         self._default = default
         self._triggered_times = 0
 
     def _predicate(self, *args, **kwargs):
-        """This function returns True when we think we should do something.
+        """This function returns True when the condition is met and we should
+        do something.
         """
         raise NotImplementedError
 
@@ -84,6 +81,9 @@ class Trigger(object):
 
     @property
     def _state_names(self):
+        """Returns a list of names of attributes of the trigger object that can
+        be saved and restored as trigger state.
+        """
         return ['_triggered_times']
 
     @property
@@ -110,9 +110,30 @@ class Trigger(object):
             self._next_action()
 
     def save_to_pickle(self, file):
+        """Write a pickled representation of the state of the trigger to the
+        open file-like object :attr:`file`.
+
+        Args:
+            file: The open file-like object to which we write. As described in
+                pickle official document, it must have a `write()` method that
+                accepts a single string argument.
+        """
         pickle.dump(self.state, file)
 
     def restore_from_pickle(self, file):
+        """Read a string from the open file-like object :attr:`file` and
+        restore the trigger state from it.
+        Note that this function will call `next(action)` for the exact times
+        that the :py:attr:`state` records how many times `next(action)` had
+        been called. The user should be aware of any possible side effect of
+        this behavior.
+
+        Args:
+            file: The open file-like object from which we read. As described in
+                pickle official document, it must have a `read()` method that
+                takes an integer argument, and a `readline()` method that
+                requires no arguments, and both methods should return a string.
+        """
         self.restore_from_state(pickle.load(file))
 
 
@@ -137,6 +158,25 @@ class ScheduledStepsTrigger(Trigger):
 
 
 class BestEverConvergenceTrigger(Trigger):
+    """A trigger that maintains the best value of a metric. It triggers when
+    the best value of the metric has not been updated for at least
+    :attr:`threshold_steps`. In order to avoid it triggers two frequently, it
+    will not trigger again within :attr:`minimum_interval_steps` once it
+    triggers.
+
+    Args:
+        action (iterable): An iterable which iteratively does the action and
+            possibly returns a value.
+        threshold_steps (int): Number of steps it should trigger after the best
+            value was last updated.
+        minimum_interval_steps (int): Minimum number of steps between twice
+            firing of the trigger.
+        default (optional): The value returned after :attr:`action` exhausted.
+            If not provided, the trigger will do nothing when `StopIteration`
+            occurs.
+    .. document private functions
+    .. automethod:: __call__
+    """
 
     def __init__(self, action, threshold_steps, minimum_interval_steps,
                  default=DEFAULT_ACTION):
@@ -159,6 +199,18 @@ class BestEverConvergenceTrigger(Trigger):
             self._last_triggered_step = step
             return True
         return False
+
+    def __call__(self, step, score):
+        """The trigger must be called to update the current training step
+        (:attr:`step`) and the current value of the maintained metric
+        (:attr:`score`).
+
+        Args:
+            step (int): Current training step to update. The training step must
+                be updated in ascending order.
+            score (float): Current value of the maintained metric.
+        """
+        return super(BestEverConvergenceTrigger, self).__call__(step, score)
 
     @property
     def _state_names(self):
