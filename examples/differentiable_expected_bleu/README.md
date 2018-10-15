@@ -17,7 +17,7 @@ python prepare_data.py --data de-en
 Train the model with the following cmd:
 
 ```
-python differentiable_expected_bleu.py --config_model config_model --config_data config_iwslt14 --config_train config_train --pretrain_epochs 8
+python differentiable_expected_bleu.py --config_model config_model --config_data config_iwslt14_de-en --config_train config_train_iwslt14_de-en --pretrain_epochs 8
 ```
 
 Here:
