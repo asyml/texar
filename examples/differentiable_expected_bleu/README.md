@@ -9,7 +9,7 @@ This example builds an attentional seq2seq model for machine translation trained
 Download the data with the following cmds:
 
 ```
-python prepare_data.py --data iwslt14
+python prepare_data.py --data de-en
 ```
 
 ### Train the model ###

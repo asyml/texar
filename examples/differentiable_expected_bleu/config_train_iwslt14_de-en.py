@@ -42,4 +42,4 @@ train_debleu = {
     },
 }
 
-expr_name = 'train'
+expr_name = 'iwslt14_de-en'

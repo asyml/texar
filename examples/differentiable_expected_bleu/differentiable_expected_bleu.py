@@ -27,9 +27,9 @@ import texar as tx
 
 flags = tf.flags
 
-flags.DEFINE_string("config_train", "config_train", "The training config.")
+flags.DEFINE_string("config_train", "config_train_iwslt14_de-en", "The training config.")
 flags.DEFINE_string("config_model", "config_model", "The model config.")
-flags.DEFINE_string("config_data", "config_iwslt14", "The dataset config.")
+flags.DEFINE_string("config_data", "config_data_iwslt14_de-en", "The dataset config.")
 flags.DEFINE_integer("pretrain_epochs", 8, "Number of pretraining epochs.")
 
 FLAGS = flags.FLAGS
@@ -254,9 +254,10 @@ def main():
                 epoch, ' (pretraining)' if pretraining else ''))
 
             val_bleu = _eval_epoch(sess, summary_writer, 'val', trigger)
+            test_bleu = _eval_epoch(sess, summary_writer, 'test', trigger)
             step = tf.train.global_step(sess, global_step)
-            print('epoch: {}, step: {}, val bleu: {}'.format(
-                epoch, step, val_bleu))
+            print('epoch: {}, step: {}, val bleu: {}, test bleu: {}'.format(
+                epoch, step, val_bleu, test_bleu))
 
             if val_bleu > best_val_bleu:
                 best_val_bleu = val_bleu
