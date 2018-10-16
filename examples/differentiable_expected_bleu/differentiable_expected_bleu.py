@@ -25,6 +25,8 @@ import os
 import tensorflow as tf
 import texar as tx
 
+from nltk.translate.bleu_score import corpus_bleu
+
 flags = tf.flags
 
 flags.DEFINE_string("config_train", "config_train_iwslt14_de-en", "The training config.")
@@ -181,9 +183,11 @@ def main():
         while True:
             try:
                 target_texts_ori, output_ids = sess.run(fetches, feed_dict)
-                target_texts = tx.utils.strip_special_tokens(target_texts_ori)
+                target_texts = tx.utils.strip_special_tokens(
+                    target_texts_ori.tolist(), is_token_list=True)
                 output_texts = tx.utils.map_ids_to_strs(
-                    ids=output_ids, vocab=val_data.target_vocab)
+                    ids=output_ids.tolist(), vocab=val_data.target_vocab,
+                    join=False)
 
                 ref_hypo_pairs.extend(
                     zip(map(lambda x: [x], target_texts), output_texts))
@@ -192,8 +196,7 @@ def main():
                 break
 
         refs, hypos = zip(*ref_hypo_pairs)
-        bleu = tx.evals.corpus_bleu_moses(list_of_references=refs,
-                                          hypotheses=hypos)
+        bleu = corpus_bleu(refs, hypos) * 100
         print('{} BLEU: {}'.format(mode, bleu))
 
         step = tf.train.global_step(sess, global_step)
