@@ -37,7 +37,7 @@ __all__ = [
     "TransformerEncoder"
 ]
 
-def default_transformer_poswise_net_hparams():
+def default_transformer_poswise_net_hparams(output_dim=512):
     """Returns default hyperparameters of a
     :class:`~texar.modules.FeedForwardNetwork` as a pos-wise network used
     in :class:`~texar.modules.TransformerEncoder` and
@@ -50,56 +50,59 @@ def default_transformer_poswise_net_hparams():
         {
             "layers": [
                 {
-                    "type":"Dense",
+                    "type": "Dense",
                     "kwargs": {
-                        "name":"conv1",
-                        "units":2048,
-                        "activation":"relu",
-                        "use_bias":True,
+                        "name": "conv1",
+                        "units": 2048,
+                        "activation": "relu",
+                        "use_bias": True,
                     }
                 },
                 {
-                    "type":"Dropout",
+                    "type": "Dropout",
                     "kwargs": {
                         "rate": 0.1,
                     }
                 },
                 {
-                    "type":"Dense",
+                    "type": "Dense",
                     "kwargs": {
-                        "name":"conv2",
-                        "units":512,
-                        "use_bias":True,
-                        }
+                        "name": "conv2",
+                        "units": output_dim,
+                        "use_bias": True,
+                    }
                 }
             ],
             "name": "ffn"
         }
+
+    Args:
+        output_dim (int): The size of output dense layer.
     """
     return {
         "layers": [
             {
-                "type":"Dense",
+                "type": "Dense",
                 "kwargs": {
-                    "name":"conv1",
-                    "units":2048,
-                    "activation":"relu",
-                    "use_bias":True,
+                    "name": "conv1",
+                    "units": 2048,
+                    "activation": "relu",
+                    "use_bias": True,
                 }
             },
             {
-                "type":"Dropout",
+                "type": "Dropout",
                 "kwargs": {
                     "rate": 0.1,
                 }
             },
             {
-                "type":"Dense",
+                "type": "Dense",
                 "kwargs": {
-                    "name":"conv2",
-                    "units":512,
-                    "use_bias":True,
-                    }
+                    "name": "conv2",
+                    "units": output_dim,
+                    "use_bias": True,
+                }
             }
         ],
         "name": "ffn"
@@ -145,7 +148,7 @@ class TransformerEncoder(EncoderBase):
                 "embedding_dropout": 0.1,
                 "attention_dropout": 0.1,
                 "residual_dropout": 0.1,
-                'poswise_feedforward': default_transformer_poswise_net_hparams,
+                "poswise_feedforward": default_transformer_poswise_net_hparams,
                 "initializer": None,
                 "name": "transformer_encoder"
             }
@@ -168,7 +171,7 @@ class TransformerEncoder(EncoderBase):
             :meth:`~texar.modules.SinusoidsPositionEmbedder.default_hparams`
             is used.
 
-        "embedding_dropout": float
+        "embedding_dropout" : float
             Dropout rate of the input word and position embeddings.
 
         "attention_dropout: : float
@@ -194,7 +197,7 @@ class TransformerEncoder(EncoderBase):
         """
         return {
             'initializer': None,
-            "position_embedder_hparams": None,
+            'position_embedder_hparams': None,
             'embedding_dropout': 0.1,
             'attention_dropout': 0.1,
             'residual_dropout': 0.1,
@@ -202,7 +205,7 @@ class TransformerEncoder(EncoderBase):
             'num_heads': 8,
             'poswise_feedforward': default_transformer_poswise_net_hparams(),
             'dim': 512,
-            "name": "transformer_encoder",
+            'name': 'transformer_encoder',
         }
 
     # pylint: disable=arguments-differ

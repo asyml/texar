@@ -125,3 +125,21 @@ decoder = {
     'max_decoding_length_infer': None,
     'name': 'attention_rnn_decoder'
 }
+# --------------------- Optimization --------------------- #
+opt = {
+    'optimizer': {
+        'type':  'AdamOptimizer',
+        'kwargs': {
+            'learning_rate': 0.001,
+            # Other keyword arguments for the optimizer class
+        },
+    },
+    'learning_rate_decay': {
+        # Hyperparameters of learning rate decay
+    },
+    'gradient_clip': {
+        # Hyperparameters of gradient clipping
+    },
+    'gradient_noise_scale': None,
+    'name': None
+}

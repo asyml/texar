@@ -59,11 +59,12 @@ def build_model(batch, train_data):
         inputs=target_embedder(batch['target_text_ids'][:, :-1]),
         sequence_length=batch['target_length'] - 1)
 
-    train_op = tx.core.get_train_op(
-        tx.losses.sequence_sparse_softmax_cross_entropy(
-            labels=batch['target_text_ids'][:, 1:],
-            logits=training_outputs.logits,
-            sequence_length=batch['target_length'] - 1))
+    mle_loss = tx.losses.sequence_sparse_softmax_cross_entropy(
+        labels=batch['target_text_ids'][:, 1:],
+        logits=training_outputs.logits,
+        sequence_length=batch['target_length'] - 1)
+
+    train_op = tx.core.get_train_op(mle_loss, hparams=config_model.opt)
 
     start_tokens = tf.ones_like(batch['target_length']) * \
             train_data.target_vocab.bos_token_id
@@ -124,7 +125,8 @@ def main():
                 target_texts_ori, output_ids = \
                     sess.run(fetches, feed_dict=feed_dict)
 
-                target_texts = tx.utils.strip_special_tokens(target_texts_ori)
+                target_texts = tx.utils.strip_special_tokens(
+                    target_texts_ori, is_token_list=True)
                 output_texts = tx.utils.map_ids_to_strs(
                     ids=output_ids, vocab=val_data.target_vocab)
 

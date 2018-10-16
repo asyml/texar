@@ -23,6 +23,7 @@ from __future__ import division
 # pylint: disable=redefined-outer-name, too-many-arguments
 
 import inspect
+import funcsigs
 from pydoc import locate
 import copy
 import collections
@@ -47,6 +48,8 @@ MAX_SEQ_LENGTH = np.iinfo(np.int32).max
 
 __all__ = [
     "_inspect_getargspec",
+    "get_args",
+    "get_default_arg_values",
     "check_or_get_class",
     "get_class",
     "check_or_get_instance",
@@ -55,8 +58,6 @@ __all__ = [
     "get_instance_with_redundant_kwargs",
     "get_function",
     "call_function_with_redundant_kwargs",
-    "get_args",
-    "get_default_arg_values",
     "get_instance_kwargs",
     "dict_patch",
     "dict_lookup",
@@ -93,6 +94,45 @@ def _inspect_getargspec(fn):
         return inspect.getfullargspec(fn)
     except AttributeError:
         return inspect.getargspec(fn)
+
+def get_args(fn):
+    """Gets the arguments of a function.
+
+    Args:
+        fn (callable): The function to inspect.
+
+    Returns:
+        list: A list of argument names (str) of the function.
+    """
+    argspec = _inspect_getargspec(fn)
+    args = argspec.args
+
+    # Empty args can be because `fn` is decorated. Use `funcsigs.signature`
+    # to re-do the inspect
+    if len(args) == 0:
+        args = funcsigs.signature(fn).parameters.keys()
+        args = list(args)
+
+    return args
+
+def get_default_arg_values(fn):
+    """Gets the arguments and respective default values of a function.
+
+    Only arguments with default values are included in the output dictionary.
+
+    Args:
+        fn (callable): The function to inspect.
+
+    Returns:
+        dict: A dictionary that maps argument names (str) to their default
+        values. The dictionary is empty if no arguments have default values.
+    """
+    argspec = _inspect_getargspec(fn)
+    if argspec.defaults is None:
+        return {}
+    num_defaults = len(argspec.defaults)
+    return dict(zip(argspec.args[-num_defaults:], argspec.defaults))
+
 
 def check_or_get_class(class_or_name, module_path=None, superclass=None):
     """Returns the class and checks if the class inherits :attr:`superclass`.
@@ -228,7 +268,7 @@ def get_instance(class_or_name, kwargs, module_paths=None):
         class_ = get_class(class_, module_paths)
 
     # Check validity of arguments
-    class_args = set(_inspect_getargspec(class_.__init__).args)
+    class_args = set(get_args(class_.__init__))
 
     if kwargs is None:
         kwargs = {}
@@ -308,7 +348,7 @@ def get_instance_with_redundant_kwargs(
 
     # Select valid arguments
     selected_kwargs = {}
-    class_args = set(_inspect_getargspec(class_.__init__).args)
+    class_args = set(get_args(class_.__init__))
     if kwargs is None:
         kwargs = {}
     for key, value in kwargs.items():
@@ -369,9 +409,9 @@ def call_function_with_redundant_kwargs(fn, kwargs):
         The returned results by calling :attr:`fn`.
     """
     try:
-        fn_args = set(_inspect_getargspec(fn).args)
+        fn_args = set(get_args(fn))
     except TypeError:
-        fn_args = set(_inspect_getargspec(fn.__call__).args)
+        fn_args = set(get_args(fn.__cal__))
 
     if kwargs is None:
         kwargs = {}
@@ -384,35 +424,6 @@ def call_function_with_redundant_kwargs(fn, kwargs):
 
     return fn(**selected_kwargs)
 
-def get_args(fn):
-    """Gets the arguments of a function.
-
-    Args:
-        fn (callable): The function to inspect.
-
-    Returns:
-        list: A list of argument names (str) of the function.
-    """
-    argspec = _inspect_getargspec(fn)
-    return argspec.args
-
-def get_default_arg_values(fn):
-    """Gets the arguments and respective default values of a function.
-
-    Only arguments with default values are included in the output dictionary.
-
-    Args:
-        fn (callable): The function to inspect.
-
-    Returns:
-        dict: A dictionary that maps argument names (str) to their default
-        values. The dictionary is empty if no arguments have default values.
-    """
-    argspec = _inspect_getargspec(fn)
-    if argspec.defaults is None:
-        return {}
-    num_defaults = len(argspec.defaults)
-    return dict(zip(argspec.args[-num_defaults:], argspec.defaults))
 
 def get_instance_kwargs(kwargs, hparams):
     """Makes a dict of keyword arguments with the following structure:
