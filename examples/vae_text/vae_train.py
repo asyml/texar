@@ -40,10 +40,29 @@ import texar as tx
 flags = tf.flags
 
 flags.DEFINE_string("config", "config", "The config to use.")
+flags.DEFINE_string("mode", "train", "train or predict")
+flags.DEFINE_string("model", None, "model path for generating sentences")
+flags.DEFINE_string("out", None, "generation output path")
 
 FLAGS = flags.FLAGS
 
 config = importlib.import_module(FLAGS.config)
+
+class VAEWordEmbedder(object):
+    def __init__(self, word_embedder):
+        self.word_embedder = word_embedder
+        self.latent_variable = None
+
+    def __call__(self, ids=None):
+        embedding = self.word_embedder(ids)
+        return tf.concat([embedding, self.latent_variable], axis=1)
+
+        if tf.rank(embedding) == 2:
+            return tf.concat([embedding, self.latent_variable], axis=1)
+        else:
+            latent_z = tf.expand_dims(self.latent_variable, axis=1)
+            latent_z = tf.tile(latent_z, [1, tf.shape(embedding)[1], 1])
+            return tf.concat([embedding, latent_z], axis=2)
 
 def kl_dvg(means, logvars):
     """compute the KL divergence between Gaussian distribution
@@ -92,12 +111,14 @@ def _main(_):
         (train_data.dataset_size() / config.batch_size))
 
     # Model architecture
-    embedder = tx.modules.WordEmbedder(
-        vocab_size=train_data.vocab.size, hparams=config.emb_hparams)
+    encoder_embedder = tx.modules.WordEmbedder(
+            vocab_size=train_data.vocab.size, hparams=config.emb_hparams)
+    decoder_embedder = tx.modules.WordEmbedder(
+            vocab_size=train_data.vocab.size, hparams=config.emb_hparams)
 
 
-    input_embed = embedder(data_batch["text_ids"])
-    output_embed = embedder(data_batch["text_ids"][:, :-1])
+    input_embed = encoder_embedder(data_batch["text_ids"])
+    output_embed = decoder_embedder(data_batch["text_ids"][:, :-1])
 
     if config.enc_keep_prob_in < 1:
         input_embed = tf.nn.dropout(
@@ -117,7 +138,7 @@ def _main(_):
         decoder_initial_state_size = decoder.cell.state_size
     elif config.decoder_hparams["type"] == 'transformer':
         decoder = tx.modules.TransformerDecoder(
-            embedding=embedder.embedding,
+            embedding=decoder_embedder.embedding,
             hparams=config.trans_hparams)
         decoder_initial_state_size = tf.TensorShape(
             [1, config.emb_hparams["dim"]])
@@ -129,6 +150,7 @@ def _main(_):
 
     connector_stoch = tx.modules.ReparameterizedStochasticConnector(
         decoder_initial_state_size)
+
 
     _, ecdr_states = encoder(
         input_embed,
@@ -142,10 +164,15 @@ def _main(_):
         loc=mean,
         scale_diag=tf.exp(0.5 * logvar))
 
-    dcdr_states, _ = connector_stoch(dst)
+    dcdr_states, latent_z = connector_stoch(dst)
 
     # decoder
     if config.decoder_hparams["type"] == "lstm":
+        # concat latent variable to input at every time step
+        latent_z = tf.expand_dims(latent_z, axis=1)
+        latent_z = tf.tile(latent_z, [1, tf.shape(output_embed)[1], 1])
+        output_embed = tf.concat([output_embed, latent_z], axis=2)
+
         outputs, _, _ = decoder(
             initial_state=dcdr_states,
             decoding_strategy="train_greedy",
@@ -246,9 +273,70 @@ def _main(_):
 
         return nll_ / num_sents, np.exp(nll_ / num_words)
 
+    def generate(sess, saver, fname=None):
+        if tf.train.checkpoint_exists(FLAGS.model):
+            saver.restore(sess, FLAGS.model)
+        else:
+            raise ValueError("cannot find checkpoint model")
+
+        batch_size = train_data.batch_size
+
+        dst = tf.contrib.distributions.MultivariateNormalDiag(
+            loc=tf.zeros([batch_size, config.latent_dims]),
+            scale_diag=tf.ones([batch_size, config.latent_dims]))
+
+        dcdr_states, latent_z = connector_stoch(dst)
+
+        def cat_embedder(ids):
+            embedding = decoder_embedder(ids)
+            return tf.concat([embedding, latent_z], axis=1)
+            
+        vocab = train_data.vocab
+        start_tokens = tf.ones(batch_size, tf.int32) * vocab.bos_token_id;
+        end_token = vocab.eos_token_id;
+
+        if config.decoder_hparams["type"] == "lstm":
+            outputs, _, _ = decoder(
+                initial_state=dcdr_states,
+                decoding_strategy="infer_sample",
+                embedding=cat_embedder,
+                max_decoding_length=100,
+                start_tokens=start_tokens,
+                end_token=end_token)
+        else:
+            outputs, _ = decoder(
+                memory=dcdr_states,
+                decoding_strategy="infer_sample",
+                memory_sequence_length=tf.ones(tf.shape(dcdr_states)[0]),
+                max_decoding_length=100,
+                start_tokens=start_tokens,
+                end_token=end_token)
+
+        sample_tokens = vocab.map_ids_to_tokens(outputs.sample_id)
+        sess.run(tf.tables_initializer())
+
+        mode_key = tf.estimator.ModeKeys.EVAL
+        feed = {tx.global_mode():mode_key}
+        sample_tokens_ = sess.run(sample_tokens, feed_dict=feed)
+        if fname is None:
+            fh = sys.stdout
+        else:
+            fh = open(fname, 'w')
+
+        for sent in sample_tokens_:
+            sent = list(sent)
+            end_id = sent.index(vocab.eos_token)
+            fh.write(' '.join(sent[:end_id+1]) + '\n')
+
+        fh.close()
 
     saver = tf.train.Saver()
     with tf.Session() as sess:
+        # generate samples from prior
+        if FLAGS.mode == "predict":
+            generate(sess, saver, FLAGS.out)
+            return
+
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
