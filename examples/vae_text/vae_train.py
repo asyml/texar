@@ -48,22 +48,6 @@ FLAGS = flags.FLAGS
 
 config = importlib.import_module(FLAGS.config)
 
-class VAEWordEmbedder(object):
-    def __init__(self, word_embedder):
-        self.word_embedder = word_embedder
-        self.latent_variable = None
-
-    def __call__(self, ids=None):
-        embedding = self.word_embedder(ids)
-        return tf.concat([embedding, self.latent_variable], axis=1)
-
-        if tf.rank(embedding) == 2:
-            return tf.concat([embedding, self.latent_variable], axis=1)
-        else:
-            latent_z = tf.expand_dims(self.latent_variable, axis=1)
-            latent_z = tf.tile(latent_z, [1, tf.shape(embedding)[1], 1])
-            return tf.concat([embedding, latent_z], axis=2)
-
 def kl_dvg(means, logvars):
     """compute the KL divergence between Gaussian distribution
     """
@@ -287,10 +271,11 @@ def _main(_):
 
         dcdr_states, latent_z = connector_stoch(dst)
 
+        # to concatenate latent variable to input word embeddings
         def cat_embedder(ids):
             embedding = decoder_embedder(ids)
             return tf.concat([embedding, latent_z], axis=1)
-            
+
         vocab = train_data.vocab
         start_tokens = tf.ones(batch_size, tf.int32) * vocab.bos_token_id;
         end_token = vocab.eos_token_id;
