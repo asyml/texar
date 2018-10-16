@@ -7,13 +7,23 @@ embedding_dim = 500
 embedder = {
     'dim': embedding_dim
 }
+
 encoder = {
     'rnn_cell_fw': {
         'kwargs': {
             'num_units': num_units
-        }
+        },
+        'num_layers': 2
+    },
+    'output_layer_fw': {
+        'dropout_rate': 0
     }
 }
+
+connector = {
+    'activation_fn': 'tanh'
+}
+
 decoder = {
     'rnn_cell': {
         'kwargs': {

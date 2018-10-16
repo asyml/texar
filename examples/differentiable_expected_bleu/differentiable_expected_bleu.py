@@ -54,7 +54,8 @@ def build_model(batch, train_data):
     encoder = tx.modules.BidirectionalRNNEncoder(
         hparams=config_model.encoder)
 
-    enc_outputs, _ = encoder(source_embedder(batch['source_text_ids']))
+    enc_outputs, enc_final_state = encoder(
+        source_embedder(batch['source_text_ids']))
 
     target_embedder = tx.modules.WordEmbedder(
         vocab_size=train_data.target_vocab.size, hparams=config_model.embedder)
@@ -65,9 +66,23 @@ def build_model(batch, train_data):
         vocab_size=train_data.target_vocab.size,
         hparams=config_model.decoder)
 
+    enc_final_state = tf.contrib.framework.nest.map_structure(
+        lambda *args: tf.concat(args, -1), *enc_final_state)
+
+    if isinstance(decoder.cell, tf.nn.rnn_cell.LSTMCell):
+        connector = tx.modules.MLPTransformConnector(
+            decoder.state_size.h, hparams=config_model.connector)
+        dec_initial_h = connector(enc_final_state.h)
+        dec_initial_state = (dec_initial_h, enc_final_state.c)
+    else:
+        connector = tx.modules.MLPTransformConnector(
+            decoder.state_size, hparams=config_model.connector)
+        dec_initial_state = connector(enc_final_state)
+
     # cross-entropy + teacher-forcing pretraining
     tf_outputs, _, _ = decoder(
         decoding_strategy='train_greedy',
+        initial_state=dec_initial_state,
         inputs=target_embedder(batch['target_text_ids'][:, :-1]),
         sequence_length=batch['target_length']-1)
 
@@ -91,7 +106,8 @@ def build_model(batch, train_data):
         tau=config_train.tau)
 
     tm_outputs, _, _ = decoder(
-        helper=tm_helper)
+        helper=tm_helper,
+        initial_state=dec_initial_state)
 
     loss_debleu = tx.losses.debleu(
         labels=batch['target_text_ids'][:, 1:],
