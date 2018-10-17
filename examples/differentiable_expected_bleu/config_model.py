@@ -20,10 +20,6 @@ encoder = {
     }
 }
 
-connector = {
-    'activation_fn': 'tanh'
-}
-
 decoder = {
     'rnn_cell': {
         'kwargs': {
