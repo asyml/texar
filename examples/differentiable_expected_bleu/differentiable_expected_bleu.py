@@ -48,6 +48,10 @@ pretrain_epochs = FLAGS.pretrain_epochs
 mask_patterns = config_train.mask_patterns
 
 
+def get_scope_by_name(tensor):
+    return tensor.name[: tensor.name.rfind('/') + 1]
+
+
 def build_model(batch, train_data):
     """Assembles the seq2seq model.
     """
@@ -143,12 +147,12 @@ def main():
     summary_xe_op = tf.summary.merge(
         tf.get_collection(
             tf.GraphKeys.SUMMARIES,
-            scope='/'.join(train_xe_op.name.split('/')[:-1])),
+            scope=get_scope_by_name(train_xe_op)),
         name='summary_xe')
     summary_debleu_op = tf.summary.merge(
         tf.get_collection(
             tf.GraphKeys.SUMMARIES,
-            scope='/'.join(train_xe_op.name.split('/')[:-1])) + summary_tm,
+            scope=get_scope_by_name(train_debleu_op)) + summary_tm,
         name='summary_debleu')
 
     saver = tf.train.Saver(max_to_keep=None)

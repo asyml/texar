@@ -15,7 +15,7 @@ train_xe = {
     "learning_rate_decay": {
         "type": "piecewise_constant",
         "kwargs": {
-            "boundaries": [10000],
+            "boundaries": [100000],
             "values": [1e-3, 1e-5],
         },
     },
@@ -25,6 +25,7 @@ train_xe = {
             "clip_norm": 5.
         },
     },
+    "name": "XE"
 }
 
 train_debleu = {
@@ -40,4 +41,5 @@ train_debleu = {
             "clip_norm": 5.
         },
     },
+    "name": "DEBLEU"
 }
