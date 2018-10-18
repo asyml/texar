@@ -137,14 +137,23 @@ def main():
     train_xe_op, train_debleu_op, tm_helper, infer_outputs = \
         build_model(data_batch, train_data)
 
-    tf.summary.scalar('tm/n_unmask', tm_helper.n_unmask)
-    tf.summary.scalar('tm/n_mask', tm_helper.n_mask)
-
-    merged_summary = tf.summary.merge_all()
+    summary_tm = [
+        tf.summary.scalar('tm/n_unmask', tm_helper.n_unmask),
+        tf.summary.scalar('tm/n_mask', tm_helper.n_mask)]
+    summary_xe_op = tf.summary.merge(
+        tf.get_collection(
+            tf.GraphKeys.SUMMARIES,
+            scope='/'.join(train_xe_op.name.split('/')[:-1])),
+        name='summary_xe')
+    summary_debleu_op = tf.summary.merge(
+        tf.get_collection(
+            tf.GraphKeys.SUMMARIES,
+            scope='/'.join(train_xe_op.name.split('/')[:-1])) + summary_tm,
+        name='summary_debleu')
 
     saver = tf.train.Saver(max_to_keep=None)
 
-    def _train_epoch(sess, summary_writer, train_op, trigger):
+    def _train_epoch(sess, summary_writer, train_op, summary_op, trigger):
         print('in _train_epoch')
 
         data_iterator.restart_dataset(sess, 'train')
@@ -156,7 +165,7 @@ def main():
         while True:
             try:
                 loss, summary, step = sess.run(
-                    (train_op, merged_summary, global_step), feed_dict)
+                    (train_op, summary_op, global_step), feed_dict)
 
                 summary_writer.add_summary(summary, step)
 
@@ -279,9 +288,11 @@ def main():
 
                 print('saved to {}'.format(saved_path))
 
-            train_op = train_xe_op if pretraining else train_debleu_op
-            _train_epoch(sess, summary_writer, train_op,
-                         None if pretraining else trigger)
+            train_op, summary_op, trigger_ = {
+                True: (train_xe_op, summary_xe_op, None),
+                False: (train_debleu_op, summary_debleu_op, trigger)
+            }[pretraining]
+            _train_epoch(sess, summary_writer, train_op, summary_op, trigger_)
             epoch += 1
 
             step = tf.train.global_step(sess, global_step)
