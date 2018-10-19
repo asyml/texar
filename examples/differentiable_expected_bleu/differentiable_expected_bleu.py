@@ -36,7 +36,8 @@ flags.DEFINE_string("config_data", "config_data_iwslt14_de-en",
                     "The dataset config.")
 flags.DEFINE_string("expr_name", "iwslt14_de-en", "The experiment name. "
                     "Also used as the directory name of run.")
-flags.DEFINE_integer("pretrain_epochs", 8, "Number of pretraining epochs.")
+flags.DEFINE_integer("pretrain_epochs", 10000, "Number of pretraining epochs.")
+flags.DEFINE_string("stage", "xe0", "stage.")
 
 FLAGS = flags.FLAGS
 
@@ -45,6 +46,7 @@ config_model = importlib.import_module(FLAGS.config_model)
 config_data = importlib.import_module(FLAGS.config_data)
 expr_name = FLAGS.expr_name
 pretrain_epochs = FLAGS.pretrain_epochs
+stage = FLAGS.stage
 mask_patterns = config_train.mask_patterns
 
 
@@ -83,9 +85,13 @@ def build_model(batch, train_data):
         logits=tf_outputs.logits,
         sequence_length=batch['target_length']-1)
 
-    train_xe_op = tx.core.get_train_op(
+    train_xe0_op = tx.core.get_train_op(
         loss_xe,
-        hparams=config_train.train_xe)
+        hparams=config_train.train_xe0)
+
+    train_xe1_op = tx.core.get_train_op(
+        loss_xe,
+        hparams=config_train.train_xe1)
 
     # teacher mask + DEBLEU fine-tuning
     tm_helper = tx.modules.TeacherMaskSoftmaxEmbeddingHelper(
@@ -122,7 +128,7 @@ def build_model(batch, train_data):
         beam_width=config_train.infer_beam_width,
         max_decoding_length=config_train.infer_max_decoding_length)
 
-    return train_xe_op, train_debleu_op, tm_helper, bs_outputs
+    return train_xe0_op, train_xe1_op, train_debleu_op, tm_helper, bs_outputs
 
 
 def main():
@@ -138,16 +144,21 @@ def main():
 
     global_step = tf.train.create_global_step()
 
-    train_xe_op, train_debleu_op, tm_helper, infer_outputs = \
+    train_xe0_op, train_xe1_op, train_debleu_op, tm_helper, infer_outputs = \
         build_model(data_batch, train_data)
 
     summary_tm = [
         tf.summary.scalar('tm/n_unmask', tm_helper.n_unmask),
         tf.summary.scalar('tm/n_mask', tm_helper.n_mask)]
-    summary_xe_op = tf.summary.merge(
+    summary_xe0_op = tf.summary.merge(
         tf.get_collection(
             tf.GraphKeys.SUMMARIES,
-            scope=get_scope_by_name(train_xe_op)),
+            scope=get_scope_by_name(train_xe0_op)),
+        name='summary_xe')
+    summary_xe1_op = tf.summary.merge(
+        tf.get_collection(
+            tf.GraphKeys.SUMMARIES,
+            scope=get_scope_by_name(train_xe1_op)),
         name='summary_xe')
     summary_debleu_op = tf.summary.merge(
         tf.get_collection(
@@ -268,9 +279,8 @@ def main():
 
         epoch = 0
         while epoch < config_train.max_epochs:
-            pretraining = epoch < pretrain_epochs
             print('epoch #{}{}:'.format(
-                epoch, ' (pretraining)' if pretraining else ''))
+                epoch, ' ({})'.format(stage)))
 
             val_bleu = _eval_epoch(sess, summary_writer, 'val', trigger)
             test_bleu = _eval_epoch(sess, summary_writer, 'test', trigger)
@@ -285,7 +295,7 @@ def main():
                 saved_path = saver.save(
                     sess, ckpt_best, global_step=step)
 
-                if not pretraining:
+                if stage == 'debleu':
                     with open('{}.trigger'.format(saved_path), 'w') as \
                             pickle_file:
                         trigger.save_to_pickle(pickle_file)
@@ -293,16 +303,17 @@ def main():
                 print('saved to {}'.format(saved_path))
 
             train_op, summary_op, trigger_ = {
-                True: (train_xe_op, summary_xe_op, None),
-                False: (train_debleu_op, summary_debleu_op, trigger)
-            }[pretraining]
+                'xe0': (train_xe0_op, summary_xe0_op, None),
+                'xe1': (train_xe1_op, summary_xe1_op, None),
+                'debleu': (train_debleu_op, summary_debleu_op, trigger)
+            }[stage]
             _train_epoch(sess, summary_writer, train_op, summary_op, trigger_)
             epoch += 1
 
             step = tf.train.global_step(sess, global_step)
             saved_path = saver.save(sess, ckpt_model, global_step=step)
 
-            if not pretraining:
+            if stage == 'debleu':
                 with open('{}.trigger'.format(saved_path), 'w') as pickle_file:
                     trigger.save_to_pickle(pickle_file)
 
