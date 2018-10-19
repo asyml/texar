@@ -31,7 +31,6 @@ __all__ = [
     'attention_bias_lower_triangle',
     'attention_bias_ignore_padding',
     'attention_bias_local',
-    'multihead_attention',
 ]
 
 def attention_bias_lower_triangle(length):
@@ -85,118 +84,6 @@ def attention_bias_ignore_padding(memory_padding):
     """
     ret = memory_padding * -1e18
     return tf.expand_dims(tf.expand_dims(ret, axis=1), axis=1)
-
-def multihead_attention(queries,
-                        memory_attention_bias=None,
-                        memory=None,
-                        num_heads=8,
-                        num_units=None,
-                        dropout_rate=0,
-                        cache=None,
-                        scope='multihead_attention'):
-    """Applies multihead attention.
-
-    Args:
-        queries: A 3d tensor with shape of [batch, length_query,
-            depth_query].
-        keys: A 3d tensor with shape of [batch, length_key, depth_key].
-        num_units: A scalar indicating the attention size,
-            equals to depth_query if not given.
-        dropout_rate: A floating point number.
-        num_heads: An int. Number of heads with calculating attention.
-        scope: Optional scope for `variable_scope`.
-        reuse: Boolean, whether to reuse the weights of a previous layer
-            by the same name.
-
-    Returns:
-        A 3d tensor with shape of (batch, length_query, num_units)
-    """
-    #pylint: disable=too-many-locals
-    with tf.variable_scope(scope):
-        if num_units is None:
-            num_units = queries.get_shape().as_list()[-1]
-        if num_units % num_heads != 0:
-            raise ValueError("Value depth (%d) must be divisible by the"
-                             "number of attention heads (%d)." % (\
-                            num_units, num_heads))
-        if memory is None:
-            #'self attention'
-            Q = tf.layers.dense(queries, num_units, use_bias=False,
-                name='q')
-            K = tf.layers.dense(queries, num_units, use_bias=False,
-                name='k')
-            V = tf.layers.dense(queries, num_units, use_bias=False,
-                name='v')
-            if cache is not None:
-                # 'decoder self attention when dynamic decoding'
-                K = tf.concat([cache['self_keys'], K], axis=1)
-                V = tf.concat([cache['self_values'], V], axis=1)
-                cache['self_keys'] = K
-                cache['self_values'] = V
-        else:
-            # 'encoder decoder attention'
-            Q = tf.layers.dense(queries, num_units, use_bias=False,
-                name='q')
-            if cache is not None:
-                K, V = tf.cond(
-                    tf.equal(tf.shape(cache["memory_keys"])[1], 0),
-                    true_fn=lambda: \
-                        [tf.layers.dense(memory, num_units, \
-                            use_bias=False, name='k'), \
-                        tf.layers.dense(memory, num_units, \
-                            use_bias=False, name='v')],
-                    false_fn=lambda: \
-                        [cache["memory_keys"], cache["memory_values"]])
-            else:
-                K, V = [tf.layers.dense(memory, num_units, \
-                            use_bias=False, name='k'),
-                        tf.layers.dense(memory, num_units, \
-                            use_bias=False, name='v')]
-
-        Q_ = _split_heads(Q, num_heads)
-        K_ = _split_heads(K, num_heads)
-        V_ = _split_heads(V, num_heads)
-        #[batch_size, num_heads, seq_length, memory_depth]
-        key_depth_per_head = num_units // num_heads
-        Q_ *= key_depth_per_head**-0.5
-
-        logits = tf.matmul(Q_, K_, transpose_b=True)
-        if memory_attention_bias is not None:
-            logits += memory_attention_bias
-        weights = tf.nn.softmax(logits, name="attention_weights")
-        weights = tf.layers.dropout(weights, \
-            rate=dropout_rate, training=context.global_mode_train())
-        outputs = tf.matmul(weights, V_)
-
-        outputs = _combine_heads(outputs)
-        outputs = tf.layers.dense(outputs, num_units,\
-            use_bias=False, name='output_transform')
-        #(batch_size, length_query, attention_depth)
-    return outputs
-
-def _split_heads(x, num_heads):
-    """Split channels (dimension 2) into multiple heads,
-        becomes dimension 1).
-    Must ensure `x.shape[-1]` can be deviced by num_heads
-    """
-    depth = x.get_shape()[-1]
-    splitted_x = tf.reshape(x, [tf.shape(x)[0], tf.shape(x)[1], \
-        num_heads, depth // num_heads])
-    return tf.transpose(splitted_x, [0, 2, 1, 3])
-
-
-def _combine_heads(x):
-    """
-    Args:
-        x: A Tensor of shape `[batch, num_heads, seq_len, dim]`
-
-    Returns:
-        A Tensor of shape `[batch, seq_len, num_heads * dim]`
-    """
-    t = tf.transpose(x, [0, 2, 1, 3]) #[batch, seq_len, num_heads, dim]
-    num_heads, dim = t.get_shape()[-2:]
-    return tf.reshape(t, [tf.shape(t)[0], tf.shape(t)[1], num_heads*dim])
-
 
 def _ones_matrix_band_part(rows, cols, num_lower, num_upper,
     out_shape=None):

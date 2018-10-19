@@ -25,6 +25,7 @@ from texar.core import layers
 from texar.utils import transformer_attentions as attn
 from texar.modules.embedders.position_embedders import SinusoidsPositionEmbedder
 from texar.modules.encoders.encoder_base import EncoderBase
+from texar.modules.encoders.multihead_attention import MultiheadAttentionEncoder
 from texar.modules.networks.networks import FeedForwardNetwork
 from texar import utils
 from texar.utils.shapes import shape_list, mask_sequences
@@ -133,7 +134,14 @@ class TransformerEncoder(EncoderBase):
             self.position_embedder = \
                 SinusoidsPositionEmbedder(
                     self._hparams.position_embedder_hparams)
-
+            self.multihead_attention_list = []
+            for i in range(self._hparams.num_blocks):
+                with tf.variable_scope("layer_{}".format(i)):
+                    with tf.variable_scope('self_attention'):
+                        multihead_attention = MultiheadAttentionEncoder(
+                            self._hparams.multihead_attention)
+                        self.multihead_attention_list.append(
+                            multihead_attention)
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
@@ -148,7 +156,8 @@ class TransformerEncoder(EncoderBase):
                 "embedding_dropout": 0.1,
                 "attention_dropout": 0.1,
                 "residual_dropout": 0.1,
-                "poswise_feedforward": default_transformer_poswise_net_hparams,
+                'poswise_feedforward': default_transformer_poswise_net_hparams,
+                'multihead_attention': None,
                 "initializer": None,
                 "name": "transformer_encoder"
             }
@@ -187,6 +196,13 @@ class TransformerEncoder(EncoderBase):
             See :func:`~texar.modules.default_transformer_poswise_net_hparams`
             for details.
 
+        "multihead_attention": dict,
+            Hyperparameters for the multihead attention strategy.
+
+            See :func:
+                `~texar.modules.encoder.MultiheadAttentionEncoder.
+                default_harams` for details.
+
         "initializer" : dict, optional
             Hyperparameters of the default initializer that initializes
             variables created in this module.
@@ -199,11 +215,13 @@ class TransformerEncoder(EncoderBase):
             'initializer': None,
             'position_embedder_hparams': None,
             'embedding_dropout': 0.1,
-            'attention_dropout': 0.1,
             'residual_dropout': 0.1,
             'num_blocks': 6,
             'num_heads': 8,
             'poswise_feedforward': default_transformer_poswise_net_hparams(),
+            'multihead_attention': {
+                'num_units': 512,
+            },
             'dim': 512,
             'name': 'transformer_encoder',
         }
@@ -255,14 +273,12 @@ class TransformerEncoder(EncoderBase):
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("layer_{}".format(i)):
                 with tf.variable_scope('self_attention'):
-                    selfatt_output = attn.multihead_attention(
+                    multihead_attention = self.multihead_attention_list[i]
+                    selfatt_output = multihead_attention(
                         queries=layers.layer_normalize(x),
                         memory=None,
                         memory_attention_bias=encoder_self_attention_bias,
-                        num_heads=self._hparams.num_heads,
-                        dropout_rate=self._hparams.attention_dropout,
-                        num_units=self._hparams.dim,
-                        scope='multihead_attention'
+                        mode=mode,
                     )
                     x = x + tf.layers.dropout(
                         selfatt_output,
