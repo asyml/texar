@@ -20,7 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 # pylint: disable=no-name-in-module, too-many-arguments, too-many-locals
-# pylint: disable=invalid-name, redefined-variable-type
+# pylint: disable=invalid-name
 
 import collections
 
@@ -32,7 +32,9 @@ from texar.module_base import ModuleBase
 from texar.modules.networks.networks import FeedForwardNetwork
 from texar.modules.embedders.position_embedders import SinusoidsPositionEmbedder
 from texar.modules.encoders.transformer_encoders import \
-        default_transformer_poswise_net_hparams
+    default_transformer_poswise_net_hparams
+from texar.modules.encoders.multihead_attention import \
+    MultiheadAttentionEncoder
 from texar.utils import beam_search
 from texar.utils.shapes import shape_list, mask_sequences
 from texar.utils import transformer_attentions as attn
@@ -89,8 +91,26 @@ class TransformerDecoder(ModuleBase):
             self._embedding = embedding
             self._vocab_size = self._embedding.get_shape().as_list()[0]
 
-        self.output_layer = \
-            self._build_output_layer(shape_list(self._embedding)[-1])
+            self.output_layer = \
+                self._build_output_layer(shape_list(self._embedding)[-1])
+            self.multihead_attentions = {
+                'self_att': [],
+                'encdec_att': []
+            }
+            for i in range(self._hparams.num_blocks):
+                layer_name = 'layer_{}'.format(i)
+                with tf.variable_scope(layer_name):
+                    with tf.variable_scope("self_attention"):
+                        multihead_attention = MultiheadAttentionEncoder(
+                            self._hparams.multihead_attention)
+                        self.multihead_attentions['self_att'].append(
+                            multihead_attention)
+                    with tf.variable_scope('encdec_attention'):
+                        multihead_attention = MultiheadAttentionEncoder(
+                            self._hparams.multihead_attention)
+                        self.multihead_attentions['encdec_att'].append(
+                            multihead_attention)
+
 
     @staticmethod
     def default_hparams():
@@ -150,6 +170,11 @@ class TransformerDecoder(ModuleBase):
             See :func:`~texar.modules.default_transformer_poswise_net_hparams`
             for details.
 
+        "multihead_attention": dict,
+            Hyperparameters for the multihead attention strategy.
+            If `None`, the :meth:~.texar.modules.MultiheadAttentionEncoder
+            .default_hparams` is used.
+            `
         "initializer" : dict, optional
             Hyperparameters of the default initializer that initializes
             variables created in this module.
@@ -187,6 +212,9 @@ class TransformerDecoder(ModuleBase):
             "attention_dropout": 0.1,
             "residual_dropout": 0.1,
             "poswise_feedforward": default_transformer_poswise_net_hparams(),
+            'multihead_attention': {
+                'num_units': 512,
+            },
             "dim": 512,
             "name": "transformer_decoder",
         }
@@ -451,15 +479,14 @@ class TransformerDecoder(ModuleBase):
             layer_cache = cache[layer_name] if cache is not None else None
             with tf.variable_scope(layer_name):
                 with tf.variable_scope("self_attention"):
-                    selfatt_output = attn.multihead_attention(
+                    multihead_attention = \
+                        self.multihead_attentions['self_att'][i]
+                    selfatt_output = multihead_attention(
                         queries=layers.layer_normalize(x),
                         memory=None,
                         memory_attention_bias=decoder_self_attention_bias,
-                        num_units=self._hparams.dim,
-                        num_heads=self._hparams.num_heads,
-                        dropout_rate=self._hparams.attention_dropout,
                         cache=layer_cache,
-                        scope="multihead_attention",
+                        mode=mode,
                     )
                     x = x + tf.layers.dropout(
                         selfatt_output,
@@ -468,14 +495,13 @@ class TransformerDecoder(ModuleBase):
                     )
                 if memory is not None:
                     with tf.variable_scope('encdec_attention'):
-                        encdec_output = attn.multihead_attention(
+                        multihead_attention = \
+                            self.multihead_attentions['encdec_att'][i]
+                        encdec_output = multihead_attention(
                             queries=layers.layer_normalize(x),
                             memory=memory,
                             memory_attention_bias=memory_attention_bias,
-                            num_units=self._hparams.dim,
-                            num_heads=self._hparams.num_heads,
-                            dropout_rate=self._hparams.attention_dropout,
-                            scope="multihead_attention"
+                            mode=mode,
                         )
                         x = x + tf.layers.dropout(encdec_output, \
                             rate=self._hparams.residual_dropout, \

@@ -4,7 +4,7 @@ import copy
 
 random_seed = 1234
 beam_width = 5
-alpha = 0.6 
+alpha = 0.6
 hidden_dim = 512
 
 emb = {
