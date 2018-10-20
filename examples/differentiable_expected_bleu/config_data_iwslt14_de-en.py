@@ -17,6 +17,7 @@ train = {
         'max_seq_length': 50
     },
 }
+
 val = {
     'batch_size': batch_size,
     'shuffle': False,
@@ -29,6 +30,7 @@ val = {
         'vocab_file': target_vocab_file,
     },
 }
+
 test = {
     'batch_size': batch_size,
     'shuffle': False,

@@ -1,8 +1,8 @@
 # Attentional Seq2seq model.
 # Hyperparameters not specified here will take the default values.
 
-num_units = 1000
-embedding_dim = 500
+num_units = 256
+embedding_dim = 256
 
 embedder = {
     'dim': embedding_dim
@@ -14,9 +14,6 @@ encoder = {
             'num_units': num_units
         },
     },
-    'output_layer_fw': {
-        'dropout_rate': 0
-    }
 }
 
 decoder = {

@@ -1,7 +1,7 @@
 max_epochs = 1000
 steps_per_eval = 500
 tau = 1.
-infer_beam_width = 1
+infer_beam_width = 10
 infer_max_decoding_length = 50
 
 mask_patterns = [(2, 2), (4, 2), (8, 2), (1, 0)]
