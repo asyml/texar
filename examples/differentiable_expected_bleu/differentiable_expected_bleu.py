@@ -314,7 +314,7 @@ def main():
             saved_path = saver.save(sess, ckpt_model, global_step=step)
 
             if stage == 'debleu':
-                with open('{}.trigger'.format(saved_path), 'w') as pickle_file:
+                with open('{}.trigger'.format(saved_path), 'wb') as pickle_file:
                     trigger.save_to_pickle(pickle_file)
 
             print('saved to {}'.format(saved_path))
