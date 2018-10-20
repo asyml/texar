@@ -13,7 +13,6 @@ encoder = {
         'kwargs': {
             'num_units': num_units
         },
-        'num_layers': 2
     },
     'output_layer_fw': {
         'dropout_rate': 0
