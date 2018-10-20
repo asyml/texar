@@ -267,7 +267,7 @@ def main():
 
             trigger_path = '{}.trigger'.format(ckpt_path)
             if os.path.exists(trigger_path):
-                with open(trigger_path, 'r') as pickle_file:
+                with open(trigger_path, 'rb') as pickle_file:
                     trigger.restore_from_pickle(pickle_file)
             else:
                 print('cannot find previous trigger state.')
@@ -296,7 +296,7 @@ def main():
                     sess, ckpt_best, global_step=step)
 
                 if stage == 'debleu':
-                    with open('{}.trigger'.format(saved_path), 'w') as \
+                    with open('{}.trigger'.format(saved_path), 'wb') as \
                             pickle_file:
                         trigger.save_to_pickle(pickle_file)
 
