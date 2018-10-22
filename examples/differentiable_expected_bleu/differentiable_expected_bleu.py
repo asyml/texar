@@ -29,7 +29,7 @@ from nltk.translate.bleu_score import corpus_bleu
 
 flags = tf.flags
 
-flags.DEFINE_string("config_train", "config_train_iwslt14_de-en",
+flags.DEFINE_string("config_train", "config_train",
                     "The training config.")
 flags.DEFINE_string("config_model", "config_model", "The model config.")
 flags.DEFINE_string("config_data", "config_data_iwslt14_de-en",
@@ -38,6 +38,8 @@ flags.DEFINE_string("expr_name", "iwslt14_de-en", "The experiment name. "
                     "Also used as the directory name of run.")
 flags.DEFINE_integer("pretrain_epochs", 10000, "Number of pretraining epochs.")
 flags.DEFINE_string("stage", "xe0", "stage.")
+flags.DEFINE_boolean("reinitialize_optimizer", False, "Whether to reinitialize "
+                     "optimizer state before training.")
 
 FLAGS = flags.FLAGS
 
@@ -47,7 +49,12 @@ config_data = importlib.import_module(FLAGS.config_data)
 expr_name = FLAGS.expr_name
 pretrain_epochs = FLAGS.pretrain_epochs
 stage = FLAGS.stage
+reinitialize_optimizer = FLAGS.reinitialize_optimizer
 mask_patterns = config_train.mask_patterns
+
+if stage.startswith("xe"):
+    d = config_train.train_xe["optimizer"]["kwargs"]
+    d["learning_rate"] = d["learning_rate"][int(stage[2:])]
 
 
 def get_scope_by_name(tensor):
@@ -85,13 +92,9 @@ def build_model(batch, train_data):
         logits=tf_outputs.logits,
         sequence_length=batch['target_length']-1)
 
-    train_xe0_op = tx.core.get_train_op(
+    train_xe_op = tx.core.get_train_op(
         loss_xe,
-        hparams=config_train.train_xe0)
-
-    train_xe1_op = tx.core.get_train_op(
-        loss_xe,
-        hparams=config_train.train_xe1)
+        hparams=config_train.train_xe)
 
     # teacher mask + DEBLEU fine-tuning
     tm_helper = tx.modules.TeacherMaskSoftmaxEmbeddingHelper(
@@ -128,7 +131,7 @@ def build_model(batch, train_data):
         beam_width=config_train.infer_beam_width,
         max_decoding_length=config_train.infer_max_decoding_length)
 
-    return train_xe0_op, train_xe1_op, train_debleu_op, tm_helper, bs_outputs
+    return train_xe_op, train_debleu_op, tm_helper, bs_outputs
 
 
 def main():
@@ -144,21 +147,26 @@ def main():
 
     global_step = tf.train.create_global_step()
 
-    train_xe0_op, train_xe1_op, train_debleu_op, tm_helper, infer_outputs = \
+    train_xe_op, train_debleu_op, tm_helper, infer_outputs = \
         build_model(data_batch, train_data)
+
+    train_xe_op_initializer, train_debleu_op_initializer = [
+        tf.variables_initializer(
+            tf.get_collection(
+                tf.GraphKeys.GLOBAL_VARIABLES,
+                scope=get_scope_by_name(train_op)),
+            name=name)
+        for train_op, name in [
+            (train_xe_op, "train_xe_op_initializer"),
+            (train_debleu_op, "train_debleu_op_initializer")]]
 
     summary_tm = [
         tf.summary.scalar('tm/n_unmask', tm_helper.n_unmask),
         tf.summary.scalar('tm/n_mask', tm_helper.n_mask)]
-    summary_xe0_op = tf.summary.merge(
+    summary_xe_op = tf.summary.merge(
         tf.get_collection(
             tf.GraphKeys.SUMMARIES,
-            scope=get_scope_by_name(train_xe0_op)),
-        name='summary_xe')
-    summary_xe1_op = tf.summary.merge(
-        tf.get_collection(
-            tf.GraphKeys.SUMMARIES,
-            scope=get_scope_by_name(train_xe1_op)),
+            scope=get_scope_by_name(train_xe_op)),
         name='summary_xe')
     summary_debleu_op = tf.summary.merge(
         tf.get_collection(
@@ -243,8 +251,12 @@ def main():
 
     best_val_bleu = -1
     with tf.Session() as sess:
-        action = (tm_helper.assign_mask_pattern(sess, n_unmask, n_mask)
-                  for n_unmask, n_mask in mask_patterns[1:])
+        def action_of_mask(mask_pattern):
+            sess.run(train_debleu_op_initializer)
+            tm_helper.assign_mask_pattern(sess, *mask_pattern)
+
+        action = (action_of_mask(mask_pattern)
+                  for mask_pattern in mask_patterns[1:])
         trigger = tx.utils.BestEverConvergenceTrigger(
             action,
             config_train.threshold_steps,
@@ -265,6 +277,10 @@ def main():
             print('restoring from {} ...'.format(ckpt_path))
             saver.restore(sess, ckpt_path)
 
+            if reinitialize_optimizer:
+                sess.run(train_xe_op_initializer)
+                sess.run(train_debleu_op_initializer)
+
             trigger_path = '{}.trigger'.format(ckpt_path)
             if os.path.exists(trigger_path):
                 with open(trigger_path, 'rb') as pickle_file:
@@ -283,7 +299,7 @@ def main():
                 epoch, ' ({})'.format(stage)))
 
             val_bleu = _eval_epoch(sess, summary_writer, 'val', trigger)
-            test_bleu = _eval_epoch(sess, summary_writer, 'test', trigger)
+            test_bleu = _eval_epoch(sess, summary_writer, 'test', None)
             step = tf.train.global_step(sess, global_step)
             print('epoch: {}, step: {}, val bleu: {}, test bleu: {}'.format(
                 epoch, step, val_bleu, test_bleu))
@@ -303,8 +319,8 @@ def main():
                 print('saved to {}'.format(saved_path))
 
             train_op, summary_op, trigger_ = {
-                'xe0': (train_xe0_op, summary_xe0_op, None),
-                'xe1': (train_xe1_op, summary_xe1_op, None),
+                'xe0': (train_xe_op, summary_xe_op, None),
+                'xe1': (train_xe_op, summary_xe_op, None),
                 'debleu': (train_debleu_op, summary_debleu_op, trigger)
             }[stage]
             _train_epoch(sess, summary_writer, train_op, summary_op, trigger_)
