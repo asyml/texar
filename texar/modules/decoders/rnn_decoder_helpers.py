@@ -394,8 +394,8 @@ class TeacherMaskSoftmaxEmbeddingHelper(TFTrainingHelper):
     def __init__(self, inputs, sequence_length, embedding, n_unmask,
                  n_mask, tau=1., time_major=False, seed=None,
                  stop_gradient=False, name=None):
-        with tf.name_scope(name, "TeacherMaskSoftmaxEmbeddingHelper",
-                           [embedding, tau, seed, stop_gradient]):
+        with tf.variable_scope(name, "TeacherMaskSoftmaxEmbeddingHelper",
+                               [embedding, tau, seed, stop_gradient]):
             super(TeacherMaskSoftmaxEmbeddingHelper, self).__init__(
                 inputs=inputs,
                 sequence_length=sequence_length,
