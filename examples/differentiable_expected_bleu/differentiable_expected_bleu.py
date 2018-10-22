@@ -52,9 +52,11 @@ stage = FLAGS.stage
 reinitialize_optimizer = FLAGS.reinitialize_optimizer
 mask_patterns = config_train.mask_patterns
 
+d = config_train.train_xe["optimizer"]["kwargs"]
 if stage.startswith("xe"):
-    d = config_train.train_xe["optimizer"]["kwargs"]
     d["learning_rate"] = d["learning_rate"][int(stage[2:])]
+else:
+    d["learning_rate"] = d["learning_rate"][-1]
 
 
 def get_scope_by_name(tensor):
