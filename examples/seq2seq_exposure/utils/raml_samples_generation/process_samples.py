@@ -43,7 +43,7 @@ def sample_from_model(args):
 
         tgt_sent = ' '.join(tgt_sent.split(' ')[1:-1])
         tgt_samples = set()
-        for i in xrange(1, 101):
+        for i in range(1, 101):
             line = f.readline().rstrip('\n')
             m = tgt_sent_pattern.match(line)
 
@@ -88,7 +88,7 @@ def get_new_ngram(ngram, n, vocab):
     replace ngram `ngram` with a newly sampled ngram of the same length
     """
 
-    new_ngram_wids = [np.random.randint(3, len(vocab)) for i in xrange(n)]
+    new_ngram_wids = [np.random.randint(3, len(vocab)) for i in range(n)]
     new_ngram = [vocab.id2word[wid] for wid in new_ngram_wids]
 
     return new_ngram
@@ -120,7 +120,7 @@ def sample_ngram(args):
         tgt_samples.append(tgt_sent)
         tgt_samples_distort_rates.append(0)
 
-        for sid in xrange(args.sample_size - 1):
+        for sid in range(args.sample_size - 1):
             n = np.random.randint(1, min(tgt_len, args.max_ngram_size + 1)) # we do not replace the last token: it must be a period!
 
             idx = np.random.randint(tgt_len - n)
@@ -185,7 +185,7 @@ def sample_ngram_adapt(args):
         # append itself
         tgt_samples.append(tgt_sent)
 
-        for sid in xrange(args.sample_size - 1):
+        for sid in range(args.sample_size - 1):
             max_n = min(tgt_len - 1, 4)
             bias_n = int(max_n * tgt_len / max_len) + 1
             assert 1 <= bias_n <= 4, 'bias_n={}, not in [1,4], max_n={}, tgt_len={}, max_len={}'.format(bias_n, max_n, tgt_len, max_len)
@@ -271,9 +271,9 @@ def generate_hamming_distance_payoff_distribution(max_sent_len, vocab_size, tau=
     """compute the q distribution for Hamming Distance (substitution only) as in the RAML paper"""
     probs = dict()
     Z_qs = dict()
-    for sent_len in xrange(1, max_sent_len + 1):
+    for sent_len in range(1, max_sent_len + 1):
         counts = [1.]  # e = 0, count = 1
-        for e in xrange(1, sent_len + 1):
+        for e in range(1, sent_len + 1):
             # apply the rescaling trick as in https://gist.github.com/norouzi/8c4d244922fa052fa8ec18d8af52d366
             count = comb(sent_len, e) * math.exp(-e / tau) * ((vocab_size - 1) ** (e - e / tau))
             counts.append(count)
