@@ -39,7 +39,7 @@ flags.DEFINE_string("config_model", "configs.config_model", "The model config.")
 flags.DEFINE_string("config_data", "configs.config_iwslt14",
                     "The dataset config.")
 
-flags.DEFINE_float('decay_factor', 3000.,
+flags.DEFINE_float('decay_factor', 500.,
                    'The hyperparameter controling the speed of increasing '
                    'the probability of sampling from model')
 
