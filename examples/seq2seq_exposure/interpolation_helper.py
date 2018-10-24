@@ -107,7 +107,7 @@ class InterpolationHelper(SampleEmbeddingHelper):
         self_feeding = lambda : SampleEmbeddingHelper.sample(
             self, time, outputs, state, name)
 
-        reward_feeding = lambda : self.sample_by_reward(time, state)
+        reward_feeding = lambda : self._sample_by_reward(time, state)
 
         sample_ids = tf.cond(
             tf.logical_or(tf.equal(time, 0), tf.equal(sample_method_id, 1)),
@@ -132,7 +132,7 @@ class InterpolationHelper(SampleEmbeddingHelper):
 
         return finished, next_inputs, next_state
 
-    def sample_by_reward(self, time, state):
+    def _sample_by_reward(self, time, state):
         def _get_rewards(time, prefix_ids, target_ids, ground_truth_length):
             batch_size = np.shape(target_ids)[0]
             words_in_target = \
