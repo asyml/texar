@@ -33,9 +33,14 @@ import os
 import sys
 import time
 import importlib
+
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 import texar as tx
+
+
+tfd = tfp.distributions
 
 flags = tf.flags
 
@@ -144,7 +149,7 @@ def _main(_):
     mean, logvar = tf.split(mean_logvar, 2, 1)
     kl_loss = kl_dvg(mean, logvar)
 
-    dst = tf.contrib.distributions.MultivariateNormalDiag(
+    dst = tfd.MultivariateNormalDiag(
         loc=mean,
         scale_diag=tf.exp(0.5 * logvar))
 
@@ -265,14 +270,14 @@ def _main(_):
 
         batch_size = train_data.batch_size
 
-        dst = tf.contrib.distributions.MultivariateNormalDiag(
+        dst = tfd.MultivariateNormalDiag(
             loc=tf.zeros([batch_size, config.latent_dims]),
             scale_diag=tf.ones([batch_size, config.latent_dims]))
 
         dcdr_states, latent_z = connector_stoch(dst)
 
         # to concatenate latent variable to input word embeddings
-        def cat_embedder(ids):
+        def _cat_embedder(ids):
             embedding = decoder_embedder(ids)
             return tf.concat([embedding, latent_z], axis=1)
 
@@ -284,7 +289,7 @@ def _main(_):
             outputs, _, _ = decoder(
                 initial_state=dcdr_states,
                 decoding_strategy="infer_sample",
-                embedding=cat_embedder,
+                embedding=_cat_embedder,
                 max_decoding_length=100,
                 start_tokens=start_tokens,
                 end_token=end_token)
