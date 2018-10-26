@@ -15,8 +15,8 @@ Here we include some sequence-to-sequence models tackling the issue to some exte
 
 Two example datasets are provided:
 
-  * iwslt14: The benchmark [IWSLT2014](https://sites.google.com/site/iwsltevaluation2014/home) (de-en) machine translation dataset, following [(Ma et al., 2017)](https://arxiv.org/pdf/1705.07136.pdf) for data pre-processing.
-  * gigaword: The benchmark [GIGAWORD](https://catalog.ldc.upenn.edu/LDC2003T05) text summurization dataset (the training set we provided is 200,000 samples from large original training set for the sake of training efficiency). 
+  * iwslt14: The benchmark [IWSLT2014](https://sites.google.com/site/iwsltevaluation2014/home) (de-en) machine translation dataset, following [(Ranzato et al., 2015)](https://arxiv.org/pdf/1511.06732.pdf) for data pre-processing.
+  * gigaword: The benchmark [GIGAWORD](https://catalog.ldc.upenn.edu/LDC2003T05) text summarization dataset (the training set we provide is 200,000 samples from large original training set for the sake of training efficiency). 
 
 Download the data with the following commands:
 
@@ -102,7 +102,7 @@ Here:
 | -----------| -------|-------|-------|
 | MLE        | 36.11 ± 0.21  | 16.39 ± 0.16 | 32.32 ± 0.19 |
 | Scheduled Sampling   |  36.59 ± 0.12  |16.79 ± 0.22|32.77 ± 0.17|
-| RAML | 36.30  ± 0.04  | 16.69 ± 0.20 | 32.49 ± 0.17 |
+| RAML | 36.30  ± 0.24 | 16.69 ± 0.20 | 32.49 ± 0.17 |
 | Interpolation | 36.72  ± 0.29  |16.99 ± 0.17 | 32.95 ± 0.33|
 
  
