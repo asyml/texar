@@ -25,6 +25,7 @@ Hyperparameters and data path may be specified in config_trans.py
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
 
 # pylint: disable=invalid-name, no-member, too-many-locals
 # pylint: disable=too-many-branches, too-many-statements, redefined-variable-type
@@ -33,6 +34,7 @@ import os
 import sys
 import time
 import importlib
+from io import open
 
 import numpy as np
 import tensorflow as tf
@@ -311,7 +313,7 @@ def _main(_):
         if fname is None:
             fh = sys.stdout
         else:
-            fh = open(fname, 'w')
+            fh = open(fname, 'w', encoding='utf-8')
 
         for sent in sample_tokens_:
             sent = list(sent)
