@@ -30,7 +30,7 @@ def prepare_data():
     if FLAGS.data == 'iwslt14':
         tx.data.maybe_download(
             urls='https://drive.google.com/file/d/'
-                 '1Vuv3bed10qUxrpldHdYoiWLzPKa4pNXd/view?usp=sharing',
+                 '1y4mUWXRS2KstgHopCS9koZ42ENOh6Yb9/view?usp=sharing',
             path='./',
             filenames='iwslt14.zip',
             extract=True)
