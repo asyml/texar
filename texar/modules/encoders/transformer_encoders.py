@@ -110,7 +110,8 @@ def default_transformer_poswise_net_hparams():
 class TransformerEncoder(EncoderBase):
     """Transformer encoder that applies multi-head self attention for encoding
     sequences.
-
+    Stacked `~texar.modules.encoders.MultiheadAttentionEncoder` and
+    `~texar.modules.FeedForwardNetwork`.
     Args:
         hparams (dict or HParams, optional): Hyperparameters. Missing
             hyperparamerter will be set to default values. See

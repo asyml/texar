@@ -62,9 +62,11 @@ class TransformerDecoderOutput(
 
 
 class TransformerDecoder(ModuleBase):
-    """Transformer decoder that applies multi-head self attention for
+    """Transformer decoder that applies multi-head attention for
     sequence decoding.
-
+    Stacked `~texar.modules.encoders.MultiheadAttentionEncoder` for
+    encoder-decoder attention and self attention, and
+    `~texar.modules.FeedForwardNetwork`.
     Args:
         embedding: A Tensor of shape `[vocab_size, dim]` containing the
             word embeddng. The Tensor is used as the decoder output layer.
