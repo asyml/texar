@@ -112,6 +112,7 @@ class TransformerDecoder(ModuleBase):
                             self._hparams.multihead_attention)
                         self.multihead_attentions['self_att'].append(
                             multihead_attention)
+                    # pylint: disable=protected-access
                     if self._hparams.dim != \
                         multihead_attention._hparams.output_dim:
                         raise ValueError('The output dimenstion of'
@@ -134,8 +135,8 @@ class TransformerDecoder(ModuleBase):
                     if self._hparams.dim != \
                         poswise_network._hparams.layers[-1]['kwargs']['units']:
                         raise ValueError('The output dimenstion of'
-                                          'FeedForwardNetwork should be equal'
-                                          'to the dim of TransformerDecoder')
+                                         'FeedForwardNetwork should be equal'
+                                         'to the dim of TransformerDecoder')
                     self.poswise_networks.append(poswise_network)
 
     @staticmethod
