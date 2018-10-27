@@ -123,7 +123,6 @@ class TransformerDecoder(ModuleBase):
             {
                 # Same as in TransformerEncoder
                 "num_blocks": 6,
-                "num_heads": 8,
                 "dim": 512,
                 "position_embedder_hparams": None,
                 "embedding_dropout": 0.1,
@@ -142,9 +141,6 @@ class TransformerDecoder(ModuleBase):
 
         "num_blocks" : int
             Number of stacked blocks.
-
-        "num_heads" : int
-            Number of heads for attention calculation.
 
         "dim" : int
             Hidden dimension of the encoder.
@@ -203,7 +199,6 @@ class TransformerDecoder(ModuleBase):
             Name of the module.
         """
         return {
-            "num_heads": 8,
             "num_blocks": 6,
             "initializer": None,
             "position_embedder_hparams": None,
@@ -216,6 +211,7 @@ class TransformerDecoder(ModuleBase):
             "poswise_feedforward": default_transformer_poswise_net_hparams(),
             'multihead_attention': {
                 'num_units': 512,
+                'num_heads': 8,
             },
             "dim": 512,
             "name": "transformer_decoder",

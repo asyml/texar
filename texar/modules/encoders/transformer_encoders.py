@@ -54,7 +54,7 @@ def default_transformer_poswise_net_hparams(output_dim=512):
                     "type": "Dense",
                     "kwargs": {
                         "name": "conv1",
-                        "units": 2048,
+                        "units": output_dim*4,
                         "activation": "relu",
                         "use_bias": True,
                     }
@@ -86,7 +86,7 @@ def default_transformer_poswise_net_hparams(output_dim=512):
                 "type": "Dense",
                 "kwargs": {
                     "name": "conv1",
-                    "units": 2048,
+                    "units": output_dim*4,
                     "activation": "relu",
                     "use_bias": True,
                 }
@@ -151,7 +151,6 @@ class TransformerEncoder(EncoderBase):
 
             {
                 "num_blocks": 6,
-                "num_heads": 8,
                 "dim": 512,
                 "position_embedder_hparams": None,
                 "embedding_dropout": 0.1,
@@ -167,9 +166,6 @@ class TransformerEncoder(EncoderBase):
 
         "num_blocks" : int
             Number of stacked blocks.
-
-        "num_heads" : int
-            Number of heads for attention calculation.
 
         "dim" : int
             Hidden dimension of the encoder.
@@ -218,10 +214,10 @@ class TransformerEncoder(EncoderBase):
             'embedding_dropout': 0.1,
             'residual_dropout': 0.1,
             'num_blocks': 6,
-            'num_heads': 8,
             'poswise_feedforward': default_transformer_poswise_net_hparams(),
             'multihead_attention': {
                 'num_units': 512,
+                'num_heads': 8,
             },
             'dim': 512,
             'name': 'transformer_encoder',
