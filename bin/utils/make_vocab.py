@@ -22,10 +22,12 @@ Note that if the file path is a pattern, wrap it with quotation masks.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
 
 # pylint: disable=invalid-name
 
 import sys
+from io import open
 
 import tensorflow as tf
 
@@ -45,6 +47,10 @@ flags.DEFINE_integer("max_vocab_size", -1,
                      "Maximum size of the vocabulary. Low frequency words "
                      "that exceeding the limit will be discarded. "
                      "Set to `-1` if no truncation is wanted.")
+flags.DEFINE_boolean("count", False, "Whether to print word count in the "
+                     "output file. Note that Texar data modules require a "
+                     "vocab file without word count. But the functionality "
+                     "can be useful to decide vocab truncation.")
 flags.DEFINE_string("output_path", "./vocab.txt",
                     "Path of the output vocab file.")
 flags.DEFINE_string("newline_token", None,
@@ -59,12 +65,26 @@ def main(_):
     """Makes vocab.
     """
     filenames = tx.utils.get_files(FLAGS.files)
-    vocab = tx.data.make_vocab(filenames,
-                               max_vocab_size=FLAGS.max_vocab_size,
-                               newline_token=FLAGS.newline_token)
 
-    with open(FLAGS.output_path, "w") as fout:
-        fout.write('\n'.join(vocab).encode("utf-8"))
+    if FLAGS.count:
+        vocab, count = tx.data.make_vocab(
+            filenames,
+            max_vocab_size=FLAGS.max_vocab_size,
+            newline_token=FLAGS.newline_token,
+            return_count=True)
+
+        with open(FLAGS.output_path, "w", encoding="utf-8") as fout:
+            for v, c in zip(vocab, count):
+                fout.write('{}\t{}\n'.format(v, c))
+    else:
+        vocab = tx.data.make_vocab(
+            filenames,
+            max_vocab_size=FLAGS.max_vocab_size,
+            newline_token=FLAGS.newline_token)
+
+        with open(FLAGS.output_path, "w", encoding="utf-8") as fout:
+            fout.write('\n'.join(vocab))
+
 
 if __name__ == "__main__":
     tf.app.run()
