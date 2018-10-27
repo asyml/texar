@@ -171,10 +171,12 @@ class TransformerEncoder(EncoderBase):
                 "dim": 512,
                 "position_embedder_hparams": None,
                 "embedding_dropout": 0.1,
-                "attention_dropout": 0.1,
                 "residual_dropout": 0.1,
-                'poswise_feedforward': default_transformer_poswise_net_hparams,
-                'multihead_attention': None,
+                "poswise_feedforward": default_transformer_poswise_net_hparams,
+                "multihead_attention": {
+                    "num_units": 512,
+                    "num_heads": 8,
+                },
                 "initializer": None,
                 "name": "transformer_encoder"
             }
@@ -196,9 +198,6 @@ class TransformerEncoder(EncoderBase):
 
         "embedding_dropout" : float
             Dropout rate of the input word and position embeddings.
-
-        "attention_dropout: : float
-            Dropout rate in the attention.
 
         "residual_dropout" :  float
             Dropout rate of the residual connections.
