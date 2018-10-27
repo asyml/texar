@@ -65,8 +65,12 @@ class TransformerDecoder(ModuleBase):
     """Transformer decoder that applies multi-head attention for
     sequence decoding.
     Stacked `~texar.modules.encoders.MultiheadAttentionEncoder` for
-    encoder-decoder attention and self attention, and
-    `~texar.modules.FeedForwardNetwork`.
+    encoder-decoder attention and self attention,
+    `~texar.modules.FeedForwardNetwork` and residual connections.
+
+    Use the passed `embedding` variable as the parameters of the
+    transform layer from output to logits.
+
     Args:
         embedding: A Tensor of shape `[vocab_size, dim]` containing the
             word embeddng. The Tensor is used as the decoder output layer.
@@ -99,6 +103,7 @@ class TransformerDecoder(ModuleBase):
                 'self_att': [],
                 'encdec_att': []
             }
+            self.poswise_networks = []
             for i in range(self._hparams.num_blocks):
                 layer_name = 'layer_{}'.format(i)
                 with tf.variable_scope(layer_name):
@@ -107,12 +112,31 @@ class TransformerDecoder(ModuleBase):
                             self._hparams.multihead_attention)
                         self.multihead_attentions['self_att'].append(
                             multihead_attention)
+                    if self._hparams.dim != \
+                        multihead_attention._hparams.output_dim:
+                        raise ValueError('The output dimenstion of'
+                                         'MultiheadEncoder should be equal'
+                                         'to the dim of TransformerDecoder')
+
                     with tf.variable_scope('encdec_attention'):
                         multihead_attention = MultiheadAttentionEncoder(
                             self._hparams.multihead_attention)
                         self.multihead_attentions['encdec_att'].append(
                             multihead_attention)
+                    if self._hparams.dim != \
+                        multihead_attention._hparams.output_dim:
+                        raise ValueError('The output dimenstion of'
+                                         'MultiheadEncoder should be equal'
+                                         'to the dim of TransformerDecoder')
 
+                    poswise_network = FeedForwardNetwork(
+                        hparams=self._hparams['poswise_feedforward'])
+                    if self._hparams.dim != \
+                        poswise_network._hparams.layers[-1]['kwargs']['units']:
+                        raise ValueError('The output dimenstion of'
+                                          'FeedForwardNetwork should be equal'
+                                          'to the dim of TransformerDecoder')
+                    self.poswise_networks.append(poswise_network)
 
     @staticmethod
     def default_hparams():
@@ -164,14 +188,18 @@ class TransformerDecoder(ModuleBase):
         "poswise_feedforward" : dict,
             Hyperparameters for a feed-forward network used in residual
             connections.
+            Make sure the dimension of the output tensor is equal to `dim`.
 
             See :func:`~texar.modules.default_transformer_poswise_net_hparams`
             for details.
 
         "multihead_attention": dict,
             Hyperparameters for the multihead attention strategy.
-            If `None`, the :meth:~.texar.modules.MultiheadAttentionEncoder
-            .default_hparams` is used.
+            Make sure the `output_dim` in this module is equal to `dim`.
+
+            See :func:
+                `~texar.modules.encoder.MultiheadAttentionEncoder.
+                default_harams` for details.
             `
         "initializer" : dict, optional
             Hyperparameters of the default initializer that initializes
@@ -504,9 +532,8 @@ class TransformerDecoder(ModuleBase):
                         x = x + tf.layers.dropout(encdec_output, \
                             rate=self._hparams.residual_dropout, \
                             training=is_train_mode(mode))
-                poswise_network = FeedForwardNetwork( \
-                    hparams=self._hparams['poswise_feedforward'])
-                with tf.variable_scope(poswise_network.variable_scope):
+                poswise_network = self.poswise_networks[i]
+                with tf.variable_scope('past_poswise_ln'):
                     sub_output = tf.layers.dropout(
                         poswise_network(layers.layer_normalize(x)),
                         rate=self._hparams.residual_dropout,
