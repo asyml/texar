@@ -1,7 +1,7 @@
 source_vocab_file = 'data/iwslt14_en-fr/vocab.en'
 target_vocab_file = 'data/iwslt14_en-fr/vocab.fr'
 
-batch_size = 160
+batch_size = 80
 
 train = {
     'batch_size': batch_size,

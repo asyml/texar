@@ -72,7 +72,8 @@ def build_model(batch, train_data):
     encoder = tx.modules.BidirectionalRNNEncoder(
         hparams=config_model.encoder)
 
-    enc_outputs, _ = encoder(source_embedder(batch['source_text_ids']))
+    enc_outputs, enc_final_state = encoder(
+        source_embedder(batch['source_text_ids']))
 
     target_embedder = tx.modules.WordEmbedder(
         vocab_size=train_data.target_vocab.size, hparams=config_model.embedder)
@@ -83,9 +84,23 @@ def build_model(batch, train_data):
         vocab_size=train_data.target_vocab.size,
         hparams=config_model.decoder)
 
+    enc_final_state = tf.contrib.framework.nest.map_structure(
+        lambda *args: tf.concat(args, -1), *enc_final_state)
+
+    if isinstance(decoder.cell, tf.nn.rnn_cell.LSTMCell):
+        connector = tx.modules.MLPTransformConnector(
+            decoder.state_size.h, hparams=config_model.connector)
+        dec_initial_h = connector(enc_final_state.h)
+        dec_initial_state = (dec_initial_h, enc_final_state.c)
+    else:
+        connector = tx.modules.MLPTransformConnector(
+            decoder.state_size, hparams=config_model.connector)
+        dec_initial_state = connector(enc_final_state)
+
     # cross-entropy + teacher-forcing pretraining
     tf_outputs, _, _ = decoder(
         decoding_strategy='train_greedy',
+        initial_state=dec_initial_state,
         inputs=target_embedder(batch['target_text_ids'][:, :-1]),
         sequence_length=batch['target_length']-1)
 
@@ -109,7 +124,8 @@ def build_model(batch, train_data):
         tau=config_train.tau)
 
     tm_outputs, _, _ = decoder(
-        helper=tm_helper)
+        helper=tm_helper,
+        initial_state=dec_initial_state)
 
     loss_debleu = tx.losses.debleu(
         labels=batch['target_text_ids'][:, 1:],
@@ -130,6 +146,7 @@ def build_model(batch, train_data):
         embedding=target_embedder,
         start_tokens=start_tokens,
         end_token=end_token,
+        initial_state=dec_initial_state,
         beam_width=config_train.infer_beam_width,
         max_decoding_length=config_train.infer_max_decoding_length)
 
@@ -177,6 +194,9 @@ def main():
         name='summary_debleu')
 
     saver = tf.train.Saver(max_to_keep=None)
+
+    global best_val_bleu
+    best_val_bleu = -1
 
     def _train_epoch(sess, summary_writer, train_op, summary_op, trigger):
         print('in _train_epoch')
@@ -243,15 +263,30 @@ def main():
         summary_writer.add_summary(summary, step)
         summary_writer.flush()
 
-        if trigger is not None:
-            triggered, _ = trigger(step, bleu)
-            if triggered:
-                print('triggered!')
+        if mode == 'val':
+            if trigger is not None:
+                triggered, _ = trigger(step, bleu)
+                if triggered:
+                    print('triggered!')
+
+            global best_val_bleu
+            if bleu > best_val_bleu:
+                best_val_bleu = bleu
+                print('update best val bleu: {}'.format(best_val_bleu))
+
+                saved_path = saver.save(
+                    sess, ckpt_best, global_step=step)
+
+                if stage == 'debleu':
+                    with open('{}.trigger'.format(saved_path), 'wb') as \
+                            pickle_file:
+                        trigger.save_to_pickle(pickle_file)
+
+                print('saved to {}'.format(saved_path))
 
         print('end _eval_epoch')
         return bleu
 
-    best_val_bleu = -1
     with tf.Session() as sess:
         def action_of_mask(mask_pattern):
             sess.run(train_debleu_op_initializer)
@@ -305,20 +340,6 @@ def main():
             step = tf.train.global_step(sess, global_step)
             print('epoch: {}, step: {}, val bleu: {}, test bleu: {}'.format(
                 epoch, step, val_bleu, test_bleu))
-
-            if val_bleu > best_val_bleu:
-                best_val_bleu = val_bleu
-                print('update best val bleu: {}'.format(best_val_bleu))
-
-                saved_path = saver.save(
-                    sess, ckpt_best, global_step=step)
-
-                if stage == 'debleu':
-                    with open('{}.trigger'.format(saved_path), 'wb') as \
-                            pickle_file:
-                        trigger.save_to_pickle(pickle_file)
-
-                print('saved to {}'.format(saved_path))
 
             train_op, summary_op, trigger_ = {
                 'xe0': (train_xe_op, summary_xe_op, None),
