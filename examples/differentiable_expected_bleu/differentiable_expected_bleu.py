@@ -179,6 +179,9 @@ def main():
             (train_xe_op, "train_xe_op_initializer"),
             (train_debleu_op, "train_debleu_op_initializer")]]
 
+    tm_helper_initializer = tf.variables_initializer(
+        [tm_helper.n_unmask, tm_helper.n_mask], name="tm_helper_initializer")
+
     summary_tm = [
         tf.summary.scalar('tm/n_unmask', tm_helper.n_unmask),
         tf.summary.scalar('tm/n_mask', tm_helper.n_mask)]
@@ -317,6 +320,7 @@ def main():
             if reinitialize_optimizer:
                 sess.run(train_xe_op_initializer)
                 sess.run(train_debleu_op_initializer)
+                sess.run(tm_helper_initializer)
 
             trigger_path = '{}.trigger'.format(ckpt_path)
             if os.path.exists(trigger_path):
