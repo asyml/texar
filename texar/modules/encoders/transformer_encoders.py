@@ -25,6 +25,7 @@ from texar.core import layers
 from texar.utils import transformer_attentions as attn
 from texar.modules.embedders.position_embedders import SinusoidsPositionEmbedder
 from texar.modules.encoders.encoder_base import EncoderBase
+from texar.modules.encoders.multihead_attention import MultiheadAttentionEncoder
 from texar.modules.networks.networks import FeedForwardNetwork
 from texar import utils
 from texar.utils.shapes import shape_list, mask_sequences
@@ -53,7 +54,7 @@ def default_transformer_poswise_net_hparams(output_dim=512):
                     "type": "Dense",
                     "kwargs": {
                         "name": "conv1",
-                        "units": 2048,
+                        "units": output_dim*4,
                         "activation": "relu",
                         "use_bias": True,
                     }
@@ -85,7 +86,7 @@ def default_transformer_poswise_net_hparams(output_dim=512):
                 "type": "Dense",
                 "kwargs": {
                     "name": "conv1",
-                    "units": 2048,
+                    "units": output_dim*4,
                     "activation": "relu",
                     "use_bias": True,
                 }
@@ -112,7 +113,8 @@ def default_transformer_poswise_net_hparams(output_dim=512):
 class TransformerEncoder(EncoderBase):
     """Transformer encoder that applies multi-head self attention for encoding
     sequences.
-
+    Stacked `~texar.modules.encoders.MultiheadAttentionEncoder`,
+    `~texar.modules.FeedForwardNetwork` and residual connections.
     Args:
         hparams (dict or HParams, optional): Hyperparameters. Missing
             hyperparamerter will be set to default values. See
@@ -133,7 +135,31 @@ class TransformerEncoder(EncoderBase):
             self.position_embedder = \
                 SinusoidsPositionEmbedder(
                     self._hparams.position_embedder_hparams)
-
+            self.multihead_attention_list = []
+            self.poswise_networks = []
+            for i in range(self._hparams.num_blocks):
+                with tf.variable_scope("layer_{}".format(i)):
+                    with tf.variable_scope('self_attention'):
+                        multihead_attention = MultiheadAttentionEncoder(
+                            self._hparams.multihead_attention)
+                        self.multihead_attention_list.append(
+                            multihead_attention)
+                    # pylint: disable=protected-access
+                    if self._hparams.dim != \
+                        multihead_attention._hparams.output_dim:
+                        raise ValueError('The output dimenstion of'
+                                         'MultiheadEncoder should be equal'
+                                         'to the dim of TransformerEncoder')
+                    poswise_network = FeedForwardNetwork(
+                        hparams=self._hparams['poswise_feedforward'])
+                    # pylint: disable=protected-access
+                    if self._hparams.dim != \
+                        poswise_network._hparams.layers[-1]['kwargs']['units']:
+                        # poswise_network._hparams.layers[-1]['units']:
+                        raise ValueError('The output dimenstion of'
+                                         'FeedForwardNetwork should be equal'
+                                         'to the dim of TransformerEncoder')
+                    self.poswise_networks.append(poswise_network)
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
@@ -142,13 +168,15 @@ class TransformerEncoder(EncoderBase):
 
             {
                 "num_blocks": 6,
-                "num_heads": 8,
                 "dim": 512,
                 "position_embedder_hparams": None,
                 "embedding_dropout": 0.1,
-                "attention_dropout": 0.1,
                 "residual_dropout": 0.1,
                 "poswise_feedforward": default_transformer_poswise_net_hparams,
+                "multihead_attention": {
+                    "num_units": 512,
+                    "num_heads": 8,
+                },
                 "initializer": None,
                 "name": "transformer_encoder"
             }
@@ -157,9 +185,6 @@ class TransformerEncoder(EncoderBase):
 
         "num_blocks" : int
             Number of stacked blocks.
-
-        "num_heads" : int
-            Number of heads for attention calculation.
 
         "dim" : int
             Hidden dimension of the encoder.
@@ -174,18 +199,23 @@ class TransformerEncoder(EncoderBase):
         "embedding_dropout" : float
             Dropout rate of the input word and position embeddings.
 
-        "attention_dropout: : float
-            Dropout rate in the attention.
-
         "residual_dropout" :  float
             Dropout rate of the residual connections.
 
         "poswise_feedforward" : dict,
             Hyperparameters for a feed-forward network used in residual
             connections.
+            Make sure the dimension of the output tensor is equal to `dim`.
 
             See :func:`~texar.modules.default_transformer_poswise_net_hparams`
             for details.
+
+        "multihead_attention": dict,
+            Hyperparameters for the multihead attention strategy.
+            Make sure the `output_dim` in this module is equal to `dim`.
+            See :func:
+                `~texar.modules.encoder.MultiheadAttentionEncoder.
+                default_harams` for details.
 
         "initializer" : dict, optional
             Hyperparameters of the default initializer that initializes
@@ -199,11 +229,13 @@ class TransformerEncoder(EncoderBase):
             'initializer': None,
             'position_embedder_hparams': None,
             'embedding_dropout': 0.1,
-            'attention_dropout': 0.1,
             'residual_dropout': 0.1,
             'num_blocks': 6,
-            'num_heads': 8,
             'poswise_feedforward': default_transformer_poswise_net_hparams(),
+            'multihead_attention': {
+                'num_units': 512,
+                'num_heads': 8,
+            },
             'dim': 512,
             'name': 'transformer_encoder',
         }
@@ -255,23 +287,19 @@ class TransformerEncoder(EncoderBase):
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("layer_{}".format(i)):
                 with tf.variable_scope('self_attention'):
-                    selfatt_output = attn.multihead_attention(
+                    multihead_attention = self.multihead_attention_list[i]
+                    selfatt_output = multihead_attention(
                         queries=layers.layer_normalize(x),
                         memory=None,
                         memory_attention_bias=encoder_self_attention_bias,
-                        num_heads=self._hparams.num_heads,
-                        dropout_rate=self._hparams.attention_dropout,
-                        num_units=self._hparams.dim,
-                        scope='multihead_attention'
+                        mode=mode,
                     )
                     x = x + tf.layers.dropout(
                         selfatt_output,
                         rate=self._hparams.residual_dropout,
                         training=is_train_mode(mode),
                     )
-
-                poswise_network = FeedForwardNetwork(
-                    hparams=self._hparams['poswise_feedforward'])
+                poswise_network = self.poswise_networks[i]
                 with tf.variable_scope(poswise_network.variable_scope):
                     y = layers.layer_normalize(x)
                     original_shape = shape_list(y)

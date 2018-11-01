@@ -28,10 +28,9 @@ import texar as tx
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.utils import transformer_utils
 
-from utils import data_utils
-from utils  import utils
+from utils import data_utils, utils
 from bleu_tool import bleu_wrapper
-
+from utils.preprocess import bos_token_id, eos_token_id
 # pylint: disable=invalid-name, too-many-locals
 
 flags = tf.flags
@@ -59,7 +58,6 @@ def main():
     with open(config_data.vocab_file, 'rb') as f:
         id2w = pickle.load(f)
     vocab_size = len(id2w)
-    bos_token_id, eos_token_id = 1, 2
 
     beam_width = config_model.beam_width
 
@@ -258,11 +256,13 @@ def main():
         smry_writer = tf.summary.FileWriter(FLAGS.model_dir, graph=sess.graph)
 
         if FLAGS.run_mode == 'train_and_evaluate':
+            logger.info('Begin running with train_and_evaluate mode')
             step = 0
             for epoch in range(config_data.max_train_epoch):
                 step = _train_epoch(sess, epoch, step, smry_writer)
 
         elif FLAGS.run_mode == 'test':
+            logger.info('Begin running with test mode')
             saver.restore(sess, tf.train.latest_checkpoint(FLAGS.model_dir))
             _eval_epoch(sess, 0, mode='test')
 

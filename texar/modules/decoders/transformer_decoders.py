@@ -20,7 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 # pylint: disable=no-name-in-module, too-many-arguments, too-many-locals
-# pylint: disable=invalid-name, redefined-variable-type
+# pylint: disable=invalid-name
 
 import collections
 
@@ -32,7 +32,9 @@ from texar.module_base import ModuleBase
 from texar.modules.networks.networks import FeedForwardNetwork
 from texar.modules.embedders.position_embedders import SinusoidsPositionEmbedder
 from texar.modules.encoders.transformer_encoders import \
-        default_transformer_poswise_net_hparams
+    default_transformer_poswise_net_hparams
+from texar.modules.encoders.multihead_attention import \
+    MultiheadAttentionEncoder
 from texar.utils import beam_search
 from texar.utils.shapes import shape_list, mask_sequences
 from texar.utils import transformer_attentions as attn
@@ -60,8 +62,14 @@ class TransformerDecoderOutput(
 
 
 class TransformerDecoder(ModuleBase):
-    """Transformer decoder that applies multi-head self attention for
+    """Transformer decoder that applies multi-head attention for
     sequence decoding.
+    Stacked `~texar.modules.encoders.MultiheadAttentionEncoder` for
+    encoder-decoder attention and self attention,
+    `~texar.modules.FeedForwardNetwork` and residual connections.
+
+    Use the passed `embedding` variable as the parameters of the
+    transform layer from output to logits.
 
     Args:
         embedding: A Tensor of shape `[vocab_size, dim]` containing the
@@ -89,8 +97,47 @@ class TransformerDecoder(ModuleBase):
             self._embedding = embedding
             self._vocab_size = self._embedding.get_shape().as_list()[0]
 
-        self.output_layer = \
-            self._build_output_layer(shape_list(self._embedding)[-1])
+            self.output_layer = \
+                self._build_output_layer(shape_list(self._embedding)[-1])
+            self.multihead_attentions = {
+                'self_att': [],
+                'encdec_att': []
+            }
+            self.poswise_networks = []
+            for i in range(self._hparams.num_blocks):
+                layer_name = 'layer_{}'.format(i)
+                with tf.variable_scope(layer_name):
+                    with tf.variable_scope("self_attention"):
+                        multihead_attention = MultiheadAttentionEncoder(
+                            self._hparams.multihead_attention)
+                        self.multihead_attentions['self_att'].append(
+                            multihead_attention)
+                    # pylint: disable=protected-access
+                    if self._hparams.dim != \
+                        multihead_attention._hparams.output_dim:
+                        raise ValueError('The output dimenstion of'
+                                         'MultiheadEncoder should be equal'
+                                         'to the dim of TransformerDecoder')
+
+                    with tf.variable_scope('encdec_attention'):
+                        multihead_attention = MultiheadAttentionEncoder(
+                            self._hparams.multihead_attention)
+                        self.multihead_attentions['encdec_att'].append(
+                            multihead_attention)
+                    if self._hparams.dim != \
+                        multihead_attention._hparams.output_dim:
+                        raise ValueError('The output dimenstion of'
+                                         'MultiheadEncoder should be equal'
+                                         'to the dim of TransformerDecoder')
+
+                    poswise_network = FeedForwardNetwork(
+                        hparams=self._hparams['poswise_feedforward'])
+                    if self._hparams.dim != \
+                        poswise_network._hparams.layers[-1]['kwargs']['units']:
+                        raise ValueError('The output dimenstion of'
+                                         'FeedForwardNetwork should be equal'
+                                         'to the dim of TransformerDecoder')
+                    self.poswise_networks.append(poswise_network)
 
     @staticmethod
     def default_hparams():
@@ -101,13 +148,15 @@ class TransformerDecoder(ModuleBase):
             {
                 # Same as in TransformerEncoder
                 "num_blocks": 6,
-                "num_heads": 8,
                 "dim": 512,
                 "position_embedder_hparams": None,
                 "embedding_dropout": 0.1,
-                "attention_dropout": 0.1,
                 "residual_dropout": 0.1,
                 "poswise_feedforward": default_transformer_poswise_net_hparams,
+                "multihead_attention": {
+                    "num_units": 512,
+                    "num_heads": 8,
+                },
                 "initializer": None,
                 # Additional for TransformerDecoder
                 "embedding_tie": True,
@@ -120,9 +169,6 @@ class TransformerDecoder(ModuleBase):
 
         "num_blocks" : int
             Number of stacked blocks.
-
-        "num_heads" : int
-            Number of heads for attention calculation.
 
         "dim" : int
             Hidden dimension of the encoder.
@@ -137,19 +183,25 @@ class TransformerDecoder(ModuleBase):
         "embedding_dropout": float
             Dropout rate of the input word and position embeddings.
 
-        "attention_dropout: : float
-            Dropout rate in the attention.
-
         "residual_dropout" :  float
             Dropout rate of the residual connections.
 
         "poswise_feedforward" : dict,
             Hyperparameters for a feed-forward network used in residual
             connections.
+            Make sure the dimension of the output tensor is equal to `dim`.
 
             See :func:`~texar.modules.default_transformer_poswise_net_hparams`
             for details.
 
+        "multihead_attention": dict,
+            Hyperparameters for the multihead attention strategy.
+            Make sure the `output_dim` in this module is equal to `dim`.
+
+            See :func:
+                `~texar.modules.encoder.MultiheadAttentionEncoder.
+                default_harams` for details.
+            `
         "initializer" : dict, optional
             Hyperparameters of the default initializer that initializes
             variables created in this module.
@@ -176,7 +228,6 @@ class TransformerDecoder(ModuleBase):
             Name of the module.
         """
         return {
-            "num_heads": 8,
             "num_blocks": 6,
             "initializer": None,
             "position_embedder_hparams": None,
@@ -184,9 +235,12 @@ class TransformerDecoder(ModuleBase):
             "output_layer_bias": False,
             "max_decoding_length": 1e10,
             "embedding_dropout": 0.1,
-            "attention_dropout": 0.1,
             "residual_dropout": 0.1,
             "poswise_feedforward": default_transformer_poswise_net_hparams(),
+            'multihead_attention': {
+                'num_units': 512,
+                'num_heads': 8,
+            },
             "dim": 512,
             "name": "transformer_decoder",
         }
@@ -451,15 +505,14 @@ class TransformerDecoder(ModuleBase):
             layer_cache = cache[layer_name] if cache is not None else None
             with tf.variable_scope(layer_name):
                 with tf.variable_scope("self_attention"):
-                    selfatt_output = attn.multihead_attention(
+                    multihead_attention = \
+                        self.multihead_attentions['self_att'][i]
+                    selfatt_output = multihead_attention(
                         queries=layers.layer_normalize(x),
                         memory=None,
                         memory_attention_bias=decoder_self_attention_bias,
-                        num_units=self._hparams.dim,
-                        num_heads=self._hparams.num_heads,
-                        dropout_rate=self._hparams.attention_dropout,
                         cache=layer_cache,
-                        scope="multihead_attention",
+                        mode=mode,
                     )
                     x = x + tf.layers.dropout(
                         selfatt_output,
@@ -468,21 +521,19 @@ class TransformerDecoder(ModuleBase):
                     )
                 if memory is not None:
                     with tf.variable_scope('encdec_attention'):
-                        encdec_output = attn.multihead_attention(
+                        multihead_attention = \
+                            self.multihead_attentions['encdec_att'][i]
+                        encdec_output = multihead_attention(
                             queries=layers.layer_normalize(x),
                             memory=memory,
                             memory_attention_bias=memory_attention_bias,
-                            num_units=self._hparams.dim,
-                            num_heads=self._hparams.num_heads,
-                            dropout_rate=self._hparams.attention_dropout,
-                            scope="multihead_attention"
+                            mode=mode,
                         )
                         x = x + tf.layers.dropout(encdec_output, \
                             rate=self._hparams.residual_dropout, \
                             training=is_train_mode(mode))
-                poswise_network = FeedForwardNetwork( \
-                    hparams=self._hparams['poswise_feedforward'])
-                with tf.variable_scope(poswise_network.variable_scope):
+                poswise_network = self.poswise_networks[i]
+                with tf.variable_scope('past_poswise_ln'):
                     sub_output = tf.layers.dropout(
                         poswise_network(layers.layer_normalize(x)),
                         rate=self._hparams.residual_dropout,
