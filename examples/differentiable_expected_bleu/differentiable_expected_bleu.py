@@ -29,9 +29,8 @@ from nltk.translate.bleu_score import corpus_bleu
 
 flags = tf.flags
 
-flags.DEFINE_string("config_train", "config_train",
-                    "The training config.")
-flags.DEFINE_string("config_model", "config_model", "The model config.")
+flags.DEFINE_string("config_train", "config_train", "The training config.")
+flags.DEFINE_string("config_model", "config_model_medium", "The model config.")
 flags.DEFINE_string("config_data", "config_data_iwslt14_de-en",
                     "The dataset config.")
 flags.DEFINE_string("expr_name", "iwslt14_de-en", "The experiment name. "
@@ -84,18 +83,22 @@ def build_model(batch, train_data):
         vocab_size=train_data.target_vocab.size,
         hparams=config_model.decoder)
 
-    enc_final_state = tf.contrib.framework.nest.map_structure(
-        lambda *args: tf.concat(args, -1), *enc_final_state)
+    if config_model.connector is None:
+        dec_initial_state = None
 
-    if isinstance(decoder.cell, tf.nn.rnn_cell.LSTMCell):
-        connector = tx.modules.MLPTransformConnector(
-            decoder.state_size.h, hparams=config_model.connector)
-        dec_initial_h = connector(enc_final_state.h)
-        dec_initial_state = (dec_initial_h, enc_final_state.c)
     else:
-        connector = tx.modules.MLPTransformConnector(
-            decoder.state_size, hparams=config_model.connector)
-        dec_initial_state = connector(enc_final_state)
+        enc_final_state = tf.contrib.framework.nest.map_structure(
+            lambda *args: tf.concat(args, -1), *enc_final_state)
+
+        if isinstance(decoder.cell, tf.nn.rnn_cell.LSTMCell):
+            connector = tx.modules.MLPTransformConnector(
+                decoder.state_size.h, hparams=config_model.connector)
+            dec_initial_h = connector(enc_final_state.h)
+            dec_initial_state = (dec_initial_h, enc_final_state.c)
+        else:
+            connector = tx.modules.MLPTransformConnector(
+                decoder.state_size, hparams=config_model.connector)
+            dec_initial_state = connector(enc_final_state)
 
     # cross-entropy + teacher-forcing pretraining
     tf_outputs, _, _ = decoder(
@@ -342,7 +345,7 @@ def main():
             val_bleu = _eval_epoch(sess, summary_writer, 'val', trigger)
             test_bleu = _eval_epoch(sess, summary_writer, 'test', None)
             step = tf.train.global_step(sess, global_step)
-            print('epoch: {}, step: {}, val bleu: {}, test bleu: {}'.format(
+            print('epoch: {}, step: {}, val BLEU: {}, test BLEU: {}'.format(
                 epoch, step, val_bleu, test_bleu))
 
             train_op, summary_op, trigger_ = {
@@ -361,6 +364,9 @@ def main():
                     trigger.save_to_pickle(pickle_file)
 
             print('saved to {}'.format(saved_path))
+
+        test_bleu = _eval_epoch(sess, summary_writer, 'test', None)
+        print('test BLEU: {}'.format(test_bleu))
 
 
 if __name__ == '__main__':
