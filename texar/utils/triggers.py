@@ -209,6 +209,11 @@ class BestEverConvergenceTrigger(Trigger):
             step (int): Current training step to update. The training step must
                 be updated in ascending order.
             score (float): Current value of the maintained metric.
+
+        Returns:
+            A tuple `(triggered, retval)`, where boolean `triggered` denotes
+            whether triggered this time and `retval` is the return value of the
+            action performed this time.
         """
         return super(BestEverConvergenceTrigger, self).__call__(step, score)
 
@@ -216,6 +221,24 @@ class BestEverConvergenceTrigger(Trigger):
     def _state_names(self):
         return super(BestEverConvergenceTrigger, self)._state_names + [
             '_last_triggered_step', '_best_ever_step', '_best_ever_score']
+
+    @property
+    def last_triggered_step(self):
+        """The step at which the Trigger last triggered.
+        """
+        return self._last_triggered_step
+
+    @property
+    def best_ever_step(self):
+        """The step at which the best-ever score is reached.
+        """
+        return self._best_ever_step
+
+    @property
+    def best_ever_score(self):
+        """The best-ever score.
+        """
+        return self._best_ever_score
 
 
 class MovingAverageConvergenceTrigger(Trigger):
