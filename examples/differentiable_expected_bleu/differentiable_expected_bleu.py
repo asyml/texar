@@ -114,13 +114,15 @@ def build_model(batch, train_data):
         hparams=config_train.train_xe_1)
 
     # teacher mask + DEBLEU fine-tuning
+    n_unmask = tf.placeholder(tf.int32, shape=[], name="n_unmask")
+    n_mask = tf.placeholder(tf.int32, shape=[], name="n_mask")
     tm_helper = tx.modules.TeacherMaskSoftmaxEmbeddingHelper(
         # must not remove last token, since it may be used as mask
         inputs=batch['target_text_ids'],
         sequence_length=batch['target_length']-1,
         embedding=target_embedder,
-        n_unmask=1,
-        n_mask=0,
+        n_unmask=n_unmask,
+        n_mask=n_mask,
         tau=config_train.tau)
 
     tm_outputs, _, _ = decoder(
@@ -153,7 +155,7 @@ def build_model(batch, train_data):
         beam_width=config_train.infer_beam_width,
         max_decoding_length=config_train.infer_max_decoding_length)
 
-    return train_ops, tm_helper, bs_outputs
+    return train_ops, tm_helper, (n_unmask, n_mask), bs_outputs
 
 
 def main():
@@ -170,7 +172,8 @@ def main():
 
     global_step = tf.train.create_global_step()
 
-    train_ops, tm_helper, infer_outputs = build_model(data_batch, train_0_data)
+    train_ops, tm_helper, mask_pattern_, infer_outputs = build_model(
+        data_batch, train_0_data)
 
     def get_train_op_scope(name):
         return get_scope_by_name(train_ops[name])
@@ -182,8 +185,6 @@ def main():
                 scope=get_train_op_scope(name)),
             name='train_{}_op_initializer'.format(name))
         for name in (xe_names + debleu_names)}
-    tm_helper_initializer = tf.variables_initializer(
-        [tm_helper.n_unmask, tm_helper.n_mask], name="tm_helper_initializer")
 
     summary_tm = [
         tf.summary.scalar('tm/n_unmask', tm_helper.n_unmask),
@@ -224,7 +225,9 @@ def main():
         data_iterator.restart_dataset(sess, mode)
         feed_dict = {
             tx.global_mode(): tf.estimator.ModeKeys.TRAIN,
-            data_iterator.handle: data_iterator.get_handle(sess, mode)
+            data_iterator.handle: data_iterator.get_handle(sess, mode),
+            mask_pattern_[0]: mask_pattern[0],
+            mask_pattern_[1]: mask_pattern[1],
         }
 
         while True:
@@ -324,8 +327,6 @@ def main():
             summary_op = summary_ops[train_op_name]
             if reinitialize:
                 sess.run(train_op_initializers[train_op_name])
-            if mask_pattern is not None:
-                tm_helper.assign_mask_pattern(sess, *mask_pattern)
 
         action = (action_before_phase(phase) for phase in phases)
         next(action)

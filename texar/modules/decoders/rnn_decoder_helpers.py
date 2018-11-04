@@ -410,17 +410,10 @@ class TeacherMaskSoftmaxEmbeddingHelper(TFTrainingHelper):
             self._zero_next_inputs = tf.zeros_like(
                 self._embedding_fn(self._zero_inputs))
 
-            self._n_unmask = tf.get_variable(
-                "n_unmask", initializer=n_unmask, trainable=False)
-            self._n_mask = tf.get_variable(
-                "n_mask", initializer=n_mask, trainable=False)
+            self._n_unmask = n_unmask
+            self._n_mask = n_mask
             self._n_cycle = tf.add(
                 self._n_unmask, self._n_mask, name="n_cycle")
-            self._new_n_unmask = tf.placeholder(shape=[], dtype=tf.int32)
-            self._new_n_mask = tf.placeholder(shape=[], dtype=tf.int32)
-            self._assign_n_unmask = tf.assign(
-                self._n_unmask, self._new_n_unmask)
-            self._assign_n_mask = tf.assign(self._n_mask, self._new_n_mask)
             self._n_shift = tf.random_uniform(
                 [], maxval=self._n_cycle, dtype=self._n_cycle.dtype,
                 seed=self._seed, name="n_shift")
@@ -440,11 +433,6 @@ class TeacherMaskSoftmaxEmbeddingHelper(TFTrainingHelper):
     @property
     def n_mask(self):
         return self._n_mask
-
-    def assign_mask_pattern(self, sess, n_unmask, n_mask):
-        sess.run([self._assign_n_unmask, self._assign_n_mask],
-                 feed_dict={self._new_n_unmask: n_unmask,
-                            self._new_n_mask: n_mask})
 
     def _is_masked(self, time):
         return (time + self._n_shift) % self._n_cycle < self._n_mask
