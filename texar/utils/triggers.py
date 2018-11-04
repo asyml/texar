@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Attentional Seq2seq.
+"""Triggers.
 """
 from __future__ import absolute_import
 from __future__ import print_function
@@ -33,48 +33,52 @@ __all__ = [
 ]
 
 
-DEFAULT_ACTION = object()
-
-
 class Trigger(object):
-    """This is the base class of all triggers. A trigger can do some action when
-    certain condition is met. Specifically, the user calls the trigger
-    periodically. Every time the trigger is called, it will send all arguments
-    to :meth:`_predicate`, which returns a boolean value indicates whether the
-    condition is met. Once the condition is met, the trigger will then call
-    `next(action)` to do next action and obtain the returned value.
+    """This is the base class of all triggers. A trigger maintains some
+    user-defined :attr:`user_state` and does some :attr:`action` when certain
+    condition is met. Specifically, the user calls the trigger periodically.
+    Every time the trigger is called, it will send all arguments to
+    :meth:`_predicate`, which returns a boolean value indicates whether the
+    condition is met. Once the condition is met, the trigger will then execute
+    `user_state = action(user_state)` to update the :attr:`user_state`.
+    :attr:`user_state` should completely define the current state of the
+    trigger, and, therefore, enables saving and restoring :attr:`user_state`.
+    It is the user's responsibility to keep :attr:`action` away from any
+    possible corruption of restored state.
 
     Args:
-        action (iterable): An iterable which iteratively does the action and
-            possibly returns a value.
-        default (optional): The value returned after :attr:`action` exhausted.
-            If not provided, the trigger will do nothing when `StopIteration`
-            occurs.
+        initial_user_state: A (any kind of picklable) object representing the
+            initial :attr:`user_state`.
+        action (function): A function which is called to update
+            :attr:`user_state` every time the trigger is triggered. See above
+            for detailed explanation.
+    .. document private functions
+    .. automethod:: __call__
     """
 
-    def __init__(self, action, default=DEFAULT_ACTION):
-        self._action = iter(action)
-        self._default = default
-        self._triggered_times = 0
+    def __init__(self, initial_user_state, action):
+        self._user_state = initial_user_state
+        self._action = action
 
     def _predicate(self, *args, **kwargs):
-        """This function returns True when the condition is met and we should
-        do something.
+        """Returns True when the condition is met and we should do something.
         """
         raise NotImplementedError
 
-    def _next_action(self):
-        return next(self._action) if self._default is DEFAULT_ACTION else \
-               next(self._action, self._default)
+    def trigger(self):
+        """Executes `user_state = action(user_state)`. User can manually call
+        this method to trigger it.
+        """
+        self._user_state = self._action(self._user_state)
 
     def __call__(self, *args, **kwargs):
+        """The trigger must be called to update the internal state and
+        automatically triggers when the condition is found met.
+        """
         pred = self._predicate(*args, **kwargs)
         if pred:
-            ret = self._next_action()
-            self._triggered_times += 1
-        else:
-            ret = None
-        return pred, ret
+            self.trigger()
+        return pred
 
     def _make_state(self, names):
         return {name: getattr(self, name) for name in names}
@@ -84,30 +88,30 @@ class Trigger(object):
         """Returns a list of names of attributes of the trigger object that can
         be saved and restored as trigger state.
         """
-        return ['_triggered_times']
+        return ['_user_state']
 
     @property
     def state(self):
         """The current state which can be used to save and restore the trigger.
-        The state records how many times `next(action)` has been called.
+        The state is consisted of the internal state used to determine whether
+        the condition is met, and the user-defined :attr:`user_state`.
         """
         return self._make_state(self._state_names)
 
+    @property
+    def user_state(self):
+        """The user-defined :attr:`user_state`.
+        """
+        return self._user_state
+
     def restore_from_state(self, state):
-        """Restore the trigger state from the previous stored state.
-        Note that this function will call `next(action)` for the exact times
-        that the :py:attr:`state` records how many times `next(action)` had
-        been called. The user should be aware of any possible side effect of
-        this behavior.
+        """Restore the trigger state from the previous saved state.
 
         Args:
-            state: The state previously obtained by :py:attr:`state`.
+            state: The state previously obtained by :attr:`state`.
         """
         for name, value in state.items():
             setattr(self, name, value)
-
-        for t in range(self._triggered_times):
-            self._next_action()
 
     def save_to_pickle(self, file):
         """Write a pickled representation of the state of the trigger to the
@@ -123,10 +127,6 @@ class Trigger(object):
     def restore_from_pickle(self, file):
         """Read a string from the open file-like object :attr:`file` and
         restore the trigger state from it.
-        Note that this function will call `next(action)` for the exact times
-        that the :py:attr:`state` records how many times `next(action)` had
-        been called. The user should be aware of any possible side effect of
-        this behavior.
 
         Args:
             file: The open file-like object from which we read. As described in
@@ -138,12 +138,14 @@ class Trigger(object):
 
 
 class ScheduledStepsTrigger(Trigger):
+    """A trigger that triggers at designated steps.
+    """
     
-    def __init__(self, action, steps, default=DEFAULT_ACTION):
-        """steps should be in increasing order.
+    def __init__(self, initial_user_state, action, steps):
+        """steps should be a list or tuple in increasing order.
         """
-        super(ScheduledTrigger, self).__init__(action, default)
-        self._steps = iter(steps)
+        super(ScheduledTrigger, self).__init__(initial_user_state, action)
+        self._steps = steps
         self._advance_steps()
 
     def _advance_steps(self):
@@ -165,8 +167,10 @@ class BestEverConvergenceTrigger(Trigger):
     triggers.
 
     Args:
-        action (iterable): An iterable which iteratively does the action and
-            possibly returns a value.
+        initial_user_state: A (any kind of picklable) object representing the
+            initial :attr:`user_state`.
+        action (function): A function which is called to update
+            :attr:`user_state` every time the trigger is triggered.
         threshold_steps (int): Number of steps it should trigger after the best
             value was last updated.
         minimum_interval_steps (int): Minimum number of steps between twice
@@ -178,9 +182,10 @@ class BestEverConvergenceTrigger(Trigger):
     .. automethod:: __call__
     """
 
-    def __init__(self, action, threshold_steps, minimum_interval_steps,
-                 default=DEFAULT_ACTION):
-        super(BestEverConvergenceTrigger, self).__init__(action, default)
+    def __init__(self, initial_user_state, action, threshold_steps,
+                 minimum_interval_steps):
+        super(BestEverConvergenceTrigger, self).__init__(
+            initial_user_state, action)
         self._threshold_steps = threshold_steps
         self._minimum_interval_steps = minimum_interval_steps
         self._last_triggered_step = None
@@ -243,9 +248,10 @@ class BestEverConvergenceTrigger(Trigger):
 
 class MovingAverageConvergenceTrigger(Trigger):
 
-    def __init__(self, action, n, threshold, minimum_interval_steps,
-                 default=DEFAULT_ACTION):
-        super(MovingAverageConvergenceTrigger, self).__init__(action, default)
+    def __init__(self, initial_user_state, action, n, threshold,
+                 minimum_interval_steps):
+        super(MovingAverageConvergenceTrigger, self).__init__(
+            initial_user_state, action)
         self._n = n
         self._threshold = threshold
         self._minimum_interval_steps = minimum_interval_steps

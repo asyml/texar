@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Attentional Seq2seq.
+"""DEBLEU.
 """
 from __future__ import absolute_import
 from __future__ import print_function
@@ -49,6 +49,12 @@ phases = config_train.phases
 
 xe_names = ('xe_0', 'xe_1')
 debleu_names = ('debleu_0', 'debleu_1')
+
+dir_model = os.path.join(expr_name, 'ckpt')
+dir_best = os.path.join(expr_name, 'ckpt-best')
+ckpt_model = os.path.join(dir_model, 'model.ckpt')
+ckpt_best = os.path.join(dir_best, 'model.ckpt')
+
 
 def get_scope_by_name(tensor):
     return tensor.name[: tensor.name.rfind('/') + 1]
@@ -198,37 +204,60 @@ def main():
             name='summary_{}'.format(name))
         for name in (xe_names + debleu_names)}
 
+    global convergence_trigger
+    convergence_trigger = tx.utils.BestEverConvergenceTrigger(
+        None,
+        lambda state: state,
+        config_train.threshold_steps,
+        config_train.minimum_interval_steps)
+
     saver = tf.train.Saver(max_to_keep=None)
 
-    def _restore_from(directory, restore_trigger):
+    def _save_to(directory, step):
+        print('saving to {} ...'.format(directory))
+        saved_path = saver.save(sess, directory, global_step=step)
+
+        for trigger_name in ['convergence_trigger', 'annealing_trigger']:
+            trigger = globals()[trigger_name]
+            trigger_path = '{}.{}'.format(saved_path, trigger_name)
+            print('saving {} ...'.format(trigger_name))
+            with open(trigger_path, 'wb') as pickle_file:
+                trigger.save_to_pickle(pickle_file)
+
+        print('saved to {}'.format(saved_path))
+
+    def _restore_from(directory, restore_trigger_names):
         if os.path.exists(directory):
             ckpt_path = tf.train.latest_checkpoint(directory)
             print('restoring from {} ...'.format(ckpt_path))
             saver.restore(sess, ckpt_path)
 
-            if restore_trigger:
-                trigger_path = '{}.trigger'.format(ckpt_path)
+            for trigger_name in restore_trigger_names:
+                trigger = globals()[trigger_name]
+                trigger_path = '{}.{}'.format(ckpt_path, trigger_name)
                 if os.path.exists(trigger_path):
+                    print('restoring {} ...'.format(trigger_name))
                     with open(trigger_path, 'rb') as pickle_file:
                         trigger.restore_from_pickle(pickle_file)
                 else:
-                    print('cannot find previous trigger state.')
+                    print('cannot find previous {} state.'.format(trigger_name))
 
             print('done.')
 
         else:
             print('cannot find checkpoint directory {}'.format(directory))
 
-    def _train_epoch(sess, summary_writer, mode, train_op, summary_op, trigger):
+    def _train_epoch(sess, summary_writer, mode, train_op, summary_op):
         print('in _train_epoch')
 
         data_iterator.restart_dataset(sess, mode)
         feed_dict = {
             tx.global_mode(): tf.estimator.ModeKeys.TRAIN,
             data_iterator.handle: data_iterator.get_handle(sess, mode),
-            mask_pattern_[0]: mask_pattern[0],
-            mask_pattern_[1]: mask_pattern[1],
         }
+        if mask_pattern is not None:
+            feed_dict.update(
+                {mask_pattern_[_]: mask_pattern[_] for _ in range(2)})
 
         while True:
             try:
@@ -239,7 +268,7 @@ def main():
 
                 if step % config_train.steps_per_eval == 0:
                     global triggered
-                    _eval_epoch(sess, summary_writer, 'val', trigger)
+                    _eval_epoch(sess, summary_writer, 'val')
                     if triggered:
                         break
 
@@ -248,7 +277,7 @@ def main():
 
         print('end _train_epoch')
 
-    def _eval_epoch(sess, summary_writer, mode, trigger):
+    def _eval_epoch(sess, summary_writer, mode):
         print('in _eval_epoch with mode {}'.format(mode))
 
         data_iterator.restart_dataset(sess, mode)
@@ -290,21 +319,16 @@ def main():
         summary_writer.flush()
 
         if mode == 'val':
-            if trigger is not None:
-                if (trigger.best_ever_score is not None and
-                        bleu > trigger.best_ever_score):
-                    print('update best val bleu: {}'.format(bleu))
+            global triggered
+            triggered = convergence_trigger(step, bleu)
+            if triggered:
+                print('triggered!')
 
-                    saved_path = saver.save(sess, ckpt_best, global_step=step)
-                    with open('{}.trigger'.format(saved_path), 'wb') as \
-                            pickle_file:
-                        trigger.save_to_pickle(pickle_file)
-                    print('saved to {}'.format(saved_path))
+            if convergence_trigger.best_ever_step == step:
+                print('updated best val bleu: {}'.format(
+                    convergence_trigger.best_ever_score))
 
-                global triggered
-                triggered, _ = trigger(step, bleu)
-                if triggered:
-                    print('triggered!')
+                _save_to(ckpt_best, step)
 
         print('end _eval_epoch')
         return bleu
@@ -314,43 +338,42 @@ def main():
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
 
-        dir_model = os.path.join(expr_name, 'ckpt')
-        dir_best = os.path.join(expr_name, 'ckpt-best')
-        ckpt_model = os.path.join(dir_model, 'model.ckpt')
-        ckpt_best = os.path.join(dir_best, 'model.ckpt')
-
-        def action_before_phase(phase):
-            global train_data_name, train_op_name, mask_pattern,\
-                train_op, summary_op
-            train_data_name, train_op_name, mask_pattern = phase
-            train_op = train_ops[train_op_name]
-            summary_op = summary_ops[train_op_name]
+        def action(i):
+            if i >= len(phases):
+                return i
+            i += 1
+            train_data_name, train_op_name, mask_pattern = phases[i]
             if reinitialize:
                 sess.run(train_op_initializers[train_op_name])
+            return i
 
-        action = (action_before_phase(phase) for phase in phases)
-        next(action)
-        trigger = tx.utils.BestEverConvergenceTrigger(
-            action,
-            config_train.threshold_steps,
-            config_train.minimum_interval_steps,
-            default=None)
+        global annealing_trigger
+        annealing_trigger = tx.utils.Trigger(0, action)
 
-        _restore_from(dir_model, restore_trigger=True)
+        def _restore_and_anneal():
+            _restore_from(dir_best, ['convergence_trigger'])
+            annealing_trigger.trigger()
+
+        _restore_from(dir_model, ['convergence_trigger', 'annealing_trigger'])
 
         summary_writer = tf.summary.FileWriter(
             os.path.join(expr_name, 'log'), sess.graph, flush_secs=30)
 
         epoch = 0
         while epoch < config_train.max_epochs:
+            train_data_name, train_op_name, mask_pattern = phases[
+                annealing_trigger.user_state]
+            train_op = train_ops[train_op_name]
+            summary_op = summary_ops[train_op_name]
+
             print('epoch #{} {}:'.format(
                 epoch, (train_data_name, train_op_name, mask_pattern)))
 
-            val_bleu = _eval_epoch(sess, summary_writer, 'val', trigger)
+            val_bleu = _eval_epoch(sess, summary_writer, 'val')
+            test_bleu = _eval_epoch(sess, summary_writer, 'test')
             if triggered:
-                _restore_from(dir_best, restore_trigger=False)
-
-            test_bleu = _eval_epoch(sess, summary_writer, 'test', None)
+                _restore_and_anneal()
+                continue
 
             step = tf.train.global_step(sess, global_step)
 
@@ -358,20 +381,17 @@ def main():
                 epoch, step, val_bleu, test_bleu))
 
             _train_epoch(sess, summary_writer, train_data_name,
-                         train_op, summary_op, trigger)
+                         train_op, summary_op)
             if triggered:
-                _restore_from(dir_best, restore_trigger=False)
+                _restore_and_anneal()
+                continue
 
             epoch += 1
 
             step = tf.train.global_step(sess, global_step)
-            saved_path = saver.save(sess, ckpt_model, global_step=step)
-            with open('{}.trigger'.format(saved_path), 'wb') as pickle_file:
-                trigger.save_to_pickle(pickle_file)
+            _save_to(ckpt_model, step)
 
-            print('saved to {}'.format(saved_path))
-
-        test_bleu = _eval_epoch(sess, summary_writer, 'test', None)
+        test_bleu = _eval_epoch(sess, summary_writer, 'test')
         print('epoch: {}, test BLEU: {}'.format(epoch, test_bleu))
 
 
