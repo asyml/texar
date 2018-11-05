@@ -339,7 +339,7 @@ def main():
         sess.run(tf.tables_initializer())
 
         def action(i):
-            if i >= len(phases):
+            if i >= len(phases) - 1:
                 return i
             i += 1
             train_data_name, train_op_name, mask_pattern = phases[i]
