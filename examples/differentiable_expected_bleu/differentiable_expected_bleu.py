@@ -35,6 +35,9 @@ flags.DEFINE_string("config_data", "config_data_iwslt14_de-en",
 flags.DEFINE_string("config_train", "config_train", "The training config.")
 flags.DEFINE_string("expr_name", "iwslt14_de-en", "The experiment name. "
                     "Used as the directory name of run.")
+flags.DEFINE_string("restore_from", "", "The specific checkpoint path to "
+                    "restore from. If not specified, the latest checkpoint in "
+                    "expr_name is restored.")
 flags.DEFINE_boolean("reinitialize", True, "Whether to reinitialize the state "
                      "of the optimizers before training and after triggering.")
 
@@ -44,6 +47,7 @@ config_model = importlib.import_module(FLAGS.config_model)
 config_data = importlib.import_module(FLAGS.config_data)
 config_train = importlib.import_module(FLAGS.config_train)
 expr_name = FLAGS.expr_name
+restore_from = FLAGS.restore_from
 reinitialize = FLAGS.reinitialize
 phases = config_train.phases
 
@@ -226,23 +230,29 @@ def main():
 
         print('saved to {}'.format(saved_path))
 
-    def _restore_from(directory, restore_trigger_names):
+    def _restore_from_path(ckpt_path, restore_trigger_names=None):
+        print('restoring from {} ...'.format(ckpt_path))
+        saver.restore(sess, ckpt_path)
+
+        if restore_trigger_names is None:
+            restore_trigger_names = ['convergence_trigger', 'annealing_trigger']
+
+        for trigger_name in restore_trigger_names:
+            trigger = globals()[trigger_name]
+            trigger_path = '{}.{}'.format(ckpt_path, trigger_name)
+            if os.path.exists(trigger_path):
+                print('restoring {} ...'.format(trigger_name))
+                with open(trigger_path, 'rb') as pickle_file:
+                    trigger.restore_from_pickle(pickle_file)
+            else:
+                print('cannot find previous {} state.'.format(trigger_name))
+
+        print('done.')
+
+    def _restore_from(directory, restore_trigger_names=None):
         if os.path.exists(directory):
             ckpt_path = tf.train.latest_checkpoint(directory)
-            print('restoring from {} ...'.format(ckpt_path))
-            saver.restore(sess, ckpt_path)
-
-            for trigger_name in restore_trigger_names:
-                trigger = globals()[trigger_name]
-                trigger_path = '{}.{}'.format(ckpt_path, trigger_name)
-                if os.path.exists(trigger_path):
-                    print('restoring {} ...'.format(trigger_name))
-                    with open(trigger_path, 'rb') as pickle_file:
-                        trigger.restore_from_pickle(pickle_file)
-                else:
-                    print('cannot find previous {} state.'.format(trigger_name))
-
-            print('done.')
+            _restore_from_path(ckpt_path, restore_trigger_names)
 
         else:
             print('cannot find checkpoint directory {}'.format(directory))
@@ -354,7 +364,10 @@ def main():
             _restore_from(dir_best, ['convergence_trigger'])
             annealing_trigger.trigger()
 
-        _restore_from(dir_model, ['convergence_trigger', 'annealing_trigger'])
+        if restore_from:
+            _restore_from_path(restore_from)
+        else:
+            _restore_from(dir_model)
 
         summary_writer = tf.summary.FileWriter(
             os.path.join(expr_name, 'log'), sess.graph, flush_secs=30)
