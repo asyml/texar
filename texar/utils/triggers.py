@@ -29,6 +29,7 @@ except ImportError:
 
 __all__ = [
     "Trigger",
+    "ScheduledStepsTrigger",
     "BestEverConvergenceTrigger",
 ]
 
@@ -58,6 +59,8 @@ class Trigger(object):
 
     def __init__(self, initial_user_state, action):
         self._user_state = initial_user_state
+        if not callable(action):
+            raise ValueError("Action {} is not callable".format(action))
         self._action = action
 
     def _predicate(self, *args, **kwargs):
@@ -74,6 +77,9 @@ class Trigger(object):
     def __call__(self, *args, **kwargs):
         """The trigger must be called to update the internal state and
         automatically triggers when the condition is found met.
+
+        Returns:
+            A boolean denotes whether triggered this time.
         """
         pred = self._predicate(*args, **kwargs)
         if pred:
@@ -138,7 +144,31 @@ class Trigger(object):
 
 
 class ScheduledStepsTrigger(Trigger):
-    """A trigger that triggers at designated steps.
+    """A trigger that triggers after the training step have iterated over some
+    user-designated steps. This means that it will trigger if there is at least
+    one `step` in user-designated set of :attr:`steps` within the range
+    `(last_called_step, current_step]`.
+
+    Args:
+        initial_user_state: A (any kind of picklable) object representing the
+            initial :attr:`user_state`.
+        action (function): A function which is called to update
+            :attr:`user_state` every time the trigger is triggered.
+        steps (list, tuple, or callable): Represents the user-designated set of
+        :attr:`steps` described above. There are **2 ways** provided to specify
+        this set:
+
+        1.  :attr:`steps` is a callable. When calling
+            `steps(last_called_step, current_step)`, it is assumed to return
+            a boolean indicating whether there is at least one `step` in the set
+            within the range `(last_called_step, current_step]`. For example,
+            :code:`steps = lambda l, r: l // n != r // n` denotes the set
+            `{i * n for any positive integer i}` where `n` is some positive
+            integer. This option enables user to define any set of steps, even
+            an infinite set.
+
+        2.  :attr:`steps` is a `list` or `tuple` containing numbers in ascending
+            order. These numbers compose the whole set.
     """
     
     def __init__(self, initial_user_state, action, steps):
@@ -146,17 +176,44 @@ class ScheduledStepsTrigger(Trigger):
         """
         super(ScheduledTrigger, self).__init__(initial_user_state, action)
         self._steps = steps
-        self._advance_steps()
 
-    def _advance_steps(self):
-        self._next_step = next(step, None)
+        if callable(self._steps):
+            self._last_called_step = None
+
+        else:
+            self._index = 0
+
+    @property
+    def _state_names(self):
+        return super(ScheduledStepsTrigger, self)._state_names + [
+            '_last_called_step' if callable(self._steps) else '_index']
 
     def _predicate(self, step):
-        while self._next_step is not None and step < self._next_step:
-            self._advance_steps()
-        if self._next_step is not None and step == self._next_step:
-            return True
-        return False
+        if callable(self._steps):
+            ret = self._steps(self._last_called_step, step)
+            self._last_call_step = step
+
+        else:
+            ret = False
+            while self._index < len(self._steps) and \
+                    self._steps[self._index] <= step:
+                ret = True
+                self._index += 1
+
+        return ret
+
+    def __call__(self, step):
+        """The trigger must be called to update the current training step
+        (:attr:`step`).
+
+        Args:
+            step (int): Current training step to update. The training step must
+                be updated in ascending order.
+
+        Returns:
+            A boolean denotes whether triggered this time.
+        """
+        return super(ScheduledStepsTrigger, self).__call__(step)
 
 
 class BestEverConvergenceTrigger(Trigger):
@@ -216,9 +273,7 @@ class BestEverConvergenceTrigger(Trigger):
             score (float): Current value of the maintained metric.
 
         Returns:
-            A tuple `(triggered, retval)`, where boolean `triggered` denotes
-            whether triggered this time and `retval` is the return value of the
-            action performed this time.
+            A boolean denotes whether triggered this time.
         """
         return super(BestEverConvergenceTrigger, self).__call__(step, score)
 
