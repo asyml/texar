@@ -407,6 +407,7 @@ def get_train_op(loss, variables=None, learning_rate=None,
         learning_rate_decay_fn=lr_decay_fn,
         variables=variables,
         name=hparams["name"],
-        increment_global_step=increment_global_step)
+        increment_global_step=increment_global_step,
+        colocate_gradients_with_ops=True)
 
     return train_op

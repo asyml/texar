@@ -1174,8 +1174,7 @@ _layer_class_to_default_kwargs_map = {
 
 def layer_normalize(inputs,
                     epsilon=1e-8,
-                    scope='ln',
-                    reuse=None):
+                    scope='ln'):
     '''Applies layer normalization. averaging over the last dimension
     Args:
         inputs: A tensor with 2 or more dimensions, where the first
@@ -1183,12 +1182,10 @@ def layer_normalize(inputs,
         epsilon: A floating number. A very small number for preventing
             ZeroDivision Error.
         scope: Optional scope for `variable_scope`.
-        reuse: Boolean, whether to reuse the weights of a previous layer
-            by the same name.
     Returns:
         A tensor with the same shape and data dtype as `inputs`.
     '''
-    with tf.variable_scope(scope, reuse=reuse):
+    with tf.variable_scope(scope):
         filters = inputs.get_shape()[-1]
         mean, variance = tf.nn.moments(inputs, [-1], keep_dims=True)
         scale = tf.get_variable('layer_norm_scale',\
