@@ -50,7 +50,7 @@ class Trigger(object):
     Args:
         initial_user_state: A (any kind of picklable) object representing the
             initial :attr:`user_state`.
-        action (function): A function which is called to update
+        action (callable): A callable which is called to update
             :attr:`user_state` every time the trigger is triggered. See above
             for detailed explanation.
     .. document private functions
@@ -149,29 +149,32 @@ class ScheduledStepsTrigger(Trigger):
     one `step` in user-designated set of :attr:`steps` within the range
     `(last_called_step, current_step]`.
 
+    There are **2 ways** provided to specify the set of :attr:`steps`:
+
+    1.  :attr:`steps` is a callable. When calling
+        `steps(last_called_step, current_step)`, it is assumed to return
+        a boolean indicating whether there is at least one `step` in the set
+        within the range `(last_called_step, current_step]`. For example,
+        :code:`steps = lambda l, r: l // n != r // n` denotes the set
+        `{i * n for any integer i}` where `n` is some integer. This option
+        enables user to define any set of steps, even an infinite set. Note
+        that in this case the trigger will never trigger when being called
+        for the first time, because `last_called_step` is undefined at this
+        time. User can manually call it to specify an initial step before
+        training.
+
+    2.  :attr:`steps` is a `list` or `tuple` containing numbers in ascending
+        order. These numbers compose the whole set.
+
     Args:
         initial_user_state: A (any kind of picklable) object representing the
             initial :attr:`user_state`.
-        action (function): A function which is called to update
+        action (callable): A callable which is called to update
             :attr:`user_state` every time the trigger is triggered.
         steps (list, tuple, or callable): Represents the user-designated set of
-        :attr:`steps` described above. There are **2 ways** provided to specify
-        this set:
-
-        1.  :attr:`steps` is a callable. When calling
-            `steps(last_called_step, current_step)`, it is assumed to return
-            a boolean indicating whether there is at least one `step` in the set
-            within the range `(last_called_step, current_step]`. For example,
-            :code:`steps = lambda l, r: l // n != r // n` denotes the set
-            `{i * n for any positive integer i}` where `n` is some positive
-            integer. This option enables user to define any set of steps, even
-            an infinite set. Note that in this case the trigger will never
-            trigger when being called for the first time, because
-            `last_called_step` is undefined at this time. User can manually call
-            it to specify an initial step before training.
-
-        2.  :attr:`steps` is a `list` or `tuple` containing numbers in ascending
-            order. These numbers compose the whole set.
+            :attr:`steps` described above.
+    .. document private functions
+    .. automethod:: __call__
     """
     
     def __init__(self, initial_user_state, action, steps):
@@ -237,15 +240,12 @@ class BestEverConvergenceTrigger(Trigger):
     Args:
         initial_user_state: A (any kind of picklable) object representing the
             initial :attr:`user_state`.
-        action (function): A function which is called to update
+        action (callable): A callable which is called to update
             :attr:`user_state` every time the trigger is triggered.
         threshold_steps (int): Number of steps it should trigger after the best
             value was last updated.
         minimum_interval_steps (int): Minimum number of steps between twice
             firing of the trigger.
-        default (optional): The value returned after :attr:`action` exhausted.
-            If not provided, the trigger will do nothing when `StopIteration`
-            occurs.
     .. document private functions
     .. automethod:: __call__
     """
@@ -281,7 +281,7 @@ class BestEverConvergenceTrigger(Trigger):
         Args:
             step (int): Current training step to update. The training step must
                 be updated in ascending order.
-            score (float): Current value of the maintained metric.
+            score (float or int): Current value of the maintained metric.
 
         Returns:
             A boolean denotes whether triggered this time.

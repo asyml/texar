@@ -287,6 +287,11 @@ Trigger
 .. autoclass:: texar.utils.Trigger
     :members:
 
+:hidden:`ScheduledStepsTrigger`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.utils.ScheduledStepsTrigger
+    :members:
+
 :hidden:`BestEverConvergenceTrigger`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.utils.BestEverConvergenceTrigger
