@@ -165,16 +165,17 @@ class ScheduledStepsTrigger(Trigger):
             :code:`steps = lambda l, r: l // n != r // n` denotes the set
             `{i * n for any positive integer i}` where `n` is some positive
             integer. This option enables user to define any set of steps, even
-            an infinite set.
+            an infinite set. Note that in this case the trigger will never
+            trigger when being called for the first time, because
+            `last_called_step` is undefined at this time. User can manually call
+            it to specify an initial step before training.
 
         2.  :attr:`steps` is a `list` or `tuple` containing numbers in ascending
             order. These numbers compose the whole set.
     """
     
     def __init__(self, initial_user_state, action, steps):
-        """steps should be a list or tuple in increasing order.
-        """
-        super(ScheduledTrigger, self).__init__(initial_user_state, action)
+        super(ScheduledStepsTrigger, self).__init__(initial_user_state, action)
         self._steps = steps
 
         if callable(self._steps):
@@ -188,10 +189,20 @@ class ScheduledStepsTrigger(Trigger):
         return super(ScheduledStepsTrigger, self)._state_names + [
             '_last_called_step' if callable(self._steps) else '_index']
 
+    @property
+    def last_called_step(self):
+        """The step when the trigger is latest called.
+        """
+        return self._last_called_step
+
     def _predicate(self, step):
         if callable(self._steps):
-            ret = self._steps(self._last_called_step, step)
-            self._last_call_step = step
+            if self._last_called_step is not None:
+                ret = self._steps(self._last_called_step, step)
+            else:
+                ret = False
+
+            self._last_called_step = step
 
         else:
             ret = False
