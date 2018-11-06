@@ -39,7 +39,7 @@ flags.DEFINE_string("restore_from", "", "The specific checkpoint path to "
                     "restore from. If not specified, the latest checkpoint in "
                     "expr_name is restored.")
 flags.DEFINE_boolean("reinitialize", True, "Whether to reinitialize the state "
-                     "of the optimizers before training and after triggering.")
+                     "of the optimizers before training and after annealing.")
 
 FLAGS = flags.FLAGS
 
