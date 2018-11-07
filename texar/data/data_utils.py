@@ -185,8 +185,8 @@ def read_words(filename, newline_token=None):
                         .replace("\n", newline_token).split())
 
 
-def make_vocab(filenames, max_vocab_size=-1,
-               newline_token=None, return_type="list"):
+def make_vocab(filenames, max_vocab_size=-1, newline_token=None,
+               return_type="list", return_count=False):
     """Builds vocab of the files.
 
     Args:
@@ -202,9 +202,17 @@ def make_vocab(filenames, max_vocab_size=-1,
             function returns a list of words sorted by frequency. If "dict",
             this function returns a dict mapping words to their index sorted
             by frequency.
+        return_count (bool): Whether to return word counts. If `True` and
+            :attr:`return_type` is "dict", then a count dict is returned, which
+            is a mapping from words to their frequency.
 
     Returns:
-        A list or dict.
+        - If :attr:`return_count` is False, returns a list or dict containing \
+        the vocabulary words.
+
+        - If :attr:`return_count` if True, returns a pair of list or dict \
+        `(a, b)`, where `a` is a list or dict containing the vocabulary \
+        words, `b` is a list of dict containing the word counts.
     """
     if not isinstance(filenames, (list, tuple)):
         filenames = [filenames]
@@ -216,15 +224,23 @@ def make_vocab(filenames, max_vocab_size=-1,
     counter = collections.Counter(words)
     count_pairs = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
 
-    words, _ = list(zip(*count_pairs))
+    words, counts = list(zip(*count_pairs))
     if max_vocab_size >= 0:
         words = words[:max_vocab_size]
+        counts = counts[:max_vocab_size]
 
     if return_type == "list":
-        return words
+        if not return_count:
+            return words
+        else:
+            return words, counts
     elif return_type == "dict":
         word_to_id = dict(zip(words, range(len(words))))
-        return word_to_id
+        if not return_count:
+            return word_to_id
+        else:
+            word_to_count = dict(zip(words, counts))
+            return word_to_id, word_to_count
     else:
         raise ValueError("Unknown return_type: {}".format(return_type))
 

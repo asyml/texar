@@ -2,3 +2,4 @@ tensorflow >= 1.7.0
 tensorflow-gpu >= 1.7.0
 tensorflow-probability >= 0.3.0
 tensorflow-probability-gpu >= 0.3.0
+funcsigs >= 1.0.2

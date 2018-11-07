@@ -86,3 +86,52 @@ python bleu_tool.py --reference=data/en_de/test.de --translation=temp/test.outpu
 ```
 Using an Nvidia GTX 1080Ti, the model usually converges within 5 hours (~15 epochs) on IWSLT'15.
 
+
+## Hands on your customed experiments!
+
+The following is the instructions on how to experiment on you customed dataset with Transformer.
+
+### 1. Prepare your dataset
+
+create the directory and store the original paired dataset in the directory. The dataset directory should 
+`data/${src_language}_${tgt_language}`. There shoule be at least six files in the corresponding directory,
+aka, `train/dev/test.src_language/tgt_language`. 
+
+For example, after you run `sh scripts/iwslt15_en_vi.sh`, you can find the directory `data/en_vi/` and
+six corpus files in that directory.
+
+### 2. Preprocess the data
+
+Run `preprocess_data.sh ${encoder} ${src_language} ${tgt_language}` to obtain the processed dataset.
+The `encoder` parameter can be `bpe`(byte pairwise encoding), `spm` (sentence piece encoding), or
+`raw`(no subword encoding).
+
+The above examples are using `bpe` or `spm`. If you choose to use `raw` encoding method, Notice that:
+
+- By default, the word embedding layer is built with the combination of source language vocabulary and target language vocabulary.
+- By default, the final output layer of transformer decoder (hidden_state -> logits) shares the parameters with the word embedding layer.
+
+### 3. Define your model configuratoin and data configuration
+
+Create your customed python files to define your transformer configuration and data loading configuration.
+
+You can refer to the provided templated named `config_iwslt15.py` and `config_model.py`.
+
+### 4. Train the model
+
+Train:
+```
+python transformer_main.py --run_mode=train_and_evaluate --config_model=custom_config_model --config_data=custom_config_data
+
+```
+
+### 5. Test the model
+Test:
+```
+python transformer_main.py --run_mode=test --config_data=custom_config_data --model_dir=./outputs
+```
+
+Inferenced test samples are in `outputs/test.output`.
+You can want to decode the samples with respective decoder if you choose to use `bpe` or `spm` encoder before.
+Finally, you can use
+`python bleu_tool.py --reference=you_reference_file --translation=your_decoded_file` to calculate the BLEU score.

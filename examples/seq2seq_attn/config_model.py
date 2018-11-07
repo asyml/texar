@@ -27,3 +27,11 @@ decoder = {
         'attention_layer_size': num_units
     }
 }
+opt = {
+    'optimizer': {
+        'type':  'AdamOptimizer',
+        'kwargs': {
+            'learning_rate': 0.001,
+        },
+    },
+}

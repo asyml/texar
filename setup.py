@@ -25,6 +25,7 @@ setuptools.setup(
         'numpy',
         'pyyaml',
         'requests',
+        'funcsigs',
     ],
     extras_require={
         'tensorflow-cpu': ['tensorflow>=1.7.0', 'tensorflow-probability >= 0.3.0'],
