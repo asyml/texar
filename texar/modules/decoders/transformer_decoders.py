@@ -239,6 +239,8 @@ class TransformerDecoder(ModuleBase):
             "poswise_feedforward": default_transformer_poswise_net_hparams(),
             'multihead_attention': {
                 'num_units': 512,
+                'dropout_rate': 0.1,
+                'output_dim': 512,
                 'num_heads': 8,
             },
             "dim": 512,
