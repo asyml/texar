@@ -71,13 +71,14 @@ def main():
 
     # Build model graph
 
-    encoder_input = tf.placeholder(tf.int64, shape=(None, None))
-    decoder_input = tf.placeholder(tf.int64, shape=(None, None))
-    label = tf.placeholder(tf.int64, shape=(None, None))
+    encoder_input_train = tf.placeholder(tf.int64, shape=(None, None))
+    decoder_input_train = tf.placeholder(tf.int64, shape=(None, None))
+    label_train = tf.placeholder(tf.int64, shape=(None, None))
 
-    encoder_inputs = tf.split(encoder_input, n_gpu, 0)
-    decoder_inputs = tf.split(decoder_input, n_gpu, 0)
-    labels = tf.split(label, n_gpu, 0)
+    batch_size = tx.utils.get_batch_size(encoder_input_train)
+    encoder_inputs = tf.split(encoder_input_train, n_gpu, 0)
+    decoder_inputs = tf.split(decoder_input_train, n_gpu, 0)
+    labels = tf.split(label_train, n_gpu, 0)
 
     encoder_input_test = tf.placeholder(tf.int64, shape=(None, None))
     decoder_input_test = tf.placeholder(tf.int64, shape=(None, None))
@@ -99,16 +100,16 @@ def main():
 
     mle_losses = []
     for i, (encoder_input, decoder_input, label) in enumerate(zip(encoder_inputs, decoder_inputs, labels)):
-        do_reuse = True if i>0 else None
-        print('i:{} reuse:{}'.format(i, do_reuse))
-        with tf.device("/gpu:{}".format(i)), tf.variable_scope(tf.get_variable_scope(), reuse=do_reuse):
-            # (text sequence length excluding padding)
+        with tf.device('gpu:{}'.format(i)), tf.variable_scope(tf.get_variable_scope(), reuse=i>0):
+            do_reuse = True if i>0 else None
+            print('i:{} reuse:{}'.format(i, do_reuse))
             encoder_input_length = tf.reduce_sum(
                 1 - tf.to_int32(tf.equal(encoder_input, 0)), axis=1)
             decoder_input_length = tf.reduce_sum(
                 1 - tf.to_int32(tf.equal(decoder_input, 0)), axis=1)
             is_target = tf.to_float(tf.not_equal(label, 0))
 
+            print('encoder built::{}'.format(encoder._built))
             encoder_output = encoder(inputs=embedder(encoder_input),
                                      sequence_length=encoder_input_length)
 
@@ -127,11 +128,10 @@ def main():
             mle_loss = tf.reduce_sum(mle_loss * is_target) / tf.reduce_sum(is_target)
             mle_losses.append(mle_loss)
 
-    mle_losses = tf.concat(mle_losses, axis=0)
-
+    mle_losses = tf.stack(mle_losses, axis=0)
     final_loss = tf.reduce_mean(mle_losses)
-    hparams = HParams(config_model.opt, default_optimization_hparams())['optimizer']
-    opt, _ = get_optimizer_fn(opt_hparams)
+    #hparams = HParams(config_model.opt, default_optimization_hparams())['optimizer']
+    #opt, _ = get_optimizer_fn(opt_hparams)
     train_op = tx.core.get_train_op(
         final_loss,
         learning_rate=learning_rate,
@@ -159,7 +159,7 @@ def main():
         # <PAD> has all-zero embedding, so here we explicitly set <PAD>'s embedding
         # to all-zero.
         # For training
-        start_tokens = tf.fill([tx.utils.get_batch_size(encoder_input)],
+        start_tokens = tf.fill([tx.utils.get_batch_size(encoder_input_test)],
                                bos_token_id)
         predictions = decoder(
             memory=encoder_output,
@@ -178,7 +178,8 @@ def main():
             # Uses the best sample by beam search
             inferred_ids = predictions['sample_id'][:, :, 0]
 
-    saver = tf.train.Saver(max_to_keep=5)
+    with tf.device('cpu:0'):
+        saver = tf.train.Saver(max_to_keep=5)
     best_results = {'score': 0, 'epoch': -1}
 
     def _eval_epoch(sess, epoch, mode):
@@ -195,8 +196,8 @@ def main():
             sources, targets = zip(*eval_data[i:i+bsize])
             x_block = data_utils.source_pad_concat_convert(sources)
             feed_dict = {
-                encoder_input: x_block,
-                tx.global_mode(): tf.estimator.ModeKeys.EVAL,
+                encoder_input_test: x_block,
+                tx.global_mode(): tf.estimator.ModeKeys.PREDICT,
             }
             fetches = {
                 'inferred_ids': inferred_ids,
@@ -260,9 +261,9 @@ def main():
             in_arrays = data_utils.seq2seq_pad_concat_convert(train_batch)
 
             feed_dict = {
-                encoder_input: in_arrays[0],
-                decoder_input: in_arrays[1],
-                label: in_arrays[2],
+                encoder_input_train: in_arrays[0],
+                decoder_input_train: in_arrays[1],
+                label_train: in_arrays[2],
                 learning_rate: utils.get_lr(step, config_model.lr)
             }
             fetches = {
@@ -283,9 +284,9 @@ def main():
             if step and step % config_data.eval_steps == 0:
                 _eval_epoch(sess, epoch, mode='eval')
         return step
-
+    sess_config = tf.ConfigProto(allow_soft_placement = True)
     # Run the graph
-    with tf.Session() as sess:
+    with tf.Session(config=sess_config) as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())

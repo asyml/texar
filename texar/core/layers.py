@@ -1185,6 +1185,7 @@ def layer_normalize(inputs,
     Returns:
         A tensor with the same shape and data dtype as `inputs`.
     '''
+    #return inputs
     with tf.variable_scope(scope):
         filters = inputs.get_shape()[-1]
         mean, variance = tf.nn.moments(inputs, [-1], keep_dims=True)

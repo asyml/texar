@@ -265,9 +265,7 @@ class TransformerEncoder(EncoderBase):
         # Multiply input embedding with the sqrt of its dimension for
         # normalization
         inputs = inputs * self._hparams.dim**0.5
-
         inputs = mask_sequences(inputs, sequence_length, tensor_rank=3)
-
         _, lengths, _ = shape_list(inputs)
 
         inputs_padding = 1 - tf.sequence_mask(
@@ -299,9 +297,9 @@ class TransformerEncoder(EncoderBase):
                         rate=self._hparams.residual_dropout,
                         training=is_train_mode(mode),
                     )
+                y = layers.layer_normalize(x)
                 poswise_network = self.poswise_networks[i]
                 with tf.variable_scope(poswise_network.variable_scope):
-                    y = layers.layer_normalize(x)
                     original_shape = shape_list(y)
                     y = tf.reshape(y, [-1, self._hparams.dim])
                     y = tf.expand_dims(pad_remover.remove(y), axis=0)
@@ -316,7 +314,8 @@ class TransformerEncoder(EncoderBase):
                     )
                     x = x + sub_output
 
-        encoder_output = layers.layer_normalize(x)
+        with tf.variable_scope('final_ln'):
+            encoder_output = layers.layer_normalize(x)
 
         if not self._built:
             self._add_internal_trainable_variables()
