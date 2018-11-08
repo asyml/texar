@@ -23,6 +23,7 @@ import random
 import os
 import importlib
 from torchtext import data
+import numpy as np
 import tensorflow as tf
 import texar as tx
 from texar.modules import TransformerEncoder, TransformerDecoder
@@ -100,16 +101,17 @@ def main():
 
     mle_losses = []
     for i, (encoder_input, decoder_input, label) in enumerate(zip(encoder_inputs, decoder_inputs, labels)):
-        with tf.device('gpu:{}'.format(i)), tf.variable_scope(tf.get_variable_scope(), reuse=i>0):
-            do_reuse = True if i>0 else None
-            print('i:{} reuse:{}'.format(i, do_reuse))
+        #with tf.device('gpu:{}'.format(i)), tf.variable_scope(tf.get_variable_scope(), reuse=i>0):
+        #with tf.device('gpu:{}'.format(i)):
+        with tf.variable_scope(tf.get_variable_scope()):
+            #do_reuse = True if i>0 else None
+            #print('i:{} reuse:{}'.format(i, do_reuse))
             encoder_input_length = tf.reduce_sum(
                 1 - tf.to_int32(tf.equal(encoder_input, 0)), axis=1)
             decoder_input_length = tf.reduce_sum(
                 1 - tf.to_int32(tf.equal(decoder_input, 0)), axis=1)
             is_target = tf.to_float(tf.not_equal(label, 0))
 
-            print('encoder built::{}'.format(encoder._built))
             encoder_output = encoder(inputs=embedder(encoder_input),
                                      sequence_length=encoder_input_length)
 
@@ -127,7 +129,7 @@ def main():
                 outputs.logits, label, vocab_size, config_model.loss_label_confidence)
             mle_loss = tf.reduce_sum(mle_loss * is_target) / tf.reduce_sum(is_target)
             mle_losses.append(mle_loss)
-
+            print('trainable_variables:{}'.format(len(tf.trainable_variables())))
     mle_losses = tf.stack(mle_losses, axis=0)
     final_loss = tf.reduce_mean(mle_losses)
     #hparams = HParams(config_model.opt, default_optimization_hparams())['optimizer']
@@ -143,7 +145,7 @@ def main():
     summary_merged = tf.summary.merge_all()
 
     # For inference
-    with tf.device("/gpu:0"), tf.variable_scope(tf.get_variable_scope(), reuse=True):
+    with tf.variable_scope(tf.get_variable_scope(), reuse=True):
             # (text sequence length excluding padding)
         encoder_input_length = tf.reduce_sum(
             1 - tf.to_int32(tf.equal(encoder_input_test, 0)), axis=1)
@@ -178,8 +180,8 @@ def main():
             # Uses the best sample by beam search
             inferred_ids = predictions['sample_id'][:, :, 0]
 
-    with tf.device('cpu:0'):
-        saver = tf.train.Saver(max_to_keep=5)
+    #with tf.device('cpu:0'):
+    saver = tf.train.Saver(max_to_keep=5)
     best_results = {'score': 0, 'epoch': -1}
 
     def _eval_epoch(sess, epoch, mode):
@@ -258,8 +260,8 @@ def main():
             random_shuffler=data.iterator.RandomShuffler())
 
         for _, train_batch in enumerate(train_iter):
-            in_arrays = data_utils.seq2seq_pad_concat_convert(train_batch)
-
+            in_arrays = data_utils.seq2seq_pad_concat_convert(train_batch, n_gpu=n_gpu)
+            print('train_batch:{} {}'.format(in_arrays[0].shape, in_arrays[1].shape))
             feed_dict = {
                 encoder_input_train: in_arrays[0],
                 decoder_input_train: in_arrays[1],
@@ -284,7 +286,8 @@ def main():
             if step and step % config_data.eval_steps == 0:
                 _eval_epoch(sess, epoch, mode='eval')
         return step
-    sess_config = tf.ConfigProto(allow_soft_placement = True)
+    sess_config = tf.ConfigProto(allow_soft_placement=True,
+                                 log_device_placement=True)
     # Run the graph
     with tf.Session(config=sess_config) as sess:
         sess.run(tf.global_variables_initializer())
