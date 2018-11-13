@@ -131,10 +131,13 @@ class TransformerEncoder(EncoderBase):
             if self._hparams.initializer:
                 tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
-
-            self.position_embedder = \
-                SinusoidsPositionEmbedder(
-                    self._hparams.position_embedder_hparams)
+            if self._hparams.position_embedder_type == 'sinusoids':
+                self.position_embedder = \
+                    SinusoidsPositionEmbedder(
+                        self._hparams.position_embedder_hparams)
+            else:
+                self.position_embedder =
+                    PositionEmbedder(position_size=self._hparams.position_size)
             self.multihead_attention_list = []
             self.poswise_networks = []
             for i in range(self._hparams.num_blocks):
@@ -170,7 +173,9 @@ class TransformerEncoder(EncoderBase):
                 "num_blocks": 6,
                 "dim": 512,
                 "position_embedder_hparams": None,
+                "position_size": None,
                 "embedding_dropout": 0.1,
+                "embedding_normalize": True,
                 "residual_dropout": 0.1,
                 "poswise_feedforward": default_transformer_poswise_net_hparams,
                 "multihead_attention": {
@@ -227,14 +232,20 @@ class TransformerEncoder(EncoderBase):
         """
         return {
             'initializer': None,
+            'embed_norm': False,
+            'embed_scale': True,
+            'position_embedder_type': 'sinusoids',
+            'position_size': None,
             'position_embedder_hparams': None,
             'embedding_dropout': 0.1,
+            'embedding_normalize': True,
             'residual_dropout': 0.1,
             'num_blocks': 6,
             'poswise_feedforward': default_transformer_poswise_net_hparams(),
             'multihead_attention': {
                 'num_units': 512,
                 'num_heads': 8,
+                'bias': False,
             },
             'dim': 512,
             'name': 'transformer_encoder',
@@ -275,7 +286,11 @@ class TransformerEncoder(EncoderBase):
 
         pos_embeds = self.position_embedder(lengths,
                                             self._hparams.dim)
+
         input_embedding = inputs + pos_embeds
+
+        if self._hparams.embed_norm:
+            input_embedding = layers.layer_normalize(input_embedding)
 
         x = tf.layers.dropout(input_embedding,
                               rate=self._hparams.embedding_dropout,

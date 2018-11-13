@@ -44,6 +44,7 @@ class MultiheadAttentionEncoder(EncoderBase):
     """
     def __init__(self, hparams=None):
         EncoderBase.__init__(self, hparams)
+        use_bias = self._hparams.use_bias
 
         with tf.variable_scope(self.variable_scope):
             if self._hparams.initializer:
@@ -51,16 +52,16 @@ class MultiheadAttentionEncoder(EncoderBase):
                     layers.get_initializer(self._hparams.initializer))
 
             self.Q_dense = tf.layers.Dense(self._hparams.num_units,
-                                           use_bias=False,
+                                           use_bias=use_bias,
                                            name='q')
             self.K_dense = tf.layers.Dense(self._hparams.num_units,
-                                           use_bias=False,
+                                           use_bias=use_bias,
                                            name='k')
             self.V_dense = tf.layers.Dense(self._hparams.num_units,
-                                           use_bias=False,
+                                           use_bias=use_bias,
                                            name='v')
             self.O_dense = tf.layers.Dense(self._hparams.output_dim,
-                                           use_bias=False,
+                                           use_bias=use_bias,
                                            name='o')
     @staticmethod
     def default_hparams():
@@ -97,6 +98,9 @@ class MultiheadAttentionEncoder(EncoderBase):
         "dropout_rate: : float
             Dropout rate in the attention.
 
+        "use_bias": bool
+            Use bias when projecting the key, value and query.
+
         "name" : str
             Name of the module.
         """
@@ -106,6 +110,7 @@ class MultiheadAttentionEncoder(EncoderBase):
             'output_dim': 512,
             'num_units': 512,
             'dropout_rate': 0.1,
+            'use_bias': False,
             "name": "multihead_attention",
         }
 

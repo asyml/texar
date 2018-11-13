@@ -69,10 +69,8 @@ def seq2seq_pad_concat_convert(xy_batch, eos_id=2, bos_id=1, n_gpu=0):
     # Add BOS in target language
     y_in_block = np.pad(y_block, ((0, 0), (1, 0)), 'constant',
                         constant_values=bos_id)
-    print('before padding, len of x_block:{}'.format(x_block))
     if n_gpu > 0:
         if len(x_block) % n_gpu != 0:
-            print('begin padding')
             padded_cnt = n_gpu - len(x_block) % n_gpu
             x_block = np.pad(x_block, ((0, padded_cnt), (0, 0)), 'constant',
                              constant_values=0)
@@ -80,7 +78,6 @@ def seq2seq_pad_concat_convert(xy_batch, eos_id=2, bos_id=1, n_gpu=0):
                                 constant_values=0)
             y_out_block = np.pad(y_out_block, ((0, padded_cnt), (0, 0)), 'constant',
                                  constant_values=0)
-        print(len(x_block))
     return x_block, y_in_block, y_out_block
 
 def source_pad_concat_convert(x_seqs, eos_id=2, bos_id=1):
