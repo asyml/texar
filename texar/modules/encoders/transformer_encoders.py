@@ -23,7 +23,7 @@ import tensorflow as tf
 
 from texar.core import layers
 from texar.utils import transformer_attentions as attn
-from texar.modules.embedders.position_embedders import SinusoidsPositionEmbedder
+from texar.modules.embedders.position_embedders import SinusoidsPositionEmbedder, PositionEmbedder
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.encoders.multihead_attention import MultiheadAttentionEncoder
 from texar.modules.networks.networks import FeedForwardNetwork
@@ -136,8 +136,9 @@ class TransformerEncoder(EncoderBase):
                     SinusoidsPositionEmbedder(
                         self._hparams.position_embedder_hparams)
             else:
-                self.position_embedder =
-                    PositionEmbedder(position_size=self._hparams.position_size)
+                self.position_embedder = \
+                        PositionEmbedder(position_size=self._hparams.position_size, hparams={'dim': self._hparams.dim})
+
             self.multihead_attention_list = []
             self.poswise_networks = []
             for i in range(self._hparams.num_blocks):
@@ -175,7 +176,6 @@ class TransformerEncoder(EncoderBase):
                 "position_embedder_hparams": None,
                 "position_size": None,
                 "embedding_dropout": 0.1,
-                "embedding_normalize": True,
                 "residual_dropout": 0.1,
                 "poswise_feedforward": default_transformer_poswise_net_hparams,
                 "multihead_attention": {
@@ -234,18 +234,21 @@ class TransformerEncoder(EncoderBase):
             'initializer': None,
             'embed_norm': False,
             'embed_scale': True,
+            'use_bert_config': False,
             'position_embedder_type': 'sinusoids',
             'position_size': None,
             'position_embedder_hparams': None,
             'embedding_dropout': 0.1,
-            'embedding_normalize': True,
+            'layernorm_scope': 'LayerNorm',
             'residual_dropout': 0.1,
             'num_blocks': 6,
             'poswise_feedforward': default_transformer_poswise_net_hparams(),
             'multihead_attention': {
                 'num_units': 512,
                 'num_heads': 8,
-                'bias': False,
+                'dropout_rate': 0.1,
+                'output_dim': 512,
+                'use_bias': False,
             },
             'dim': 512,
             'name': 'transformer_encoder',
@@ -275,7 +278,9 @@ class TransformerEncoder(EncoderBase):
         """
         # Multiply input embedding with the sqrt of its dimension for
         # normalization
-        inputs = inputs * self._hparams.dim**0.5
+        if self._hparams.embed_scale:
+            inputs = inputs * self._hparams.dim**0
+
         inputs = mask_sequences(inputs, sequence_length, tensor_rank=3)
         _, lengths, _ = shape_list(inputs)
 
@@ -284,56 +289,92 @@ class TransformerEncoder(EncoderBase):
         ignore_padding = attn.attention_bias_ignore_padding(inputs_padding)
         encoder_self_attention_bias = ignore_padding
 
-        pos_embeds = self.position_embedder(lengths,
-                                            self._hparams.dim)
+        pos_embeds = self.position_embedder(sequence_length=sequence_length)
 
         input_embedding = inputs + pos_embeds
 
-        if self._hparams.embed_norm:
-            input_embedding = layers.layer_normalize(input_embedding)
+        if self._hparams.use_bert_config:
+            x = layers.layer_normalize(input_embedding)
+            x = tf.layers.dropout(x,
+                                  rate=self._hparams.embedding_dropout,
+                                  training=is_train_mode(mode))
+        else:
+            x = tf.layers.dropout(input_embedding)
 
-        x = tf.layers.dropout(input_embedding,
-                              rate=self._hparams.embedding_dropout,
-                              training=is_train_mode(mode))
-        pad_remover = utils.transformer_utils.PadRemover(inputs_padding)
+        # Just to keep consistent with BERT, actually makes no difference
+        if self._hparams.use_bert_config:
+            pad_remover = None
+        else:
+            pad_remover = utils.transformer_utils.PadRemover(inputs_padding)
 
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("layer_{}".format(i)):
-                with tf.variable_scope('self_attention'):
+                with tf.variable_scope('attention'):
                     multihead_attention = self.multihead_attention_list[i]
-                    selfatt_output = multihead_attention(
-                        queries=layers.layer_normalize(x),
+                    # trivial difference between BERT and original Transformer
+                    if self._hparams.use_bert_config:
+                        _queries_input = x
+                    else:
+                        _queries_input = layers.layer_normalize(x)
+
+                    attention_output = multihead_attention(
+                        queries=_queries_input,
                         memory=None,
                         memory_attention_bias=encoder_self_attention_bias,
                         mode=mode,
                     )
-                    x = x + tf.layers.dropout(
-                        selfatt_output,
+                    attention_output = tf.layers.dropout(
+                        attention_output,
                         rate=self._hparams.residual_dropout,
                         training=is_train_mode(mode),
                     )
-                y = layers.layer_normalize(x)
+                    x = x + attention_output
+                with tf.variable_scope('output'):
+                    y = layers.layer_normalize(x)
                 poswise_network = self.poswise_networks[i]
                 with tf.variable_scope(poswise_network.variable_scope):
                     original_shape = shape_list(y)
                     y = tf.reshape(y, [-1, self._hparams.dim])
-                    y = tf.expand_dims(pad_remover.remove(y), axis=0)
-                    # [1, batch_size*seq_length, hidden_dim]
+                    if pad_remover:
+                        y = tf.expand_dims(pad_remover.remove(y), axis=0)
+                        # [1, batch_size*seq_length, hidden_dim]
+                    layer_output = poswise_network(y)
                     sub_output = tf.layers.dropout(
-                        poswise_network(y),
+                        layer_output,
                         rate=self._hparams.residual_dropout,
                         training=is_train_mode(mode)
                     )
-                    sub_output = tf.reshape(pad_remover.restore(tf.squeeze(\
-                        sub_output, axis=0)), original_shape \
-                    )
+                    if pad_remover:
+                        sub_output = tf.reshape(pad_remover.restore(tf.squeeze(\
+                            sub_output, axis=0)), original_shape \
+                        )
+                    else:
+                        sub_output = tf.reshape(sub_output, original_shape)
                     x = x + sub_output
+                    if self._hparams.use_bert_config:
+                        x = layers.layer_normalize(x)
 
-        with tf.variable_scope('final_ln'):
-            encoder_output = layers.layer_normalize(x)
+        if not self._hparams.use_bert_config:
+            x = layers.layer_normalize(x)
+
+        self.encoded_sequence = x
+
+        if self._hparams.use_bert_config:
+            with tf.variable_scope("pooler"):
+                # We "pool" the model by simply taking the hidden state corresponding
+                # to the first token. We assume that this has been pre-trained
+                first_token_tensor = tf.squeeze(x[:, 0:1, :], axis=1)
+                self.pooled_output = tf.layers.dense(
+                    first_token_tensor,
+                    self._hparams.dim,
+                    activation=tf.tanh
+                )
 
         if not self._built:
             self._add_internal_trainable_variables()
             self._built = True
 
-        return encoder_output
+        if self._hparams.use_bert_config:
+            return self.pooled_output
+        else:
+            return self.encoded_sequence
