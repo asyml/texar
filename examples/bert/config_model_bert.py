@@ -31,11 +31,9 @@ token_embed = {
     }
 }
 
-## TODO: segment ids
-
 encoder = {
+    'name': 'encoder',
     'dim': hidden_dim,
-    'embed_scale': False,
     'position_embedder_type': 'variables',
     'embed_norm': True,
     'embed_scale': False,
@@ -46,6 +44,7 @@ encoder = {
         'num_units': hidden_dim,
         'num_heads': 12,
         'output_dim': hidden_dim,
+        'name': 'self'
     },
     'dim': hidden_dim,
     'use_bert_config': True,

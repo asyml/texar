@@ -1,9 +1,9 @@
 export BERT_BASE_DIR=uncased_L-12_H-768_A-12
 export GLUE_DIR=glue_data
+export CUDA_VISIBLE_DEVICES=''
 
 python run_classifier.py \
   --task_name=MRPC \
-  --do_train=true \
   --do_eval=true \
   --data_dir=$GLUE_DIR/MRPC \
   --vocab_file=$BERT_BASE_DIR/vocab.txt \

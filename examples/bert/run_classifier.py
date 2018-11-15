@@ -44,6 +44,11 @@ flags.DEFINE_string(
     "The config json file corresponding to the pre-trained BERT model. "
     "This specifies the model architecture.")
 
+flags.DEFINE_string(
+    "bert_config_file", None,
+    "The config json file corresponding to the pre-trained BERT model. "
+    "This specifies the model architecture.")
+
 flags.DEFINE_string("task_name", None, "The name of the task to train.")
 
 flags.DEFINE_string("vocab_file", None,
@@ -126,6 +131,9 @@ flags.DEFINE_integer(
     "num_tpu_cores", 8,
     "Only used if `use_tpu` is True. Total number of TPU cores to use.")
 
+import json
+config_ckpt = json.loads(
+    open(FLAGS.bert_config_file).read())
 
 class InputExample(object):
   """A single training/test example for simple sequence classification."""
@@ -546,29 +554,42 @@ def create_model(config_model, is_training, input_ids, input_mask, segment_ids,
     """Creates a classification model."""
     input_length = tf.reduce_sum(
         1 - tf.to_int32(tf.equal(input_ids, 0)), axis=1)
-    embedder = tx.modules.WordEmbedder(
-        vocab_size=28996, hparams=config_model.emb)
-    token_type_embedder = tx.modules.WordEmbedder(
-        vocab_size=2, hparams=config_model.token_embed)
 
-    word_embeds = embedder(input_ids)
-    token_type_ids = tf.zeros_like(input_ids)
-    token_type_embeds = token_type_embedder(token_type_ids)
+    with tf.variable_scope('bert'):
+        with tf.variable_scope('embeddings'):
+            embedder = tx.modules.WordEmbedder(
+                vocab_size=config_ckpt['vocab_size'], hparams=config_model.emb)
+            token_type_embedder = tx.modules.WordEmbedder(
+                vocab_size=2, hparams=config_model.token_embed)
 
-    input_embeds = word_embeds + token_type_embeds
+            word_embeds = embedder(input_ids)
+            if segment_ids is None:
+                token_type_ids = tf.zeros_like(input_ids)
+            else:
+                token_type_ids = segment_ids
+            token_type_embeds = token_type_embedder(token_type_ids)
 
-    encoder = TransformerEncoder(hparams=config_model.encoder)
+        input_embeds = word_embeds + token_type_embeds
 
-    output_layer = encoder(input_embeds, input_length)
-    hidden_size = output_layer.shape[-1].value
-    output_weights = tf.get_variable(
-        "output_weights", [num_labels, hidden_size],
-        initializer=tf.truncated_normal_initializer(stddev=0.02))
-    output_bias = tf.get_variable(
-        "output_bias", [num_labels], initializer=tf.zeros_initializer())
+        encoder = TransformerEncoder(hparams=config_model.encoder)
+
+        output_layer = encoder(input_embeds, input_length)
+
+        with tf.variable_scope("pooler"):
+            first_token_tensor = tf.squeeze(output_layer[:, 0:1, :], axis=1)
+            output_layer = tf.layers.dense(
+                first_token_tensor,
+                config_ckpt['hidden_size'],
+                activation=tf.tanh
+        )
+        hidden_size = output_layer.shape[-1].value
+        output_weights = tf.get_variable(
+            "output_weights", [num_labels, hidden_size],
+            initializer=tf.truncated_normal_initializer(stddev=0.02))
+        output_bias = tf.get_variable(
+            "output_bias", [num_labels], initializer=tf.zeros_initializer())
     with tf.variable_scope("loss"):
         if is_training:
-            # I.e., 0.1 dropout
             output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
         logits = tf.matmul(output_layer, output_weights, transpose_b=True)
         logits = tf.nn.bias_add(logits, output_bias)
@@ -598,6 +619,9 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     input_ids = features["input_ids"]
     input_mask = features["input_mask"]
     segment_ids = features["segment_ids"]
+    print('input_ids:{}'.format(input_ids))
+    print('input_mask:{}'.format(input_mask))
+    print('segment ids:{}'.format(segment_ids))
     label_ids = features["label_ids"]
 
     is_training = (mode == tf.estimator.ModeKeys.TRAIN)
@@ -719,7 +743,6 @@ def input_fn_builder(features, seq_length, is_training, drop_remainder):
     return d
 
   return input_fn
-
 
 # This function is not used by this file but is still used by the Colab and
 # people who depend on it.

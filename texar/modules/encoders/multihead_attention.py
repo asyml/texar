@@ -53,16 +53,16 @@ class MultiheadAttentionEncoder(EncoderBase):
 
             self.Q_dense = tf.layers.Dense(self._hparams.num_units,
                                            use_bias=use_bias,
-                                           name='q')
+                                           name='query')
             self.K_dense = tf.layers.Dense(self._hparams.num_units,
                                            use_bias=use_bias,
-                                           name='k')
+                                           name='key')
             self.V_dense = tf.layers.Dense(self._hparams.num_units,
                                            use_bias=use_bias,
-                                           name='v')
+                                           name='value')
             self.O_dense = tf.layers.Dense(self._hparams.output_dim,
                                            use_bias=use_bias,
-                                           name='o')
+                                           name='output')
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.

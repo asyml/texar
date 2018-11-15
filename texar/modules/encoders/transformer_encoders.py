@@ -143,7 +143,7 @@ class TransformerEncoder(EncoderBase):
             self.poswise_networks = []
             for i in range(self._hparams.num_blocks):
                 with tf.variable_scope("layer_{}".format(i)):
-                    with tf.variable_scope('self_attention'):
+                    with tf.variable_scope('attention'):
                         multihead_attention = MultiheadAttentionEncoder(
                             self._hparams.multihead_attention)
                         self.multihead_attention_list.append(
@@ -244,6 +244,7 @@ class TransformerEncoder(EncoderBase):
             'num_blocks': 6,
             'poswise_feedforward': default_transformer_poswise_net_hparams(),
             'multihead_attention': {
+                'name': 'multihead_attention',
                 'num_units': 512,
                 'num_heads': 8,
                 'dropout_rate': 0.1,
@@ -289,7 +290,8 @@ class TransformerEncoder(EncoderBase):
         ignore_padding = attn.attention_bias_ignore_padding(inputs_padding)
         encoder_self_attention_bias = ignore_padding
 
-        pos_embeds = self.position_embedder(sequence_length=sequence_length)
+        positions = tf.expand_dims(tf.range(lengths, dtype=tf.int32), 0)
+        pos_embeds = self.position_embedder(positions)
 
         input_embedding = inputs + pos_embeds
 
@@ -309,26 +311,25 @@ class TransformerEncoder(EncoderBase):
 
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("layer_{}".format(i)):
-                with tf.variable_scope('attention'):
-                    multihead_attention = self.multihead_attention_list[i]
-                    # trivial difference between BERT and original Transformer
-                    if self._hparams.use_bert_config:
-                        _queries_input = x
-                    else:
-                        _queries_input = layers.layer_normalize(x)
+                multihead_attention = self.multihead_attention_list[i]
+                # trivial difference between BERT and original Transformer
+                if self._hparams.use_bert_config:
+                    _queries_input = x
+                else:
+                    _queries_input = layers.layer_normalize(x)
 
-                    attention_output = multihead_attention(
-                        queries=_queries_input,
-                        memory=None,
-                        memory_attention_bias=encoder_self_attention_bias,
-                        mode=mode,
-                    )
-                    attention_output = tf.layers.dropout(
-                        attention_output,
-                        rate=self._hparams.residual_dropout,
-                        training=is_train_mode(mode),
-                    )
-                    x = x + attention_output
+                attention_output = multihead_attention(
+                    queries=_queries_input,
+                    memory=None,
+                    memory_attention_bias=encoder_self_attention_bias,
+                    mode=mode,
+                )
+                attention_output = tf.layers.dropout(
+                    attention_output,
+                    rate=self._hparams.residual_dropout,
+                    training=is_train_mode(mode),
+                )
+                x = x + attention_output
                 with tf.variable_scope('output'):
                     y = layers.layer_normalize(x)
                 poswise_network = self.poswise_networks[i]
@@ -359,22 +360,8 @@ class TransformerEncoder(EncoderBase):
 
         self.encoded_sequence = x
 
-        if self._hparams.use_bert_config:
-            with tf.variable_scope("pooler"):
-                # We "pool" the model by simply taking the hidden state corresponding
-                # to the first token. We assume that this has been pre-trained
-                first_token_tensor = tf.squeeze(x[:, 0:1, :], axis=1)
-                self.pooled_output = tf.layers.dense(
-                    first_token_tensor,
-                    self._hparams.dim,
-                    activation=tf.tanh
-                )
-
         if not self._built:
             self._add_internal_trainable_variables()
             self._built = True
 
-        if self._hparams.use_bert_config:
-            return self.pooled_output
-        else:
-            return self.encoded_sequence
+        return self.encoded_sequence
