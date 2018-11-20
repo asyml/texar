@@ -1,34 +1,16 @@
 """Configurations of Transformer model
 """
-import copy
-import texar as tx
-
 random_seed = 1234
-beam_width = 5
-alpha = 0.6
 hidden_dim = 768
-
+vocab_size =
 emb = {
     'name': 'word_embeddings',
     'dim': hidden_dim,
-    'initializer': {
-        'type': 'random_normal_initializer',
-        'kwargs': {
-            'mean': 0.0,
-            'stddev': hidden_dim**-0.5,
-        },
-    }
 }
 
 token_embed = {
     'name': 'token_type_embeddings',
     'dim': hidden_dim,
-    'initializer': {
-        'type': 'truncated_normal_initializer',
-        'kwargs': {
-            'stddev': 0.02,
-        }
-    }
 }
 
 encoder = {
@@ -44,6 +26,7 @@ encoder = {
         'num_units': hidden_dim,
         'num_heads': 12,
         'output_dim': hidden_dim,
+        'dropout_rate': 0.1,
         'name': 'self'
     },
     'dim': hidden_dim,

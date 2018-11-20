@@ -558,9 +558,11 @@ def create_model(config_model, is_training, input_ids, input_mask, segment_ids,
     with tf.variable_scope('bert'):
         with tf.variable_scope('embeddings'):
             embedder = tx.modules.WordEmbedder(
-                vocab_size=config_ckpt['vocab_size'], hparams=config_model.emb)
+                vocab_size=config_model.vocab_size,
+                hparams=config_model.emb)
             token_type_embedder = tx.modules.WordEmbedder(
-                vocab_size=2, hparams=config_model.token_embed)
+                vocab_size=config_model.token_vocab_size,
+                hparams=config_model.token_embed)
 
             word_embeds = embedder(input_ids)
             if segment_ids is None:
@@ -583,9 +585,11 @@ def create_model(config_model, is_training, input_ids, input_mask, segment_ids,
                 activation=tf.tanh
         )
         hidden_size = output_layer.shape[-1].value
+
         output_weights = tf.get_variable(
             "output_weights", [num_labels, hidden_size],
-            initializer=tf.truncated_normal_initializer(stddev=0.02))
+            #initializer=tf.truncated_normal_initializer(stddev=0.02))
+            initializer=tf.ones_initializer())
         output_bias = tf.get_variable(
             "output_bias", [num_labels], initializer=tf.zeros_initializer())
     with tf.variable_scope("loss"):

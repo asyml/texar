@@ -132,12 +132,12 @@ class TransformerEncoder(EncoderBase):
                 tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
             if self._hparams.position_embedder_type == 'sinusoids':
-                self.position_embedder = \
-                    SinusoidsPositionEmbedder(
-                        self._hparams.position_embedder_hparams)
+                self.position_embedder = SinusoidsPositionEmbedder(
+                    self._hparams.position_embedder_hparams)
             else:
-                self.position_embedder = \
-                        PositionEmbedder(position_size=self._hparams.position_size, hparams={'dim': self._hparams.dim})
+                self.position_embedder = PositionEmbedder(
+                    position_size=self._hparams.position_size,
+                    hparams=self._hparams.position_embedder_hparams)
 
             self.multihead_attention_list = []
             self.poswise_networks = []
@@ -174,7 +174,6 @@ class TransformerEncoder(EncoderBase):
                 "num_blocks": 6,
                 "dim": 512,
                 "position_embedder_hparams": None,
-                "position_size": None,
                 "embedding_dropout": 0.1,
                 "residual_dropout": 0.1,
                 "poswise_feedforward": default_transformer_poswise_net_hparams,
@@ -192,7 +191,10 @@ class TransformerEncoder(EncoderBase):
             Number of stacked blocks.
 
         "dim" : int
-            Hidden dimension of the encoder.
+            Hidden dimension of the encoders.
+
+        "position_size": int
+            The size of position embeddings.
 
         "position_embedder_hparams" : dict, optional
             Hyperparameters of a
@@ -232,7 +234,6 @@ class TransformerEncoder(EncoderBase):
         """
         return {
             'initializer': None,
-            'embed_norm': False,
             'embed_scale': True,
             'use_bert_config': False,
             'position_embedder_type': 'sinusoids',
@@ -280,7 +281,7 @@ class TransformerEncoder(EncoderBase):
         # Multiply input embedding with the sqrt of its dimension for
         # normalization
         if self._hparams.embed_scale:
-            inputs = inputs * self._hparams.dim**0
+            inputs = inputs * self._hparams.dim**0.5
 
         inputs = mask_sequences(inputs, sequence_length, tensor_rank=3)
         _, lengths, _ = shape_list(inputs)
