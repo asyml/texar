@@ -9,19 +9,17 @@ def transform_bert_to_texar_config(input_json):
     config_ckpt = json.loads(
         open(input_json).read())
     configs = {}
-    configs['random_seed'] = 1234
     configs['hidden_size'] = config_ckpt['hidden_size']
     hidden_dim = config_ckpt['hidden_size']
     configs['emb'] = {
         'name': 'word_embeddings',
-        'dim': hidden_dim,
-            }
+        'dim': hidden_dim}
     configs['vocab_size'] = config_ckpt['vocab_size']
     configs['token_embed'] = {
         'name': 'token_type_embeddings',
-        'dim': hidden_dim,
-    }
+        'dim': hidden_dim}
     configs['type_vocab_size'] = config_ckpt['type_vocab_size']
+
     configs['encoder'] = {
         'name': 'encoder',
         'dim': hidden_dim,
@@ -30,7 +28,6 @@ def transform_bert_to_texar_config(input_json):
         'position_embedder_hparams': {
             'dim': hidden_dim,
         },
-        'embed_scale': False,
         'embedding_dropout': config_ckpt['hidden_dropout_prob'],
         'num_blocks': config_ckpt['num_hidden_layers'],
         'multihead_attention': {
@@ -70,7 +67,8 @@ def transform_bert_to_texar_config(input_json):
     return Munch(configs)
 
 def get_lr(global_step, num_train_steps, num_warmup_steps, opt_config):
-    learning_rate = tf.constant(value=opt_config['learning_rate'], shape=[], dtype=tf.float32)
+    learning_rate = tf.constant(value=opt_config['learning_rate'],
+                                shape=[], dtype=tf.float32)
     learning_rate = tf.train.polynomial_decay(
         learning_rate,
         global_step,
@@ -90,7 +88,8 @@ def get_lr(global_step, num_train_steps, num_warmup_steps, opt_config):
 
         is_warmup = tf.cast(global_steps_int < warmup_steps_int, tf.float32)
         learning_rate = (
-                (1.0 - is_warmup) * learning_rate + is_warmup * warmup_learning_rate)
+            (1.0 - is_warmup) * learning_rate + is_warmup * warmup_learning_rate)
+
     return learning_rate
 
 def get_train_op(loss, learning_rate):
@@ -142,6 +141,10 @@ def get_assignment_map_from_checkpoint(tvars, init_checkpoint):
         'bert/embeddings/LayerNorm/beta': 'bert/encoder/LayerNorm/beta',
         'bert/embeddings/LayerNorm/gamma': 'bert/encoder/LayerNorm/gamma',
     }
+    for check_name, model_name in assignment_map.items():
+        initialized_variable_names[model_name] = 1
+        initialized_variable_names[model_name + ":0"] = 1
+
     for check_name, shape in init_vars:
         if check_name.startswith('bert'):
             if check_name.startswith('bert/embeddings'):

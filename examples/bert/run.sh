@@ -1,1 +1,1 @@
-python example_classifier.py --sanity_check=True
+python example_classifier.py --do_train --do_eval

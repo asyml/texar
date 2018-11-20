@@ -552,6 +552,8 @@ def _truncate_seq_pair(tokens_a, tokens_b, max_length):
 def create_model(config_model, is_training, input_ids, input_mask, segment_ids,
                  labels, num_labels, use_one_hot_embeddings):
     """Creates a classification model."""
+    # the input_mask is not used.
+    # we use `input_length` to make attention mask, which is equivalent.
     input_length = tf.reduce_sum(
         1 - tf.to_int32(tf.equal(input_ids, 0)), axis=1)
 
@@ -572,9 +574,7 @@ def create_model(config_model, is_training, input_ids, input_mask, segment_ids,
             token_type_embeds = token_type_embedder(token_type_ids)
 
         input_embeds = word_embeds + token_type_embeds
-
         encoder = TransformerEncoder(hparams=config_model.encoder)
-
         output_layer = encoder(input_embeds, input_length)
 
         with tf.variable_scope("pooler"):
@@ -588,8 +588,7 @@ def create_model(config_model, is_training, input_ids, input_mask, segment_ids,
 
         output_weights = tf.get_variable(
             "output_weights", [num_labels, hidden_size],
-            #initializer=tf.truncated_normal_initializer(stddev=0.02))
-            initializer=tf.ones_initializer())
+            initializer=tf.truncated_normal_initializer(stddev=0.02))
         output_bias = tf.get_variable(
             "output_bias", [num_labels], initializer=tf.zeros_initializer())
     with tf.variable_scope("loss"):
@@ -780,7 +779,7 @@ def main(_):
     raise ValueError(
         "At least one of `do_train`, `do_eval` or `do_predict' must be True.")
 
-  bert_config = importlib.import_module(FLAGS.config_model)
+  bert_config = import_module(FLAGS.config_model)
 
   tf.gfile.MakeDirs(FLAGS.output_dir)
 

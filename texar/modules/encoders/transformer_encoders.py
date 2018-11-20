@@ -234,7 +234,6 @@ class TransformerEncoder(EncoderBase):
         """
         return {
             'initializer': None,
-            'embed_scale': True,
             'use_bert_config': False,
             'position_embedder_type': 'sinusoids',
             'position_size': None,
@@ -280,15 +279,20 @@ class TransformerEncoder(EncoderBase):
         """
         # Multiply input embedding with the sqrt of its dimension for
         # normalization
-        if self._hparams.embed_scale:
+        if not self._hparams.use_bert_config:
             inputs = inputs * self._hparams.dim**0.5
-
-        inputs = mask_sequences(inputs, sequence_length, tensor_rank=3)
+            inputs = mask_sequences(inputs, sequence_length, tensor_rank=3)
         _, lengths, _ = shape_list(inputs)
 
         inputs_padding = 1 - tf.sequence_mask(
             sequence_length, tf.shape(inputs)[1], dtype=tf.float32)
-        ignore_padding = attn.attention_bias_ignore_padding(inputs_padding)
+        if self._hparams.use_bert_config:
+            ignore_padding = attn.attention_bias_ignore_padding(
+                inputs_padding, bias_value=-1e4)
+        else:
+            ignore_padding = attn.attentionb_bias_ignore_padding(
+                inputs_padding)
+
         encoder_self_attention_bias = ignore_padding
 
         positions = tf.expand_dims(tf.range(lengths, dtype=tf.int32), 0)
@@ -302,7 +306,9 @@ class TransformerEncoder(EncoderBase):
                                   rate=self._hparams.embedding_dropout,
                                   training=is_train_mode(mode))
         else:
-            x = tf.layers.dropout(input_embedding)
+            x = tf.layers.dropout(input_embedding,
+                                  rate=self._hparams.embedding_dropout,
+                                  training=is_train_mode(mode))
 
         # Just to keep consistent with BERT, actually makes no difference
         if self._hparams.use_bert_config:
@@ -340,7 +346,7 @@ class TransformerEncoder(EncoderBase):
                     if pad_remover:
                         y = tf.expand_dims(pad_remover.remove(y), axis=0)
                         # [1, batch_size*seq_length, hidden_dim]
-                    layer_output = poswise_network(y)
+                    layer_output = poswise_network(y, mode=mode)
                     sub_output = tf.layers.dropout(
                         layer_output,
                         rate=self._hparams.residual_dropout,
