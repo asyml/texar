@@ -68,6 +68,14 @@ Entropy
 .. autofunction:: texar.losses.sequence_entropy_with_logits
 
 
+DEBLEU
+==================
+
+:hidden:`debleu`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.losses.debleu
+
+
 Loss Utils
 ===========
 

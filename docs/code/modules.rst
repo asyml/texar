@@ -134,6 +134,11 @@ Decoders
 .. autoclass:: texar.modules.GumbelSoftmaxEmbeddingHelper
     :members:
 
+:hidden:`TeacherMaskSoftmaxEmbeddingHelper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.TeacherMaskSoftmaxEmbeddingHelper
+    :members:
+
 :hidden:`get_helper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.modules.get_helper

@@ -38,6 +38,7 @@ __all__ = [
     "_get_training_helper",
     "GumbelSoftmaxEmbeddingHelper",
     "SoftmaxEmbeddingHelper",
+    "TeacherMaskSoftmaxEmbeddingHelper",
 ]
 
 def default_helper_train_hparams():
@@ -185,6 +186,17 @@ def _get_training_helper( #pylint: disable=invalid-name
     return helper
 
 
+def get_embedding_and_fn(embedding):
+    if isinstance(embedding, EmbedderBase):
+        embedding = embedding.embedding
+
+    if callable(embedding):
+        raise ValueError("`embedding` must be an embedding tensor or an "
+                         "instance of subclass of `EmbedderBase`.")
+    else:
+        return embedding, (lambda ids: tf.nn.embedding_lookup(embedding, ids))
+
+
 class SoftmaxEmbeddingHelper(TFHelper):
     """A helper that feeds softmax probabilities over vocabulary
     to the next step.
@@ -215,17 +227,7 @@ class SoftmaxEmbeddingHelper(TFHelper):
 
     def __init__(self, embedding, start_tokens, end_token, tau,
                  stop_gradient=False, use_finish=True):
-        if isinstance(embedding, EmbedderBase):
-            embedding = embedding.embedding
-
-        if callable(embedding):
-            raise ValueError("`embedding` must be an embedding tensor or an "
-                             "instance of subclass of `EmbedderBase`.")
-        else:
-            self._embedding = embedding
-            self._embedding_fn = (
-                lambda ids: tf.nn.embedding_lookup(embedding, ids))
-
+        self._embedding, self._embedding_fn = get_embedding_and_fn(embedding)
         self._start_tokens = tf.convert_to_tensor(
             start_tokens, dtype=tf.int32, name="start_tokens")
         self._end_token = tf.convert_to_tensor(
@@ -326,3 +328,146 @@ class GumbelSoftmaxEmbeddingHelper(SoftmaxEmbeddingHelper):
             sample_ids = tf.stop_gradient(sample_ids_hard - sample_ids) \
                          + sample_ids
         return sample_ids
+
+
+class TeacherMaskSoftmaxEmbeddingHelper(TFTrainingHelper):
+    """A helper that implements the Teacher Mask described in the paper
+    https://openreview.net/pdf?id=S1x2aiRqFX. In an unmasked step, it feeds
+    softmax probabilities over vocabulary to the next step. In a masked step,
+    it feeds the one-hot distribution of the target labels (:attr:`inputs`)
+    to the next step.
+    Uses the softmax probability or one-hot vector to pass through word
+    embeddings to get the next input (i.e., a mixed word embedding).
+    In this implementation, all sequences in a batch shares the same teacher
+    mask.
+
+    A subclass of
+    :tf_main:`TrainingHelper <contrib/seq2seq/TrainingHelper>`.
+    Used as a helper to :class:`~texar.modules.RNNDecoderBase` :meth:`_build`
+    in training mode.
+
+    Args:
+        inputs (2D Tensor): Target sequence token indexes. It should be a tensor
+            of shape `[batch_size, max_time]`. Must append both BOS and EOS
+            tokens to each sequence.
+        sequence_length (1D Tensor): Lengths of input token sequences. These
+            lengths should include the BOS tokens but exclude the EOS tokens.
+        embedding: An embedding argument (:attr:`params`) for
+            :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`, or an
+            instance of subclass of :class:`texar.modules.EmbedderBase`.
+            Note that other callables are not acceptable here.
+        n_unmask: An int scalar tensor denotes the mask pattern together with
+            :attr:`n_mask`. See the paper for details.
+        n_mask: An int scalar tensor denotes the mask pattern together with
+            :attr:`n_unmask`. See the paper for details.
+        tau (float, optional): A float scalar tensor, the softmax temperature.
+            Default to 1. 
+        seed (int, optional): The random seed used to shift the mask.
+        stop_gradient (bool): Whether to stop the gradient backpropagation
+            when feeding softmax vector to the next step.
+        name (str, optional): A name for the module.
+
+    Example:
+
+        .. code-block:: python
+
+            embedder = WordEmbedder(vocab_size=data.vocab.size)
+            decoder = BasicRNNDecoder(vocab_size=data.vocab.size)
+            
+            tm_helper = texar.modules.TeacherMaskSoftmaxEmbeddingHelper(
+                inputs=data_batch['text_ids'],
+                sequence_length=data_batch['length']-1,
+                embedding=embedder,
+                n_unmask=1,
+                n_mask=0,
+                tau=1.)
+
+            outputs, _, _ = decoder(helper=tm_helper)
+
+            loss = debleu(
+                labels=data_batch['text_ids'][:, 1:],
+                probs=outputs.sample_ids,
+                sequence_length=data_batch['length']-1)
+
+    """
+
+    def __init__(self, inputs, sequence_length, embedding, n_unmask,
+                 n_mask, tau=1., time_major=False, seed=None,
+                 stop_gradient=False, name=None):
+        with tf.variable_scope(name, "TeacherMaskSoftmaxEmbeddingHelper",
+                               [embedding, tau, seed, stop_gradient]):
+            super(TeacherMaskSoftmaxEmbeddingHelper, self).__init__(
+                inputs=inputs,
+                sequence_length=sequence_length,
+                time_major=time_major)
+
+            self._embedding, self._embedding_fn = get_embedding_and_fn(
+                embedding)
+            self._tau = tau
+            self._seed = seed
+            self._stop_gradient = stop_gradient
+
+            self._zero_next_inputs = tf.zeros_like(
+                self._embedding_fn(self._zero_inputs))
+
+            self._n_unmask = n_unmask
+            self._n_mask = n_mask
+            self._n_cycle = tf.add(
+                self._n_unmask, self._n_mask, name="n_cycle")
+            self._n_shift = tf.random_uniform(
+                [], maxval=self._n_cycle, dtype=self._n_cycle.dtype,
+                seed=self._seed, name="n_shift")
+
+    @property
+    def sample_ids_dtype(self):
+        return tf.float32
+
+    @property
+    def sample_ids_shape(self):
+        return self._embedding.get_shape()[:1]
+
+    @property
+    def n_unmask(self):
+        return self._n_unmask
+
+    @property
+    def n_mask(self):
+        return self._n_mask
+
+    def _is_masked(self, time):
+        return (time + self._n_shift) % self._n_cycle < self._n_mask
+
+    def initialize(self, name=None):
+        finished = tf.equal(0, self._sequence_length)
+        all_finished = tf.reduce_all(finished)
+        next_inputs = tf.cond(
+            all_finished,
+            lambda: self._zero_next_inputs,
+            lambda: self._embedding_fn(self._input_tas.read(0)))
+        return (finished, next_inputs)
+
+    def sample(self, time, outputs, state, name=None):
+        """Returns `sample_id` of shape `[batch_size, vocab_size]`. In an
+        unmasked step, it is softmax distributions over vocabulary with
+        temperature :attr:`tau`; in a masked step, it is one-hot
+        representations of :attr:`input` in the next step.
+        """
+        next_time = time + 1
+        sample_ids = tf.cond(
+            self._is_masked(next_time),
+            lambda: tf.one_hot(self._input_tas.read(next_time),
+                               self._embedding.get_shape()[0]),
+            lambda: tf.nn.softmax(outputs / self._tau))
+        return sample_ids
+
+    def next_inputs(self, time, outputs, state, sample_ids, name=None):
+        next_time = time + 1
+        finished = (next_time >= self._sequence_length)
+        all_finished = tf.reduce_all(finished)
+        if self._stop_gradient:
+            sample_ids = tf.stop_gradient(sample_ids)
+        next_inputs = tf.cond(
+            all_finished,
+            lambda: self._zero_next_inputs,
+            lambda: tf.matmul(sample_ids, self._embedding))
+        return (finished, next_inputs, state)
