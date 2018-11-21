@@ -12,6 +12,7 @@ More examples are continuously added...
 * [seq2seq_attn](./seq2seq_attn): Attentional seq2seq
 * [seq2seq_configs](./seq2seq_configs): Seq2seq implemented with Texar model template.
 * [seq2seq_rl](./seq2seq_rl): Attentional seq2seq trained with policy gradient.
+* [seq2seq_exposure_bias](./seq2seq_exposure_bias): Various algorithms tackling exposure bias in sequence generation.
 * [hierarchical_dialog](./hierarchical_dialog): Hierarchical recurrent encoder-decoder model for conversation response generation.
 * [torchtext](./torchtext): Use of torchtext data loader
 
@@ -44,6 +45,10 @@ More examples are continuously added...
 * [sentence_classifier](./sentence_classifier): Basic CNN-based sentence classifier
 * [sequence_tagging](./sequence_tagging): BiLSTM-CNN model for Named Entity Recognition (NER)
 
+### Reward Augmented Maximum Likelihood (RAML) ###
+
+* [seq2seq_exposure_bias](./seq2seq_exposure_bias): RAML and other learning algorithms for sequence generation 
+
 ---
 
 ## Examples by Tasks
@@ -60,11 +65,17 @@ More examples are continuously added...
 * [seq2seq_attn](./seq2seq_attn): Attentional seq2seq
 * [seq2seq_configs](./seq2seq_configs): Seq2seq implemented with Texar model template.
 * [seq2seq_rl](./seq2seq_rl): Attentional seq2seq trained with policy gradient.
+* [seq2seq_exposure_bias](./seq2seq_exposure_bias): Various algorithms tackling exposure bias in sequence generation (MT and summarization as examples).
 * [transformer](./transformer): Transformer for machine translation
 
 ### Dialog ###
 
 * [hierarchical_dialog](./hierarchical_dialog): Hierarchical recurrent encoder-decoder model for conversation response generation.
+
+
+### Text Summarization ###
+
+* [seq2seq_exposure_bias](./seq2seq_exposure_bias): Various algorithms tackling exposure bias in sequence generation (MT and summarization as examples).
 
 ### Text Style Transfer ###
 

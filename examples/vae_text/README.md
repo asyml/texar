@@ -13,7 +13,7 @@ python prepare_data.py --data ptb
 python prepare_data.py --data yahoo
 ```
 
-## Usage
+## Training
 Train with the following command:
 
 ```shell
@@ -27,11 +27,31 @@ Here:
   - [config_lstm_yahoo.py](./config_lstm_yahoo.py): LSTM decoder, on the Yahoo data
   - [config_trans_ptb.py](./config_trans_ptb.py): Transformer decoder, on the PTB data
   - [config_trans_yahoo.py](./config_trans_yahoo.py): Transformer decoder, on the Yahoo data
-  
+
+## Generation
+Generating sentences with pre-trained model can be performed with the following command:
+```shell
+python vae_train.py --config config_file --mode predict --model /path/to/model.ckpt --out /path/to/output
+```
+
+Here `--model` specifies the saved model checkpoint, which is saved in `./models/dataset_name/` at training time. For example, the model path is `./models/ptb/ptb_lstmDecoder.ckpt` when generating with a LSTM decoder trained on PTB dataset. Generated sentences will be written to standard output if `--out` is not specifcied.
+
 ## Results
+
+### Language Modeling
 
 |Dataset    |Metrics   | VAE-LSTM |VAE-Transformer |
 |---------------|-------------|----------------|------------------------|
 |Yahoo | Test PPL<br>Test NLL | 68.11<br>337.13 |59.95<br>326.93|
 |PTB | Test PPL<br>Test NLL | 104.61<br>101.92 | 103.68<br>101.72 |
 
+### Generated Examples
+We show the generated examples with transformer as decoder trained  on PTB training data.
+
+|Examples|
+|:---------|
+|i 'm always looking at a level of \$ N to \$ N billion \<EOS\> |
+|after four years ago president bush has federal regulators decided to file financing for the waiver\<EOS\> |
+|the savings & loan association said total asset revenue was about \$ N billion compared with \$ N billion \<EOS\> |
+|the trend would seem to be effective \<EOS\> |
+|chicago city 's <unk> computer bank of britain posted a N N jump in third-quarter net income \<EOS\>|

@@ -72,9 +72,7 @@ emb_hparams = {
 trans_hparams = {
     'output_layer_bias': False,
     'embedding_dropout': embedding_dropout,
-    'attention_dropout': attention_dropout,
     'residual_dropout': residual_dropout,
-    'num_heads': 8,
     'num_blocks': num_blocks,
     'dim': hidden_size,
     'initializer': {
@@ -84,6 +82,12 @@ trans_hparams = {
             'mode':'fan_avg',
             'distribution':'uniform',
         },
+    },
+    'multihead_attention': {
+        'dropout_rate': attention_dropout,
+        'num_heads': 8,
+        'num_units': hidden_size,
+        'output_dim': hidden_size
     },
     'poswise_feedforward': {
         'name':'fnn',

@@ -28,9 +28,10 @@ from io import open
 
 split_pattern = re.compile(r'([.,!?"\':;)(])')
 digit_pattern = re.compile(r'\d')
-Special_Seq = collections.namedtuple('Special_Seq', \
-    ['PAD', 'BOS', 'EOS', 'UNK'])
-Vocab_Pad = Special_Seq(PAD=0, BOS=1, EOS=2, UNK=3)
+
+# Refer to https://texar.readthedocs.io/en/latest/_modules/texar/data/vocabulary.html#SpecialTokens
+# these tokens will by default have token ids 0, 1, 2, 3 respectively
+pad_token_id, bos_token_id, eos_token_id, unk_token_id = 0, 1, 2, 3
 
 def split_sentence(s, tok=False):
     """split sentence with some segmentation rules."""
@@ -72,7 +73,7 @@ def count_words(path, max_vocab_size=40000, tok=False):
 
 def make_array(word_id, words):
     """generate id numpy array from plain text words."""
-    ids = [word_id.get(word, Vocab_Pad.UNK) for word in words]
+    ids = [word_id.get(word, unk_token_id) for word in words]
     return np.array(ids, 'i')
 
 def make_dataset(path, w2id, tok=False):
@@ -84,7 +85,7 @@ def make_dataset(path, w2id, tok=False):
         npy_dataset.append(array)
         dataset.append(words)
         token_count += array.size
-        unknown_count += (array == Vocab_Pad.UNK).sum()
+        unknown_count += (array == unk_token_id).sum()
     print('# of tokens:{}'.format(token_count))
     print('# of unknown {} {:.2}'.format(unknown_count,\
         100. * unknown_count / token_count))
@@ -95,9 +96,9 @@ def get_preprocess_args():
     class Config(): pass
     config = Config()
     parser = argparse.ArgumentParser(description='Preprocessing Options')
-    parser.add_argument('--source-vocab', type=int, default=40000,
+    parser.add_argument('--source_vocab', type=int, default=40000,
                         help='Vocabulary size of source language')
-    parser.add_argument('--target-vocab', type=int, default=40000,
+    parser.add_argument('--target_vocab', type=int, default=40000,
                         help='Vocabulary size of target language')
     parser.add_argument('--tok', dest='tok', action='store_true',
                         help='tokenized and lowercased')
