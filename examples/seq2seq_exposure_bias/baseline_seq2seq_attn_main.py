@@ -123,6 +123,8 @@ def main():
                 loss = sess.run(train_op)
                 print("step={}, loss={:.4f}".format(step, loss),
                       file=training_log_file)
+                if step % config_data.observe_steps == 0:
+                    print("step={}, loss={:.4f}".format(step, loss))
                 training_log_file.flush()
                 step += 1
             except tf.errors.OutOfRangeError:

@@ -151,6 +151,9 @@ def main():
                     self_sampling_proba: sampling_proba_})
                 print("step={}, loss={:.4f}, self_proba={}".format(
                     step, loss, sampling_proba_), file=training_log_file)
+                if step % config_data.observe_steps == 0:
+                    print("step={}, loss={:.4f}, self_proba={}".format(
+                        step, loss, sampling_proba_))
                 training_log_file.flush()
                 step += 1
                 total_step_counter += 1
