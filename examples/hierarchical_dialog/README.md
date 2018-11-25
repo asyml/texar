@@ -51,7 +51,7 @@ The table shows results of perplexity and BLEU after 10 epochs, comparing the re
 
 |               | biminor        | biminor       | Zhao et al.   |
 |               | num_samples=10 | num_samples=5 | num_samples=5 |
-| --------------| --------| ---------| -------|
+| --------------| ---------------| --------------| --------------|
 | Perlexity     | 23.79   | 24.26    | 35.4   |
 | BLEU-1 recall | 0.478   | 0.386    | 0.405  |
 | BLEU-1 prec   | 0.379   | 0.395    | 0.336  |

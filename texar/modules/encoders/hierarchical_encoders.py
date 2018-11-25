@@ -242,8 +242,9 @@ class HierarchicalRNNEncoder(EncoderBase):
             return kwargs_minor, kwargs_major
 
         kwargs_minor, kwargs_major = _kwargs_split(kwargs)
-        kwargs_minor['sequence_length'] = tf.reshape(sequence_length_minor,
-                                                     [-1])
+        if sequence_length_minor is not None:
+            sequence_length_minor = tf.reshape(sequence_length_minor, [-1])
+        kwargs_minor['sequence_length'] = sequence_length_minor
         kwargs_major['sequence_length'] = sequence_length_major
 
         expand, shape = self._get_flatten_order(
