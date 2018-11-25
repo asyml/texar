@@ -9,7 +9,7 @@ This example builds an attentional seq2seq model for machine translation.
 Two example datasets are provided:
 
   * toy_copy: A small toy autoencoding dataset from [TF Seq2seq toolkit](https://github.com/google/seq2seq/tree/2500c26add91b079ca00cf1f091db5a99ddab9ae).
-  * iwslt14: The benchmark [IWSLT2014](https://sites.google.com/site/iwsltevaluation2014/home) (de-en) machine translation dataset. 
+  * iwslt14: The benchmark [IWSLT2014](https://sites.google.com/site/iwsltevaluation2014/home) (de-en) machine translation dataset, following [(Ranzato et al., 2015)](https://arxiv.org/pdf/1511.06732.pdf) for data pre-processing.
 
 Download the data with the following cmds:
 
@@ -36,5 +36,5 @@ For demonstration purpose, [config_model_full.py](./config_model_full.py) gives 
 
 ## Results ##
 
-On the IWSLT14 dataset, using original target texts as reference(no  `<UNK>`  in the reference), the model achieves `BLEU=21.66` within `10` epochs.
+On the IWSLT14 dataset, using original target texts as reference(no  `<UNK>`  in the reference), the model achieves `BLEU = 26.44 ± 0.18` .
 
