@@ -49,15 +49,14 @@ The table shows results of perplexity and BLEU after 10 epochs, comparing the re
 * (Zhao et al. 2017) uses more meta data besides the speaker meta-data here.
 * Results may vary a bit due to randomness.
 
-|               | biminor        | biminor       | Zhao et al.   |
-|               | num_samples=10 | num_samples=5 | num_samples=5 |
+|               | biminor<br>num_samples=10   | biminor<br>num_samples=5 | Zhao et al.<br>num_samples=5 |
 | --------------| ---------------| --------------| --------------|
-| Perlexity     | 23.79   | 24.26    | 35.4   |
-| BLEU-1 recall | 0.478   | 0.386    | 0.405  |
-| BLEU-1 prec   | 0.379   | 0.395    | 0.336  |
-| BLEU-2 recall | 0.391   | 0.319    | 0.300  |
-| BLEU-2 prec   | 0.310   | 0.324    | 0.281  |
-| BLEU-3 recall | 0.330   | 0.270    | 0.272  |
-| BLEU-3 prec   | 0.259   | 0.272    | 0.254  |
-| BLEU-4 recall | 0.262   | 0.216    | 0.226  |
-| BLEU-4 prec   | 0.204   | 0.215    | 0.215  |
+| Perlexity     | 23.79          | 24.26         | 35.4   |
+| BLEU-1 recall | 0.478          | 0.386         | 0.405  |
+| BLEU-1 prec   | 0.379          | 0.395         | 0.336  |
+| BLEU-2 recall | 0.391          | 0.319         | 0.300  |
+| BLEU-2 prec   | 0.310          | 0.324         | 0.281  |
+| BLEU-3 recall | 0.330          | 0.270         | 0.272  |
+| BLEU-3 prec   | 0.259          | 0.272         | 0.254  |
+| BLEU-4 recall | 0.262          | 0.216         | 0.226  |
+| BLEU-4 prec   | 0.204          | 0.215         | 0.215  |
