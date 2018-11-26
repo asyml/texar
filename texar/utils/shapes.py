@@ -36,7 +36,8 @@ __all__ = [
     "_mask_sequences_tensor",
     "_mask_sequences_py",
     "flatten",
-    "shape_list"
+    "shape_list",
+    "pad_and_concat"
 ]
 
 
@@ -296,3 +297,82 @@ def shape_list(x):
             dim = shape[i]
         ret.append(dim)
     return ret
+
+def pad_and_concat(values, axis, rank=None, pad_axis=None,
+                   pad_constant_values=0):
+    """Concats tensors along one dimension. Pads each of other dimensions of
+    the tensors to the corresponding maximum size if necessary.
+
+    Args:
+        values: A list of Tensors of the same rank.
+        axis (int): A Python int. Dimension along which to concatenate.
+        rank (int, optional): Rank of the tensors. If `None`, inferred
+            automatically from :attr:`values`.
+        pad_axis (int or list, optional): A Python int or a list of int.
+            Dimensions to pad. Paddings are only added to the end of
+            corresponding dimensions. If `None`, all dimensions except the
+            :attr:`axis` dimension are padded.
+        pad_constant_values: The scalar pad value to use. Must be same type
+            as the tensors.
+
+    Returns:
+        A `Tensor` resulting from padding and concatenation of the input
+        tensors.
+
+    Raises:
+        ValueError: If :attr:`rank` is `None` and cannot be inferred from
+            :attr:`values`.
+
+
+    Example:
+
+        .. code-block:: python
+
+            a = tf.ones([1, 2])
+            b = tf.ones([2, 3])
+
+            c = pad_and_concat([a,b], 0)
+            # c.shape == [3, 3]
+            # c == [[1, 1, 0],
+            #       [1, 1, 1],
+            #       [1, 1, 1]]
+
+            d = pad_and_concat([a,b], 1)
+            # d.shape == [2, 5]
+            # d == [[1, 1, 1, 1, 1]
+            #       [0, 0, 1, 1, 1]]
+    """
+    if rank is None:
+        for value in values:
+            rank = get_rank(value)
+            if rank is not None:
+                break
+    if rank is None:
+        raise ValueError('Cannot determine the rank of the tensors')
+
+    def _pad_to_size(value, axis_, size):
+        """Pads the :attr:`axis_` of a tensor :attr:`value` to the given
+        :attr:`size`. Only pads to the end.
+
+        Args:
+            value: A Tensor.
+            axis_: A Python int.
+            size: A scalar int Tensor or Python int.
+        """
+        paddings = np.zeros([rank, 2], dtype=np.int32)
+        paddings[axis_, 1] = 1
+        paddings = paddings * (size - tf.shape(value)[axis_])
+        return tf.pad(value, paddings, mode='CONSTANT',
+                      constant_values=pad_constant_values)
+
+    if pad_axis is None:
+        pad_axis = [r for r in range(rank) if r != axis]
+
+    pad_axis = pad_axis if isinstance(pad_axis, (list, tuple)) else [pad_axis]
+
+    for pa in pad_axis:
+        max_dim_size = tf.reduce_max([tf.shape(v)[pa] for v in values])
+        for i, v in enumerate(values):
+            values[i] = _pad_to_size(v, pa, max_dim_size)
+
+    return tf.concat(values, axis)

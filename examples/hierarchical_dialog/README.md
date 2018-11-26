@@ -1,14 +1,15 @@
 # Hierarchical Recurrent Encoder-Decoder (HRED) Dialogue Model
 
-This example builds a HRED dialogue model described in [(Serban et al.) Building End-To-End Dialogue Systems Using Generative Hierarchical Neural Network Models](https://arxiv.org/abs/1507.04808). 
+This example builds a HRED dialogue model described in [(Serban et al. 2016) Building End-To-End Dialogue Systems Using Generative Hierarchical Neural Network Models](https://arxiv.org/abs/1507.04808). 
 
-The dataset used here is provided by [(Zhao et al. ) Learning Discourse-level Diversity for Neural Dialog Models using Conditional Variational Autoencoders](https://arxiv.org/abs/1703.10960), which adapts [switchboard-1 Release 2](https://catalog.ldc.upenn.edu/ldc97s62). In particular, for evaluation purpose, multiple reference responses for each dialog context in the test set are collected through manual annotations. 
+The dataset used here is provided by [(Zhao et al. 2017) Learning Discourse-level Diversity for Neural Dialog Models using Conditional Variational Autoencoders](https://arxiv.org/abs/1703.10960), which adapts [switchboard-1 Release 2](https://catalog.ldc.upenn.edu/ldc97s62). In particular, for evaluation purpose, multiple reference responses for each dialog context in the test set are collected through manual annotations. 
 
 This example demonstrates:
 * Use of `MultiAlignedData` to read parallel data with multiple fields, e.g., (source, target, meta, ...)
 * Use of the `'variable_utterance'` hyperparameter in TextData to read dialog history data.
 * Use of the `'embedding_init'` hyperparameter in TextData to read pre-trained word embedding as initialization. 
 * Use of `HierarchicalRNNEncoder` to encode dialog history with utterance-level and word-level encoding.
+* Use of *beam search decoding* and *random sample decoding* at inference time. 
 * Addition of speaker meta-data in the encoder-decoder model.
 
 ## Usage
@@ -42,16 +43,20 @@ Both configs use a uni-directional RNN for the utterance-level (major-level) enc
 
 ## Results
 
-The table shows results of perplexity and BLEU after 10 epochs, comparing the results of [Zhao et al.](https://arxiv.org/abs/1703.10960). BLEU score is computed with 5 sampling.
+The table shows results of perplexity and BLEU after 10 epochs, comparing the results of [(Zhao et al. 2017)](https://arxiv.org/abs/1703.10960) (See "Baseline" of Table.1 in the paper). Note that:
+* We report results of random sample decoding, which performs slightly better than beam search decoding. 
+* `num_samples` is the number of samples generated for each test instances (for computing precision and recall of BLEU). See sec.5.2 of the paper for the definition of the metrics.
+* (Zhao et al. 2017) uses more meta data besides the speaker meta-data here.
+* Results may vary a bit due to randomness.
 
-|               | biminor | uniminor | Zhao et al. |
-| --------------| --------| ---------| -------|
-| Perlexity     | 22.73   | 23.51    | 35.4   |
-| BLEU-1 recall | 0.414   | 0.409    | 0.405  |
-| BLEU-1 prec   | 0.376   | 0.368    | 0.336  |
-| BLEU-2 recall | 0.328   | 0.317    | 0.300  |
-| BLEU-2 prec   | 0.295   | 0.289    | 0.281  |
-| BLEU-3 recall | 0.281   | 0.283    | 0.272  |
-| BLEU-3 prec   | 0.256   | 0.251    | 0.254  |
-| BLEU-4 recall | 0.228   | 0.223    | 0.226  |
-| BLEU-4 prec   | 0.205   | 0.211    | 0.215  |
+|               | biminor<br>num_samples=10   | biminor<br>num_samples=5 | Zhao et al.<br>num_samples=5 |
+| --------------| ---------------| --------------| --------------|
+| Perlexity     | 23.79          | 24.26         | 35.4   |
+| BLEU-1 recall | 0.478          | 0.386         | 0.405  |
+| BLEU-1 prec   | 0.379          | 0.395         | 0.336  |
+| BLEU-2 recall | 0.391          | 0.319         | 0.300  |
+| BLEU-2 prec   | 0.310          | 0.324         | 0.281  |
+| BLEU-3 recall | 0.330          | 0.270         | 0.272  |
+| BLEU-3 prec   | 0.259          | 0.272         | 0.254  |
+| BLEU-4 recall | 0.262          | 0.216         | 0.226  |
+| BLEU-4 prec   | 0.204          | 0.215         | 0.215  |
