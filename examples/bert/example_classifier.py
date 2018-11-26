@@ -17,10 +17,10 @@ import texar as tx
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.utils import transformer_utils
 from texar.utils.mode import is_train_mode
-
-from data_utils import MrpcProcessor, file_based_convert_examples_to_features, \
-    file_based_input_fn_builder
+from data_utils import *
+#from data_utils import MrpcProcessor, file_based_convert_examples_to_features, file_based_input_fn_builder
 import utils
+import numpy as np
 
 flags = tf.flags
 
@@ -76,7 +76,7 @@ def main(_):
         'bert_released_models/%s/bert_config.json'%FLAGS.bert_pretrain_config,
         '%s/config_model.py'%FLAGS.output_dir
     )
-    utils.set_random_seed(bert_config.random_seed)
+    #utils.set_random_seed(bert_config.random_seed)
 
     label_list = processor.get_labels()
     num_labels = len(label_list)
@@ -94,13 +94,12 @@ def main(_):
         input_file=train_file,
         seq_length=config_data.max_seq_length,
         drop_remainder=True,
-        epoch=config_data.max_train_epoch,
-        batch_size=config_data.train_batch_size)
+        is_training=True)({'batch_size': config_data.train_batch_size})
 
     num_train_steps = int(len(train_examples) / config_data.train_batch_size \
         * config_data.max_train_epoch)
     num_warmup_steps = int(num_train_steps * config_data.warmup_proportion)
-    print('maximum training steps:{}'.format(num_train_steps))
+    tf.logging.info('maximum training steps: %d' % (num_train_steps))
     eval_examples = processor.get_dev_examples(config_data.data_dir)
     eval_file = os.path.join(FLAGS.output_dir, "eval.tf_record")
     file_based_convert_examples_to_features(
@@ -108,9 +107,8 @@ def main(_):
     eval_dataset = file_based_input_fn_builder(
         input_file=eval_file,
         seq_length=config_data.max_seq_length,
-        drop_remainder=False,
-        epoch=1,
-        batch_size=config_data.eval_batch_size)
+        is_training=False,
+        drop_remainder=False)({'batch_size': config_data.eval_batch_size})
 
     predict_examples = processor.get_test_examples(config_data.data_dir)
     predict_file = os.path.join(FLAGS.output_dir, "predict.tf_record")
@@ -120,9 +118,8 @@ def main(_):
     test_dataset = file_based_input_fn_builder(
         input_file=predict_file,
         seq_length=config_data.max_seq_length,
-        drop_remainder=False,
-        epoch=1,
-        batch_size=config_data.test_batch_size)
+        is_training=False,
+        drop_remainder=False)({'batch_size': config_data.test_batch_size})
 
     iterator = tx.data.FeedableDataIterator({
         'train': train_dataset,
@@ -181,7 +178,7 @@ def main(_):
     train_op = utils.get_train_op(loss, cur_learning_rate)
 
     predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
-    results = tf.to_float(tf.equal(predictions, labels))
+    results = tf.to_float(tf.equal(predictions, label_ids))
 
     def _train_epoch(sess, epoch=0):
         while True:
@@ -194,12 +191,12 @@ def main(_):
                     [batch_size, global_step, loss, train_op],
                     feed_dict=feed_dict)
                 if _step % 100 == 0:
-                    print('step:{} size:{} loss:{}'.format(_step, _size, _loss))
+                    tf.logging.info('step:%d size:%d loss:%f' % (_step, _size, _loss))
                 if _step == num_train_steps:
                     break
             except tf.errors.OutOfRangeError:
                 break
-        print('step:{} loss:{}'.format(_step, _loss))
+        tf.logging.info('step:%d loss:%f' % (_step, _loss))
 
     def _eval_epoch(sess, epoch=0):
         sum_loss, sum_size, sum_res = 0, 0, []
@@ -216,7 +213,7 @@ def main(_):
             except tf.errors.OutOfRangeError:
                 break
         acc = np.mean(sum_res)
-        print('evaluation loss:{} accuracy:{} batch_size:{}'.format(
+        tf.logging.info('evaluation loss:{} accuracy:{} batch_size:{}'.format(
             sum_loss, acc, _size))
 
     def _test_epoch(sess, epoch=0):
@@ -244,9 +241,10 @@ def main(_):
             _init_bert_checkpoint(init_checkpoint)
         iterator.initialize_dataset(sess)
 
-        for epoch in range(config_data.max_train_epoch):
-            iterator.restart_dataset(sess, 'train')
-            _train_epoch(sess)
+        #for epoch in range(config_data.max_train_epoch):
+        iterator.restart_dataset(sess, 'train')
+        tf.logging.info('training begins')
+        _train_epoch(sess)
 
         #iterator.restart_dataset(sess, 'eval')
         _eval_epoch(sess)
