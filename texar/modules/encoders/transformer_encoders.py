@@ -327,7 +327,7 @@ class TransformerEncoder(EncoderBase):
 
                 attention_output = multihead_attention(
                     queries=_queries_input,
-                    memory=None,
+                    memory=_queries_input,
                     memory_attention_bias=encoder_self_attention_bias,
                     mode=mode,
                 )
@@ -338,7 +338,11 @@ class TransformerEncoder(EncoderBase):
                 )
                 x = x + attention_output
                 with tf.variable_scope('output'):
-                    y = layers.layer_normalize(x)
+                    if self._hparams.use_bert_config:
+                        x = layers.layer_normalize(x)
+                        y = x
+                    else:
+                        y = layers.layer_normalize(x)
                 poswise_network = self.poswise_networks[i]
                 with tf.variable_scope(poswise_network.variable_scope):
                     original_shape = shape_list(y)
@@ -358,6 +362,7 @@ class TransformerEncoder(EncoderBase):
                         )
                     else:
                         sub_output = tf.reshape(sub_output, original_shape)
+
                     x = x + sub_output
                     if self._hparams.use_bert_config:
                         x = layers.layer_normalize(x)

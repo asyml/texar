@@ -10,3 +10,9 @@ run
 ```
 python example_classifier.py --sanity_check=True
 ```
+
+Remove estimator. Use our settings.
+
+Distributed settings.
+
+example_classifier.py

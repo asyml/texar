@@ -3,12 +3,16 @@ import json
 import collections
 import re
 import tensorflow as tf
+import numpy as np
+import random
 from texar.core.optimization import AdamWeightDecayOptimizer
+import pprint
 
-def transform_bert_to_texar_config(input_json):
+def transform_bert_to_texar_config(input_json, output_config):
     config_ckpt = json.loads(
         open(input_json).read())
     configs = {}
+    configs['random_seed'] = 123
     configs['hidden_size'] = config_ckpt['hidden_size']
     hidden_dim = config_ckpt['hidden_size']
     configs['emb'] = {
@@ -64,6 +68,8 @@ def transform_bert_to_texar_config(input_json):
             ],
         },
     }
+    with open(output_config, 'w+') as fout:
+        pprint.pprint(configs, fout)
     return Munch(configs)
 
 def get_lr(global_step, num_train_steps, num_warmup_steps, opt_config):
@@ -170,3 +176,8 @@ def get_assignment_map_from_checkpoint(tvars, init_checkpoint):
             initialized_variable_names[model_name] = 1
             initialized_variable_names[model_name + ":0"] = 1
     return (assignment_map, initialized_variable_names)
+
+def set_random_seed(myseed):
+    tf.set_random_seed(myseed)
+    np.random.seed(myseed)
+    random.seed(myseed)
