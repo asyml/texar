@@ -26,7 +26,8 @@ from texar.modules.encoders.encoder_base import EncoderBase
 from texar.utils.shapes import shape_list
 from texar.utils.mode import is_train_mode
 
-# pylint: disable=too-many-locals, invalid-name
+# pylint: disable=too-many-locals, invalid-name, arguments-differ
+# pylint: disable=too-many-arguments
 
 __all__ = [
     "MultiheadAttentionEncoder"
@@ -34,11 +35,13 @@ __all__ = [
 
 class MultiheadAttentionEncoder(EncoderBase):
     """Multihead Attention Encoder
+
     Args:
         hparams (dict or HParams, optional): Hyperparameters. Missing
             hyperparamerter will be set to default values. See
             :meth:`default_hparams` for the hyperparameter sturcture and
             default values.
+
     .. document private functions
     .. automethod:: _build
     """
@@ -109,8 +112,6 @@ class MultiheadAttentionEncoder(EncoderBase):
             "name": "multihead_attention",
         }
 
-    # pylint: disable=arguments-differ
-    # pylint: disable=too-many-arguments
     def _build(self, queries, memory, memory_attention_bias,
                cache=None, mode=None):
         """Encodes the inputs.
@@ -132,7 +133,6 @@ class MultiheadAttentionEncoder(EncoderBase):
             encoded vectors.
         """
 
-        #pylint: disable=too-many-locals
         with tf.variable_scope(self.variable_scope):
             num_heads = self._hparams.num_heads
             num_units = self._hparams.num_units
@@ -193,7 +193,8 @@ class MultiheadAttentionEncoder(EncoderBase):
 
     def _split_heads(self, x):
         """Split channels (dimension 2) into multiple heads,
-            becomes dimension 1).
+        becomes dimension 1).
+
         Must ensure `x.shape[-1]` can be deviced by num_heads
         """
         depth = shape_list(x)[-1]
@@ -205,6 +206,7 @@ class MultiheadAttentionEncoder(EncoderBase):
         """
         Args:
             x: A Tensor of shape `[batch, num_heads, seq_len, dim]`
+
         Returns:
             A Tensor of shape `[batch, seq_len, num_heads * dim]`
         """
