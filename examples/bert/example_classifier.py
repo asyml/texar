@@ -10,7 +10,7 @@ import json
 import collections
 import csv
 import os
-from bert_ref import tokenization
+import tokenization
 import importlib
 import tensorflow as tf
 import texar as tx
@@ -32,11 +32,15 @@ flags.DEFINE_string(
     "bert_pretrain_config", 'uncased_L-12_H-768_A-12',
     "The config json file corresponding to the pre-trained BERT model.")
 flags.DEFINE_string(
-    "down_config_model", 'config_model',
+    "bert_config_format", "texar",
+    "The configuration format. Choose `json` if loaded from the config attached"
+    "Choose `texar` to load the customed writen configuration file for texar")
+flags.DEFINE_string(
+    "config_model", 'config_model',
     "Model configuration for downstream tasks, following the BERT model.")
 flags.DEFINE_string(
     "saved_model", None,
-    "The complete saved model (including bert modules), which can be restored from.")
+    "The complete saved checkpoint (including bert modules), which can be restored from.")
 
 flags.DEFINE_string(
     "output_dir", "output/",
@@ -47,23 +51,25 @@ flags.DEFINE_bool(
     "Whether to lower case the input text. Should be True for uncased "
     "models and False for cased models.")
 
-flags.DEFINE_bool("do_train", True, "Whether to run training.")
-flags.DEFINE_bool("do_eval", True, "Whether to run eval on the dev set.")
+flags.DEFINE_bool("do_train", False, "Whether to run training.")
+flags.DEFINE_bool("do_eval", False, "Whether to run eval on the dev set.")
 flags.DEFINE_bool("do_predict", False, "Whether to run predict on the test set.")
 
 config_data = importlib.import_module(FLAGS.config_data)
 #downstream model configuration, following the BERT model configuration
-down_config_model = importlib.import_module(FLAGS.down_config_model)
 
 def main(_):
     tf.logging.set_verbosity(tf.logging.INFO)
     tf.gfile.MakeDirs(FLAGS.output_dir)
     processor = MrpcProcessor()
-    bert_config = utils.transform_bert_to_texar_config(
-        'bert_released_models/%s/bert_config.json'%FLAGS.bert_pretrain_config,
-        '%s/config_model.py'%FLAGS.output_dir
-    )
-    #utils.set_random_seed(bert_config.random_seed)
+
+    if FLAGS.bert_config_format == "json":
+        bert_config = utils.transform_bert_to_texar_config(
+            'bert_released_models/%s/bert_config.json'%FLAGS.bert_pretrain_config,
+            '%s/config_model.py'%FLAGS.output_dir
+        )
+    elif FLAGS.bert_config_format == 'texar':
+        bert_config = importlib.import_module(FLAGS.config_model)
 
     label_list = processor.get_labels()
     num_labels = len(label_list)
@@ -115,10 +121,9 @@ def main(_):
     inputs = iterator.get_next()
 
     input_ids = inputs["input_ids"]
-    batch_size = tf.shape(input_ids)[0]
     segment_ids = inputs["segment_ids"]
     label_ids = inputs["label_ids"]
-
+    batch_size = tf.shape(input_ids)[0]
     input_length = tf.reduce_sum(
         1 - tf.to_int32(tf.equal(input_ids, 0)), axis=1)
 
@@ -126,10 +131,10 @@ def main(_):
     with tf.variable_scope('bert'):
         with tf.variable_scope('embeddings'):
             embedder = tx.modules.WordEmbedder(
-                vocab_size=bert_config['vocab_size'],
-                hparams=bert_config.emb)
+                vocab_size=bert_config.vocab_size,
+                hparams=bert_config.embed)
             token_type_embedder = tx.modules.WordEmbedder(
-                vocab_size=bert_config['type_vocab_size'],
+                vocab_size=bert_config.type_vocab_size,
                 hparams=bert_config.token_embed)
             word_embeds = embedder(input_ids, mode=mode)
             token_type_ids = segment_ids
@@ -140,13 +145,12 @@ def main(_):
         with tf.variable_scope("pooler"):
             first_token_tensor = tf.squeeze(output_layer[:, 0:1, :], axis=1)
             output_layer = tf.layers.dense(
-                first_token_tensor, bert_config['hidden_size'], activation=tf.tanh)
+                first_token_tensor, bert_config.hidden_size, activation=tf.tanh)
     hidden_size = output_layer.shape[-1].value
 
     output_weights = tf.get_variable(
             "output_weights", [num_labels, hidden_size],
-            initializer=tf.ones_initializer())
-            #initializer=tf.truncated_normal_initializer(stddev=0.02))
+            initializer=tf.truncated_normal_initializer(stddev=0.02))
 
     output_bias = tf.get_variable(
             "output_bias", [num_labels], initializer=tf.zeros_initializer())
@@ -166,16 +170,12 @@ def main(_):
         loss = tf.reduce_mean(per_example_loss)
 
     global_step = tf.train.get_or_create_global_step()
-    static_lr = down_config_model.opt['learning_rate']
+    static_lr = bert_config.opt['learning_rate']
     tf.summary.scalar('loss', loss)
-    print_op = tf.print('logits', logits, 'labels', label_ids, 'loss', loss, summarize=-1)
-    with tf.control_dependencies([print_op]):
-        train_op = utils.get_train_op(loss, global_step, num_train_steps, num_warmup_steps, static_lr)
+    train_op = utils.get_train_op(loss, global_step, num_train_steps, num_warmup_steps, static_lr)
 
     summary_merged = tf.summary.merge_all()
-    print_op = tf.print('logits', logits, 'labels', label_ids, 'loss', loss, summarize=-1)
-    with tf.control_dependencies([print_op]):
-        predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
+    predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
     correct_cnt = tf.reduce_sum(tf.to_float(tf.equal(predictions, label_ids)))
 
     def _train_epoch(sess, writer):
@@ -185,12 +185,12 @@ def main(_):
                     iterator.handle: iterator.get_handle(sess, 'train'),
                     tx.context.global_mode(): tf.estimator.ModeKeys.TRAIN,
                 }
-                _size, _step, _loss, _, smr = sess.run(
-                    [batch_size, global_step, loss, train_op, summary_merged],
+                _step, _loss, _, smr = sess.run(
+                    [global_step, loss, train_op, summary_merged],
                     feed_dict=feed_dict)
                 writer.add_summary(smr, global_step=_step)
-                if _step % 100 == 0:
-                    tf.logging.info('step:%d size:%d loss:%f' % (_step, _size, _loss))
+                if _step % 50 == 0:
+                    tf.logging.info('step:%d loss:%f' % (_step, _loss))
                 if _step == num_train_steps:
                     break
             except tf.errors.OutOfRangeError:
@@ -205,16 +205,17 @@ def main(_):
                     iterator.handle: iterator.get_handle(sess, 'eval'),
                     tx.context.global_mode(): tf.estimator.ModeKeys.EVAL,
                 }
-                _size, _res, _eval_loss = sess.run([batch_size, correct_cnt, loss],
+                _bsize, _res, _eval_loss = sess.run(
+                    [batch_size, correct_cnt, loss],
                     feed_dict=feed_dict)
                 eval_step += 1
                 sum_loss +=_eval_loss
                 sum_correct += _res
-                sum_size += _size
+                sum_size += _bsize
             except tf.errors.OutOfRangeError:
                 break
-        tf.logging.info('evaluation loss:{} accuracy:{} batch_size:{} eval_size'.format(
-            sum_loss/eval_step, sum_correct/sum_size, _size, sum_size))
+        tf.logging.info('evaluation loss:{} accuracy:{} eval_size:{}'.format(
+            sum_loss/eval_step, sum_correct/sum_size, sum_size))
 
     def _test_epoch(sess):
         _all_probs = []
@@ -228,27 +229,32 @@ def main(_):
                 _all_probs.extend(_probs.tolist())
             except:
                 break
+        output_file = os.path.join(FLAGS.output_dir, "test_results.tsv")
+        with tf.gfile.GFile(output_file, "w") as writer:
+            tf.logging.info("***** Predict results *****")
+            for prediction in _all_probs:
+                output_line = "\t".join(
+                    str(class_probability) for class_probability in prediction) + "\n"
+                writer.write(output_line)
+
     with tf.Session() as sess:
+        init_checkpoint='bert_released_models/%s/bert_model.ckpt' % FLAGS.bert_pretrain_config
+        if init_checkpoint:
+            utils._init_bert_checkpoint(init_checkpoint)
+
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
         smry_writer = tf.summary.FileWriter(FLAGS.output_dir, graph=sess.graph)
         saver = tf.train.Saver(max_to_keep=None)
-        init_checkpoint='bert_released_models/%s/bert_model.ckpt' % FLAGS.bert_pretrain_config
-
-        if init_checkpoint:
-            utils._init_bert_checkpoint(init_checkpoint)
 
         if FLAGS.saved_model:
             saver.restore(sess, FLAGS.saved_model)
-        tf.logging.info('bert/embeddings/word_embeddings/word_embeddings')
-        with tf.variable_scope('bert/embeddings/word_embeddings', reuse=True):
-            tf.logging.info(sess.run(tf.get_variable('word_embeddings')))
-
         iterator.initialize_dataset(sess)
         if FLAGS.do_train:
             iterator.restart_dataset(sess, 'train')
             _train_epoch(sess, smry_writer)
+            saver.save(sess, FLAGS.output_dir + '/model.ckpt')
 
         if FLAGS.do_eval:
             iterator.restart_dataset(sess, 'eval')
