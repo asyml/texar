@@ -39,6 +39,9 @@ flags.DEFINE_string(
     "config_model", 'config_model',
     "Model configuration for downstream tasks, following the BERT model.")
 flags.DEFINE_string(
+    "learning_rate", 2e-5,
+    "Specify the model learining rate.")
+flags.DEFINE_string(
     "saved_model", None,
     "The complete saved checkpoint (including bert modules), which can be restored from.")
 
@@ -170,7 +173,10 @@ def main(_):
         loss = tf.reduce_mean(per_example_loss)
 
     global_step = tf.train.get_or_create_global_step()
-    static_lr = bert_config.opt['learning_rate']
+    if FLAGS.bert_config_format == "json":
+        static_lr = FLAGS.learning_rate
+    else:
+        static_lr = bert_config.opt['learning_rate']
     tf.summary.scalar('loss', loss)
     train_op = utils.get_train_op(loss, global_step, num_train_steps, num_warmup_steps, static_lr)
 
