@@ -37,7 +37,7 @@ python example_classifier.py --do_train --do_eval --bert_config_format=texar [--
 The checkpoint and summary data for tensorboard visualization will be saved in `output_dir`
 directory, which is `./output` by default.
 ```
-INFO:tensorflow:evaluation loss:0.39845473161332456 accuracy:0.8848039215686274 eval_size
+INFO:tensorflow:evaluation loss:0.39845473161332456 accuracy:0.8848039215686274 eval_size:408
 ```
 
 ### Restore and Test
