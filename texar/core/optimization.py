@@ -423,13 +423,13 @@ class AdamWeightDecayOptimizer(tf.train.Optimizer):
     """A basic Adam optimizer that includes "correct" L2 weight decay."""
 
     def __init__(self,
-                             learning_rate,
-                             weight_decay_rate=0.0,
-                             beta_1=0.9,
-                             beta_2=0.999,
-                             epsilon=1e-6,
-                             exclude_from_weight_decay=None,
-                             name="AdamWeightDecayOptimizer"):
+                 learning_rate,
+                 weight_decay_rate=0.0,
+                 beta_1=0.9,
+                 beta_2=0.999,
+                 epsilon=1e-6,
+                 exclude_from_weight_decay=None,
+                 name="AdamWeightDecayOptimizer"):
         """Constructs a AdamWeightDecayOptimizer."""
         super(AdamWeightDecayOptimizer, self).__init__(False, name)
 
@@ -450,24 +450,24 @@ class AdamWeightDecayOptimizer(tf.train.Optimizer):
             param_name = self._get_variable_name(param.name)
 
             m = tf.get_variable(
-                    name=param_name + "/adam_m",
-                    shape=param.shape.as_list(),
-                    dtype=tf.float32,
-                    trainable=False,
-                    initializer=tf.zeros_initializer())
+                name=param_name + "/adam_m",
+                shape=param.shape.as_list(),
+                dtype=tf.float32,
+                trainable=False,
+                initializer=tf.zeros_initializer())
             v = tf.get_variable(
-                    name=param_name + "/adam_v",
-                    shape=param.shape.as_list(),
-                    dtype=tf.float32,
-                    trainable=False,
-                    initializer=tf.zeros_initializer())
+                name=param_name + "/adam_v",
+                shape=param.shape.as_list(),
+                dtype=tf.float32,
+                trainable=False,
+                initializer=tf.zeros_initializer())
 
             # Standard Adam update.
             next_m = (
-                    tf.multiply(self.beta_1, m) + tf.multiply(1.0 - self.beta_1, grad))
+                tf.multiply(self.beta_1, m) + tf.multiply(1.0 - self.beta_1, grad))
             next_v = (
-                    tf.multiply(self.beta_2, v) + tf.multiply(1.0 - self.beta_2,
-                                                                                                        tf.square(grad)))
+                tf.multiply(self.beta_2, v) + tf.multiply(1.0 - self.beta_2,
+                                                          tf.square(grad)))
 
             update = next_m / (tf.sqrt(next_v) + self.epsilon)
 

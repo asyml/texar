@@ -1,4 +1,4 @@
-from munch import Munch
+irom munch import Munch
 import json
 import collections
 import re
@@ -72,9 +72,14 @@ def transform_bert_to_texar_config(input_json, output_config):
         pprint.pprint(configs, fout)
     return Munch(configs)
 
-def get_lr(global_step, num_train_steps, num_warmup_steps, opt_config):
-    learning_rate = tf.constant(value=opt_config['learning_rate'],
+def get_train_op(loss, global_step, num_train_steps, num_warmup_steps, static_lr):
+    """Creates an optimizer training op."""
+    # It is recommended that you use this optimizer for fine tuning, since this
+    # is how the model was trained (note that the Adam m/v variables are NOT
+    # loaded from init_checkpoint.)
+    learning_rate = tf.constant(value=static_lr,
                                 shape=[], dtype=tf.float32)
+
     learning_rate = tf.train.polynomial_decay(
         learning_rate,
         global_step,
@@ -90,20 +95,12 @@ def get_lr(global_step, num_train_steps, num_warmup_steps, opt_config):
         warmup_steps_float = tf.cast(warmup_steps_int, tf.float32)
 
         warmup_percent_done = global_steps_float / warmup_steps_float
-        warmup_learning_rate = opt_config['learning_rate']* warmup_percent_done
+        warmup_learning_rate = static_lr * warmup_percent_done
 
         is_warmup = tf.cast(global_steps_int < warmup_steps_int, tf.float32)
         learning_rate = (
             (1.0 - is_warmup) * learning_rate + is_warmup * warmup_learning_rate)
 
-    return learning_rate
-
-def get_train_op(loss, learning_rate):
-    """Creates an optimizer training op."""
-    # It is recommended that you use this optimizer for fine tuning, since this
-    # is how the model was trained (note that the Adam m/v variables are NOT
-    # loaded from init_checkpoint.)
-    global_step = tf.train.get_or_create_global_step()
     optimizer = AdamWeightDecayOptimizer(
         learning_rate=learning_rate,
         weight_decay_rate=0.01,
@@ -112,6 +109,8 @@ def get_train_op(loss, learning_rate):
         epsilon=1e-6,
         exclude_from_weight_decay=["LayerNorm", "layer_norm", "bias"])
 
+    #if use_tpu:
+    #    optimizer = tf.contrib.tpu.CrossShardOptimizer(optimizer)
     tvars = tf.trainable_variables()
     grads = tf.gradients(loss, tvars)
 
@@ -177,6 +176,22 @@ def get_assignment_map_from_checkpoint(tvars, init_checkpoint):
             initialized_variable_names[model_name + ":0"] = 1
     return (assignment_map, initialized_variable_names)
 
+def _init_bert_checkpoint(init_checkpoint):
+    tvars = tf.trainable_variables()
+
+    initialized_variable_names = []
+    if init_checkpoint:
+        (assignment_map, initialized_variable_names
+        ) = utils.get_assignment_map_from_checkpoint(tvars, init_checkpoint)
+        tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
+
+    tf.logging.info("**** Trainable Variables ****")
+    for var in tvars:
+        init_string = ""
+        if var.name in initialized_variable_names:
+            init_string = ", *INIT_FROM_CKPT*"
+        tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
+                        init_string)
 def set_random_seed(myseed):
     tf.set_random_seed(myseed)
     np.random.seed(myseed)

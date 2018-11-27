@@ -172,30 +172,28 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         (total_loss, per_example_loss, logits, probabilities) = create_model(
                 bert_config, input_ids, input_mask, segment_ids, label_ids,
                 num_labels, use_one_hot_embeddings, mode=mode)
-        tvars = tf.trainable_variables()
 
         scaffold_fn = None
         if init_checkpoint:
-            _init_bert_checkpoint(init_checkpoint)
+            utils._init_bert_checkpoint(init_checkpoint)
         output_spec = None
         if mode == tf.estimator.ModeKeys.TRAIN:
-
             global_step = tf.train.get_or_create_global_step()
-            cur_learning_rate = utils.get_lr(
-                global_step, num_train_steps, num_warmup_steps, down_config_model.opt)
-
-            train_op = utils.get_train_op(total_loss, cur_learning_rate)
+            static_lr = down_config_model.opt['learning_rate']
+            train_op = utils.get_train_op(loss, global_step, num_train_steps, num_warmup_steps, static_lr)
+            tf.summary.scalar('loss', total_loss)
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                     mode=mode,
                     loss=total_loss,
                     train_op=train_op,
                     scaffold_fn=scaffold_fn)
         elif mode == tf.estimator.ModeKeys.EVAL:
-
             def metric_fn(per_example_loss, label_ids, logits):
                 predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
-                accuracy = tf.metrics.accuracy(label_ids, predictions)
-                loss = tf.metrics.mean(per_example_loss)
+                print_op = tf.print('logits:', logits, 'labels:', label_ids, 'loss', total_loss, summarize=-1)
+                with tf.control_dependencies([print_op]):
+                    accuracy = tf.metrics.accuracy(label_ids, predictions)
+                    loss = tf.metrics.mean(per_example_loss)
                 return {
                         "eval_accuracy": accuracy,
                         "eval_loss": loss,
@@ -307,13 +305,6 @@ def _init_bert_checkpoint(init_checkpoint):
 def main(_):
     tf.logging.set_verbosity(tf.logging.INFO)
 
-    processors = {
-            "cola": ColaProcessor,
-            "mnli": MnliProcessor,
-            "mrpc": MrpcProcessor,
-            "xnli": XnliProcessor,
-    }
-
     if not FLAGS.do_train and not FLAGS.do_eval and not FLAGS.do_predict:
         raise ValueError(
                 "At least one of `do_train`, `do_eval` or `do_predict' must be True.")
@@ -341,6 +332,7 @@ def main(_):
             cluster=tpu_cluster_resolver,
             model_dir=FLAGS.output_dir,
             save_checkpoints_steps=FLAGS.save_checkpoints_steps,
+            save_summary_steps=1,
             tpu_config=tf.contrib.tpu.TPUConfig(
                     iterations_per_loop=FLAGS.iterations_per_loop,
                     num_shards=FLAGS.num_tpu_cores,
@@ -461,6 +453,4 @@ def main(_):
 
 
 if __name__ == "__main__":
-    flags.mark_flag_as_required("data_dir")
-    flags.mark_flag_as_required("output_dir")
     tf.app.run()
