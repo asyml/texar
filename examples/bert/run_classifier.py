@@ -28,12 +28,14 @@ import texar as tx
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.utils import transformer_utils
 from texar.utils.mode import is_train_mode
+
 from data_utils import *
 
 flags = tf.flags
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_string('config_data', 'config_mrpc', "The dataset config.")
 ## Required parameters
 flags.DEFINE_string(
         "data_dir", "glue_data/MRPC",
@@ -58,12 +60,6 @@ flags.DEFINE_bool(
         "Whether to lower case the input text. Should be True for uncased "
         "models and False for cased models.")
 
-flags.DEFINE_integer(
-        "max_seq_length", 128,
-        "The maximum total input sequence length after WordPiece tokenization. "
-        "Sequences longer than this will be truncated, and sequences shorter "
-        "than this will be padded.")
-
 flags.DEFINE_bool("do_train", True, "Whether to run training.")
 
 flags.DEFINE_bool("do_eval", True, "Whether to run eval on the dev set.")
@@ -71,22 +67,6 @@ flags.DEFINE_bool("do_eval", True, "Whether to run eval on the dev set.")
 flags.DEFINE_bool(
         "do_predict", False,
         "Whether to run the model in inference mode on the test set.")
-
-flags.DEFINE_integer("train_batch_size", 32, "Total batch size for training.")
-
-flags.DEFINE_integer("eval_batch_size", 8, "Total batch size for eval.")
-
-flags.DEFINE_integer("predict_batch_size", 8, "Total batch size for predict.")
-
-flags.DEFINE_float("learning_rate", 2e-5, "The initial learning rate for Adam.")
-
-flags.DEFINE_float("num_train_epochs", 3.0,
-                                     "Total number of training epochs to perform.")
-
-flags.DEFINE_float(
-        "warmup_proportion", 0.1,
-        "Proportion of training to perform linear learning rate warmup for. "
-        "E.g., 0.1 = 10% of training.")
 
 flags.DEFINE_integer("save_checkpoints_steps", 1000,
                                          "How often to save the model checkpoint.")
@@ -162,13 +142,10 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 
         tf.logging.info("*** Features ***")
         for name in sorted(features.keys()):
-            tf.logging.info("    name = %s, shape = %s" % (name, features[name].shape))
-
-        input_ids = features["input_ids"]
-        input_mask = features["input_mask"]
-        segment_ids = features["segment_ids"]
-        label_ids = features["label_ids"]
-
+            input_ids = features["input_ids"]
+            input_mask = features["input_mask"]
+            segment_ids = features["segment_ids"]
+            label_ids = features["label_ids"]
 
         (total_loss, per_example_loss, logits, probabilities) = create_model(
                 bert_config, input_ids, input_mask, segment_ids, label_ids,
@@ -285,7 +262,7 @@ def convert_examples_to_features(examples, label_list, max_seq_length,
 
         features.append(feature)
     return features
-
+config_data  = importlib.import_module(FLAGS.config_data)
 down_config_model = importlib.import_module(FLAGS.down_config_model)
 def _init_bert_checkpoint(init_checkpoint):
     tvars = tf.trainable_variables()
@@ -346,15 +323,15 @@ def main(_):
     if FLAGS.do_train:
         train_examples = processor.get_train_examples(FLAGS.data_dir)
         num_train_steps = int(
-                len(train_examples) / config_data.train_batch_size * config.num_train_epochs)
-        num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
+                len(train_examples) / config_data.train_batch_size * config_data.max_train_epoch)
+        num_warmup_steps = int(num_train_steps * config_data.warmup_proportion)
     print('num_train_steps:{}'.format(num_train_steps))
     init_checkpoint='bert_released_models/%s/bert_model.ckpt' % FLAGS.bert_pretrain_config
     model_fn = model_fn_builder(
             bert_config=bert_config,
             num_labels=len(label_list),
             init_checkpoint=init_checkpoint,
-            learning_rate=FLAGS.learning_rate,
+            learning_rate=down_config_model.opt['learning_rate'],
             num_train_steps=num_train_steps,
             num_warmup_steps=num_warmup_steps,
             use_tpu=FLAGS.use_tpu,
@@ -366,21 +343,21 @@ def main(_):
             use_tpu=FLAGS.use_tpu,
             model_fn=model_fn,
             config=run_config,
-            train_batch_size=FLAGS.train_batch_size,
-            eval_batch_size=FLAGS.eval_batch_size,
-            predict_batch_size=FLAGS.predict_batch_size)
+            train_batch_size=config_data.train_batch_size,
+            eval_batch_size=config_data.eval_batch_size,
+            predict_batch_size=config_data.test_batch_size)
 
     if FLAGS.do_train:
         train_file = os.path.join(FLAGS.output_dir, "train.tf_record")
         file_based_convert_examples_to_features(
-                train_examples, label_list, FLAGS.max_seq_length, tokenizer, train_file)
+                train_examples, label_list, config_data.max_seq_length, tokenizer, train_file)
         tf.logging.info("***** Running training *****")
         tf.logging.info("    Num examples = %d", len(train_examples))
-        tf.logging.info("    Batch size = %d", FLAGS.train_batch_size)
+        tf.logging.info("    Batch size = %d", config_data.train_batch_size)
         tf.logging.info("    Num steps = %d", num_train_steps)
         train_input_fn = file_based_input_fn_builder(
                 input_file=train_file,
-                seq_length=FLAGS.max_seq_length,
+                seq_length=config_data.max_seq_length,
                 is_training=True,
                 drop_remainder=True)
         estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
@@ -389,7 +366,7 @@ def main(_):
         eval_examples = processor.get_dev_examples(FLAGS.data_dir)
         eval_file = os.path.join(FLAGS.output_dir, "eval.tf_record")
         file_based_convert_examples_to_features(
-                eval_examples, label_list, FLAGS.max_seq_length, tokenizer, eval_file)
+                eval_examples, label_list, config_data.max_seq_length, tokenizer, eval_file)
 
         tf.logging.info("***** Running evaluation *****")
         tf.logging.info("    Num examples = %d", len(eval_examples))
@@ -407,7 +384,7 @@ def main(_):
         eval_drop_remainder = True if FLAGS.use_tpu else False
         eval_input_fn = file_based_input_fn_builder(
                 input_file=eval_file,
-                seq_length=FLAGS.max_seq_length,
+                seq_length=config_data.max_seq_length,
                 is_training=False,
                 drop_remainder=eval_drop_remainder)
 
@@ -424,7 +401,7 @@ def main(_):
         predict_examples = processor.get_test_examples(FLAGS.data_dir)
         predict_file = os.path.join(FLAGS.output_dir, "predict.tf_record")
         file_based_convert_examples_to_features(predict_examples, label_list,
-                                                                                        FLAGS.max_seq_length, tokenizer,
+                                                                                        config_data.max_seq_length, tokenizer,
                                                                                         predict_file)
 
         tf.logging.info("***** Running prediction*****")
@@ -439,7 +416,7 @@ def main(_):
         predict_drop_remainder = True if FLAGS.use_tpu else False
         predict_input_fn = file_based_input_fn_builder(
                 input_file=predict_file,
-                seq_length=FLAGS.max_seq_length,
+                seq_length=config_data.max_seq_length,
                 is_training=False,
                 drop_remainder=predict_drop_remainder)
 

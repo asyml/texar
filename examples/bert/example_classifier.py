@@ -168,14 +168,14 @@ def main(_):
     global_step = tf.train.get_or_create_global_step()
     static_lr = down_config_model.opt['learning_rate']
     tf.summary.scalar('loss', loss)
-    #print_op = tf.print('logits', logits, 'labels', label_ids, 'loss', loss, summarize=-1)
-    #with tf.control_dependencies([print_op]):
-    train_op = utils.get_train_op(loss, global_step, num_train_steps, num_warmup_steps, static_lr)
+    print_op = tf.print('logits', logits, 'labels', label_ids, 'loss', loss, summarize=-1)
+    with tf.control_dependencies([print_op]):
+        train_op = utils.get_train_op(loss, global_step, num_train_steps, num_warmup_steps, static_lr)
 
     summary_merged = tf.summary.merge_all()
-    #print_op = tf.print('logits', logits, 'labels', label_ids, 'loss', loss, summarize=-1)
-    #with tf.control_dependencies([print_op]):
-    predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
+    print_op = tf.print('logits', logits, 'labels', label_ids, 'loss', loss, summarize=-1)
+    with tf.control_dependencies([print_op]):
+        predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
     correct_cnt = tf.reduce_sum(tf.to_float(tf.equal(predictions, label_ids)))
 
     def _train_epoch(sess, writer):
@@ -241,7 +241,10 @@ def main(_):
 
         if FLAGS.saved_model:
             saver.restore(sess, FLAGS.saved_model)
-        tf.get_default_graph().finalize()
+        tf.logging.info('bert/embeddings/word_embeddings/word_embeddings')
+        with tf.variable_scope('bert/embeddings/word_embeddings', reuse=True):
+            tf.logging.info(sess.run(tf.get_variable('word_embeddings')))
+
         iterator.initialize_dataset(sess)
         if FLAGS.do_train:
             iterator.restart_dataset(sess, 'train')
