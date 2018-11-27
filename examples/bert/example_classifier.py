@@ -47,8 +47,9 @@ flags.DEFINE_bool(
     "Whether to lower case the input text. Should be True for uncased "
     "models and False for cased models.")
 
-flags.DEFINE_bool("do_train", False, "Whether to run training.")
-flags.DEFINE_bool("do_eval", False, "Whether to run eval on the dev set.")
+flags.DEFINE_bool("do_train", True, "Whether to run training.")
+flags.DEFINE_bool("do_eval", True, "Whether to run eval on the dev set.")
+flags.DEFINE_bool("do_predict", False, "Whether to run predict on the test set.")
 
 config_data = importlib.import_module(FLAGS.config_data)
 #downstream model configuration, following the BERT model configuration
@@ -144,7 +145,8 @@ def main(_):
 
     output_weights = tf.get_variable(
             "output_weights", [num_labels, hidden_size],
-            initializer=tf.truncated_normal_initializer(stddev=0.02))
+            initializer=tf.ones_initializer())
+            #initializer=tf.truncated_normal_initializer(stddev=0.02))
 
     output_bias = tf.get_variable(
             "output_bias", [num_labels], initializer=tf.zeros_initializer())
@@ -166,13 +168,15 @@ def main(_):
     global_step = tf.train.get_or_create_global_step()
     static_lr = down_config_model.opt['learning_rate']
     tf.summary.scalar('loss', loss)
+    #print_op = tf.print('logits', logits, 'labels', label_ids, 'loss', loss, summarize=-1)
+    #with tf.control_dependencies([print_op]):
     train_op = utils.get_train_op(loss, global_step, num_train_steps, num_warmup_steps, static_lr)
 
     summary_merged = tf.summary.merge_all()
-    print_op = tf.print('logits', logits, 'labels', label_ids, 'loss', loss, summarize=-1)
-    with tf.control_dependencies([print_op]):
-        predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
-        correct_cnt = tf.reduce_sum(tf.to_float(tf.equal(predictions, label_ids)))
+    #print_op = tf.print('logits', logits, 'labels', label_ids, 'loss', loss, summarize=-1)
+    #with tf.control_dependencies([print_op]):
+    predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
+    correct_cnt = tf.reduce_sum(tf.to_float(tf.equal(predictions, label_ids)))
 
     def _train_epoch(sess, writer):
         while True:
@@ -224,7 +228,6 @@ def main(_):
                 _all_probs.extend(_probs.tolist())
             except:
                 break
-
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
@@ -238,8 +241,8 @@ def main(_):
 
         if FLAGS.saved_model:
             saver.restore(sess, FLAGS.saved_model)
+        tf.get_default_graph().finalize()
         iterator.initialize_dataset(sess)
-
         if FLAGS.do_train:
             iterator.restart_dataset(sess, 'train')
             _train_epoch(sess, smry_writer)

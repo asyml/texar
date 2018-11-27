@@ -1,4 +1,4 @@
-irom munch import Munch
+from munch import Munch
 import json
 import collections
 import re
@@ -182,7 +182,7 @@ def _init_bert_checkpoint(init_checkpoint):
     initialized_variable_names = []
     if init_checkpoint:
         (assignment_map, initialized_variable_names
-        ) = utils.get_assignment_map_from_checkpoint(tvars, init_checkpoint)
+        ) = get_assignment_map_from_checkpoint(tvars, init_checkpoint)
         tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
     tf.logging.info("**** Trainable Variables ****")

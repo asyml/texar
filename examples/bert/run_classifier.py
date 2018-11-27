@@ -28,7 +28,7 @@ import texar as tx
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.utils import transformer_utils
 from texar.utils.mode import is_train_mode
-from offi_data_utils import *
+from data_utils import *
 
 flags = tf.flags
 
@@ -130,7 +130,8 @@ def create_model(bert_config, input_ids, input_mask, segment_ids,
 
     output_weights = tf.get_variable(
             "output_weights", [num_labels, hidden_size],
-            initializer=tf.truncated_normal_initializer(stddev=0.02))
+            initializer=tf.ones_initializer())
+            #initializer=tf.truncated_normal_initializer(stddev=0.02))
 
     output_bias = tf.get_variable(
             "output_bias", [num_labels], initializer=tf.zeros_initializer())
@@ -180,13 +181,14 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         if mode == tf.estimator.ModeKeys.TRAIN:
             global_step = tf.train.get_or_create_global_step()
             static_lr = down_config_model.opt['learning_rate']
-            train_op = utils.get_train_op(loss, global_step, num_train_steps, num_warmup_steps, static_lr)
+            print_op = tf.print('logits:', logits, 'labels:', label_ids, 'loss', total_loss, summarize=-1)
+            with tf.control_dependencies([print_op]):
+                train_op = utils.get_train_op(total_loss, global_step, num_train_steps, num_warmup_steps, static_lr)
             tf.summary.scalar('loss', total_loss)
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                     mode=mode,
                     loss=total_loss,
-                    train_op=train_op,
-                    scaffold_fn=scaffold_fn)
+                    train_op=train_op)
         elif mode == tf.estimator.ModeKeys.EVAL:
             def metric_fn(per_example_loss, label_ids, logits):
                 predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
@@ -344,9 +346,9 @@ def main(_):
     if FLAGS.do_train:
         train_examples = processor.get_train_examples(FLAGS.data_dir)
         num_train_steps = int(
-                len(train_examples) / FLAGS.train_batch_size * FLAGS.num_train_epochs)
+                len(train_examples) / config_data.train_batch_size * config.num_train_epochs)
         num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
-
+    print('num_train_steps:{}'.format(num_train_steps))
     init_checkpoint='bert_released_models/%s/bert_model.ckpt' % FLAGS.bert_pretrain_config
     model_fn = model_fn_builder(
             bert_config=bert_config,

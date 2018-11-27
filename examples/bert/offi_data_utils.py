@@ -59,15 +59,9 @@ class DataProcessor(object):
         with tf.gfile.Open(input_file, "r") as f:
             reader = csv.reader(f, delimiter="\t", quotechar=quotechar)
             lines = []
-            i = 0
-            #TODO:haoran: Remember to remove this
             for line in reader:
                 lines.append(line)
-            #    i += 1
-            #    if i == 32:
-            #        break
-        #assert len(lines) == 32
-        return lines
+            return lines
 
 
 class XnliProcessor(DataProcessor):
@@ -79,7 +73,8 @@ class XnliProcessor(DataProcessor):
     def get_train_examples(self, data_dir):
         """See base class."""
         lines = self._read_tsv(
-                os.path.join(data_dir, "multinli", "multinli.train.%s.tsv" % self.language))
+                os.path.join(data_dir, "multinli",
+                                         "multinli.train.%s.tsv" % self.language))
         examples = []
         for (i, line) in enumerate(lines):
             if i == 0:
@@ -393,16 +388,17 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
         d = tf.data.TFRecordDataset(input_file)
         if is_training:
             d = d.repeat()
-            # d = d.shuffle(buffer_size=100)
+            d = d.shuffle(buffer_size=100)
 
         d = d.apply(
             tf.contrib.data.map_and_batch(
                 lambda record: _decode_record(record, name_to_features),
                 batch_size=batch_size,
                 drop_remainder=drop_remainder))
-
         return d
+
     return input_fn
+
 
 def _truncate_seq_pair(tokens_a, tokens_b, max_length):
     """Truncates a sequence pair in place to the maximum length."""
