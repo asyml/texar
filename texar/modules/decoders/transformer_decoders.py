@@ -40,6 +40,7 @@ from texar.utils.shapes import shape_list, mask_sequences
 from texar.utils import transformer_attentions as attn
 from texar.utils.mode import is_train_mode
 
+import numpy as np
 
 __all__ = [
     "TransformerDecoderOutput",
@@ -258,13 +259,15 @@ class TransformerDecoder(ModuleBase):
         """
         channels = shape_list(self._embedding)[-1]
         timing_signal = self.position_embedder(max_length, channels)
-
+        #you can use the comment to prevent the model to decode <UNK> token
+        #biases = np.ones([1, self._vocab_size])
+        #biases[0][3] = -np.inf
         def _impl(ids, step, cache):
             """The function is called in dynamic decoding.
 
             `ids` should be next_id of shape `[batch_size, decoded_lenth]`
 
-            Returned logits is of shape `[batch_size, 1]`
+            Returned logits is of shape `[batch_size, vocab_size]`
             """
             ids = ids[:, -1:]
             inputs = embedding_fn(ids)
@@ -278,6 +281,7 @@ class TransformerDecoder(ModuleBase):
             )
             logits = self.output_layer(outputs)
             logits = tf.squeeze(logits, axis=[1])
+            #logits = tf.multiply(logits, biases)
             return logits, cache
 
         return _impl

@@ -30,7 +30,7 @@ def load_data_numpy(input_dir, prefix):
     print('train data size:{}'.format(len(train_data)))
     return train_data, dev_data, test_data
 
-def seq2seq_pad_concat_convert(xy_batch, eos_id=2, bos_id=1):
+def seq2seq_pad_concat_convert(xy_batch, eos_id=2, bos_id=1, n_gpu=0):
     """
     Args:
         xy_batch (list of tuple of two numpy.ndarray-s or cupy.ndarray-s):
@@ -41,7 +41,8 @@ def seq2seq_pad_concat_convert(xy_batch, eos_id=2, bos_id=1):
             The shape of each array is `(sentence length, )`.
         eos_id: The index of end-of-sentence special token in the
             dictionary.
-
+        n_gpu:
+            The number of Visible GPUs.
     Returns:
         Tuple of Converted array.
             (input_sent_batch_array, target_sent_batch_input_array,
@@ -68,6 +69,15 @@ def seq2seq_pad_concat_convert(xy_batch, eos_id=2, bos_id=1):
     # Add BOS in target language
     y_in_block = np.pad(y_block, ((0, 0), (1, 0)), 'constant',
                         constant_values=bos_id)
+    if n_gpu > 0:
+        if len(x_block) % n_gpu != 0:
+            padded_cnt = n_gpu - len(x_block) % n_gpu
+            x_block = np.pad(x_block, ((0, padded_cnt), (0, 0)), 'constant',
+                             constant_values=0)
+            y_in_block = np.pad(y_in_block, ((0, padded_cnt), (0, 0)), 'constant',
+                                constant_values=0)
+            y_out_block = np.pad(y_out_block, ((0, padded_cnt), (0, 0)), 'constant',
+                                 constant_values=0)
     return x_block, y_in_block, y_out_block
 
 def source_pad_concat_convert(x_seqs, eos_id=2, bos_id=1):
