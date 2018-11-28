@@ -12,7 +12,7 @@ We choose the experiments on Microsoft Research Paraphrase Corpus (MRPC) corpus 
 ```
 python download_glue_data.py [--data_dir] [--tasks] [--path_to_mrpc]
 ```
-By default, it will download GLUE datasets into `glue_data` directory. For more information on GLUE, you can refer to 
+By default, it will download GLUE datasets into `data` directory. For more information on GLUE, you can refer to 
 [gluebenchmark](https://gluebenchmark.com/tasks)
 
 ### BERT Pretrain Model Download

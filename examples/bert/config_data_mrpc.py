@@ -1,4 +1,4 @@
-data_dir = 'glue_data/MRPC'
+data_dir = 'data/MRPC'
 train_batch_size = 32
 max_seq_length = 128
 eval_batch_size = 8

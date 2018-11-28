@@ -6,7 +6,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import os
-import tokenization
 import importlib
 import tensorflow as tf
 import texar as tx
@@ -14,9 +13,7 @@ from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.utils import transformer_utils
 from texar.utils.mode import is_train_mode
 from texar.core import get_train_op
-from data.data_utils import MrpcProcessor,\
-    file_based_convert_examples_to_features, file_based_input_fn_builder
-import utils
+from utils import data_utils, model_utils, tokenization
 
 flags = tf.flags
 
@@ -25,7 +22,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('config_data', 'config_data_mrpc', "The dataset config.")
 flags.DEFINE_string(
     "bert_config_format", "texar",
-    "The configuration format. Choose `json` if loaded from the config",
+    "The configuration format. Choose `json` if loaded from the config"
     "attached from the downloaded pretrained BERT directory."
     "Choose `texar` to load the customed writen configuration file for texar")
 
@@ -58,27 +55,30 @@ def main(_):
 
     # load BERT Model Configuration
     if FLAGS.bert_config_format == "json":
-        bert_config = utils.transform_bert_to_texar_config(
+        bert_config = model_utils.transform_bert_to_texar_config(
             'bert_released_models/%s/bert_config.json'%FLAGS.bert_pretrain_config)
     elif FLAGS.bert_config_format == 'texar':
         bert_config = importlib.import_module(
             'bert_config_lib.config_model_%s' % (FLAGS.bert_pretrain_config))
 
     # Data Loading Configuration
-    processor = MrpcProcessor()
+    processor = data_utils.MrpcProcessor()
     num_labels = len(processor.get_labels())
     tokenizer = tokenization.FullTokenizer(
         vocab_file='bert_released_models/%s/vocab.txt'
             %(FLAGS.bert_pretrain_config),
         do_lower_case=FLAGS.do_lower_case)
 
-    train_examples = processor.get_train_examles(config_data.data_dir)
-    train_dataset = _get_dataset(processor, tokenizer, config_data.data_dir,
-        config_data.max_seq_length, config_data.train_batch_size, mode='train')
-    eval_dataset = _get_dataset(processor, tokenizer, config_data.data_dir,
-        config_data.max_seq_length, config_data.eval_batch_size, mode='eval')
-    test_dataset = _get_dataset(processor, tokenizer, config_data.data_dir,
-        config_data.max_seq_length, config_data.test_batch_size, mode='test')
+    train_examples = processor.get_train_examples(config_data.data_dir)
+    train_dataset = data_utils.get_dataset(processor, tokenizer, config_data.data_dir,
+        config_data.max_seq_length, config_data.train_batch_size,
+        mode='train', output_dir=FLAGS.output_dir)
+    eval_dataset = data_utils.get_dataset(processor, tokenizer, config_data.data_dir,
+        config_data.max_seq_length, config_data.eval_batch_size,
+        mode='eval', output_dir=FLAGS.output_dir)
+    test_dataset = data_utils.get_dataset(processor, tokenizer, config_data.data_dir,
+        config_data.max_seq_length, config_data.test_batch_size,
+        mode='test', output_dir=FLAGS.output_dir)
     iterator = tx.data.FeedableDataIterator({
         'train': train_dataset,
         'eval': eval_dataset,
@@ -131,7 +131,7 @@ def main(_):
     num_train_steps = int(len(train_examples) / config_data.train_batch_size \
         * config_data.max_train_epoch)
     num_warmup_steps = int(num_train_steps * config_data.warmup_proportion)
-    lr = utils.get_lr(global_step, num_train_steps, num_warmup_steps, static_lr)
+    lr = model_utils.get_lr(global_step, num_train_steps, num_warmup_steps, static_lr)
     train_op = get_train_op(
         loss,
         global_step=global_step,
@@ -205,7 +205,7 @@ def main(_):
         # Load Pretrained BERT model parameters
         init_checkpoint='bert_released_models/%s/bert_model.ckpt' % FLAGS.bert_pretrain_config
         if init_checkpoint:
-            utils._init_bert_checkpoint(init_checkpoint)
+            model_utils._init_bert_checkpoint(init_checkpoint)
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())

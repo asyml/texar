@@ -20,8 +20,11 @@ https://github.com/google-research/bert/blob/master/run_classifier.py
 import os
 import tensorflow as tf
 import csv
-import tokenization
 import collections
+import sys
+file_dir = os.path.dirname(__file__)
+sys.path.append(file_dir)
+import tokenization
 
 class InputExample(object):
     """A single training/test example for simple sequence classification."""
@@ -431,16 +434,29 @@ def _truncate_seq_pair(tokens_a, tokens_b, max_length):
         else:
             tokens_b.pop()
 
-def _get_dataset(processor,
-                 tokenizer,
-                 data_dir,
-                 max_seq_length,
-                 batch_size,
-                 mode):
+def get_dataset(processor,
+                tokenizer,
+                data_dir,
+                max_seq_length,
+                batch_size,
+                mode,
+                output_dir):
+    """
+    Args:
+        processor: Data Preprocessor, must have get_lables,
+            get_train/dev/test/examples methods defined.
+        tokenizer: The Sentence Tokenizer. Generally should be
+            SentencePiece Model.
+        data_dir: The input data directory.
+        max_seq_length: Max sequence length.
+        batch_size: mini-batch size.
+        model: `train`, `eval` or `test`.
+        output_dir: The directory to save the TFRecords in.
+    """
     label_list = processor.get_labels()
     if mode == 'train':
         train_examples = processor.get_train_examples(data_dir)
-        train_file = os.path.join(FLAGS.output_dir, "train.tf_record")
+        train_file = os.path.join(output_dir, "train.tf_record")
         file_based_convert_examples_to_features(
             train_examples, label_list, max_seq_length,
             tokenizer, train_file)
@@ -451,7 +467,7 @@ def _get_dataset(processor,
             is_training=True)({'batch_size': batch_size})
     elif mode == 'eval':
         eval_examples = processor.get_dev_examples(data_dir)
-        eval_file = os.path.join(FLAGS.output_dir, "eval.tf_record")
+        eval_file = os.path.join(output_dir, "eval.tf_record")
         file_based_convert_examples_to_features(
             eval_examples, label_list, max_seq_length, tokenizer, eval_file)
         dataset = file_based_input_fn_builder(
@@ -461,7 +477,7 @@ def _get_dataset(processor,
             drop_remainder=False)({'batch_size': batch_size})
     elif mode == 'test':
         test_examples = processor.get_test_examples(data_dir)
-        test_file = os.path.join(FLAGS.output_dir, "predict.tf_record")
+        test_file = os.path.join(output_dir, "predict.tf_record")
         file_based_convert_examples_to_features(
             test_examples, label_list, max_seq_length, tokenizer, test_file)
         dataset = file_based_input_fn_builder(
@@ -469,3 +485,4 @@ def _get_dataset(processor,
             seq_length=max_seq_length,
             is_training=False,
             drop_remainder=False)({'batch_size': batch_size})
+    return dataset
