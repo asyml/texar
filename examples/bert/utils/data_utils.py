@@ -431,3 +431,41 @@ def _truncate_seq_pair(tokens_a, tokens_b, max_length):
         else:
             tokens_b.pop()
 
+def _get_dataset(processor,
+                 tokenizer,
+                 data_dir,
+                 max_seq_length,
+                 batch_size,
+                 mode):
+    label_list = processor.get_labels()
+    if mode == 'train':
+        train_examples = processor.get_train_examples(data_dir)
+        train_file = os.path.join(FLAGS.output_dir, "train.tf_record")
+        file_based_convert_examples_to_features(
+            train_examples, label_list, max_seq_length,
+            tokenizer, train_file)
+        dataset = file_based_input_fn_builder(
+            input_file=train_file,
+            seq_length=max_seq_length,
+            drop_remainder=True,
+            is_training=True)({'batch_size': batch_size})
+    elif mode == 'eval':
+        eval_examples = processor.get_dev_examples(data_dir)
+        eval_file = os.path.join(FLAGS.output_dir, "eval.tf_record")
+        file_based_convert_examples_to_features(
+            eval_examples, label_list, max_seq_length, tokenizer, eval_file)
+        dataset = file_based_input_fn_builder(
+            input_file=eval_file,
+            seq_length=max_seq_length,
+            is_training=False,
+            drop_remainder=False)({'batch_size': batch_size})
+    elif mode == 'test':
+        test_examples = processor.get_test_examples(data_dir)
+        test_file = os.path.join(FLAGS.output_dir, "predict.tf_record")
+        file_based_convert_examples_to_features(
+            test_examples, label_list, max_seq_length, tokenizer, test_file)
+        dataset = file_based_input_fn_builder(
+            input_file=test_file,
+            seq_length=max_seq_length,
+            is_training=False,
+            drop_remainder=False)({'batch_size': batch_size})

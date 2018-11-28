@@ -20,7 +20,7 @@ def transform_bert_to_texar_config(input_json):
         'name': 'word_embeddings',
         'dim': hidden_dim}
     configs['vocab_size'] = config_ckpt['vocab_size']
-    configs['token_embed'] = {
+    configs['token_type_embed'] = {
         'name': 'token_type_embeddings',
         'dim': hidden_dim}
     configs['type_vocab_size'] = config_ckpt['type_vocab_size']
@@ -102,27 +102,6 @@ def get_lr(global_step, num_train_steps, num_warmup_steps, static_lr):
             (1.0 - is_warmup) * learning_rate + is_warmup * warmup_learning_rate)
 
     return learning_rate
-
-def get_train_op(loss, global_step, learning_rate, hparams=None):
-
-    optimizer = AdamWeightDecayOptimizer(
-        learning_rate=learning_rate,
-        weight_decay_rate=0.01,
-        beta_1=0.9,
-        beta_2=0.999,
-        epsilon=1e-6,
-        exclude_from_weight_decay=["LayerNorm", "layer_norm", "bias"])
-
-    tvars = tf.trainable_variables()
-    grads = tf.gradients(loss, tvars)
-
-    # This is how the model was pre-trained.
-    (grads, _) = tf.clip_by_global_norm(grads, clip_norm=1.0)
-
-    train_op = optimizer.apply_gradients(
-        zip(grads, tvars), global_step=global_step)
-
-    return train_op
 
 def _get_assignment_map_from_checkpoint(tvars, init_checkpoint):
     """

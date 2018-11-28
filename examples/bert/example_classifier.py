@@ -14,7 +14,6 @@ from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.utils import transformer_utils
 from texar.utils.mode import is_train_mode
 from texar.core import get_train_op
-#from utils import get_train_op
 from data.data_utils import MrpcProcessor,\
     file_based_convert_examples_to_features, file_based_input_fn_builder
 import utils
@@ -23,7 +22,7 @@ flags = tf.flags
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('config_data', 'config_mrpc', "The dataset config.")
+flags.DEFINE_string('config_data', 'config_data_mrpc', "The dataset config.")
 flags.DEFINE_string(
     "bert_config_format", "texar",
     "The configuration format. Choose `json` if loaded from the config attached"
@@ -34,7 +33,7 @@ flags.DEFINE_string(
     "The config json file corresponding to the pre-trained BERT model.")
 
 flags.DEFINE_string(
-    "config_model", "config_model",
+    "config_model", "config_classifier",
     "Model configuration for downstream task and the model training")
 flags.DEFINE_float(
     "learning_rate", 2e-5,
@@ -72,48 +71,22 @@ def main(_):
 
     # Data Loading Configuration
     processor = MrpcProcessor()
-    label_list = processor.get_labels()
-    num_labels = len(label_list)
+    num_labels = len(processor.get_labels())
     tokenizer = tokenization.FullTokenizer(
         vocab_file='bert_released_models/%s/vocab.txt'
             %(FLAGS.bert_pretrain_config),
         do_lower_case=FLAGS.do_lower_case)
 
-    train_examples = processor.get_train_examples(config_data.data_dir)
-    train_file = os.path.join(FLAGS.output_dir, "train.tf_record")
-    file_based_convert_examples_to_features(
-        train_examples, label_list, config_data.max_seq_length,
-        tokenizer, train_file)
-    train_dataset = file_based_input_fn_builder(
-        input_file=train_file,
-        seq_length=config_data.max_seq_length,
-        drop_remainder=True,
-        is_training=True)({'batch_size': config_data.train_batch_size})
-
+    train_examples = processor.get_train_examles(config_data.data_dir)
     num_train_steps = int(len(train_examples) / config_data.train_batch_size \
         * config_data.max_train_epoch)
     num_warmup_steps = int(num_train_steps * config_data.warmup_proportion)
-    eval_examples = processor.get_dev_examples(config_data.data_dir)
-    eval_file = os.path.join(FLAGS.output_dir, "eval.tf_record")
-    file_based_convert_examples_to_features(
-        eval_examples, label_list, config_data.max_seq_length, tokenizer, eval_file)
-    eval_dataset = file_based_input_fn_builder(
-        input_file=eval_file,
-        seq_length=config_data.max_seq_length,
-        is_training=False,
-        drop_remainder=False)({'batch_size': config_data.eval_batch_size})
-
-    predict_examples = processor.get_test_examples(config_data.data_dir)
-    predict_file = os.path.join(FLAGS.output_dir, "predict.tf_record")
-    file_based_convert_examples_to_features(
-        predict_examples, label_list,
-        config_data.max_seq_length, tokenizer, predict_file)
-    test_dataset = file_based_input_fn_builder(
-        input_file=predict_file,
-        seq_length=config_data.max_seq_length,
-        is_training=False,
-        drop_remainder=False)({'batch_size': config_data.test_batch_size})
-
+    train_dataset = _get_dataset(processor, tokenizer, config_data.data_dir,
+        config_data.max_seq_length, config_data.train_batch_size, mode='train')
+    eval_dataset = _get_dataset(processor, tokenizer, config_data.data_dir,
+        config_data.max_seq_length, config_data.eval_batch_size, mode='eval')
+    test_dataset = _get_dataset(processor, tokenizer, config_data.data_dir,
+        config_data.max_seq_length, config_data.test_batch_size, mode='test')
     iterator = tx.data.FeedableDataIterator({
         'train': train_dataset,
         'eval': eval_dataset,
@@ -134,25 +107,25 @@ def main(_):
             hparams=bert_config.embed)
         token_type_embedder = tx.modules.WordEmbedder(
             vocab_size=bert_config.type_vocab_size,
-            hparams=bert_config.token_embed)
+            hparams=bert_config.token_type_embed)
         word_embeds = embedder(input_ids, mode=mode)
         token_type_ids = segment_ids
         token_type_embeds = token_type_embedder(token_type_ids, mode=mode)
         input_embeds = word_embeds + token_type_embeds
         encoder = TransformerEncoder(hparams=bert_config.encoder)
-        output_layer = encoder(input_embeds, input_length, mode=mode)
+        output = encoder(input_embeds, input_length, mode=mode)
 
         # Downstream model configuration
         with tf.variable_scope("pooler"):
             # Use the projection of first token hidden vector of BERT output
             # as the representation of the sentence
-            bert_sent_hidden = tf.squeeze(output_layer[:, 0:1, :], axis=1)
+            bert_sent_hidden = tf.squeeze(output[:, 0:1, :], axis=1)
             bert_sent_output = tf.layers.dense(
                 bert_sent_hidden, config_model.hidden_dim, activation=tf.tanh)
-            output_layer = tf.layers.dropout(bert_sent_output, rate=0.1,
+            output = tf.layers.dropout(bert_sent_output, rate=0.1,
             training=is_train_mode(mode))
 
-    logits = tf.layers.dense(output_layer, num_labels,
+    logits = tf.layers.dense(output, num_labels,
         kernel_initializer=tf.truncated_normal_initializer(stddev=0.02))
     probabilities = tf.nn.softmax(logits, axis=-1)
     preds = tf.argmax(logits, axis=-1, output_type=tf.int32)

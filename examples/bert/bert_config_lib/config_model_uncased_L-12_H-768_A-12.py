@@ -4,7 +4,7 @@ embed = {
 }
 vocab_size = 30522
 
-token_embed = {
+token_type_embed = {
     'dim': 768,
     'name': 'token_type_embeddings'
 }

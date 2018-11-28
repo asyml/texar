@@ -31,7 +31,8 @@ In the `bert_released_models/uncased_L-12_H-768_A-12.zip` directory, you may fin
 
 ### Train and Evaluate
 ```
-python example_classifier.py --do_train --do_eval --bert_config_format=texar [--output_dir]
+python example_classifier.py --do_train --do_eval --bert_config_format=texar [--output_dir] [--config_data=config_data_mrpc]
+[--config_model=config_classifier]
 ```
 
 The checkpoint and summary data for tensorboard visualization will be saved in `output_dir`
