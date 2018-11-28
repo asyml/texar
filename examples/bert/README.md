@@ -51,3 +51,8 @@ python example_classifier.py --do_test --saved_model=output/model.ckpt
 ```
 The output is by default saved in `output/test_results.tsv`.
 Each line will contain output for each sample, with two fields representing the probabilities for each class.
+
+
+## Hands On tutorial
+
+For more detailed tutorial on how to use pretrained BERT model in your own dataset and task, please refer to the notebook tutorial `hands_on_tutorial_for_customed_dataset.ipynb`

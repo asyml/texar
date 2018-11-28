@@ -1,4 +1,3 @@
-from munch import Munch
 import json
 import collections
 import re
@@ -119,7 +118,6 @@ def _get_assignment_map_from_checkpoint(tvars, init_checkpoint):
         if m is not None:
             name = m.group(1)
         name_to_variable[name] = var
-        print('name:%s' %var.name)
     init_vars = tf.train.list_variables(init_checkpoint)
 
     assignment_map = {
@@ -157,6 +155,14 @@ def _get_assignment_map_from_checkpoint(tvars, init_checkpoint):
             assignment_map[check_name] = model_name
             initialized_variable_names[model_name] = 1
             initialized_variable_names[model_name + ":0"] = 1
+    tf.logging.info("**** Trainable Variables ****")
+    for var in tvars:
+        init_string = ""
+        if var.name in initialized_variable_names:
+            init_string = ", *INIT_FROM_CKPT*"
+        tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
+            init_string)
+
     return (assignment_map, initialized_variable_names)
 
 def _init_bert_checkpoint(init_checkpoint):

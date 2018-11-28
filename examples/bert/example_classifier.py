@@ -20,6 +20,7 @@ flags = tf.flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('config_data', 'config_data_mrpc', "The dataset config.")
+
 flags.DEFINE_string(
     "bert_config_format", "texar",
     "The configuration format. Choose `json` if loaded from the config"
@@ -45,7 +46,7 @@ flags.DEFINE_bool(
 
 flags.DEFINE_bool("do_train", False, "Whether to run training.")
 flags.DEFINE_bool("do_eval", False, "Whether to run eval on the dev set.")
-flags.DEFINE_bool("do_predict", False, "Whether to run predict on the test set.")
+flags.DEFINE_bool("do_test", False, "Whether to run prediction on the test set.")
 
 config_data = importlib.import_module(FLAGS.config_data)
 config_model = importlib.import_module(FLAGS.config_model)
@@ -225,7 +226,7 @@ def main(_):
             iterator.restart_dataset(sess, 'eval')
             _run_epoch(sess, mode='eval')
 
-        if FLAGS.do_predict:
+        if FLAGS.do_test:
             iterator.restart_dataset(sess, 'test')
             _run_epoch(sess, mode='test')
 
