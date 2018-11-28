@@ -6,53 +6,51 @@ With Texar, building the BERT model is as simple as constructing a [`Transformer
 
 ## Quick Start
 
-### Dataset Download
+### Download Dataset
 
 This example uses the Microsoft Research Paraphrase Corpus (MRPC) corpus for sentence classification, same as in the [BERT official release](https://github.com/google-research/bert#sentence-and-sentence-pair-classification-tasks). 
 
 Download the data by
 ```
-python data/download_glue_data.py [--data_dir='data/'] [--tasks] [--path_to_mrpc]
-cd ..
+python download_glue_data.py --tasks=MRPC
 ```
-By default, it will download the [GLUE](https://gluebenchmark.com/tasks) datasets into the `data` directory. The MRPC dataset for classification is included as part of GLUE.
+By default, it will download the MRPC dataset into the `data` directory. FYI, the MRPC dataset part of the [GLUE](https://gluebenchmark.com/tasks) dataset collection.
 
-### BERT Pretrain Model Download
+### Download BERT Pre-train Model
 
 ```
-sh bert_pretrained_models/download_model.sh
+sh download_model.sh
 ```
 By default, it will download the `uncased_L-12_H-768_A-12.zip` and unzip it the same directory.
-In the `bert_pretrained_models/uncased_L-12_H-768_A-12.zip` directory, you may find five files.
+In the `bert_released_models/uncased_L-12_H-768_A-12.zip` directory, you may find five files.
 - `bert-config.json` Model configurations for the BERT. Generally, it's a uncased-vocabulary, 12-layer, 768-hidden, 12-heads Transformer model, even it there is some trivial variant compared to the official Transformer.
 
 ### Train and Evaluate
+To train the classifier and evaluate on the dev set, run the following cmd. The training updates the classification layer and fine-tunes the pre-trained BERT parameters.
 ```
 python example_classifier.py --do_train --do_eval
-[--bert_pretrain_config=uncased_L-12_H-768_A-12]
-[--bert_config_format=texar]
-[--config_model=config_classifier] [--config_data=config_data_mrpc]
+[--config_bert_pretrain=uncased_L-12_H-768_A-12]
+[--config_downstream=config_classifier]
+[--config_data=config_data_mrpc]
 [--output_dir=output] 
 ```
-- `bert_pretrain_config`: specify the pretrained BERT model architecture to be used
-- `bert_config_format`: The configuration format. Choose `json` if loaded from the config attached from the downloaded BERT model directory. Choose `texar` to load the customed writen configuration file for texar, which is stored in `bert_config_lib/config_model_[--bert_pretrain_config].py`.
-- `config_model`: The downstream classification model configuration is set in `config_classifier.py` 
-- `config_data`: The data configuration is set in `config_data_mrpc.py`.
-- `output_dir': `The checkpoint and summary data for tensorboard visualization will be saved in `output_dir` directory, which is `./output` by default.
+- `config_bert_pretrain`: Specifies the architecture of pre-trained BERT model to use.
+- `config_downstream`: Configuration of the downstream part. In this example, [`config_classifier.py`](https://github.com/haoransh/texar_private/blob/master/examples/bert/config_classifier.py) configs the classification layer and the optimization method.
+- `config_data`: The data configuration.
+- `output_dir`: The output path where checkpoints and summaries for tensorboard visualization are saved.
 
-You can achieve the evaluation performance shown as follows. Because the random initialization of variables, the evaluation accuracy should be reasonable is if it can exceed 0.84.
+After convergence, the evaluation performance is around the following. Due to certain randomness (e.g., random initialization of the classification layer), the evaluation accuracy is reasonable as long as it's `>0.84`.
 ```
 INFO:tensorflow:evaluation loss:0.39845473161332456 accuracy:0.8848039215686274 eval_size:408
 ```
 
 ### Restore and Test
 ```
-python example_classifier.py --do_test --saved_model=output/model.ckpt
+python example_classifier.py --do_test --checkpoint=output/model.ckpt
 ```
-The output is by default saved in `output/test_results.tsv`.
-Each line will contain output for each sample, with two fields representing the probabilities for each class.
+The output is by default saved in `output/test_results.tsv`, where each line contains output for each sample, with two fields representing the probabilities for each class.
 
 
-## Hands On tutorial
+## Hands-on tutorial
 
-For more detailed tutorial on how to use pretrained BERT model in your own dataset and task, please refer to the notebook tutorial `hands_on_tutorial_for_customed_dataset.ipynb`
+For detailed tutorial of using your own data and constructing your own model based on BERT, please refer to the notebook [`hands_on_tutorial_for_customed_dataset.ipynb`](https://github.com/haoransh/texar_private/blob/master/examples/bert/hands_on_tutorial_for_customed_dataset.ipynb)
