@@ -167,7 +167,7 @@ def main(_):
                     break
 
         if mode == 'eval':
-            cum_accu = 0.0
+            cum_acc = 0.0
             nsamples = 0
             while True:
                 try:
@@ -180,7 +180,7 @@ def main(_):
                     nsamples += rets['batch_size']
                 except tf.errors.OutOfRangeError:
                     break
-            tf.logging.info('evaluation accuracy:{}'.format(cum_accu / nsamples))
+            tf.logging.info('evaluation accuracy:{}'.format(cum_acc / nsamples))
 
         if mode == 'test':
             _all_probs = []
