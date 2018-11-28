@@ -1,19 +1,20 @@
-# Bert
+# BERT: Pre-trained models and downstream applications
 
-This is an implementation of the Google's BERT model implementation and the fine-tuning of downstream tasks.
+This is a Texar implementation of Google's BERT model, which allows to load pre-trained model parameters downloaded from the [official releaes](https://github.com/google-research/bert) and build/fine-tune arbitrary downstream applications (This example showcases BERT for sentence classification).
 
-## Quick trial
+With Texar, building the BERT model is as simple as constructing a [`TransformerEncoder`](https://texar.readthedocs.io/en/latest/code/modules.html#transformerencoder) instance. We can initialize the parameters of the TransformerEncoder using a pre-trained BERT checkpoint by calling `_init_bert_checkpoint(path_to_bert_checkpoint)`. 
 
-Here we give a simple example on how to initialize your model with BERT for sentence classification task, 
-which is described in [BERT official release](https://github.com/google-research/bert#sentence-and-sentence-pair-classification-tasks).
-We choose the experiments on Microsoft Research Paraphrase Corpus (MRPC) corpus as the showcase.
+## Quick Start
 
 ### Dataset Download
+
+This example uses the Microsoft Research Paraphrase Corpus (MRPC) corpus for sentence classification, same as in the [BERT official release](https://github.com/google-research/bert#sentence-and-sentence-pair-classification-tasks). 
+
+Download the data by
 ```
-python download_glue_data.py [--data_dir] [--tasks] [--path_to_mrpc]
+python data/download_glue_data.py [--data_dir] [--tasks] [--path_to_mrpc]
 ```
-By default, it will download GLUE datasets into `data` directory. For more information on GLUE, you can refer to 
-[gluebenchmark](https://gluebenchmark.com/tasks)
+By default, it will download the [GLUE](https://gluebenchmark.com/tasks) datasets into the `data` directory. The MRPC dataset for classification is included as part of GLUE.
 
 ### BERT Pretrain Model Download
 
