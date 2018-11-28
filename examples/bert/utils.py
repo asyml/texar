@@ -7,8 +7,9 @@ import numpy as np
 import random
 from texar.core.optimization import AdamWeightDecayOptimizer
 import pprint
+from texar import HParams
 
-def transform_bert_to_texar_config(input_json, output_config):
+def transform_bert_to_texar_config(input_json):
     config_ckpt = json.loads(
         open(input_json).read())
     configs = {}
@@ -68,15 +69,13 @@ def transform_bert_to_texar_config(input_json, output_config):
             ],
         },
     }
-    with open(output_config, 'w+') as fout:
-        pprint.pprint(configs, fout)
-    return Munch(configs)
+    return HParams(configs, default_hparams=None)
 
-def get_train_op(loss, global_step, num_train_steps, num_warmup_steps, static_lr):
-    """Creates an optimizer training op."""
-    # It is recommended that you use this optimizer for fine tuning, since this
-    # is how the model was trained (note that the Adam m/v variables are NOT
-    # loaded from init_checkpoint.)
+def get_lr(global_step, num_train_steps, num_warmup_steps, static_lr):
+    """
+    Calculate the learinng rate given global step and warmup steps.
+    The learinng rate is following a linear warmup and linear decay.
+    """
     learning_rate = tf.constant(value=static_lr,
                                 shape=[], dtype=tf.float32)
 
@@ -87,6 +86,7 @@ def get_train_op(loss, global_step, num_train_steps, num_warmup_steps, static_lr
         end_learning_rate=0.0,
         power=1.0,
         cycle=False)
+
     if num_warmup_steps:
         global_steps_int = tf.cast(global_step, tf.int32)
         warmup_steps_int = tf.constant(num_warmup_steps, dtype=tf.int32)
@@ -101,6 +101,10 @@ def get_train_op(loss, global_step, num_train_steps, num_warmup_steps, static_lr
         learning_rate = (
             (1.0 - is_warmup) * learning_rate + is_warmup * warmup_learning_rate)
 
+    return learning_rate
+
+def get_train_op(loss, global_step, learning_rate, hparams=None):
+
     optimizer = AdamWeightDecayOptimizer(
         learning_rate=learning_rate,
         weight_decay_rate=0.01,
@@ -109,8 +113,6 @@ def get_train_op(loss, global_step, num_train_steps, num_warmup_steps, static_lr
         epsilon=1e-6,
         exclude_from_weight_decay=["LayerNorm", "layer_norm", "bias"])
 
-    #if use_tpu:
-    #    optimizer = tf.contrib.tpu.CrossShardOptimizer(optimizer)
     tvars = tf.trainable_variables()
     grads = tf.gradients(loss, tvars)
 
@@ -120,12 +122,14 @@ def get_train_op(loss, global_step, num_train_steps, num_warmup_steps, static_lr
     train_op = optimizer.apply_gradients(
         zip(grads, tvars), global_step=global_step)
 
-    new_global_step = global_step + 1
-    train_op = tf.group(train_op, [global_step.assign(new_global_step)])
     return train_op
 
-def get_assignment_map_from_checkpoint(tvars, init_checkpoint):
-    """Compute the union of the current variables and checkpoint variables."""
+def _get_assignment_map_from_checkpoint(tvars, init_checkpoint):
+    """
+    Compute the union of the current variables and checkpoint variables.
+    Because the variable scope of the original BERT and Texar implementation,
+    we need to build a assignment map to match the variables.
+    """
     assignment_map = {}
     initialized_variable_names = {}
 
@@ -136,13 +140,13 @@ def get_assignment_map_from_checkpoint(tvars, init_checkpoint):
         if m is not None:
             name = m.group(1)
         name_to_variable[name] = var
-
+        print('name:%s' %var.name)
     init_vars = tf.train.list_variables(init_checkpoint)
 
     assignment_map = {
-        'bert/embeddings/word_embeddings': 'bert/embeddings/word_embeddings/word_embeddings',
-        'bert/embeddings/token_type_embeddings': 'bert/embeddings/token_type_embeddings/token_type_embeddings',
-        'bert/embeddings/position_embeddings': 'bert/encoder/position_embedder/position_embedder',
+        'bert/embeddings/word_embeddings': 'bert/word_embeddings/w',
+        'bert/embeddings/token_type_embeddings': 'bert/token_type_embeddings/w',
+        'bert/embeddings/position_embeddings': 'bert/encoder/position_embedder/w',
         'bert/embeddings/LayerNorm/beta': 'bert/encoder/LayerNorm/beta',
         'bert/embeddings/LayerNorm/gamma': 'bert/encoder/LayerNorm/gamma',
     }
@@ -182,16 +186,9 @@ def _init_bert_checkpoint(init_checkpoint):
     initialized_variable_names = []
     if init_checkpoint:
         (assignment_map, initialized_variable_names
-        ) = get_assignment_map_from_checkpoint(tvars, init_checkpoint)
+        ) = _get_assignment_map_from_checkpoint(tvars, init_checkpoint)
         tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
-    tf.logging.info("**** Trainable Variables ****")
-    for var in tvars:
-        init_string = ""
-        if var.name in initialized_variable_names:
-            init_string = ", *INIT_FROM_CKPT*"
-        tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
-                        init_string)
 def set_random_seed(myseed):
     tf.set_random_seed(myseed)
     np.random.seed(myseed)

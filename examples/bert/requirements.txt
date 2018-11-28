@@ -1,2 +1,0 @@
-munch
-tensorflow-gpu>=1.12.0

@@ -1,6 +1,6 @@
 # Bert
 
-This is an implementation of the Google's BERT implementation.
+This is an implementation of the Google's BERT model implementation and the fine-tuning of downstream tasks.
 
 ## Prerequisites
 ```
@@ -46,3 +46,7 @@ python example_classifier.py --do_test --saved_model=output/model.ckpt
 ```
 The output is by default saved in `output/test_results.tsv`.
 Each line will contain output for each sample, with two fields representing the probabilities for each class.
+
+
+
+

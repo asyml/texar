@@ -1,57 +1,27 @@
+hidden_dim = 768
+
+loss_label_confidence = 0.9
+
 opt = {
-    'learning_rate': 2e-5,
-}
-embed = {
-    'dim': 768,
-    'name': 'word_embeddings'
-}
-vocab_size = 30522
-
-token_embed = {
-    'dim': 768,
-    'name': 'token_type_embeddings'
-}
-type_vocab_size = 2
-
-encoder = {
-    'dim': 768,
-    'embedding_dropout': 0.1,
-    'multihead_attention': {
-        'dropout_rate': 0.1,
-        'name': 'self',
-        'num_heads': 12,
-        'num_units': 768,
-        'output_dim': 768,
-        'use_bias': True
+    'optimizer': {
+        'type': 'AdamWeightDecayOptimizer',
+        'kwargs': {
+            'weight_decay_rate': 0.01,
+            'beta_1': 0.9,
+            'beta_2': 0.999,
+            'epsilon': 1e-6,
+            'exclude_from_weight_decay': ['LayerNorm', 'layer_norm', 'bias']
+        }
     },
-    'name': 'encoder',
-    'num_blocks': 12,
-    'position_embedder_hparams': {
-        'dim': 768
-    },
-    'position_embedder_type': 'variables',
-    'position_size': 512,
-    'poswise_feedforward': {
-        'layers': [
-            {   'kwargs': {
-                    'activation': 'gelu',
-                    'name': 'intermediate',
-                    'units': 3072,
-                    'use_bias': True
-                },
-                'type': 'Dense'
-            },
-            {   'kwargs': {'activation': None,
-                'name': 'output',
-                'units': 768,
-                'use_bias': True
-                },
-                'type': 'Dense'
-            }
-        ]
-    },
-    'residual_dropout': 0.1,
-    'use_bert_config': True
+    'gradient_clip': {
+        'type': 'clip_by_global_norm',
+        'kwargs': {
+            'clip_norm': 1.0,
+        }
+    }
 }
 
-hidden_size = 768 # The output dimension of BERT
+# By default, we use warmup and linear decay for learinng rate
+lr = {
+    'static_lr': 2e-5,
+}
