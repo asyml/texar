@@ -86,6 +86,54 @@ class DataProcessor(object):
                 lines.append(line)
         return lines
 
+class SSTProcessor(DataProcessor):
+    """Processor for the MRPC data set (GLUE version)."""
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+                self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+                self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
+
+    def get_test_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+                self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
+
+    def get_labels(self):
+        """See base class."""
+        return ["0", "1"]
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        if set_type == 'train' or set_type == 'dev':
+            for (i, line) in enumerate(lines):
+                if i == 0:
+                    continue
+                guid = "%s-%s" % (set_type, i)
+                text_a = tokenization.convert_to_unicode(line[0])
+                # Single sentence classification, text_b doesn't exist
+                text_b = None
+                label = tokenization.convert_to_unicode(line[1])
+                examples.append(
+                    InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+        if set_type == 'test':
+            for (i, line) in enumerate(lines):
+                if i == 0:
+                    continue
+                guid = "%s-%s" % (set_type, i)
+                text_a = tokenization.convert_to_unicode(line[1])
+                # Single sentence classification, text_b doesn't exist
+                text_b = None
+                label = '0' # arbitrary set as 0
+                examples.append(
+                    InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+        return examples
 
 class XnliProcessor(DataProcessor):
     """Processor for the XNLI data set."""
@@ -327,7 +375,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     assert len(segment_ids) == max_seq_length
 
     label_id = label_map[example.label]
-    if ex_index < 5:
+    if ex_index < 1:
         tf.logging.info("*** Example ***")
         tf.logging.info("guid: %s" % (example.guid))
         tf.logging.info("tokens: %s" % " ".join(
@@ -353,11 +401,9 @@ def file_based_convert_examples_to_features(
     writer = tf.python_io.TFRecordWriter(output_file)
 
     for (ex_index, example) in enumerate(examples):
-        if ex_index % 10000 == 0:
-            tf.logging.info("Writing example %d of %d" % (ex_index, len(examples)))
 
         feature = convert_single_example(ex_index, example, label_list,
-                                                                         max_seq_length, tokenizer)
+            max_seq_length, tokenizer)
 
         def create_int_feature(values):
             f = tf.train.Feature(int64_list=tf.train.Int64List(value=list(values)))

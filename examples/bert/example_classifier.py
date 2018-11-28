@@ -102,8 +102,7 @@ def main(_):
             vocab_size=bert_config.type_vocab_size,
             hparams=bert_config.token_type_embed)
         word_embeds = embedder(input_ids, mode=mode)
-        token_type_ids = segment_ids
-        token_type_embeds = token_type_embedder(token_type_ids, mode=mode)
+        token_type_embeds = token_type_embedder(segment_ids, mode=mode)
         input_embeds = word_embeds + token_type_embeds
         encoder = TransformerEncoder(hparams=bert_config.encoder)
         output = encoder(input_embeds, input_length, mode=mode)
@@ -126,7 +125,6 @@ def main(_):
     # Losses & train_ops
     loss = tf.losses.sparse_softmax_cross_entropy(
         labels=batch["label_ids"], logits=logits)
-    #global_step = tf.train.get_or_create_global_step()
     global_step = tf.Variable(0, trainable=False)
     static_lr = config_model.lr['static_lr']
     num_train_steps = int(len(train_examples) / config_data.train_batch_size \
