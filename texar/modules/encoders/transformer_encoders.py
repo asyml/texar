@@ -23,7 +23,8 @@ import tensorflow as tf
 
 from texar.core import layers
 from texar.utils import transformer_attentions as attn
-from texar.modules.embedders.position_embedders import SinusoidsPositionEmbedder, PositionEmbedder
+from texar.modules.embedders.position_embedders import\
+    SinusoidsPositionEmbedder, PositionEmbedder
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.encoders.multihead_attention import MultiheadAttentionEncoder
 from texar.modules.networks.networks import FeedForwardNetwork
@@ -246,7 +247,6 @@ class TransformerEncoder(EncoderBase):
             'multihead_attention': {
                 'name': 'multihead_attention',
                 'num_units': 512,
-                'dropout_rate':0.1,
                 'output_dim': 512,
                 'num_heads': 8,
                 'dropout_rate': 0.1,
@@ -292,7 +292,7 @@ class TransformerEncoder(EncoderBase):
             ignore_padding = attn.attention_bias_ignore_padding(
                 inputs_padding, bias_value=-1e4)
         else:
-            ignore_padding = attn.attentionb_bias_ignore_padding(
+            ignore_padding = attn.attention_bias_ignore_padding(
                 inputs_padding)
 
         encoder_self_attention_bias = ignore_padding
@@ -372,10 +372,8 @@ class TransformerEncoder(EncoderBase):
         if not self._hparams.use_bert_config:
             x = layers.layer_normalize(x)
 
-        self.encoded_sequence = x
-
         if not self._built:
             self._add_internal_trainable_variables()
             self._built = True
 
-        return self.encoded_sequence
+        return x
