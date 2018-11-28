@@ -25,27 +25,22 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('config_data', 'config_data_mrpc', "The dataset config.")
 flags.DEFINE_string(
     "bert_config_format", "texar",
-    "The configuration format. Choose `json` if loaded from the config attached"
+    "The configuration format. Choose `json` if loaded from the config",
+    "attached from the downloaded pretrained BERT directory."
     "Choose `texar` to load the customed writen configuration file for texar")
 
 flags.DEFINE_string(
     "bert_pretrain_config", 'uncased_L-12_H-768_A-12',
-    "The config json file corresponding to the pre-trained BERT model.")
-
+    "specify the pretrained BERT model architecture to be used")
 flags.DEFINE_string(
     "config_model", "config_classifier",
     "Model configuration for downstream task and the model training")
-flags.DEFINE_float(
-    "learning_rate", 2e-5,
-    "Specify the model learining rate.")
 flags.DEFINE_string(
     "saved_model", None,
     "The complete saved checkpoint (including bert modules), which can be restored from.")
-
 flags.DEFINE_string(
     "output_dir", "output/",
     "The output directory where the model checkpoints will be written.")
-
 flags.DEFINE_bool(
     "do_lower_case", True,
     "Whether to lower case the input text. Should be True for uncased "
@@ -78,9 +73,6 @@ def main(_):
         do_lower_case=FLAGS.do_lower_case)
 
     train_examples = processor.get_train_examles(config_data.data_dir)
-    num_train_steps = int(len(train_examples) / config_data.train_batch_size \
-        * config_data.max_train_epoch)
-    num_warmup_steps = int(num_train_steps * config_data.warmup_proportion)
     train_dataset = _get_dataset(processor, tokenizer, config_data.data_dir,
         config_data.max_seq_length, config_data.train_batch_size, mode='train')
     eval_dataset = _get_dataset(processor, tokenizer, config_data.data_dir,
@@ -136,6 +128,9 @@ def main(_):
     #global_step = tf.train.get_or_create_global_step()
     global_step = tf.Variable(0, trainable=False)
     static_lr = config_model.lr['static_lr']
+    num_train_steps = int(len(train_examples) / config_data.train_batch_size \
+        * config_data.max_train_epoch)
+    num_warmup_steps = int(num_train_steps * config_data.warmup_proportion)
     lr = utils.get_lr(global_step, num_train_steps, num_warmup_steps, static_lr)
     train_op = get_train_op(
         loss,

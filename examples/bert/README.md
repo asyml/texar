@@ -2,10 +2,6 @@
 
 This is an implementation of the Google's BERT model implementation and the fine-tuning of downstream tasks.
 
-## Prerequisites
-```
-pip install -r requirements
-```
 ## Quick trial
 
 Here we give a simple example on how to initialize your model with BERT for sentence classification task, 
@@ -24,6 +20,7 @@ By default, it will download GLUE datasets into `glue_data` directory. For more 
 ```
 cd bert_released_models
 sh download_model.sh
+cd ..
 ```
 By default, it will download the `uncased_L-12_H-768_A-12.zip` and unzip it the same directory.
 In the `bert_released_models/uncased_L-12_H-768_A-12.zip` directory, you may find five files.
@@ -34,13 +31,16 @@ In the `bert_released_models/uncased_L-12_H-768_A-12.zip` directory, you may fin
 python example_classifier.py --do_train --do_eval
 [--bert_pretrain_config=uncased_L-12_H-768_A-12]
 [--bert_config_format=texar]
-[--config_model=config_classifier]
-[--output_dir=output] [--config_data=config_data_mrpc]
+[--config_model=config_classifier] [--config_data=config_data_mrpc]
+[--output_dir=output] 
 ```
-By default, we use `uncased_L-12_H-768_A-12` BERT pretrained model to build the transformer, whose configuration file is in 
-`bert_config_lib/config_model_uncased_L-12_H-768_A-12.py` writtern in Texar style.
-The downstream classification model configuration is set in `config_classifier.py` and the data configuration is set in `config_data_mrpc.py`.
-The checkpoint and summary data for tensorboard visualization will be saved in `output_dir` directory, which is `./output` by default.
+- `bert_pretrain_config`: specify the pretrained BERT model architecture to be used
+-`bert_config_format`: The configuration format. Choose `json` if loaded from the config attached from the downloaded BERT model directory. Choose `texar` to load the customed writen configuration file for texar, which is stored in `bert_config_lib/config_model_[--bert_pretrain_config].py`.
+- `config_model`: The downstream classification model configuration is set in `config_classifier.py` 
+- `config_data`: The data configuration is set in `config_data_mrpc.py`.
+- `output_dir': `The checkpoint and summary data for tensorboard visualization will be saved in `output_dir` directory, which is `./output` by default.
+
+You can achieve the evaluation performance shown as follows.
 ```
 INFO:tensorflow:evaluation loss:0.39845473161332456 accuracy:0.8848039215686274 eval_size:408
 ```
