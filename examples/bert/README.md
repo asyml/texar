@@ -20,10 +20,10 @@ By default, it will download the [GLUE](https://gluebenchmark.com/tasks) dataset
 ### BERT Pretrain Model Download
 
 ```
-sh bert_released_models/download_model.sh
+sh bert_pretrained_models/download_model.sh
 ```
 By default, it will download the `uncased_L-12_H-768_A-12.zip` and unzip it the same directory.
-In the `bert_released_models/uncased_L-12_H-768_A-12.zip` directory, you may find five files.
+In the `bert_pretrained_models/uncased_L-12_H-768_A-12.zip` directory, you may find five files.
 - `bert-config.json` Model configurations for the BERT. Generally, it's a uncased-vocabulary, 12-layer, 768-hidden, 12-heads Transformer model, even it there is some trivial variant compared to the official Transformer.
 
 ### Train and Evaluate
