@@ -142,7 +142,7 @@ def main(_):
         encoder = TransformerEncoder(hparams=bert_config.encoder)
         output_layer = encoder(input_embeds, input_length, mode=mode)
 
-    # Downstream model configuration
+        # Downstream model configuration
         with tf.variable_scope("pooler"):
             # Use the projection of first token hidden vector of BERT output
             # as the representation of the sentence
