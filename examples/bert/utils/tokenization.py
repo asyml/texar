@@ -1,4 +1,6 @@
 # coding=utf-8
+# Copied from google BERT repo.
+
 # Copyright 2018 The Google AI Language Team Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,7 +27,9 @@ import tensorflow as tf
 
 
 def convert_to_unicode(text):
-    """Converts `text` to Unicode (if it's not already), assuming utf-8 input."""
+    """
+    Converts `text` to Unicode (if it's not already), assuming utf-8 input.
+    """
     if six.PY3:
         if isinstance(text, str):
             return text
@@ -212,14 +216,16 @@ class BasicTokenizer(object):
 
     def _is_chinese_char(self, cp):
         """Checks whether CP is the codepoint of a CJK character."""
-        # This defines a "chinese character" as anything in the CJK Unicode block:
-        #     https://en.wikipedia.org/wiki/CJK_Unified_Ideographs_(Unicode_block)
+        # This defines a "chinese character" as anything in the CJK Unicode
+        # block:
+        # https://en.wikipedia.org/wiki/CJK_Unified_Ideographs_(Unicode_block)
         #
-        # Note that the CJK Unicode block is NOT all Japanese and Korean characters,
-        # despite its name. The modern Korean Hangul alphabet is a different block,
-        # as is Japanese Hiragana and Katakana. Those alphabets are used to write
-        # space-separated words, so they are not treated specially and handled
-        # like the all of the other languages.
+        # Note that the CJK Unicode block is NOT all Japanese and Korean
+        # characters, despite its name.
+        # The modern Korean Hangul alphabet is a different block,
+        # as is Japanese Hiragana and Katakana. Those alphabets are used to
+        # write space-separated words, so they are not treated specially and
+        # handled like the all of the other languages.
         if ((cp >= 0x4E00 and cp <= 0x9FFF) or    #
                 (cp >= 0x3400 and cp <= 0x4DBF) or    #
                 (cp >= 0x20000 and cp <= 0x2A6DF) or    #
@@ -263,10 +269,9 @@ class WordpieceTokenizer(object):
         For example:
             input = "unaffable"
             output = ["un", "##aff", "##able"]
-
         Args:
-            text: A single token or whitespace separated tokens. This should have
-                already been passed through `BasicTokenizer.
+            text: A single token or whitespace separated tokens.
+                This should have already been passed through `BasicTokenizer.
 
         Returns:
             A list of wordpiece tokens.
@@ -346,4 +351,3 @@ def _is_punctuation(char):
     if cat.startswith("P"):
         return True
     return False
-

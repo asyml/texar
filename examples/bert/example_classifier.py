@@ -9,8 +9,7 @@ import os
 import importlib
 import tensorflow as tf
 import texar as tx
-from texar.modules import TransformerEncoder, TransformerDecoder
-from texar.utils import transformer_utils
+from texar.modules import TransformerEncoder
 from texar.utils.mode import is_train_mode
 from texar.core import get_train_op
 from utils import data_utils, model_utils, tokenization
@@ -35,7 +34,8 @@ flags.DEFINE_string(
     "Model configuration for downstream task and the model training")
 flags.DEFINE_string(
     "saved_model", None,
-    "The complete saved checkpoint (including bert modules), which can be restored from.")
+    "The complete saved checkpoint (including bert modules), "
+    "which can be restored from.")
 flags.DEFINE_string(
     "output_dir", "output/",
     "The output directory where the model checkpoints will be written.")
@@ -46,18 +46,23 @@ flags.DEFINE_bool(
 
 flags.DEFINE_bool("do_train", False, "Whether to run training.")
 flags.DEFINE_bool("do_eval", False, "Whether to run eval on the dev set.")
-flags.DEFINE_bool("do_test", False, "Whether to run prediction on the test set.")
+flags.DEFINE_bool("do_test", False, "Whether to run test on the test set.")
 
 config_data = importlib.import_module(FLAGS.config_data)
 config_model = importlib.import_module(FLAGS.config_model)
+
 def main(_):
+    """
+    Define the routine to run the model pipeline
+    """
     tf.logging.set_verbosity(tf.logging.INFO)
     tf.gfile.MakeDirs(FLAGS.output_dir)
 
     # load BERT Model Configuration
     if FLAGS.bert_config_format == "json":
         bert_config = model_utils.transform_bert_to_texar_config(
-            'bert_released_models/%s/bert_config.json'%FLAGS.bert_pretrain_config)
+            'bert_released_models/%s/bert_config.json'%
+            FLAGS.bert_pretrain_config)
     elif FLAGS.bert_config_format == 'texar':
         bert_config = importlib.import_module(
             'bert_config_lib.config_model_%s' % (FLAGS.bert_pretrain_config))
@@ -67,19 +72,19 @@ def main(_):
     num_labels = len(processor.get_labels())
     tokenizer = tokenization.FullTokenizer(
         vocab_file='bert_released_models/%s/vocab.txt'
-            %(FLAGS.bert_pretrain_config),
+        %(FLAGS.bert_pretrain_config),
         do_lower_case=FLAGS.do_lower_case)
 
     train_examples = processor.get_train_examples(config_data.data_dir)
-    train_dataset = data_utils.get_dataset(processor, tokenizer, config_data.data_dir,
-        config_data.max_seq_length, config_data.train_batch_size,
-        mode='train', output_dir=FLAGS.output_dir)
-    eval_dataset = data_utils.get_dataset(processor, tokenizer, config_data.data_dir,
-        config_data.max_seq_length, config_data.eval_batch_size,
-        mode='eval', output_dir=FLAGS.output_dir)
-    test_dataset = data_utils.get_dataset(processor, tokenizer, config_data.data_dir,
-        config_data.max_seq_length, config_data.test_batch_size,
-        mode='test', output_dir=FLAGS.output_dir)
+    train_dataset = data_utils.get_dataset(processor, tokenizer, \
+        config_data.data_dir, config_data.max_seq_length, \
+        config_data.train_batch_size, mode='train', output_dir=FLAGS.output_dir)
+    eval_dataset = data_utils.get_dataset(processor, tokenizer, \
+        config_data.data_dir, config_data.max_seq_length, \
+        config_data.eval_batch_size, mode='eval', output_dir=FLAGS.output_dir)
+    test_dataset = data_utils.get_dataset(processor, tokenizer,\
+        config_data.data_dir, config_data.max_seq_length, \
+        config_data.test_batch_size, mode='test', output_dir=FLAGS.output_dir)
     iterator = tx.data.FeedableDataIterator({
         'train': train_dataset,
         'eval': eval_dataset,
@@ -115,9 +120,9 @@ def main(_):
             bert_sent_output = tf.layers.dense(
                 bert_sent_hidden, config_model.hidden_dim, activation=tf.tanh)
             output = tf.layers.dropout(bert_sent_output, rate=0.1,
-            training=is_train_mode(mode))
+                                       training=is_train_mode(mode))
 
-    logits = tf.layers.dense(output, num_labels,
+    logits = tf.layers.dense(output, num_labels,\
         kernel_initializer=tf.truncated_normal_initializer(stddev=0.02))
     probabilities = tf.nn.softmax(logits, axis=-1)
     preds = tf.argmax(logits, axis=-1, output_type=tf.int32)
@@ -130,7 +135,8 @@ def main(_):
     num_train_steps = int(len(train_examples) / config_data.train_batch_size \
         * config_data.max_train_epoch)
     num_warmup_steps = int(num_train_steps * config_data.warmup_proportion)
-    lr = model_utils.get_lr(global_step, num_train_steps, num_warmup_steps, static_lr)
+    lr = model_utils.get_lr(global_step, num_train_steps, num_warmup_steps,\
+        static_lr)
     train_op = get_train_op(
         loss,
         global_step=global_step,
@@ -189,22 +195,23 @@ def main(_):
                         iterator.handle: iterator.get_handle(sess, 'test'),
                         tx.context.global_mode(): tf.estimator.ModeKeys.PREDICT,
                     }
-                    _probs = sess.run(probs, feed_dict=feed_dict)
+                    _probs = sess.run(probabilities, feed_dict=feed_dict)
                     _all_probs.extend(_probs.tolist())
-                except:
+                except tf.errors.OutOfRangeError:
                     break
             output_file = os.path.join(FLAGS.output_dir, "test_results.tsv")
             with tf.gfile.GFile(output_file, "w") as writer:
                 for prediction in _all_probs:
                     output_line = "\t".join(
-                        str(class_probability) for class_probability in prediction) + "\n"
+                        str(_prob) for _prob in prediction) + "\n"
                     writer.write(output_line)
 
     with tf.Session() as sess:
         # Load Pretrained BERT model parameters
-        init_checkpoint='bert_released_models/%s/bert_model.ckpt' % FLAGS.bert_pretrain_config
+        init_checkpoint = 'bert_released_models/%s/bert_model.ckpt' %\
+            FLAGS.bert_pretrain_config
         if init_checkpoint:
-            model_utils._init_bert_checkpoint(init_checkpoint)
+            model_utils.init_bert_checkpoint(init_checkpoint)
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())

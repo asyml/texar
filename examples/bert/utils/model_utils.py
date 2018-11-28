@@ -1,13 +1,17 @@
+"""
+Model utility functions
+"""
 import json
 import collections
 import re
+import random
 import tensorflow as tf
 import numpy as np
-import random
-from texar.core.optimization import AdamWeightDecayOptimizer
-import pprint
 from texar import HParams
 
+"""
+Load the Json config file and transform it into Texar style configuration.
+"""
 def transform_bert_to_texar_config(input_json):
     config_ckpt = json.loads(
         open(input_json).read())
@@ -26,7 +30,6 @@ def transform_bert_to_texar_config(input_json):
 
     configs['encoder'] = {
         'name': 'encoder',
-        'dim': hidden_dim,
         'position_embedder_type': 'variables',
         'position_size': config_ckpt['max_position_embeddings'],
         'position_embedder_hparams': {
@@ -97,8 +100,8 @@ def get_lr(global_step, num_train_steps, num_warmup_steps, static_lr):
         warmup_learning_rate = static_lr * warmup_percent_done
 
         is_warmup = tf.cast(global_steps_int < warmup_steps_int, tf.float32)
-        learning_rate = (
-            (1.0 - is_warmup) * learning_rate + is_warmup * warmup_learning_rate)
+        learning_rate = ((1.0 - is_warmup) * learning_rate\
+            +is_warmup * warmup_learning_rate)
 
     return learning_rate
 
@@ -123,7 +126,8 @@ def _get_assignment_map_from_checkpoint(tvars, init_checkpoint):
     assignment_map = {
         'bert/embeddings/word_embeddings': 'bert/word_embeddings/w',
         'bert/embeddings/token_type_embeddings': 'bert/token_type_embeddings/w',
-        'bert/embeddings/position_embeddings': 'bert/encoder/position_embedder/w',
+        'bert/embeddings/position_embeddings':
+            'bert/encoder/position_embedder/w',
         'bert/embeddings/LayerNorm/beta': 'bert/encoder/LayerNorm/beta',
         'bert/embeddings/LayerNorm/gamma': 'bert/encoder/LayerNorm/gamma',
     }
@@ -135,22 +139,30 @@ def _get_assignment_map_from_checkpoint(tvars, init_checkpoint):
         if check_name.startswith('bert'):
             if check_name.startswith('bert/embeddings'):
                 continue
-            model_name = re.sub('layer_\d+/output/dense',
-                                lambda x: x.group(0).replace('output/dense', 'ffn/output'),
-                                check_name)
+            model_name = re.sub(
+                'layer_\d+/output/dense',
+                lambda x: x.group(0).replace('output/dense', 'ffn/output'),
+                check_name)
             if model_name == check_name:
-                model_name = re.sub('layer_\d+/output/LayerNorm',
-                                    lambda x: x.group(0).replace('output/LayerNorm', 'ffn/LayerNorm'),
-                                    check_name)
+                model_name = re.sub(
+                    'layer_\d+/output/LayerNorm',
+                    lambda x: x.group(0).replace('output/LayerNorm',
+                                                 'ffn/LayerNorm'),
+                    check_name)
             if model_name == check_name:
-                model_name = re.sub('layer_\d+/intermediate/dense',
-                                    lambda x: x.group(0).replace('intermediate/dense', 'ffn/intermediate'),
-                                    check_name)
+                model_name = re.sub(
+                    'layer_\d+/intermediate/dense',
+                    lambda x: x.group(0).replace('intermediate/dense',
+                                                 'ffn/intermediate'),
+                    check_name)
             if model_name == check_name:
-                model_name = re.sub('attention/output/dense', 'attention/self/output', check_name)
+                model_name = re.sub('attention/output/dense',
+                                    'attention/self/output', check_name)
             if model_name == check_name:
-                model_name = check_name.replace('attention/output/LayerNorm', 'output/LayerNorm')
-            assert model_name in name_to_variable.keys(), 'model name:{} not exists!'.format(model_name)
+                model_name = check_name.replace('attention/output/LayerNorm',
+                                                'output/LayerNorm')
+            assert model_name in name_to_variable.keys(),\
+                'model name:{} not exists!'.format(model_name)
 
             assignment_map[check_name] = model_name
             initialized_variable_names[model_name] = 1
@@ -158,7 +170,7 @@ def _get_assignment_map_from_checkpoint(tvars, init_checkpoint):
 
     return (assignment_map, initialized_variable_names)
 
-def _init_bert_checkpoint(init_checkpoint):
+def init_bert_checkpoint(init_checkpoint):
     tvars = tf.trainable_variables()
 
     initialized_variable_names = []
