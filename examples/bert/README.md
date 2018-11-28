@@ -31,12 +31,16 @@ In the `bert_released_models/uncased_L-12_H-768_A-12.zip` directory, you may fin
 
 ### Train and Evaluate
 ```
-python example_classifier.py --do_train --do_eval --bert_config_format=texar [--output_dir] [--config_data=config_data_mrpc]
+python example_classifier.py --do_train --do_eval
+[--bert_pretrain_config=uncased_L-12_H-768_A-12]
+[--bert_config_format=texar]
 [--config_model=config_classifier]
+[--output_dir=output] [--config_data=config_data_mrpc]
 ```
-
-The checkpoint and summary data for tensorboard visualization will be saved in `output_dir`
-directory, which is `./output` by default.
+By default, we use `uncased_L-12_H-768_A-12` BERT pretrained model to build the transformer, whose configuration file is in 
+`bert_config_lib/config_model_uncased_L-12_H-768_A-12.py` writtern in Texar style.
+The downstream classification model configuration is set in `config_classifier.py` and the data configuration is set in `config_data_mrpc.py`.
+The checkpoint and summary data for tensorboard visualization will be saved in `output_dir` directory, which is `./output` by default.
 ```
 INFO:tensorflow:evaluation loss:0.39845473161332456 accuracy:0.8848039215686274 eval_size:408
 ```
@@ -47,7 +51,3 @@ python example_classifier.py --do_test --saved_model=output/model.ckpt
 ```
 The output is by default saved in `output/test_results.tsv`.
 Each line will contain output for each sample, with two fields representing the probabilities for each class.
-
-
-
-
