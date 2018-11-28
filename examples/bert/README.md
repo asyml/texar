@@ -10,7 +10,9 @@ We choose the experiments on Microsoft Research Paraphrase Corpus (MRPC) corpus 
 
 ### Dataset Download
 ```
-python download_glue_data.py [--data_dir] [--tasks] [--path_to_mrpc]
+cd data
+python download_glue_data.py [--data_dir='./'] [--tasks] [--path_to_mrpc]
+cd ..
 ```
 By default, it will download GLUE datasets into `data` directory. For more information on GLUE, you can refer to 
 [gluebenchmark](https://gluebenchmark.com/tasks)
