@@ -12,14 +12,14 @@ This example uses the Microsoft Research Paraphrase Corpus (MRPC) corpus for sen
 
 Download the data by
 ```
-python download_glue_data.py --tasks=MRPC
+python data/download_glue_data.py --tasks=MRPC
 ```
 By default, it will download the MRPC dataset into the `data` directory. FYI, the MRPC dataset part of the [GLUE](https://gluebenchmark.com/tasks) dataset collection.
 
 ### Download BERT Pre-train Model
 
 ```
-sh download_model.sh
+sh bert_pretrained_models/download_model.sh
 ```
 By default, it will download the `uncased_L-12_H-768_A-12.zip` and unzip it the same directory.
 In the `bert_released_models/uncased_L-12_H-768_A-12.zip` directory, you may find five files.
