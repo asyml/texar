@@ -38,12 +38,12 @@ python example_classifier.py --do_train --do_eval
 [--output_dir=output] 
 ```
 - `bert_pretrain_config`: specify the pretrained BERT model architecture to be used
--`bert_config_format`: The configuration format. Choose `json` if loaded from the config attached from the downloaded BERT model directory. Choose `texar` to load the customed writen configuration file for texar, which is stored in `bert_config_lib/config_model_[--bert_pretrain_config].py`.
+- `bert_config_format`: The configuration format. Choose `json` if loaded from the config attached from the downloaded BERT model directory. Choose `texar` to load the customed writen configuration file for texar, which is stored in `bert_config_lib/config_model_[--bert_pretrain_config].py`.
 - `config_model`: The downstream classification model configuration is set in `config_classifier.py` 
 - `config_data`: The data configuration is set in `config_data_mrpc.py`.
 - `output_dir': `The checkpoint and summary data for tensorboard visualization will be saved in `output_dir` directory, which is `./output` by default.
 
-You can achieve the evaluation performance shown as follows.
+You can achieve the evaluation performance shown as follows. Because the random initialization of variables, the evaluation accuracy should be reasonable is if it can exceed 0.84.
 ```
 INFO:tensorflow:evaluation loss:0.39845473161332456 accuracy:0.8848039215686274 eval_size:408
 ```
