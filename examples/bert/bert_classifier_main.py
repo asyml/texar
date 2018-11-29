@@ -31,7 +31,9 @@ from utils import data_utils, model_utils, tokenization
 flags = tf.flags
 
 FLAGS = flags.FLAGS
-
+flags.DEFINE_string(
+    "task", "mrpc",
+    "The task ro tun experiment on")
 flags.DEFINE_string(
     "config_bert_pretrain", 'uncased_L-12_H-768_A-12',
     "The architecture of pre-trained BERT model to use.")
@@ -82,7 +84,15 @@ def main(_):
         raise ValueError('Unknown config_format_bert.')
 
     # Loads data
-    processor = data_utils.MrpcProcessor()
+    processors = {
+        "cola": data_utils.ColaProcessor,
+        "mnli": data_utils.MnliProcessor,
+        "mrpc": data_utils.MrpcProcessor,
+        "xnli": data_utils.XnliProcessor,
+        'ssn': data_utils.SSNProcessor
+    }
+
+    processor = processors(FLAGS.task.lower())
 
     num_classes = len(processor.get_labels())
     num_train_data = len(processor.get_train_examples(config_data.data_dir))
@@ -110,20 +120,24 @@ def main(_):
     input_length = tf.reduce_sum(1 - tf.to_int32(tf.equal(input_ids, 0)),
                                  axis=1)
 
-    # Builds BERT (Transformer)
+    # Builds BERT (Transformel)
     with tf.variable_scope('bert'):
         embedder = tx.modules.WordEmbedder(
             vocab_size=bert_config.vocab_size,
             hparams=bert_config.embed)
         word_embeds = embedder(input_ids)
 
-        token_type_embedder = tx.modules.WordEmbedder(
+        # create the segment embeddings for each type of of tokens.
+        # For sentence pair classification, each sentence pair will be
+        # assigneddifferent segment embedding based on their segment ids.
+        segment_embedder = tx.modules.WordEmbedder(
             vocab_size=bert_config.type_vocab_size,
-            hparams=bert_config.token_type_embed)
-        token_type_embeds = token_type_embedder(segment_ids)
+            hparams=bert_config.segment_embed)
+        segment_embeds = segment_embedder(segment_ids)
 
-        input_embeds = word_embeds + token_type_embeds
+        input_embeds = word_embeds + segment_embeds
 
+        # The encoder used in BERT (Transformer Encoder)
         encoder = tx.modules.TransformerEncoder(hparams=bert_config.encoder)
         output = encoder(input_embeds, input_length)
 

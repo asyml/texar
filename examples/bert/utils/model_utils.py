@@ -23,7 +23,7 @@ def transform_bert_to_texar_config(input_json):
         'name': 'word_embeddings',
         'dim': hidden_dim}
     configs['vocab_size'] = config_ckpt['vocab_size']
-    configs['token_type_embed'] = {
+    configs['segment_embed'] = {
         'name': 'token_type_embeddings',
         'dim': hidden_dim}
     configs['type_vocab_size'] = config_ckpt['type_vocab_size']
