@@ -255,8 +255,8 @@ class TransformerDecoder(ModuleBase):
         """Returns a function that accepts the decoded tokens and related
         decoding status, and returns the logits of next token.
         """
-        channels = shape_list(self._embedding)[-1]
-        timing_signal = self.position_embedder(max_length, channels)
+        positions = tf.expand_dims(tf.range(max_length, dtype=tf.int32), 0)
+        timing_signal = self.position_embedder(positions)
         #you can use the comment to prevent the model to decode <UNK> token
         #biases = np.ones([1, self._vocab_size])
         #biases[0][3] = -np.inf
@@ -423,7 +423,8 @@ class TransformerDecoder(ModuleBase):
             target_inputs = inputs * self._hparams.dim**0.5
 
             _, lengths, channels = shape_list(target_inputs)
-            pos_embeds = self.position_embedder(lengths, channels)
+            positions = tf.expand_dims(tf.range(lengths, dtype=tf.int32), 0)
+            pos_embeds = self.position_embedder(positions)
 
             inputs = target_inputs + pos_embeds
 
