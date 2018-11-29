@@ -33,7 +33,7 @@ flags = tf.flags
 FLAGS = flags.FLAGS
 flags.DEFINE_string(
     "task", "mrpc",
-    "The task ro tun experiment on")
+    "The task to run experiment on")
 flags.DEFINE_string(
     "config_bert_pretrain", 'uncased_L-12_H-768_A-12',
     "The architecture of pre-trained BERT model to use.")
