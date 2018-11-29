@@ -127,7 +127,6 @@ def main():
             _mle_loss = transformer_utils.smoothing_cross_entropy(
                 outputs.logits, label, vocab_size, config_model.loss_label_confidence)
             mle_losses.append(_mle_loss)
-            print('trainable_variables:{}'.format(len(tf.trainable_variables())))
 
     mle_losses = tf.concat(mle_losses, axis=0)
     mle_loss = tf.reduce_sum(mle_losses * is_targets) / tf.reduce_sum(is_targets)
@@ -178,7 +177,6 @@ def main():
         else:
             # Uses the best sample by beam search
             inferred_ids = predictions['sample_id'][:, :, 0]
-    print('trainable_variables:{}'.format(len(tf.trainable_variables())))
 
     saver = tf.train.Saver(max_to_keep=5)
     best_results = {'score': 0, 'epoch': -1}

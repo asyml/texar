@@ -1,5 +1,5 @@
 batch_size = 4096
-n_gpu = 2
+n_gpu = 1
 test_batch_size = 64
 
 max_train_epoch = 20
