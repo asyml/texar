@@ -58,7 +58,7 @@ The output is by default saved in `output/test_results.tsv`, where each line con
 
 ## Try on other Datasets
 
-You can change the task flag and define data configurations (like in `config_data_mcpc.py`) to run experiment on different tasks.
+You can change the task flag and define data configurations (like in `config_data_mrpc.py`) to run experiment on different tasks.
 For example, try this command to run on SST (Stanford Sentiment Treebank) dataset with other settings as default.
 ```
 python bert_classifier_main.py --do_train --do_eval --task=sst --config_data=config_data_sst
