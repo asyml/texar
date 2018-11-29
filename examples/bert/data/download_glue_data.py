@@ -115,7 +115,7 @@ def get_tasks(task_names):
 
 def main(arguments):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', help='directory to save data to', type=str, default='./')
+    parser.add_argument('--data_dir', help='directory to save data to', type=str, default='./data')
     parser.add_argument('--tasks', help='tasks to download data for as a comma separated string',
                         type=str, default='all')
     parser.add_argument('--path_to_mrpc', help='path to directory containing extracted MRPC data, msr_paraphrase_train.txt and msr_paraphrase_text.txt',

@@ -22,13 +22,13 @@ By default, it will download the MRPC dataset into the `data` directory. FYI, th
 sh bert_pretrained_models/download_model.sh
 ```
 By default, it will download the `uncased_L-12_H-768_A-12.zip` and unzip it the same directory.
-In the `bert_released_models/uncased_L-12_H-768_A-12.zip` directory, you may find five files.
+In the `bert_pretrained_models/uncased_L-12_H-768_A-12.zip` directory, you may find five files.
 - `bert-config.json` Model configurations for the BERT. Generally, it's a uncased-vocabulary, 12-layer, 768-hidden, 12-heads Transformer model, even it there is some trivial variant compared to the official Transformer.
 
 ### Train and Evaluate
 To train the classifier and evaluate on the dev set, run the following cmd. The training updates the classification layer and fine-tunes the pre-trained BERT parameters.
 ```
-python example_classifier.py --do_train --do_eval
+python bert_classifier_main.py --do_train --do_eval
 [--config_bert_pretrain=uncased_L-12_H-768_A-12]
 [--config_downstream=config_classifier]
 [--config_data=config_data_mrpc]
@@ -46,7 +46,7 @@ INFO:tensorflow:evaluation loss:0.39845473161332456 accuracy:0.8848039215686274 
 
 ### Restore and Test
 ```
-python example_classifier.py --do_test --checkpoint=output/model.ckpt
+python bert_classifier_main.py --do_test --checkpoint=output/model.ckpt
 ```
 The output is by default saved in `output/test_results.tsv`, where each line contains output for each sample, with two fields representing the probabilities for each class.
 
