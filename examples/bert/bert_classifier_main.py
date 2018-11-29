@@ -33,7 +33,8 @@ flags = tf.flags
 FLAGS = flags.FLAGS
 flags.DEFINE_string(
     "task", "mrpc",
-    "The task ro tun experiment on")
+    "The task to run experiment on. One of "
+    "{'cola', 'mnli', 'mrpc', 'xnli', 'sst'}.")
 flags.DEFINE_string(
     "config_bert_pretrain", 'uncased_L-12_H-768_A-12',
     "The architecture of pre-trained BERT model to use.")
@@ -120,16 +121,14 @@ def main(_):
     input_length = tf.reduce_sum(1 - tf.to_int32(tf.equal(input_ids, 0)),
                                  axis=1)
 
-    # Builds BERT (Transformel)
+    # Builds BERT
     with tf.variable_scope('bert'):
         embedder = tx.modules.WordEmbedder(
             vocab_size=bert_config.vocab_size,
             hparams=bert_config.embed)
         word_embeds = embedder(input_ids)
 
-        # create the segment embeddings for each type of of tokens.
-        # For sentence pair classification, each sentence pair will be
-        # assigneddifferent segment embedding based on their segment ids.
+        # Creates segment embeddings for each type of tokens.
         segment_embedder = tx.modules.WordEmbedder(
             vocab_size=bert_config.type_vocab_size,
             hparams=bert_config.segment_embed)
@@ -137,7 +136,7 @@ def main(_):
 
         input_embeds = word_embeds + segment_embeds
 
-        # The encoder used in BERT (Transformer Encoder)
+        # The BERT model (a TransformerEncoder)
         encoder = tx.modules.TransformerEncoder(hparams=bert_config.encoder)
         output = encoder(input_embeds, input_length)
 

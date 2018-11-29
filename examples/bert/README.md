@@ -8,9 +8,9 @@ With Texar, building the BERT model is as simple as creating a [`TransformerEnco
 
 ### Download Dataset
 
-This example uses the Microsoft Research Paraphrase Corpus (MRPC) corpus for sentence classification, same as in the [BERT official release](https://github.com/google-research/bert#sentence-and-sentence-pair-classification-tasks). 
+We explain the use of the example code based on the Microsoft Research Paraphrase Corpus (MRPC) corpus for sentence classification. See 
 
-Download the data by
+Download the data with the following cmd
 ```
 python data/download_glue_data.py --tasks=MRPC
 ```
@@ -56,10 +56,12 @@ python bert_classifier_main.py --do_test --checkpoint=output/model.ckpt
 The output is by default saved in `output/test_results.tsv`, where each line contains the predicted label for each sample.
 
 
-## Try on other Datasets
+## Use other datasets/tasks
 
-You can change the task flag and define data configurations (like in `config_data_mrpc.py`) to run experiment on different tasks.
-For example, try this command to run on SST (Stanford Sentiment Treebank) dataset with other settings as default.
+`bert_classifier_main.py` also support other datasets/tasks. To do this, specify a different value to the `--task` flag, and use a corresponding data configuration file. 
+
+For example, use the following commands to download the SST (Stanford Sentiment Treebank) dataset and run for sentence classification.
 ```
+python data/download_glue_data.py --tasks=SST
 python bert_classifier_main.py --do_train --do_eval --task=sst --config_data=config_data_sst
 ```
