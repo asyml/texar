@@ -185,9 +185,9 @@ def main(_):
                         tx.global_mode(): tf.estimator.ModeKeys.TRAIN,
                     }
                     rets = sess.run(fetches, feed_dict)
-
-                    tf.logging.info(
-                        'step:%d loss:%f' % (rets['step'], rets['loss']))
+                    if rets['step'] % 50 == 0:
+                        tf.logging.info(
+                            'step:%d loss:%f' % (rets['step'], rets['loss']))
                     if rets['step'] == num_train_steps:
                         break
                 except tf.errors.OutOfRangeError:
