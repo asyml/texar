@@ -51,7 +51,3 @@ python bert_classifier_main.py --do_test --checkpoint=output/model.ckpt
 ```
 The output is by default saved in `output/test_results.tsv`, where each line contains the predicted label for each sample.
 
-
-## Hands-on tutorial
-
-For detailed tutorial of using your own data and constructing your own model based on BERT, please refer to the notebook [`hands_on_tutorial_for_customed_dataset.ipynb`](https://github.com/haoransh/texar_private/blob/master/examples/bert/hands_on_tutorial_for_customed_dataset.ipynb)
