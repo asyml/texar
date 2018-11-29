@@ -53,6 +53,7 @@ INFO:tensorflow:dev accu: 0.8676470588235294
 ``
 python bert_classifier_main.py --do_test --checkpoint=output/model.ckpt
 ``
+
 The output is by default saved in `output/test_results.tsv`, where each line contains the predicted label for each sample.
 
 
