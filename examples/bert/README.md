@@ -41,14 +41,14 @@ python bert_classifier_main.py --do_train --do_eval
 
 After convergence, the evaluation performance is around the following. Due to certain randomness (e.g., random initialization of the classification layer), the evaluation accuracy is reasonable as long as it's `>0.84`.
 ```
-INFO:tensorflow:evaluation loss:0.39845473161332456 accuracy:0.8848039215686274 eval_size:408
+INFO:tensorflow:dev accu: 0.8676470588235294
 ```
 
 ### Restore and Test
 ```
 python bert_classifier_main.py --do_test --checkpoint=output/model.ckpt
 ```
-The output is by default saved in `output/test_results.tsv`, where each line contains output for each sample, with two fields representing the probabilities for each class.
+The output is by default saved in `output/test_results.tsv`, where each line contains the predicted label for each sample.
 
 
 ## Hands-on tutorial
