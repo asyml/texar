@@ -33,7 +33,7 @@ __all__ = [
     'attention_bias_local',
 ]
 
-def attention_bias_lower_triangle(length):
+def attention_bias_lower_triangle(length, bias_value=-1e18):
     """Create an bias tensor to be added to attention logits.
     Allows a query to attend to all positions up to and including its own.
 
@@ -43,9 +43,9 @@ def attention_bias_lower_triangle(length):
     Returns:
         a `Tensor` with shape [1, 1, length, length].
     """
-    return attention_bias_local(length, -1, 0)
+    return attention_bias_local(length, -1, 0, bias_value)
 
-def attention_bias_local(length, max_backward, max_forward):
+def attention_bias_local(length, max_backward, max_forward, bias_value=-1e18):
     """Create an bias tensor to be added to attention logits.
     A position may attend to positions at most max_distance from it,
     forward and backwards.
@@ -69,9 +69,9 @@ def attention_bias_local(length, max_backward, max_forward):
         max_backward,
         max_forward,
         out_shape=[1, 1, length, length])
-    return -1e18 * (1.0 - band)
+    return bias_value * (1.0 - band)
 
-def attention_bias_ignore_padding(memory_padding):
+def attention_bias_ignore_padding(memory_padding, bias_value=-1e18):
     """Create an bias tensor to be added to attention logits.
 
     Args:
@@ -82,7 +82,7 @@ def attention_bias_ignore_padding(memory_padding):
         each dim corresponding to batch_size, num_heads, queries_len,
         memory_length
     """
-    ret = memory_padding * -1e18
+    ret = memory_padding * bias_value
     return tf.expand_dims(tf.expand_dims(ret, axis=1), axis=1)
 
 def _ones_matrix_band_part(rows, cols, num_lower, num_upper,

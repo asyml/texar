@@ -40,7 +40,6 @@ from texar.utils.shapes import shape_list, mask_sequences
 from texar.utils import transformer_attentions as attn
 from texar.utils.mode import is_train_mode
 
-
 __all__ = [
     "TransformerDecoderOutput",
     "TransformerDecoder"
@@ -256,15 +255,17 @@ class TransformerDecoder(ModuleBase):
         """Returns a function that accepts the decoded tokens and related
         decoding status, and returns the logits of next token.
         """
-        channels = shape_list(self._embedding)[-1]
-        timing_signal = self.position_embedder(max_length, channels)
-
+        positions = tf.expand_dims(tf.range(max_length, dtype=tf.int32), 0)
+        timing_signal = self.position_embedder(positions)
+        #you can use the comment to prevent the model to decode <UNK> token
+        #biases = np.ones([1, self._vocab_size])
+        #biases[0][3] = -np.inf
         def _impl(ids, step, cache):
             """The function is called in dynamic decoding.
 
             `ids` should be next_id of shape `[batch_size, decoded_lenth]`
 
-            Returned logits is of shape `[batch_size, 1]`
+            Returned logits is of shape `[batch_size, vocab_size]`
             """
             ids = ids[:, -1:]
             inputs = embedding_fn(ids)
@@ -278,6 +279,7 @@ class TransformerDecoder(ModuleBase):
             )
             logits = self.output_layer(outputs)
             logits = tf.squeeze(logits, axis=[1])
+            #logits = tf.multiply(logits, biases)
             return logits, cache
 
         return _impl
@@ -421,7 +423,8 @@ class TransformerDecoder(ModuleBase):
             target_inputs = inputs * self._hparams.dim**0.5
 
             _, lengths, channels = shape_list(target_inputs)
-            pos_embeds = self.position_embedder(lengths, channels)
+            positions = tf.expand_dims(tf.range(lengths, dtype=tf.int32), 0)
+            pos_embeds = self.position_embedder(positions)
 
             inputs = target_inputs + pos_embeds
 
@@ -576,7 +579,7 @@ class TransformerDecoder(ModuleBase):
             'memory_attention_bias': memory_attention_bias,
         }
         batch_size = tf.shape(memory)[0]
-        depth = memory.get_shape().as_list()[-1]
+        depth = self._hparams.multihead_attention.num_units
         for l in range(self._hparams.num_blocks):
             cache['layer_{}'.format(l)] = {
                 'self_keys': tf.zeros([batch_size, 0, depth]),

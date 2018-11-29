@@ -202,13 +202,13 @@ def get_embedding(hparams=None,
             dim = hparams["dim"]
             if not isinstance(hparams["dim"], (list, tuple)):
                 dim = [dim]
-            embedding = tf.get_variable(name=hparams["name"],
+            embedding = tf.get_variable(name='w',
                                         shape=[num_embeds] + dim,
                                         initializer=initializer,
                                         regularizer=regularizer,
                                         trainable=hparams["trainable"])
         else:
-            embedding = tf.get_variable(name=hparams["name"],
+            embedding = tf.get_variable(name='w',
                                         initializer=tf.to_float(init_value),
                                         regularizer=regularizer,
                                         trainable=hparams["trainable"])
