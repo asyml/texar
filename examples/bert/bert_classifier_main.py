@@ -89,7 +89,7 @@ def main(_):
         "mnli": data_utils.MnliProcessor,
         "mrpc": data_utils.MrpcProcessor,
         "xnli": data_utils.XnliProcessor,
-        'ssn': data_utils.SSNProcessor
+        'sst': data_utils.SSTProcessor
     }
 
     processor = processors(FLAGS.task.lower())

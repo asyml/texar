@@ -59,7 +59,7 @@ The output is by default saved in `output/test_results.tsv`, where each line con
 ## Try on other Datasets
 
 You can change the task flag to run experiment on different tasks.
-For example, try this command to run on SSN dataset with other settings as default.
+For example, try this command to run on SST (Stanford Sentiment Treebank) dataset with other settings as default.
 ```
-python bert_classifier_main.py --do_train --do_eval --task=ssn
+python bert_classifier_main.py --do_train --do_eval --task=sst
 ```
