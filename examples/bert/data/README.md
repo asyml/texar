@@ -1,6 +1,6 @@
 This gives the explanation on data preparation.
 
-When you run `data/download_glue_data.py` in the parent directory, by default, the download GLUE datasets are stored here. For more information on GLUE, you can refer to 
+When you run `data/download_glue_data.py` in the parent directory, by default, all datasets in GLEU will be stored here. For more information on GLUE, you can refer to 
 [gluebenchmark](https://gluebenchmark.com/tasks)
 
 Here we show the data format of the SSN-2 example.
