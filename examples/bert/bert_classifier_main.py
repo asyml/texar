@@ -89,10 +89,10 @@ def main(_):
         "mnli": data_utils.MnliProcessor,
         "mrpc": data_utils.MrpcProcessor,
         "xnli": data_utils.XnliProcessor,
-        'ssn': data_utils.SSNProcessor
+        'ssn': data_utils.SSTProcessor
     }
 
-    processor = processors(FLAGS.task.lower())
+    processor = processors[FLAGS.task.lower()]()
 
     num_classes = len(processor.get_labels())
     num_train_data = len(processor.get_train_examples(config_data.data_dir))
