@@ -174,16 +174,24 @@ class TransformerEncoder(EncoderBase):
             {
                 "num_blocks": 6,
                 "dim": 512,
-                "position_embedder_hparams": None,
+                'position_embedder_type': 'sinusoids',
+                'position_size': None,
+                'position_embedder_hparams': None,
                 "embedding_dropout": 0.1,
                 "residual_dropout": 0.1,
                 "poswise_feedforward": default_transformer_poswise_net_hparams,
-                "multihead_attention": {
-                    "num_units": 512,
-                    "num_heads": 8,
+                'multihead_attention': {
+                    'name': 'multihead_attention',
+                    'num_units': 512,
+                    'output_dim': 512,
+                    'num_heads': 8,
+                    'dropout_rate': 0.1,
+                    'output_dim': 512,
+                    'use_bias': False,
                 },
                 "initializer": None,
                 "name": "transformer_encoder"
+                'use_bert_config': False,
             }
 
         Here:
@@ -194,15 +202,29 @@ class TransformerEncoder(EncoderBase):
         "dim" : int
             Hidden dimension of the encoders.
 
+        "use_bert_config": bool
+            If False, apply the default Transformer Encoder architecture.
+            If True, apply the Transformer Encoder architecture used in BERT.
+            The differences lie in:
+                1. The Normalization of the input embedding with dimension
+                2. The attention bias for padding tokens.
+                3. The residual connections between the internal tensors.
+
+        "position_embedder_type":
+            Choose from "sinusoids" or "variables".
+            "sinusoids":
+                create the position embedding as sinusoids, which is fixed.
+            "variables":
+                create the position embedding as trainable variables.
+
         "position_size": int
             The size of position embeddings.
+            Only be used when `position_embedder_type` is `variables`
 
         "position_embedder_hparams" : dict, optional
             Hyperparameters of a
             :class:`~texar.modules.SinusoidsPositionEmbedder` as position
-            embedder. If `None`, the
-            :meth:`~texar.modules.SinusoidsPositionEmbedder.default_hparams`
-            is used.
+            embedder.
 
         "embedding_dropout" : float
             Dropout rate of the input word and position embeddings.
@@ -234,26 +256,24 @@ class TransformerEncoder(EncoderBase):
             Name of the module.
         """
         return {
-            'initializer': None,
+            'num_blocks': 6,
+            'dim': 512,
             'use_bert_config': False,
             'position_embedder_type': 'sinusoids',
             'position_size': None,
             'position_embedder_hparams': None,
             'embedding_dropout': 0.1,
-            'layernorm_scope': 'LayerNorm',
             'residual_dropout': 0.1,
-            'num_blocks': 6,
             'poswise_feedforward': default_transformer_poswise_net_hparams(),
             'multihead_attention': {
                 'name': 'multihead_attention',
                 'num_units': 512,
-                'output_dim': 512,
                 'num_heads': 8,
                 'dropout_rate': 0.1,
                 'output_dim': 512,
                 'use_bias': False,
             },
-            'dim': 512,
+            'initializer': None,
             'name': 'transformer_encoder',
         }
 
