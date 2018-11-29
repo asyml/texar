@@ -23,7 +23,6 @@ import random
 import os
 import importlib
 from torchtext import data
-import numpy as np
 import tensorflow as tf
 import texar as tx
 from texar.modules import TransformerEncoder, TransformerDecoder
@@ -46,14 +45,9 @@ flags.DEFINE_string("model_dir", "./outputs",
 FLAGS = flags.FLAGS
 
 config_model = importlib.import_module(FLAGS.config_model)
-utils.set_random_seed(config_model.random_seed)
-
 config_data = importlib.import_module(FLAGS.config_data)
 
-print(config_model)
-print(config_data)
-
-n_gpu = config_data.n_gpu
+utils.set_random_seed(config_model.random_seed)
 
 def main():
     """Entrypoint.
@@ -74,22 +68,27 @@ def main():
     print('logging file is saved in: %s', logging_file)
 
     # Build model graph
+    encoder_input = tf.placeholder(tf.int64, shape=(None, None))
+    decoder_input = tf.placeholder(tf.int64, shape=(None, None))
+    # (text sequence length excluding padding)
+    encoder_input_length = tf.reduce_sum(
+        1 - tf.to_int32(tf.equal(encoder_input, 0)), axis=1)
+    decoder_input_length = tf.reduce_sum(
+        1 - tf.to_int32(tf.equal(decoder_input, 0)), axis=1)
 
-    encoder_input_train = tf.placeholder(tf.int64, shape=(None, None))
-    decoder_input_train = tf.placeholder(tf.int64, shape=(None, None))
-    label_train = tf.placeholder(tf.int64, shape=(None, None))
+    labels = tf.placeholder(tf.int64, shape=(None, None))
+    is_target = tf.to_float(tf.not_equal(labels, 0))
 
-    encoder_inputs = tf.split(encoder_input_train, n_gpu, 0)
-    decoder_inputs = tf.split(decoder_input_train, n_gpu, 0)
-    labels = tf.split(label_train, n_gpu, 0)
-
-    encoder_input_test = tf.placeholder(tf.int64, shape=(None, None))
-    decoder_input_test = tf.placeholder(tf.int64, shape=(None, None))
-    label_test = tf.placeholder(tf.int64, shape=(None, None))
+    global_step = tf.Variable(0, dtype=tf.int64, trainable=False)
+    learning_rate = tf.placeholder(tf.float64, shape=(), name='lr')
 
     embedder = tx.modules.WordEmbedder(
         vocab_size=vocab_size, hparams=config_model.emb)
     encoder = TransformerEncoder(hparams=config_model.encoder)
+
+    encoder_output = encoder(inputs=embedder(encoder_input),
+                             sequence_length=encoder_input_length)
+
     # The decoder ties the input word embedding with the output logit layer.
     # As the decoder masks out <PAD>'s embedding, which in effect means
     # <PAD> has all-zero embedding, so here we explicitly set <PAD>'s embedding
@@ -98,40 +97,20 @@ def main():
         [tf.zeros(shape=[1, embedder.dim]), embedder.embedding[1:, :]], axis=0)
     decoder = TransformerDecoder(embedding=tgt_embedding,
                                  hparams=config_model.decoder)
-    global_step = tf.Variable(0, dtype=tf.int64, trainable=False)
-    learning_rate = tf.placeholder(tf.float64, shape=(), name='lr')
+    # For training
+    outputs = decoder(
+        memory=encoder_output,
+        memory_sequence_length=encoder_input_length,
+        inputs=embedder(decoder_input),
+        sequence_length=decoder_input_length,
+        decoding_strategy='train_greedy',
+        mode=tf.estimator.ModeKeys.TRAIN
+    )
 
-    mle_losses = []
-    is_targets = tf.to_float(tf.not_equal(label_train, 0))
+    mle_loss = transformer_utils.smoothing_cross_entropy(
+        outputs.logits, labels, vocab_size, config_model.loss_label_confidence)
+    mle_loss = tf.reduce_sum(mle_loss * is_target) / tf.reduce_sum(is_target)
 
-    for i, (encoder_input, decoder_input, label) in enumerate(zip(encoder_inputs, decoder_inputs, labels)):
-        with tf.device('gpu:{}'.format(i)):
-            encoder_input_length = tf.reduce_sum(
-                1 - tf.to_int32(tf.equal(encoder_input, 0)), axis=1)
-            decoder_input_length = tf.reduce_sum(
-                1 - tf.to_int32(tf.equal(decoder_input, 0)), axis=1)
-
-            encoder_output = encoder(inputs=embedder(encoder_input),
-                                     sequence_length=encoder_input_length)
-
-            # For training
-            outputs = decoder(
-                memory=encoder_output,
-                memory_sequence_length=encoder_input_length,
-                inputs=embedder(decoder_input),
-                sequence_length=decoder_input_length,
-                decoding_strategy='train_greedy',
-                mode=tf.estimator.ModeKeys.TRAIN
-            )
-
-            _mle_loss = transformer_utils.smoothing_cross_entropy(
-                outputs.logits, label, vocab_size, config_model.loss_label_confidence)
-            mle_losses.append(_mle_loss)
-
-    mle_losses = tf.concat(mle_losses, axis=0)
-    mle_loss = tf.reduce_sum(mle_losses * is_targets) / tf.reduce_sum(is_targets)
-    #hparams = HParams(config_model.opt, default_optimization_hparams())['optimizer']
-    #opt, _ = get_optimizer_fn(opt_hparams)
     train_op = tx.core.get_train_op(
         mle_loss,
         learning_rate=learning_rate,
@@ -143,40 +122,25 @@ def main():
     summary_merged = tf.summary.merge_all()
 
     # For inference
-    with tf.variable_scope(tf.get_variable_scope(), reuse=True):
-            # (text sequence length excluding padding)
-        encoder_input_length = tf.reduce_sum(
-            1 - tf.to_int32(tf.equal(encoder_input_test, 0)), axis=1)
-        decoder_input_length = tf.reduce_sum(
-            1 - tf.to_int32(tf.equal(decoder_input_test, 0)), axis=1)
-        is_target = tf.to_float(tf.not_equal(label_test, 0))
+    start_tokens = tf.fill([tx.utils.get_batch_size(encoder_input)],
+                           bos_token_id)
+    predictions = decoder(
+        memory=encoder_output,
+        memory_sequence_length=encoder_input_length,
+        decoding_strategy='infer_greedy',
+        beam_width=beam_width,
+        alpha=config_model.alpha,
+        start_tokens=start_tokens,
+        end_token=eos_token_id,
+        max_decoding_length=config_data.max_decoding_length,
+        mode=tf.estimator.ModeKeys.PREDICT
+    )
+    if beam_width <= 1:
+        inferred_ids = predictions[0].sample_id
+    else:
+        # Uses the best sample by beam search
+        inferred_ids = predictions['sample_id'][:, :, 0]
 
-        encoder_output = encoder(inputs=embedder(encoder_input_test),
-                                 sequence_length=encoder_input_length)
-
-        # The decoder ties the input word embedding with the output logit layer.
-        # As the decoder masks out <PAD>'s embedding, which in effect means
-        # <PAD> has all-zero embedding, so here we explicitly set <PAD>'s embedding
-        # to all-zero.
-        # For training
-        start_tokens = tf.fill([tx.utils.get_batch_size(encoder_input_test)],
-                               bos_token_id)
-        predictions = decoder(
-            memory=encoder_output,
-            memory_sequence_length=encoder_input_length,
-            decoding_strategy='infer_greedy',
-            beam_width=beam_width,
-            alpha=config_model.alpha,
-            start_tokens=start_tokens,
-            end_token=eos_token_id,
-            max_decoding_length=config_data.max_decoding_length,
-            mode=tf.estimator.ModeKeys.PREDICT
-        )
-        if beam_width <= 1:
-            inferred_ids = predictions[0].sample_id
-        else:
-            # Uses the best sample by beam search
-            inferred_ids = predictions['sample_id'][:, :, 0]
 
     saver = tf.train.Saver(max_to_keep=5)
     best_results = {'score': 0, 'epoch': -1}
@@ -194,11 +158,9 @@ def main():
         for i in range(0, len(eval_data), bsize):
             sources, targets = zip(*eval_data[i:i+bsize])
             x_block = data_utils.source_pad_concat_convert(sources)
-            print('encoder_input_test:{}'.format(x_block.shape))
-            logger.info('encoder_input_test:{}'.format(x_block.shape))
             feed_dict = {
-                encoder_input_test: x_block,
-                tx.global_mode(): tf.estimator.ModeKeys.PREDICT,
+                encoder_input: x_block,
+                tx.global_mode(): tf.estimator.ModeKeys.EVAL,
             }
             fetches = {
                 'inferred_ids': inferred_ids,
@@ -215,28 +177,15 @@ def main():
             # For 'eval' mode, the BLEU is based on token ids (rather than
             # text tokens) and serves only as a surrogate metric to monitor
             # the training process
-            fname = os.path.join(FLAGS.model_dir, 'tmp.eval.digit')
-            _hypotheses = tx.utils.str_join(hypotheses)
-            _references = tx.utils.str_join(references)
+            fname = os.path.join(FLAGS.model_dir, 'tmp.eval')
+            hypotheses = tx.utils.str_join(hypotheses)
+            references = tx.utils.str_join(references)
             hyp_fn, ref_fn = tx.utils.write_paired_text(
-                _hypotheses, _references, fname, mode='s')
+                hypotheses, references, fname, mode='s')
             eval_bleu = bleu_wrapper(ref_fn, hyp_fn, case_sensitive=True)
             eval_bleu = 100. * eval_bleu
-            logger.info('epoch: %d, eval_bleu_digit %.4f', epoch, eval_bleu)
-            print('epoch: %d, eval_bleu_digit %.4f' % (epoch, eval_bleu))
-
-            fname = os.path.join(FLAGS.model_dir, 'tmp.eval.txt')
-            for hyp, ref in zip(hypotheses, references):
-                hwords.append([id2w[y] for y in hyp])
-                rwords.append([id2w[y] for y in ref])
-            hwords = tx.utils.str_join(hwords)
-            rwords = tx.utils.str_join(rwords)
-            hyp_fn, ref_fn = tx.utils.write_paired_text(
-                hwords, rwords, fname, mode='s')
-            eval_bleu = bleu_wrapper(ref_fn, hyp_fn, case_sensitive=True)
-            eval_bleu = 100. * eval_bleu
-            logger.info('epoch: %d, eval_bleu txt %.4f', epoch, eval_bleu)
-            print('epoch: %d, eval_bleu txt %.4f' % (epoch, eval_bleu))
+            logger.info('epoch: %d, eval_bleu %.4f', epoch, eval_bleu)
+            print('epoch: %d, eval_bleu %.4f' % (epoch, eval_bleu))
 
             if eval_bleu > best_results['score']:
                 logger.info('epoch: %d, best bleu: %.4f', epoch, eval_bleu)
@@ -250,18 +199,8 @@ def main():
         elif mode == 'test':
             # For 'test' mode, together with the cmds in README.md, BLEU
             # is evaluated based on text tokens, which is the standard metric.
-            hwords, rwords = [], []
-            fname = os.path.join(FLAGS.model_dir, 'test.output.digit')
-            _hypotheses = tx.utils.str_join(hypotheses)
-            _references = tx.utils.str_join(references)
-            hyp_fn, ref_fn = tx.utils.write_paired_text(
-                _hypotheses, _references, fname, mode='s')
-            eval_bleu = bleu_wrapper(ref_fn, hyp_fn, case_sensitive=True)
-            eval_bleu = 100. * eval_bleu
-            logger.info('test bleu_digit %.4f', epoch, eval_bleu)
-            print('test bleu_digit %.4f' % (epoch, eval_bleu))
-
             fname = os.path.join(FLAGS.model_dir, 'test.output')
+            hwords, rwords = [], []
             for hyp, ref in zip(hypotheses, references):
                 hwords.append([id2w[y] for y in hyp])
                 rwords.append([id2w[y] for y in ref])
@@ -269,10 +208,6 @@ def main():
             rwords = tx.utils.str_join(rwords)
             hyp_fn, ref_fn = tx.utils.write_paired_text(
                 hwords, rwords, fname, mode='s')
-            eval_bleu = bleu_wrapper(ref_fn, hyp_fn, case_sensitive=True)
-            eval_bleu = 100. * eval_bleu
-            logger.info('test_bleu for raw text %.4f', epoch, eval_bleu)
-            print('test bleu for raw text %.4f' % (epoch, eval_bleu))
             logger.info('Test output writtn to file: %s', hyp_fn)
             print('Test output writtn to file: %s' % hyp_fn)
 
@@ -286,15 +221,13 @@ def main():
             random_shuffler=data.iterator.RandomShuffler())
 
         for _, train_batch in enumerate(train_iter):
-            in_arrays = data_utils.seq2seq_pad_concat_convert(train_batch, n_gpu=n_gpu)
+            in_arrays = data_utils.seq2seq_pad_concat_convert(train_batch)
             feed_dict = {
-                encoder_input_train: in_arrays[0],
-                decoder_input_train: in_arrays[1],
-                label_train: in_arrays[2],
+                encoder_input: in_arrays[0],
+                decoder_input: in_arrays[1],
+                labels: in_arrays[2],
                 learning_rate: utils.get_lr(step, config_model.lr)
             }
-            print('encoder_input_train:{} decoder_input_train:{} label_train:{}'.format(in_arrays[0].shape, in_arrays[1].shape, in_arrays[2].shape))
-            logger.info('encoder_input_train:{} decoder_input_train:{} label_train:{}'.format(in_arrays[0].shape, in_arrays[1].shape, in_arrays[2].shape))
             fetches = {
                 'step': global_step,
                 'train_op': train_op,
@@ -313,10 +246,9 @@ def main():
             if step and step % config_data.eval_steps == 0:
                 _eval_epoch(sess, epoch, mode='eval')
         return step
-    sess_config = tf.ConfigProto(allow_soft_placement=True)
-    #log_device_placement=True)
+
     # Run the graph
-    with tf.Session(config=sess_config) as sess:
+    with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
