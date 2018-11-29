@@ -27,6 +27,7 @@ Under `bert_pretrained_models/uncased_L-12_H-768_A-12`, you can find 5 files, wh
 - `bert-config.json` is the model configuration of the BERT model. For the particular model we just downloaded, it is an uncased-vocabulary, 12-layer, 768-hidden, 12-heads Transformer model.
 
 ### Train and Evaluate
+
 To train the classifier and evaluate on the dev set, run the following cmd. The training updates the classification layer and fine-tunes the pre-trained BERT parameters.
 ```
 python bert_classifier_main.py --do_train --do_eval
@@ -48,11 +49,11 @@ INFO:tensorflow:dev accu: 0.8676470588235294
 ```
 
 ### Restore and Test
-<<<<<<< HEAD
+
 ``
-ython bert_classifier_main.py --do_test --checkpoint=output/model.ckpt
+python bert_classifier_main.py --do_test --checkpoint=output/model.ckpt
 ``
-he output is by default saved in `output/test_results.tsv`, where each line contains output for each sample, with two fields representing the probabilities for each class.
+The output is by default saved in `output/test_results.tsv`, where each line contains the predicted label for each sample.
 
 
 ## Try on other Datasets
@@ -62,8 +63,3 @@ For example, try this command to run on SSN dataset with other settings as defau
 ```
 python bert_classifier_main.py --do_train --do_eval --task=ssn
 ```
-=======
-```
-python bert_classifier_main.py --do_test --checkpoint=output/model.ckpt
-```
-The output is by default saved in `output/test_results.tsv`, where each line contains the predicted label for each sample.
