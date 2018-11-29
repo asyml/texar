@@ -1,9 +1,9 @@
 This gives the explanation on data preparation.
 
-When you run `data/download_glue_data.py` in the parent directory, by default, all datasets in GLEU will be stored here. For more information on GLUE, you can refer to 
+When you run `data/download_glue_data.py` in the parent directory, by default, all datasets in GLEU will be stored here. For more information on GLUE, please refer to 
 [gluebenchmark](https://gluebenchmark.com/tasks)
 
-Here we show the data format of the SSN-2 example.
+Here we show the data format of the SSN-2 dataset.
 
 ```
 # train sample in SST-2/train.tsv
@@ -22,6 +22,8 @@ index	sentence
 1	this film 's relationship to actual tension is the same as what christmas-tree flocking in a spray can is to actual snow : a poor -- if durable -- imitation .
 ```
 
-In SST dataset, The train data and evaluation data are in the same schema. The first line gives the header information, sentence and label. In the following lines, the sentence is a space-seperated string, and the label is 0 or 1. While the test data has a different schema, where the first column is a unique index for each test example, the second column is the space-seperated string.
+* As above, in SST, the train/eval data are in the following format: the first line gives the header information, including `sentence` and `label`. In each of the following lines, the sentence is a space-seperated string, and the label is `0` or `1`. 
+* The test data is in a different format: the first column is a unique index for each test example, the second column is the space-seperated string.
 
-In the `bert/utils/data_utils`, there are five types of Data Processor Implemented. You can run `python bert_classifier_main.py` and specify the `--task` to run on different datasets.
+
+In [`bert/utils/data_utils.py`](https://github.com/asyml/texar/blob/master/examples/bert/utils/data_utils.py), there are 5 types of `Data Processor` Implemented. You can run `python bert_classifier_main.py` and specify `--task` to run on different datasets.
