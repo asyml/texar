@@ -19,7 +19,7 @@ def transform_bert_to_texar_config(input_json):
     configs['random_seed'] = 123
     configs['hidden_size'] = config_ckpt['hidden_size']
     hidden_dim = config_ckpt['hidden_size']
-    configs['emb'] = {
+    configs['embed'] = {
         'name': 'word_embeddings',
         'dim': hidden_dim}
     configs['vocab_size'] = config_ckpt['vocab_size']
