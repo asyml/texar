@@ -78,6 +78,7 @@ class MultiheadAttentionEncoder(EncoderBase):
                 'output_dim': 512,
                 'num_units': 512,
                 'dropout_rate': 0.1,
+                'use_bias': False,
                 "name": "multihead_attention"
             }
 
