@@ -21,9 +21,10 @@ By default, it will download the MRPC dataset into the `data` directory. FYI, th
 ```
 sh bert_pretrained_models/download_model.sh
 ```
-By default, it will download the `uncased_L-12_H-768_A-12.zip` and unzip it the same directory.
-In the `bert_pretrained_models/uncased_L-12_H-768_A-12.zip` directory, you may find five files.
-- `bert-config.json` Model configurations for the BERT. Generally, it's a uncased-vocabulary, 12-layer, 768-hidden, 12-heads Transformer model, even it there is some trivial variant compared to the official Transformer.
+By default, it will download a pretrained model (BERT-Base Uncased: 12-layer, 768-hidden, 12-heads, 110M parameters) named `uncased_L-12_H-768_A-12` to `bert_pretrained_models/`.
+
+Under `bert_pretrained_models/uncased_L-12_H-768_A-12`, you can find 5 files, where
+- `bert-config.json` is the model configuration of the BERT model. For the particular model we just downloaded, it is an uncased-vocabulary, 12-layer, 768-hidden, 12-heads Transformer model.
 
 ### Train and Evaluate
 To train the classifier and evaluate on the dev set, run the following cmd. The training updates the classification layer and fine-tunes the pre-trained BERT parameters.
