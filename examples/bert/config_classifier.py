@@ -1,7 +1,5 @@
 hidden_dim = 768
 
-loss_label_confidence = 0.9
-
 opt = {
     'optimizer': {
         'type': 'AdamWeightDecayOptimizer',
