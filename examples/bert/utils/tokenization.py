@@ -20,56 +20,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import sys
 import collections
 import unicodedata
-import six
+
 import tensorflow as tf
 
-
 def convert_to_unicode(text):
-    """
-    Converts `text` to Unicode (if it's not already), assuming utf-8 input.
-    """
-    if six.PY3:
-        if isinstance(text, str):
-            return text
-        elif isinstance(text, bytes):
-            return text.decode("utf-8", "ignore")
-        else:
-            raise ValueError("Unsupported string type: %s" % (type(text)))
-    elif six.PY2:
-        if isinstance(text, str):
-            return text.decode("utf-8", "ignore")
-        elif isinstance(text, unicode):
-            return text
-        else:
-            raise ValueError("Unsupported string type: %s" % (type(text)))
-    else:
-        raise ValueError("Not running on Python2 or Python 3?")
-
+    """Returns the given argument as a unicode string."""
+    return tf.compat.as_text(text)
 
 def printable_text(text):
     """Returns text encoded in a way suitable for print or `tf.logging`."""
-
-    # These functions want `str` for both Python2 and Python3, but in one case
-    # it's a Unicode string and in the other it's a byte string.
-    if six.PY3:
-        if isinstance(text, str):
-            return text
-        elif isinstance(text, bytes):
-            return text.decode("utf-8", "ignore")
-        else:
-            raise ValueError("Unsupported string type: %s" % (type(text)))
-    elif six.PY2:
-        if isinstance(text, str):
-            return text
-        elif isinstance(text, unicode):
-            return text.encode("utf-8")
-        else:
-            raise ValueError("Unsupported string type: %s" % (type(text)))
-    else:
-        raise ValueError("Not running on Python2 or Python 3?")
-
+    return tf.compat.as_str_any(text)
 
 def load_vocab(vocab_file):
     """Loads a vocabulary file into a dictionary."""
@@ -77,7 +40,7 @@ def load_vocab(vocab_file):
     index = 0
     with tf.gfile.GFile(vocab_file, "r") as reader:
         while True:
-            token = convert_to_unicode(reader.readline())
+            token = tf.compat.as_text(reader.readline())
             if not token:
                 break
             token = token.strip()
@@ -148,7 +111,7 @@ class BasicTokenizer(object):
 
     def tokenize(self, text):
         """Tokenizes a piece of text."""
-        text = convert_to_unicode(text)
+        text = tf.compat.as_text(text)
         text = self._clean_text(text)
 
         # This was added on November 1st, 2018 for the multilingual and Chinese
@@ -277,7 +240,7 @@ class WordpieceTokenizer(object):
             A list of wordpiece tokens.
         """
 
-        text = convert_to_unicode(text)
+        text = tf.compat.as_text(text)
 
         output_tokens = []
         for token in whitespace_tokenize(text):
