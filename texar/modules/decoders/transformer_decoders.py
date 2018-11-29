@@ -40,8 +40,6 @@ from texar.utils.shapes import shape_list, mask_sequences
 from texar.utils import transformer_attentions as attn
 from texar.utils.mode import is_train_mode
 
-import numpy as np
-
 __all__ = [
     "TransformerDecoderOutput",
     "TransformerDecoder"
@@ -580,7 +578,7 @@ class TransformerDecoder(ModuleBase):
             'memory_attention_bias': memory_attention_bias,
         }
         batch_size = tf.shape(memory)[0]
-        depth = memory.get_shape().as_list()[-1]
+        depth = self._hparams.multihead_attention.num_units
         for l in range(self._hparams.num_blocks):
             cache['layer_{}'.format(l)] = {
                 'self_keys': tf.zeros([batch_size, 0, depth]),
