@@ -31,7 +31,7 @@ Under `bert_pretrained_models/uncased_L-12_H-768_A-12`, you can find 5 files, wh
 To train the classifier and evaluate on the dev set, run the following cmd. The training updates the classification layer and fine-tunes the pre-trained BERT parameters.
 ```
 python bert_classifier_main.py --do_train --do_eval
-[--task=mcpc]
+[--task=mrpc]
 [--config_bert_pretrain=uncased_L-12_H-768_A-12]
 [--config_downstream=config_classifier]
 [--config_data=config_data_mrpc]
