@@ -75,6 +75,9 @@ trans_hparams = {
     'residual_dropout': residual_dropout,
     'num_blocks': num_blocks,
     'dim': hidden_size,
+    'position_embedder_hparams': {
+        'dim': hidden_size,
+    },
     'initializer': {
         'type': 'variance_scaling_initializer',
         'kwargs': {

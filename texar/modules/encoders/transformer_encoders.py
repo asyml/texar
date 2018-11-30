@@ -223,8 +223,11 @@ class TransformerEncoder(EncoderBase):
 
         "position_embedder_hparams" : dict, optional
             Hyperparameters of a
+            :class:`~texar.modules.PositionEmbedder` as position
+            embedder if `position_embedder_type` is `variables`,
+            or Hyperparameters of a
             :class:`~texar.modules.SinusoidsPositionEmbedder` as position
-            embedder.
+            embedder if `position_embedder_type` is `sinusoids'.`
 
         "embedding_dropout" : float
             Dropout rate of the input word and position embeddings.

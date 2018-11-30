@@ -86,7 +86,7 @@ class TransformerDecoder(ModuleBase):
 
         with tf.variable_scope(self.variable_scope):
             if self._hparams.initializer:
-                tf.get_variable_scope().set_initializer( \
+                tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
 
             self.position_embedder = \
@@ -358,7 +358,7 @@ class TransformerDecoder(ModuleBase):
             alpha (float): Length penalty coefficient.
                 Refer to https://arxiv.org/abs/1609.08144
                 for more details.
-            tart_tokens (optional): An int Tensor of shape `[batch_size]`,
+            start_tokens (optional): An int Tensor of shape `[batch_size]`,
                 containing the start tokens.
                 Used when `decoding_strategy` = "infer_greedy" or
                 "infer_sample", or `beam_width` > 1.
@@ -422,7 +422,7 @@ class TransformerDecoder(ModuleBase):
                     shape_list(inputs)[1]))
             target_inputs = inputs * self._hparams.dim**0.5
 
-            _, lengths, channels = shape_list(target_inputs)
+            _, lengths, = shape_list(target_inputs)
             positions = tf.expand_dims(tf.range(lengths, dtype=tf.int32), 0)
             pos_embeds = self.position_embedder(positions)
 
@@ -534,8 +534,9 @@ class TransformerDecoder(ModuleBase):
                             memory_attention_bias=memory_attention_bias,
                             mode=mode,
                         )
-                        x = x + tf.layers.dropout(encdec_output, \
-                            rate=self._hparams.residual_dropout, \
+                        x = x + tf.layers.dropout(
+                            encdec_output,
+                            rate=self._hparams.residual_dropout,
                             training=is_train_mode(mode))
                 poswise_network = self.poswise_networks[i]
                 with tf.variable_scope('past_poswise_ln'):
@@ -568,7 +569,8 @@ class TransformerDecoder(ModuleBase):
 
             return _outputs_to_logits
         else:
-            layer = tf.layers.Dense(self._vocab_size, \
+            layer = tf.layers.Dense(
+                self._vocab_size,
                 use_bias=self._hparams.output_layer_bias)
             layer.build([None, dim])
             return layer
@@ -678,7 +680,8 @@ class TransformerDecoder(ModuleBase):
                      beam_width=5,
                      alpha=0.6):
         cache = self._init_cache(memory, memory_attention_bias)
-        symbols_to_logits_fn = self._symbols_to_logits_fn(embedding_fn, \
+        symbols_to_logits_fn = self._symbols_to_logits_fn(
+            embedding_fn,
             max_length=decode_length+1)
         outputs, log_prob = beam_search.beam_search(
             symbols_to_logits_fn,
