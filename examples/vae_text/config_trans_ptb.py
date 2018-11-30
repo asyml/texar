@@ -19,12 +19,12 @@
 
 dataset = "ptb"
 num_epochs = 100
-hidden_size = 256
+hidden_size = 512
 enc_keep_prob_in = 1.0
 enc_keep_prob_out = 1.0
 dec_keep_prob_in = 1.0
 batch_size = 32
-embed_dim = 256
+embed_dim = 512
 
 latent_dims = 32
 
