@@ -59,7 +59,7 @@ enc_cell_hparams = {
 emb_hparams = {
     'name': 'lookup_table',
     "dim": embed_dim,
-    'initializer' : {
+    'initializer': {
         'type': 'random_normal_initializer',
         'kwargs': {
             'mean': 0.0,
@@ -75,12 +75,15 @@ trans_hparams = {
     'residual_dropout': residual_dropout,
     'num_blocks': num_blocks,
     'dim': hidden_size,
+    'position_embedder_hparams': {
+        'dim': hidden_size,
+    },
     'initializer': {
         'type': 'variance_scaling_initializer',
         'kwargs': {
             'scale': 1.0,
-            'mode':'fan_avg',
-            'distribution':'uniform',
+            'mode': 'fan_avg',
+            'distribution': 'uniform',
         },
     },
     'multihead_attention': {
@@ -90,29 +93,29 @@ trans_hparams = {
         'output_dim': hidden_size
     },
     'poswise_feedforward': {
-        'name':'fnn',
-        'layers':[
+        'name': 'fnn',
+        'layers': [
             {
-                'type':'Dense',
+                'type': 'Dense',
                 'kwargs': {
-                    'name':'conv1',
-                    'units':hidden_size*4,
-                    'activation':'relu',
-                    'use_bias':True,
+                    'name': 'conv1',
+                    'units': hidden_size*4,
+                    'activation': 'relu',
+                    'use_bias': True,
                 },
             },
             {
-                'type':'Dropout',
+                'type': 'Dropout',
                 'kwargs': {
                     'rate': relu_dropout,
                 }
             },
             {
-                'type':'Dense',
+                'type': 'Dense',
                 'kwargs': {
-                    'name':'conv2',
-                    'units':hidden_size,
-                    'use_bias':True,
+                    'name': 'conv2',
+                    'units': hidden_size,
+                    'use_bias': True,
                     }
             }
         ],
@@ -120,7 +123,7 @@ trans_hparams = {
 }
 
 # KL annealing
-kl_anneal_hparams={
+kl_anneal_hparams = {
     "warm_up": 10,
     "start": 0.1
 }
@@ -166,4 +169,3 @@ opt_hparams = {
         "kwargs": {"clip_norm": 5.}
     }
 }
-
