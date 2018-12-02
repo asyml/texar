@@ -139,6 +139,13 @@ class TransformerEncoder(EncoderBase):
                 self.position_embedder = PositionEmbedder(
                     position_size=self._hparams.position_size,
                     hparams=self._hparams.position_embedder_hparams)
+            # pylint: disable=protected-access
+            if self._hparams.dim != \
+                self.position_embedder._hparams.dim:
+                raise ValueError('The "dim" in the hparams of'
+                                 'TransformerEncoder should be equal'
+                                 'to the "dim" in its '
+                                 'position_embedder_hparams.')
 
             self.multihead_attention_list = []
             self.poswise_networks = []
@@ -152,18 +159,18 @@ class TransformerEncoder(EncoderBase):
                     # pylint: disable=protected-access
                     if self._hparams.dim != \
                         multihead_attention._hparams.output_dim:
-                        raise ValueError('The output dimenstion of'
-                                         'MultiheadEncoder should be equal'
-                                         'to the dim of TransformerEncoder')
+                        raise ValueError('The "dim" in the hparams of'
+                                         'multihead_attention should be equal'
+                                         'to the "dim" of TransformerEncoder')
                     poswise_network = FeedForwardNetwork(
                         hparams=self._hparams['poswise_feedforward'])
                     # pylint: disable=protected-access
                     if self._hparams.dim != \
                         poswise_network._hparams.layers[-1]['kwargs']['units']:
                         # poswise_network._hparams.layers[-1]['units']:
-                        raise ValueError('The output dimenstion of'
+                        raise ValueError('The "units" in the "kwargs" of'
                                          'FeedForwardNetwork should be equal'
-                                         'to the dim of TransformerEncoder')
+                                         'to the "dim" of TransformerEncoder')
                     self.poswise_networks.append(poswise_network)
     @staticmethod
     def default_hparams():
@@ -212,6 +219,7 @@ class TransformerEncoder(EncoderBase):
 
         "position_embedder_type":
             Choose from "sinusoids" or "variables".
+
             "sinusoids":
                 create the position embedding as sinusoids, which is fixed.
             "variables":
@@ -219,15 +227,15 @@ class TransformerEncoder(EncoderBase):
 
         "position_size": int
             The size of position embeddings.
-            Only be used when `position_embedder_type` is `variables`
+            Only be used when "position_embedder_type"is "variables".
 
         "position_embedder_hparams" : dict, optional
             Hyperparameters of a
             :class:`~texar.modules.PositionEmbedder` as position
-            embedder if `position_embedder_type` is `variables`,
+            embedder if "position_embedder_type" is "variables",
             or Hyperparameters of a
             :class:`~texar.modules.SinusoidsPositionEmbedder` as position
-            embedder if `position_embedder_type` is `sinusoids'.`
+            embedder if "position_embedder_type" is "sinusoids".
 
         "embedding_dropout" : float
             Dropout rate of the input word and position embeddings.
@@ -245,7 +253,7 @@ class TransformerEncoder(EncoderBase):
 
         "multihead_attention": dict,
             Hyperparameters for the multihead attention strategy.
-            Make sure the `output_dim` in this module is equal to `dim`.
+            Make sure the "output_dim" in this module is equal to "dim".
             See :func:
                 `~texar.modules.encoder.MultiheadAttentionEncoder.
                 default_harams` for details.
@@ -280,7 +288,7 @@ class TransformerEncoder(EncoderBase):
             'name': 'transformer_encoder',
         }
 
-    # pylint: disable=arguments-differ
+    # pylint: disable=arguments-differ, too-many-branches, too-many-statements
     def _build(self, inputs, sequence_length, mode=None):
         """Encodes the inputs.
 
