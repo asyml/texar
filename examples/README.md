@@ -19,6 +19,7 @@ More examples are continuously added...
 ### Transformer (Self-attention) ###
 
 * [transformer](./transformer): Transformer for machine translation
+* [bert](./bert): Pre-trained BERT model for text representation
 * [vae_text](./vae_text): VAE with a transformer decoder for improved language modeling 
 
 ### Variational Autoencoder (VAE) ###
@@ -42,6 +43,7 @@ More examples are continuously added...
 
 ### Classifier / Sequence Prediction ###  
 
+* [bert](./bert): Pre-trained BERT model for text representation
 * [sentence_classifier](./sentence_classifier): Basic CNN-based sentence classifier
 * [sequence_tagging](./sequence_tagging): BiLSTM-CNN model for Named Entity Recognition (NER)
 
@@ -72,7 +74,6 @@ More examples are continuously added...
 
 * [hierarchical_dialog](./hierarchical_dialog): Hierarchical recurrent encoder-decoder model for conversation response generation.
 
-
 ### Text Summarization ###
 
 * [seq2seq_exposure_bias](./seq2seq_exposure_bias): Various algorithms tackling exposure bias in sequence generation (MT and summarization as examples).
@@ -83,6 +84,7 @@ More examples are continuously added...
 
 ### Classification ###
 
+* [bert](./bert): Pre-trained BERT model for text representation
 * [sentence_classifier](./sentence_classifier): Basic CNN-based sentence classifier
 
 ### Sequence Tagging ###
