@@ -57,7 +57,6 @@ class TransformerDecoderOutput(
         sample_id: An int Tensor of shape `[batch_size, max_time]`
             containing the sampled token indexes.
     """
-    pass
 
 
 class TransformerDecoder(ModuleBase):
@@ -422,7 +421,7 @@ class TransformerDecoder(ModuleBase):
                     shape_list(inputs)[1]))
             target_inputs = inputs * self._hparams.dim**0.5
 
-            _, lengths, = shape_list(target_inputs)
+            _, lengths, _ = shape_list(target_inputs)
             positions = tf.expand_dims(tf.range(lengths, dtype=tf.int32), 0)
             pos_embeds = self.position_embedder(positions)
 
@@ -475,7 +474,7 @@ class TransformerDecoder(ModuleBase):
                     memory_attention_bias=memory_attention_bias,
                 )
                 predictions = {
-                    'sample_id':sample_id,
+                    'sample_id': sample_id,
                     'log_prob': log_prob
                 }
                 rets = predictions

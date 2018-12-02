@@ -39,7 +39,7 @@ python bert_classifier_main.py --do_train --do_eval
 ```
 - `task`: Specifies which dataset to experiment on.
 - `config_bert_pretrain`: Specifies the architecture of pre-trained BERT model to use.
-- `config_downstream`: Configuration of the downstream part. In this example, [`config_classifier.py`](https://github.com/haoransh/texar_private/blob/master/examples/bert/config_classifier.py) configs the classification layer and the optimization method.
+- `config_downstream`: Configuration of the downstream part. In this example, [`config_classifier.py`](https://github.com/asyml/texar/blob/master/examples/bert/bert_classifier_main.py) configs the classification layer and the optimization method.
 - `config_data`: The data configuration.
 - `output_dir`: The output path where checkpoints and summaries for tensorboard visualization are saved.
 
