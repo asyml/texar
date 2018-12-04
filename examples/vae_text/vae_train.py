@@ -103,21 +103,13 @@ def _main(_):
 
     # Model architecture
     encoder_embedder = tx.modules.WordEmbedder(
-            vocab_size=train_data.vocab.size, hparams=config.emb_hparams)
+            vocab_size=train_data.vocab.size, hparams=config.enc_emb_hparams)
     decoder_embedder = tx.modules.WordEmbedder(
-            vocab_size=train_data.vocab.size, hparams=config.emb_hparams)
+            vocab_size=train_data.vocab.size, hparams=config.dec_emb_hparams)
 
 
     input_embed = encoder_embedder(data_batch["text_ids"])
     output_embed = decoder_embedder(data_batch["text_ids"][:, :-1])
-
-    if config.enc_keep_prob_in < 1:
-        input_embed = tf.nn.dropout(
-            input_embed, tx.utils.switch_dropout(config.enc_keep_prob_in))
-
-    if config.dec_keep_prob_in < 1:
-        output_embed = tf.nn.dropout(
-            output_embed, tx.utils.switch_dropout(config.dec_keep_prob_in))
 
     encoder = tx.modules.UnidirectionalRNNEncoder(
         hparams={"rnn_cell": config.enc_cell_hparams})
@@ -132,7 +124,7 @@ def _main(_):
             embedding=decoder_embedder.embedding,
             hparams=config.trans_hparams)
         decoder_initial_state_size = tf.TensorShape(
-            [1, config.emb_hparams["dim"]])
+            [1, config.dec_emb_hparams["dim"]])
     else:
         raise NotImplementedError
 
