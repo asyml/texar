@@ -7,7 +7,7 @@ This example provide implementations of some classic and advanced training algor
 * **Maximum Likelihood (MLE)**: attentional seq2seq model with maximum likelihood training.
 * **Reward Augmented Maximum Likelihood (RAML)**: Described in [(Norouzi et al., 2016)](https://arxiv.org/pdf/1609.00150.pdf) and we use the sampling approach (n-gram replacement) by [(Ma et al., 2017)](https://arxiv.org/abs/1705.07136).
 * **Scheduled Sampling**: Described in [(Bengio et al., 2015)](https://arxiv.org/abs/1506.03099)
-* **Interpolation Algorithm**: Described in [(Tan et al., 2018) Connecting the Dots Between MLE and RL for Sequence Generation](http://www.cs.cmu.edu/~zhitingh/data/hu2018connecting.pdf)
+* **Interpolation Algorithm**: Described in [(Tan et al., 2018) Connecting the Dots Between MLE and RL for Sequence Generation](https://arxiv.org/abs/1811.09740)
 
 ## Usage ##
 

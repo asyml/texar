@@ -249,3 +249,9 @@ simple-examples.tgz
 /examples/transformer/data/
 /examples/transformer/temp/
 /examples/transformer/outputs/
+/examples/bert/data/
+!/examples/bert/data/download_glue_data.py
+!/examples/bert/data/README.md
+/examples/bert/bert_pretrained_models/
+!/examples/bert/bert_pretrained_models/download_model.sh
+/examples/bert/output

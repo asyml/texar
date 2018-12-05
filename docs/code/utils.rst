@@ -120,6 +120,10 @@ Shape
 ~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.utils.shape_list
 
+:hidden:`pad_and_concat`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.utils.pad_and_concat
+
 :hidden:`flatten`
 ~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.utils.flatten

@@ -23,7 +23,8 @@ import tensorflow as tf
 
 from texar.core import layers
 from texar.utils import transformer_attentions as attn
-from texar.modules.embedders.position_embedders import SinusoidsPositionEmbedder
+from texar.modules.embedders.position_embedders import\
+    SinusoidsPositionEmbedder, PositionEmbedder
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.encoders.multihead_attention import MultiheadAttentionEncoder
 from texar.modules.networks.networks import FeedForwardNetwork
@@ -131,15 +132,26 @@ class TransformerEncoder(EncoderBase):
             if self._hparams.initializer:
                 tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
-
-            self.position_embedder = \
-                SinusoidsPositionEmbedder(
+            if self._hparams.position_embedder_type == 'sinusoids':
+                self.position_embedder = SinusoidsPositionEmbedder(
                     self._hparams.position_embedder_hparams)
+            else:
+                self.position_embedder = PositionEmbedder(
+                    position_size=self._hparams.position_size,
+                    hparams=self._hparams.position_embedder_hparams)
+            # pylint: disable=protected-access
+            if self._hparams.dim != \
+                self.position_embedder._hparams.dim:
+                raise ValueError('The "dim" in the hparams of'
+                                 'TransformerEncoder should be equal'
+                                 'to the "dim" in its '
+                                 'position_embedder_hparams.')
+
             self.multihead_attention_list = []
             self.poswise_networks = []
             for i in range(self._hparams.num_blocks):
                 with tf.variable_scope("layer_{}".format(i)):
-                    with tf.variable_scope('self_attention'):
+                    with tf.variable_scope('attention'):
                         multihead_attention = MultiheadAttentionEncoder(
                             self._hparams.multihead_attention)
                         self.multihead_attention_list.append(
@@ -147,18 +159,18 @@ class TransformerEncoder(EncoderBase):
                     # pylint: disable=protected-access
                     if self._hparams.dim != \
                         multihead_attention._hparams.output_dim:
-                        raise ValueError('The output dimenstion of'
-                                         'MultiheadEncoder should be equal'
-                                         'to the dim of TransformerEncoder')
+                        raise ValueError('The "dim" in the hparams of'
+                                         'multihead_attention should be equal'
+                                         'to the "dim" of TransformerEncoder')
                     poswise_network = FeedForwardNetwork(
                         hparams=self._hparams['poswise_feedforward'])
                     # pylint: disable=protected-access
                     if self._hparams.dim != \
                         poswise_network._hparams.layers[-1]['kwargs']['units']:
                         # poswise_network._hparams.layers[-1]['units']:
-                        raise ValueError('The output dimenstion of'
+                        raise ValueError('The "units" in the "kwargs" of'
                                          'FeedForwardNetwork should be equal'
-                                         'to the dim of TransformerEncoder')
+                                         'to the "dim" of TransformerEncoder')
                     self.poswise_networks.append(poswise_network)
     @staticmethod
     def default_hparams():
@@ -169,16 +181,24 @@ class TransformerEncoder(EncoderBase):
             {
                 "num_blocks": 6,
                 "dim": 512,
-                "position_embedder_hparams": None,
+                'position_embedder_type': 'sinusoids',
+                'position_size': None,
+                'position_embedder_hparams': None,
                 "embedding_dropout": 0.1,
                 "residual_dropout": 0.1,
                 "poswise_feedforward": default_transformer_poswise_net_hparams,
-                "multihead_attention": {
-                    "num_units": 512,
-                    "num_heads": 8,
+                'multihead_attention': {
+                    'name': 'multihead_attention',
+                    'num_units': 512,
+                    'output_dim': 512,
+                    'num_heads': 8,
+                    'dropout_rate': 0.1,
+                    'output_dim': 512,
+                    'use_bias': False,
                 },
                 "initializer": None,
                 "name": "transformer_encoder"
+                'use_bert_config': False,
             }
 
         Here:
@@ -187,14 +207,35 @@ class TransformerEncoder(EncoderBase):
             Number of stacked blocks.
 
         "dim" : int
-            Hidden dimension of the encoder.
+            Hidden dimension of the encoders.
+
+        "use_bert_config": bool
+            If False, apply the default Transformer Encoder architecture.
+            If True, apply the Transformer Encoder architecture used in BERT.
+            The differences lie in:
+                1. The Normalization of the input embedding with dimension
+                2. The attention bias for padding tokens.
+                3. The residual connections between the internal tensors.
+
+        "position_embedder_type":
+            Choose from "sinusoids" or "variables".
+
+            "sinusoids":
+                create the position embedding as sinusoids, which is fixed.
+            "variables":
+                create the position embedding as trainable variables.
+
+        "position_size": int
+            The size of position embeddings.
+            Only be used when "position_embedder_type"is "variables".
 
         "position_embedder_hparams" : dict, optional
             Hyperparameters of a
+            :class:`~texar.modules.PositionEmbedder` as position
+            embedder if "position_embedder_type" is "variables",
+            or Hyperparameters of a
             :class:`~texar.modules.SinusoidsPositionEmbedder` as position
-            embedder. If `None`, the
-            :meth:`~texar.modules.SinusoidsPositionEmbedder.default_hparams`
-            is used.
+            embedder if "position_embedder_type" is "sinusoids".
 
         "embedding_dropout" : float
             Dropout rate of the input word and position embeddings.
@@ -212,7 +253,7 @@ class TransformerEncoder(EncoderBase):
 
         "multihead_attention": dict,
             Hyperparameters for the multihead attention strategy.
-            Make sure the `output_dim` in this module is equal to `dim`.
+            Make sure the "output_dim" in this module is equal to "dim".
             See :func:
                 `~texar.modules.encoder.MultiheadAttentionEncoder.
                 default_harams` for details.
@@ -226,23 +267,28 @@ class TransformerEncoder(EncoderBase):
             Name of the module.
         """
         return {
-            'initializer': None,
+            'num_blocks': 6,
+            'dim': 512,
+            'use_bert_config': False,
+            'position_embedder_type': 'sinusoids',
+            'position_size': None,
             'position_embedder_hparams': None,
             'embedding_dropout': 0.1,
             'residual_dropout': 0.1,
-            'num_blocks': 6,
             'poswise_feedforward': default_transformer_poswise_net_hparams(),
             'multihead_attention': {
+                'name': 'multihead_attention',
                 'num_units': 512,
-                'dropout_rate':0.1,
-                'output_dim': 512,
                 'num_heads': 8,
+                'dropout_rate': 0.1,
+                'output_dim': 512,
+                'use_bias': False,
             },
-            'dim': 512,
+            'initializer': None,
             'name': 'transformer_encoder',
         }
 
-    # pylint: disable=arguments-differ
+    # pylint: disable=arguments-differ, too-many-branches, too-many-statements
     def _build(self, inputs, sequence_length, mode=None):
         """Encodes the inputs.
 
@@ -266,62 +312,99 @@ class TransformerEncoder(EncoderBase):
         """
         # Multiply input embedding with the sqrt of its dimension for
         # normalization
-        inputs = inputs * self._hparams.dim**0.5
-
-        inputs = mask_sequences(inputs, sequence_length, tensor_rank=3)
-
+        if not self._hparams.use_bert_config:
+            inputs = inputs * self._hparams.dim**0.5
+            inputs = mask_sequences(inputs, sequence_length, tensor_rank=3)
         _, lengths, _ = shape_list(inputs)
 
         inputs_padding = 1 - tf.sequence_mask(
             sequence_length, tf.shape(inputs)[1], dtype=tf.float32)
-        ignore_padding = attn.attention_bias_ignore_padding(inputs_padding)
+        if self._hparams.use_bert_config:
+            ignore_padding = attn.attention_bias_ignore_padding(
+                inputs_padding, bias_value=-1e4)
+        else:
+            ignore_padding = attn.attention_bias_ignore_padding(
+                inputs_padding)
+
         encoder_self_attention_bias = ignore_padding
 
-        pos_embeds = self.position_embedder(lengths,
-                                            self._hparams.dim)
+        positions = tf.expand_dims(tf.range(lengths, dtype=tf.int32), 0)
+        pos_embeds = self.position_embedder(positions)
+
         input_embedding = inputs + pos_embeds
 
-        x = tf.layers.dropout(input_embedding,
-                              rate=self._hparams.embedding_dropout,
-                              training=is_train_mode(mode))
-        pad_remover = utils.transformer_utils.PadRemover(inputs_padding)
+        if self._hparams.use_bert_config:
+            x = layers.layer_normalize(input_embedding)
+            x = tf.layers.dropout(x,
+                                  rate=self._hparams.embedding_dropout,
+                                  training=is_train_mode(mode))
+        else:
+            x = tf.layers.dropout(input_embedding,
+                                  rate=self._hparams.embedding_dropout,
+                                  training=is_train_mode(mode))
+
+        # Just to keep consistent with BERT, actually makes no difference
+        if self._hparams.use_bert_config:
+            pad_remover = None
+        else:
+            pad_remover = utils.transformer_utils.PadRemover(inputs_padding)
 
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("layer_{}".format(i)):
-                with tf.variable_scope('self_attention'):
-                    multihead_attention = self.multihead_attention_list[i]
-                    selfatt_output = multihead_attention(
-                        queries=layers.layer_normalize(x),
-                        memory=None,
-                        memory_attention_bias=encoder_self_attention_bias,
-                        mode=mode,
-                    )
-                    x = x + tf.layers.dropout(
-                        selfatt_output,
-                        rate=self._hparams.residual_dropout,
-                        training=is_train_mode(mode),
-                    )
+                multihead_attention = self.multihead_attention_list[i]
+                # trivial difference between BERT and original Transformer
+                if self._hparams.use_bert_config:
+                    _queries_input = x
+                else:
+                    _queries_input = layers.layer_normalize(x)
+
+                attention_output = multihead_attention(
+                    queries=_queries_input,
+                    memory=_queries_input,
+                    memory_attention_bias=encoder_self_attention_bias,
+                    mode=mode,
+                )
+                attention_output = tf.layers.dropout(
+                    attention_output,
+                    rate=self._hparams.residual_dropout,
+                    training=is_train_mode(mode),
+                )
+                x = x + attention_output
+                with tf.variable_scope('output'):
+                    if self._hparams.use_bert_config:
+                        x = layers.layer_normalize(x)
+                        y = x
+                    else:
+                        y = layers.layer_normalize(x)
                 poswise_network = self.poswise_networks[i]
                 with tf.variable_scope(poswise_network.variable_scope):
-                    y = layers.layer_normalize(x)
                     original_shape = shape_list(y)
                     y = tf.reshape(y, [-1, self._hparams.dim])
-                    y = tf.expand_dims(pad_remover.remove(y), axis=0)
-                    # [1, batch_size*seq_length, hidden_dim]
+                    if pad_remover:
+                        y = tf.expand_dims(pad_remover.remove(y), axis=0)
+                        # [1, batch_size*seq_length, hidden_dim]
+                    layer_output = poswise_network(y, mode=mode)
                     sub_output = tf.layers.dropout(
-                        poswise_network(y),
+                        layer_output,
                         rate=self._hparams.residual_dropout,
                         training=is_train_mode(mode)
                     )
-                    sub_output = tf.reshape(pad_remover.restore(tf.squeeze(\
-                        sub_output, axis=0)), original_shape \
-                    )
-                    x = x + sub_output
+                    if pad_remover:
+                        sub_output = tf.reshape(pad_remover.restore(tf.squeeze(\
+                            sub_output, axis=0)), original_shape \
+                        )
+                    else:
+                        sub_output = tf.reshape(sub_output, original_shape)
 
-        encoder_output = layers.layer_normalize(x)
+                    x = x + sub_output
+                    if self._hparams.use_bert_config:
+                        x = layers.layer_normalize(x)
+
+        if not self._hparams.use_bert_config:
+            x = layers.layer_normalize(x)
 
         if not self._built:
             self._add_internal_trainable_variables()
             self._built = True
 
-        return encoder_output
+        return x

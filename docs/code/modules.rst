@@ -52,6 +52,11 @@ Encoders
 .. autoclass:: texar.modules.HierarchicalRNNEncoder
     :members:
 
+:hidden:`MultiheadAttentionEncoder`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.MultiheadAttentionEncoder
+    :members:
+
 :hidden:`TransformerEncoder`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.TransformerEncoder

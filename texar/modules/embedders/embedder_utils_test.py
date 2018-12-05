@@ -27,7 +27,6 @@ class GetEmbeddingTest(tf.test.TestCase):
                          embedder_utils.default_embedding_hparams()["dim"])
 
         hparams = {
-            "name": "embedding_2",
             "initializer": {
                 "type": tf.random_uniform_initializer(minval=-0.1, maxval=0.1)
             },
@@ -36,7 +35,8 @@ class GetEmbeddingTest(tf.test.TestCase):
             }
         }
         emb = embedder_utils.get_embedding(
-            hparams=hparams, num_embeds=vocab_size)
+            hparams=hparams, num_embeds=vocab_size,
+            variable_scope='embedding_2')
         self.assertEqual(emb.shape[0].value, vocab_size)
         self.assertEqual(emb.shape[1].value,
                          embedder_utils.default_embedding_hparams()["dim"])
