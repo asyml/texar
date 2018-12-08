@@ -81,8 +81,8 @@ def default_rnn_cell_hparams():
             "type": "LSTMCell",
             "kwargs": {
                 "num_units": 256
-            }
-            "num_layers": 1
+            },
+            "num_layers": 1,
             "dropout": {
                 "input_keep_prob": 1.0,
                 "output_keep_prob": 1.0,
@@ -132,11 +132,11 @@ def default_rnn_cell_hparams():
     "dropout" : dict
         Dropout applied to the cell in **each** layer. See
         :tf_main:`DropoutWrapper <contrib/rnn/DropoutWrapper>` for details of
-        the hyperparameters. If all `*_keep_prob`=1, no dropout is applied.
+        the hyperparameters. If all "\*_keep_prob" = 1, no dropout is applied.
 
-        Specifically, if "variational_recurrent"=`True`,
+        Specifically, if "variational_recurrent" = `True`,
         the same dropout mask is applied across all time steps per run call.
-        If `True`, :attr:`"input_size"` is required, which is a list of input
+        If `True`, "input_size" is required, which is a list of input
         size of each cell layer. The input size of a cell layer is the last
         dimension size of its input tensor. For example, the
         input size of the first layer is usually the dimension of
@@ -148,22 +148,22 @@ def default_rnn_cell_hparams():
             # Assume embedding_dim = 100
             "type": "LSTMCell",
             "kwargs": { "num_units": 123 },
-            "num_layers": 3
+            "num_layers": 3,
             "dropout": {
                 "output_keep_prob": 0.5,
                 "variational_recurrent": True,
                 "input_size": [100, 123, 123]
             }
 
-    "residule" : bool
+    "residual" : bool
         If `True`, apply residual connection on the inputs and
         outputs of cell in **each** layer except the first layer. Ignored
-        if "num_layers"==1.
+        if "num_layers" = 1.
 
     "highway" : bool
         If True, apply highway connection on the inputs and
         outputs of cell in each layer except the first layer. Ignored if
-        "num_layers"==1.
+        "num_layers" = 1.
     """
     return {
         "type": "LSTMCell",
@@ -549,12 +549,12 @@ def get_layer(hparams):
                 - Arguments named "activation" can be a callable, \
                 or a `str` of \
                 the name or module path to the activation function.
-                - Arguments named "*_regularizer" and "*_initializer" \
+                - Arguments named "\*_regularizer" and "\*_initializer" \
                 can be a class instance, or a `dict` of \
                 hyperparameters of \
                 respective regularizers and initializers. See
-                - Arguments named "*_constraint" can be a callable, or a `str` \
-                of the name or full path to the constraint function.
+                - Arguments named "\*_constraint" can be a callable, or a \
+                `str` of the name or full path to the constraint function.
 
     Returns:
         A layer instance. If hparams["type"] is a layer instance, returns it
