@@ -20,10 +20,16 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import random
 import importlib
+import numpy as np
 import tensorflow as tf
-import horovod.tensorflow as hvd
 import texar as tx
+import horovod.tensorflow as hvd
+
+tf.set_random_seed(1234)
+np.random.seed(1234)
+random.seed(1234)
 
 from utils import data_utils, model_utils, tokenization
 
@@ -54,7 +60,7 @@ flags.DEFINE_string(
     "checkpoint", None,
     "Path to a model checkpoint (including bert modules) to restore from.")
 flags.DEFINE_string(
-    "output_dir", "monitor_output/",
+    "output_dir", "output/",
     "The output directory where the model checkpoints will be written.")
 flags.DEFINE_bool(
     "do_lower_case", True,
@@ -71,17 +77,10 @@ def main(_):
     """
     Builds the model and runs.
     """
+
     hvd.init()
 
-    config = tf.ConfigProto()
-    config.gpu_options.visible_device_list = str(hvd.local_rank())
-
-    hooks = [hvd.BroadcastGlobalVariablesHook(0)]
-
     tf.logging.set_verbosity(tf.logging.INFO)
-
-    output_dir = FLAGS.output_dir if hvd.rank() == 0 else None
-    is_chief = True if hvd.rank() == 0 else False
     tx.utils.maybe_create_dir(FLAGS.output_dir)
     bert_pretrain_dir = 'bert_pretrained_models/%s' % FLAGS.config_bert_pretrain
 
@@ -115,13 +114,13 @@ def main(_):
 
     train_dataset = data_utils.get_dataset(
         processor, tokenizer, config_data.data_dir, config_data.max_seq_length,
-        config_data.train_batch_size, mode='train', output_dir=output_dir)
+        config_data.train_batch_size, mode='train', output_dir=FLAGS.output_dir)
     eval_dataset = data_utils.get_dataset(
         processor, tokenizer, config_data.data_dir, config_data.max_seq_length,
-        config_data.eval_batch_size, mode='eval', output_dir=output_dir)
+        config_data.eval_batch_size, mode='eval', output_dir=FLAGS.output_dir)
     test_dataset = data_utils.get_dataset(
         processor, tokenizer, config_data.data_dir, config_data.max_seq_length,
-        config_data.test_batch_size, mode='test', output_dir=output_dir)
+        config_data.test_batch_size, mode='test', output_dir=FLAGS.output_dir)
 
     iterator = tx.data.FeedableDataIterator({
         'train': train_dataset, 'eval': eval_dataset, 'test': test_dataset})
@@ -170,15 +169,11 @@ def main(_):
     preds = tf.argmax(logits, axis=-1, output_type=tf.int32)
     accu = tx.evals.accuracy(batch['label_ids'], preds)
 
-    # Loads pretrained BERT model parameters
-    init_checkpoint = os.path.join(bert_pretrain_dir, 'bert_model.ckpt')
-    model_utils.init_bert_checkpoint(init_checkpoint)
-
     # Optimization
 
     loss = tf.losses.sparse_softmax_cross_entropy(
         labels=batch["label_ids"], logits=logits)
-    global_step = tf.train.get_or_create_global_step()
+    global_step = tf.Variable(0, trainable=False)
 
     # Builds learning rate decay scheduler
     static_lr = config_downstream.lr['static_lr']
@@ -191,15 +186,15 @@ def main(_):
     opt = tx.core.get_optimizer(
         global_step=global_step,
         learning_rate=lr,
-        hparams=config_downstream.opt)
+        hparams=config_downstream.opt
+    )
     opt = hvd.DistributedOptimizer(opt)
-
     train_op = tf.contrib.layers.optimize_loss(
         loss=loss,
         global_step=global_step,
         learning_rate=lr,
-        optimizer=opt,
-    )
+        optimizer=opt)
+
     # Train/eval/test routine
 
     def _run(sess, mode):
@@ -222,7 +217,7 @@ def main(_):
                     if rets['step'] % 1 == 0:
                         tf.logging.info(
                             'step:%d loss:%f' % (rets['step'], rets['loss']))
-                    if rets['step'] >= num_train_steps:
+                    if rets['step'] == num_train_steps:
                         break
                 except tf.errors.OutOfRangeError:
                     break
@@ -258,43 +253,44 @@ def main(_):
                 except tf.errors.OutOfRangeError:
                     break
 
-            output_file = os.path.join(output_dir, "test_results.tsv")
+            output_file = os.path.join(FLAGS.output_dir, "test_results.tsv")
             with tf.gfile.GFile(output_file, "w") as writer:
                 writer.write('\n'.join(str(p) for p in _all_preds))
 
-    # saver = tf.train.Saver()
 
-    if FLAGS.do_train:
-        with tf.train.MonitoredTrainingSession(
-            # when you pass the checkpoint_dir, it will raise the error that
-            # you must feed a value to the data iterator handle
-            # checkpoint_dir='monitor_output',
-            is_chief=is_chief, hooks=hooks,
-            config=config) as sess:
+    # broadcast global variables from rank-0 process
+    bcast = hvd.broadcast_global_variables(0)
+    with tf.Session() as sess:
+        # Loads pretrained BERT model parameters
+        init_checkpoint = os.path.join(bert_pretrain_dir, 'bert_model.ckpt')
+        model_utils.init_bert_checkpoint(init_checkpoint)
 
-            iterator.initialize_dataset(sess)
+        sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
+        sess.run(tf.tables_initializer())
+        bcast.run()
 
-            tf.logging.info('begin training...')
+        # Restores trained model if specified
+        saver = tf.train.Saver()
+        if FLAGS.checkpoint:
+            saver.restore(sess, FLAGS.checkpoint)
+
+        iterator.initialize_dataset(sess)
+
+        for var, value in zip(tf.trainable_variables(),
+                              sess.run(tf.trainable_variables())):
+            tf.logging.info('name：{} value:{}'.format(var.name, value))
+
+        if FLAGS.do_train:
+            iterator.restart_dataset(sess, 'train')
             _run(sess, mode='train')
-            # saver.save(sess, output_dir + '/model.ckpt')
+            saver.save(sess, FLAGS.output_dir + '/model.ckpt')
 
-    if FLAGS.do_eval:
-        with tf.train.MonitoredTrainingSession(
-            # when you pass the checkpoint_dir, it will raise the error that
-            # you must feed a value to the data iterator handle
-            # checkpoint_dir='monitor_output',
-            is_chief=is_chief, hooks=hooks,
-            config=config) as sess:
+        if FLAGS.do_eval:
             iterator.restart_dataset(sess, 'eval')
             _run(sess, mode='eval')
 
-    if FLAGS.do_test:
-        with tf.train.MonitoredTrainingSession(
-            # when you pass the checkpoint_dir, it will raise the error that
-            # you must feed a value to the data iterator handle
-            # checkpoint_dir='monitor_output',
-            is_chief=is_chief, hooks=hooks,
-            config=config) as sess:
+        if FLAGS.do_test:
             iterator.restart_dataset(sess, 'test')
             _run(sess, mode='test')
 

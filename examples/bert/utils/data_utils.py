@@ -465,6 +465,8 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
         d = tf.data.TFRecordDataset(input_file)
         if is_training:
             # https://github.com/uber/horovod/issues/223
+            tf.logging.info('hvd size:%d local rank:%d' % (hvd.size(),
+                                                           hvd.rank()))
             d = d.shard(hvd.size(), hvd.rank())
             d = d.repeat()
             d = d.shuffle(buffer_size=100)
