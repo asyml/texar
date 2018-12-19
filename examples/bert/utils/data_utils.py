@@ -24,6 +24,7 @@ import sys
 sys.path.append(os.path.dirname(__file__))
 import tokenization
 import tensorflow as tf
+import horovod.tensorflow as hvd
 
 class InputExample():
     """A single training/test example for simple sequence classification."""
@@ -463,6 +464,8 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
         # For eval, we want no shuffling and parallel reading doesn't matter.
         d = tf.data.TFRecordDataset(input_file)
         if is_training:
+            # https://github.com/uber/horovod/issues/223
+            d = d.shard(hvd.size(), hvd.rank())
             d = d.repeat()
             d = d.shuffle(buffer_size=100)
 

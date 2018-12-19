@@ -74,6 +74,7 @@ def main(_):
     hvd.init()
 
     config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
     config.gpu_options.visible_device_list = str(hvd.local_rank())
 
     hooks = [hvd.BroadcastGlobalVariablesHook(0)]
@@ -262,39 +263,26 @@ def main(_):
             with tf.gfile.GFile(output_file, "w") as writer:
                 writer.write('\n'.join(str(p) for p in _all_preds))
 
-    # saver = tf.train.Saver()
+    saver = tf.train.Saver()
+    init = tf.global_variables_initializer()
+    bcast = hvd.broadcast_global_variables(0)
 
-    if FLAGS.do_train:
-        with tf.train.MonitoredTrainingSession(
-            # when you pass the checkpoint_dir, it will raise the error that
-            # you must feed a value to the data iterator handle
-            # checkpoint_dir='monitor_output',
-            is_chief=is_chief, hooks=hooks,
-            config=config) as sess:
+    with tf.Session(config=config) as sess:
+        sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
+        sess.run(tf.tables_initializer())
+        iterator.initialize_dataset(sess)
 
-            iterator.initialize_dataset(sess)
-
+        if FLAGS.do_train:
             tf.logging.info('begin training...')
             _run(sess, mode='train')
-            # saver.save(sess, output_dir + '/model.ckpt')
+            saver.save(sess, output_dir + '/model.ckpt')
 
-    if FLAGS.do_eval:
-        with tf.train.MonitoredTrainingSession(
-            # when you pass the checkpoint_dir, it will raise the error that
-            # you must feed a value to the data iterator handle
-            # checkpoint_dir='monitor_output',
-            is_chief=is_chief, hooks=hooks,
-            config=config) as sess:
+        if FLAGS.do_eval and is_chief:
             iterator.restart_dataset(sess, 'eval')
             _run(sess, mode='eval')
 
-    if FLAGS.do_test:
-        with tf.train.MonitoredTrainingSession(
-            # when you pass the checkpoint_dir, it will raise the error that
-            # you must feed a value to the data iterator handle
-            # checkpoint_dir='monitor_output',
-            is_chief=is_chief, hooks=hooks,
-            config=config) as sess:
+        if FLAGS.do_test and is_chief:
             iterator.restart_dataset(sess, 'test')
             _run(sess, mode='test')
 
