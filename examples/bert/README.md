@@ -4,6 +4,21 @@ This is a Texar implementation of Google's BERT model, which allows to load pre-
 
 With Texar, building the BERT model is as simple as creating a [`TransformerEncoder`](https://texar.readthedocs.io/en/latest/code/modules.html#transformerencoder) instance. We can initialize the parameters of the TransformerEncoder using a pre-trained BERT checkpoint by calling `init_bert_checkpoint(path_to_bert_checkpoint)`. 
 
+## Updates:
+
+You can run the `python bert_classifier_main.py` with `--distributed` to enable the distributed training of the model. The only thing you need to do is to install [horovod](https://github.com/uber/horovod).
+
+For example, you can run
+```
+mpirun -np 2 \
+-H  server1:1,server2:1\
+-bind-to none -map-by slot \
+-x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
+-mca pml ob1 -mca btl ^openib \
+-mca btl_tcp_if_include ens3 \
+python bert_classifier_main.py --do_train --do_eval --do_test --output_dir='distributed_output'
+```
+
 ## Quick Start
 
 ### Download Dataset
