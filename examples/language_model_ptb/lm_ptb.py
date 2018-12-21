@@ -73,8 +73,6 @@ def _main(_):
     batch_size = config.batch_size
     num_steps = config.num_steps
     data = prepare_data(FLAGS.data_path)
-    print(len(data))
-    exit()
     vocab_size = data["vocab_size"]
 
     inputs = tf.placeholder(tf.int32, [batch_size, num_steps])
