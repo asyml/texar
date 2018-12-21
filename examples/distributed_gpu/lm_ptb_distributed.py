@@ -175,7 +175,8 @@ def _main(_):
             iters += num_steps
 
             ppl = np.exp(loss / iters)
-            if verbose and step % (epoch_size // 10) == 0:
+            if verbose and hvd.rank() == 0 \
+                and (step+1) % (epoch_size // 10) == 0:
                 tf.logging.info("%.3f perplexity: %.3f speed: %.0f wps" %
                       ((step+1) * 1.0 / epoch_size, ppl,
                        iters * batch_size / (time.time() - start_time)))

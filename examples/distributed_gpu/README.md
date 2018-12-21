@@ -39,8 +39,15 @@ The model will begin training, and will evaluate on the validation data periodic
 
 Run the following command to run on different GPUs where each GPU is used by one process.
 ```
-
+mpirun -np 2 \
+    -H  server1:1,server2:1\
+    -bind-to none -map-by slot \
+    -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
+    -mca pml ob1 -mca btl tcp,self \
+    -mca btl_tcp_if_include ens3 \
+    python lm_ptb_distributed.py
 ```
+
 ## Results ##
 
 As per the TensorFlow official PTB example, the perplexity of different configs is:
