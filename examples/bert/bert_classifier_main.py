@@ -218,12 +218,9 @@ def main(_):
                         tx.global_mode(): tf.estimator.ModeKeys.TRAIN,
                     }
                     rets = sess.run(fetches, feed_dict)
-                    if rets['step'] % 1 == 0:
+                    if rets['step'] % 50 == 0:
                         tf.logging.info(
                             'step:%d loss:%f' % (rets['step'], rets['loss']))
-                        tf.logging.info(
-                            'input_ids:{}'.format(rets['input_ids'])
-                        )
                     if rets['step'] == num_train_steps:
                         break
                 except tf.errors.OutOfRangeError:
@@ -287,10 +284,6 @@ def main(_):
             saver.restore(sess, FLAGS.checkpoint)
 
         iterator.initialize_dataset(sess)
-
-        for var, value in zip(tf.trainable_variables(),
-                              sess.run(tf.trainable_variables())):
-            tf.logging.info('name：{} value:{}'.format(var.name, value))
 
         if FLAGS.do_train:
             iterator.restart_dataset(sess, 'train')
