@@ -11,12 +11,12 @@ You can run the `python bert_classifier_main.py` with `--distributed` to enable 
 For example, you can run
 ```
 mpirun -np 2 \
--H  server1:1,server2:1\
--bind-to none -map-by slot \
--x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
--mca pml ob1 -mca btl ^openib \
--mca btl_tcp_if_include ens3 \
-python bert_classifier_main.py --do_train --do_eval --do_test --output_dir='distributed_output'
+    -H  server1:1,server2:1\
+    -bind-to none -map-by slot \
+    -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
+    -mca pml ob1 -mca btl tcp,self \
+    -mca btl_tcp_if_include ens3 
+    python bert_classifier_main.py --do_train --do_eval --do_test --output_dir='distributed_output'
 ```
 
 ## Quick Start
