@@ -1,3 +1,18 @@
+# Distributed Version of Language Model on PTB
+
+This is the distributed version of language model on PTB with Horovod framework.
+
+Compared to the single-machine version, there are a few things different:
+
+- Basic setting of Horovod in your codes. Generally, you will need in insert the horovod wrappers in appropriate portion of your codes
+    - `hvd.init()`: initialize the horovod
+    - set visible GPU list by `config.gpu_options.visible_device_list = str(hvd.local_rank())`, to make each process see the attached single GPU.
+    - `hvd.DistributedOptimizer`: wrap your optimizer.
+    - `hvd.broadcast_global_variables(0).run()` broadcast your global variables to different processes from rank-0 process.
+- Data feeding:
+    - As introduced in the [official Horovod Repository](https://github.com/uber/horovod/issues/223), you should split your dataset into shards before sending them to different processes, to make sure different GPUs are fed different mini-batch in each iteration.
+    - Because we update the global variables based on the mini-batches in different processes, we may need to adjust the `learning rate`, `batch_size` to fit the distributed settings.
+
 # Language Model on PTB #
 
 This example builds an LSTM language model, and trains on PTB data. Model and training are described in   
@@ -10,7 +25,7 @@ The example shows:
 
 ## Usage ##
 
-The following cmd trains a small-size model:
+By default, the following cmd trains a single-gpu model with Horovod:
 
 ```
 python lm_ptb.py [--config config_small] [--data_path ./]
@@ -21,6 +36,8 @@ Here:
   * `--data_path` specifies the directory containing PTB raw data (e.g., `ptb.train.txt`). If the data files do not exist, the program will automatically download, extract, and pre-process the data.
 
 The model will begin training, and will evaluate on the validation data periodically, and evaluate on the test data after the training is done. 
+
+Run the following command to run on different GPUs where each GPU is used by one process.
 
 ## Results ##
 

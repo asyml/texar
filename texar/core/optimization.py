@@ -382,26 +382,27 @@ def get_optimizer(variables=None, learning_rate=None,
 
     if learning_rate is None:
         learning_rate = opt_hparams["kwargs"].get("learning_rate", None)
+    tf.logging.info('static lr:{}'.format(learning_rate))
     if learning_rate is None:
         # Try to get learning_rate from the default value of the
         # optimizer's argument
         opt_argspec = utils.get_default_arg_values(optimizer_class.__init__)
         learning_rate = opt_argspec.get("learning_rate", None)
 
-    grad_clip_fn = get_gradient_clip_fn(hparams["gradient_clip"])
-
     lr_decay_fn = get_learning_rate_decay_fn(hparams["learning_rate_decay"])
     if lr_decay_fn is not None:
         lr = lr_decay_fn(learning_rate=learning_rate,
-                     global_step=global_step)
+                         global_step=global_step)
     else:
         lr = learning_rate
+        tf.summary.scalar("learning_rate", lr)
 
-    optimizer = optimizer_fn(lr)
+    optimizer = optimizer_fn(learning_rate=lr)
 
     return optimizer
 
-def get_train_op(loss, variables=None, learning_rate=None,
+def get_train_op(loss, variables=None,
+                 optimizer=None, learning_rate=None,
                  global_step=None, increment_global_step=True, hparams=None):
     """Creates a training op.
 
@@ -412,6 +413,8 @@ def get_train_op(loss, variables=None, learning_rate=None,
         loss: A scalar Tensor representing the loss to minimize.
         variables (optional): A list of Variables to optimize. If
             `None`, all trainable variables are used.
+        optimizer (optional): An tf.train.Optimizer instance. If `None`,
+            use the setting in `hparams` to create the optimizer.
         learning_rate (float or Tensor, optional): If `None`, learning rate
             specified in :attr:`hparams`, or the default learning rate
             of the optimizer will be used (if exists).
@@ -439,32 +442,45 @@ def get_train_op(loss, variables=None, learning_rate=None,
     """
     hparams = HParams(hparams, default_optimization_hparams())
 
-    opt_hparams = hparams["optimizer"]
-    optimizer_fn, optimizer_class = get_optimizer_fn(opt_hparams)
-
-    if learning_rate is None:
-        learning_rate = opt_hparams["kwargs"].get("learning_rate", None)
-    if learning_rate is None:
-        # Try to get learning_rate from the default value of the
-        # optimizer's argument
-        opt_argspec = utils.get_default_arg_values(optimizer_class.__init__)
-        learning_rate = opt_argspec.get("learning_rate", None)
+    if not isinstance(optimizer, tf.train.Optimizer):
+        opt_hparams = hparams["optimizer"]
+        optimizer_fn, optimizer_class = get_optimizer_fn(opt_hparams)
+        if learning_rate is None:
+            learning_rate = opt_hparams["kwargs"].get("learning_rate", None)
+            if learning_rate is None:
+                # Try to get learning_rate from the default value of the
+                # optimizer's argument
+                opt_argspec = utils.get_default_arg_values(
+                    optimizer_class.__init__)
+            learning_rate = opt_argspec.get("learning_rate", None)
+        lr_decay_fn = get_learning_rate_decay_fn(hparams["learning_rate_decay"])
 
     grad_clip_fn = get_gradient_clip_fn(hparams["gradient_clip"])
 
-    lr_decay_fn = get_learning_rate_decay_fn(hparams["learning_rate_decay"])
-
-    train_op = tf.contrib.layers.optimize_loss(
-        loss=loss,
-        global_step=global_step,
-        learning_rate=learning_rate,
-        optimizer=optimizer_fn,
-        gradient_noise_scale=hparams["gradient_noise_scale"],
-        clip_gradients=grad_clip_fn,
-        learning_rate_decay_fn=lr_decay_fn,
-        variables=variables,
-        name=hparams["name"],
-        increment_global_step=increment_global_step)
+    if isinstance(optimizer, tf.train.Optimizer):
+        train_op = tf.contrib.layers.optimize_loss(
+            loss=loss,
+            global_step=global_step,
+            learning_rate=None,
+            optimizer=optimizer,
+            gradient_noise_scale=hparams["gradient_noise_scale"],
+            clip_gradients=grad_clip_fn,
+            variables=variables,
+            name=hparams["name"],
+            increment_global_step=increment_global_step)
+    else:
+        exit()
+        train_op = tf.contrib.layers.optimize_loss(
+            loss=loss,
+            global_step=global_step,
+            learning_rate=learning_rate,
+            optimizer=optimizer_fn,
+            gradient_noise_scale=hparams["gradient_noise_scale"],
+            clip_gradients=grad_clip_fn,
+            learning_rate_decay_fn=lr_decay_fn,
+            variables=variables,
+            name=hparams["name"],
+            increment_global_step=increment_global_step)
 
     return train_op
 

@@ -195,7 +195,7 @@ def main(_):
     train_op = tf.contrib.layers.optimize_loss(
         loss=loss,
         global_step=global_step,
-        learning_rate=lr,
+        learning_rate=None,
         optimizer=opt)
 
     # Train/eval/test routine
