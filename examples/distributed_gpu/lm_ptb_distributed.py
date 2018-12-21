@@ -79,8 +79,10 @@ def _main(_):
     data = prepare_data(FLAGS.data_path)
     vocab_size = data["vocab_size"]
 
-    inputs = tf.placeholder(tf.int32, [batch_size // hvd.size(), num_steps])
-    targets = tf.placeholder(tf.int32, [batch_size // hvd.size(), num_steps])
+    inputs = tf.placeholder(tf.int32, [None, num_steps],
+                            name='inputs')
+    targets = tf.placeholder(tf.int32, [None, num_steps],
+                             name='targets')
 
     # Model architecture
     initializer = tf.random_uniform_initializer(
@@ -95,15 +97,21 @@ def _main(_):
 
         decoder = tx.modules.BasicRNNDecoder(
             vocab_size=vocab_size, hparams={"rnn_cell": config.cell})
-        initial_state = decoder.zero_state(batch_size // hvd.size(),
+
+        # This _batch_size equals to batch_size // hvd.size() in
+        # distributed training.
+        # because the mini-batch is distributed to multiple GPUs
+
+        _batch_size = tf.shape(inputs)[0]
+        initial_state = decoder.zero_state(_batch_size,
                                            tf.float32)
+        seq_length = tf.broadcast_to([num_steps], (_batch_size, ))
         outputs, final_state, seq_lengths = decoder(
             decoding_strategy="train_greedy",
             impute_finished=True,
             inputs=emb_inputs,
-            sequence_length=[num_steps]*(batch_size // hvd.size()),
+            sequence_length=seq_length,
             initial_state=initial_state)
-
     # Losses & train ops
     mle_loss = tx.losses.sequence_sparse_softmax_cross_entropy(
         labels=targets,
@@ -133,7 +141,6 @@ def _main(_):
         start_time = time.time()
         loss = 0.
         iters = 0
-        state = sess.run(initial_state)
 
         fetches = {
             "mle_loss": mle_loss,
@@ -150,6 +157,10 @@ def _main(_):
             // num_steps
 
         for step, (x, y) in enumerate(data_iter):
+            if step == 0:
+                state = sess.run(initial_state,
+                                 feed_dict={inputs: x})
+
             feed_dict = {
                 inputs: x, targets: y, global_step: epoch,
                 tx.global_mode(): mode,
@@ -165,9 +176,8 @@ def _main(_):
 
             ppl = np.exp(loss / iters)
             if verbose and step % (epoch_size // 10) == 0:
-                tf.logging.info("step{} epoch size:{}".format(step, epoch_size))
                 tf.logging.info("%.3f perplexity: %.3f speed: %.0f wps" %
-                      (step * 1.0 / epoch_size, ppl,
+                      ((step+1) * 1.0 / epoch_size, ppl,
                        iters * batch_size / (time.time() - start_time)))
 
         ppl = np.exp(loss / iters)

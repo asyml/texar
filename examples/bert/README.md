@@ -15,7 +15,7 @@ mpirun -np 2 \
     -bind-to none -map-by slot \
     -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
     -mca pml ob1 -mca btl tcp,self \
-    -mca btl_tcp_if_include ens3 
+    -mca btl_tcp_if_include ens3 \
     python bert_classifier_main.py --do_train --do_eval --do_test --output_dir='distributed_output'
 ```
 

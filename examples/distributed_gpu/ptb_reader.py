@@ -49,9 +49,7 @@ def ptb_iterator(data, batch_size, num_steps, is_train=False):
         return data
 
     if is_train:
-        tf.logging.info('before shard, data shape:{}'.format(data.shape))
         data = _sharded_data(data)
-        tf.logging.info('after shard, data shape:{}'.format(data.shape))
 
     for i in range(epoch_size):
         x = data[:, i * num_steps : (i+1) * num_steps]

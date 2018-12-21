@@ -149,7 +149,7 @@ def _main(_):
             ppl = np.exp(loss / iters)
             if verbose and step % (epoch_size // 10) == 10:
                 print("%.3f perplexity: %.3f speed: %.0f wps" %
-                      (step * 1.0 / epoch_size, ppl,
+                      ((step+1) * 1.0 / epoch_size, ppl,
                        iters * batch_size / (time.time() - start_time)))
 
         ppl = np.exp(loss / iters)
