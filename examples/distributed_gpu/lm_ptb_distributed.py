@@ -205,16 +205,20 @@ def _main(_):
             train_ppl = _run_epoch(
                 sess, train_data_iter, epoch, is_train=True, verbose=True)
             tf.logging.info("Epoch: %d Train Perplexity: %.3f" % (epoch, train_ppl))
-            # Valid
-            valid_data_iter = ptb_iterator(
-                data["valid_text_id"], config.batch_size, num_steps)
-            valid_ppl = _run_epoch(sess, valid_data_iter, epoch)
-            tf.logging.info("Epoch: %d Valid Perplexity: %.3f" % (epoch, valid_ppl))
-        # Test
-        test_data_iter = ptb_iterator(
-            data["test_text_id"], batch_size, num_steps)
-        test_ppl = _run_epoch(sess, test_data_iter, 0)
-        tf.logging.info("Test Perplexity: %.3f" % (test_ppl))
+            # Valid in the main process
+            if hvd.rank() == 0:
+                valid_data_iter = ptb_iterator(
+                    data["valid_text_id"], config.batch_size, num_steps)
+                valid_ppl = _run_epoch(sess, valid_data_iter, epoch)
+                tf.logging.info("Epoch: %d Valid Perplexity: %.3f"
+                                % (epoch, valid_ppl))
+
+        # Test in the main process
+        if hvd.rank() == 0:
+            test_data_iter = ptb_iterator(
+                data["test_text_id"], batch_size, num_steps)
+            test_ppl = _run_epoch(sess, test_data_iter, 0)
+            tf.logging.info("Test Perplexity: %.3f" % (test_ppl))
 
 if __name__ == '__main__':
     tf.app.run(main=_main)
