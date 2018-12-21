@@ -382,7 +382,6 @@ def get_optimizer(variables=None, learning_rate=None,
 
     if learning_rate is None:
         learning_rate = opt_hparams["kwargs"].get("learning_rate", None)
-    tf.logging.info('static lr:{}'.format(learning_rate))
     if learning_rate is None:
         # Try to get learning_rate from the default value of the
         # optimizer's argument
