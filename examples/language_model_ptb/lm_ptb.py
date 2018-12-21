@@ -73,6 +73,8 @@ def _main(_):
     batch_size = config.batch_size
     num_steps = config.num_steps
     data = prepare_data(FLAGS.data_path)
+    print(len(data))
+    exit()
     vocab_size = data["vocab_size"]
 
     inputs = tf.placeholder(tf.int32, [batch_size, num_steps])
@@ -128,7 +130,8 @@ def _main(_):
                 if is_train
                 else tf.estimator.ModeKeys.EVAL)
 
-        epoch_size = (len(data) // batch_size - 1) // num_steps
+        epoch_size = (len(data["train_text_id"]) // batch_size - 1)\
+            // num_steps
         for step, (x, y) in enumerate(data_iter):
             feed_dict = {
                 inputs: x, targets: y, global_step: epoch,

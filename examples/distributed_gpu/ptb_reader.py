@@ -26,7 +26,7 @@ import tensorflow as tf
 import horovod.tensorflow as hvd
 import texar as tx
 
-def ptb_iterator(data, batch_size, num_steps):
+def ptb_iterator(data, batch_size, num_steps, is_train=False):
     """Iterates through the ptb data.
     """
 
@@ -48,9 +48,10 @@ def ptb_iterator(data, batch_size, num_steps):
         data = data[hvd.rank()]
         return data
 
-    tf.logging.info('before shard, data shape:{}'.format(data.shape))
-    data = _sharded_data(data)
-    tf.logging.info('after shard, data shape:{}'.format(data.shape))
+    if is_train:
+        tf.logging.info('before shard, data shape:{}'.format(data.shape))
+        data = _sharded_data(data)
+        tf.logging.info('after shard, data shape:{}'.format(data.shape))
 
     for i in range(epoch_size):
         x = data[:, i * num_steps : (i+1) * num_steps]

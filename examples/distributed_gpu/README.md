@@ -11,7 +11,7 @@ Compared to the single-machine version, there are a few things different:
     - `hvd.broadcast_global_variables(0).run()` broadcast your global variables to different processes from rank-0 process.
 - Data feeding:
     - As introduced in the [official Horovod Repository](https://github.com/uber/horovod/issues/223), you should split your dataset into shards before sending them to different processes, to make sure different GPUs are fed different mini-batch in each iteration.
-    - Because we update the global variables based on the mini-batches in different processes, we may need to adjust the `learning rate`, `batch_size` to fit the distributed settings.
+    - Because we update the global variables based on the mini-batches in different processes, we may need to adjust the `learning rate`, `batch_size` to fit the distributed settings. In this example, we scale down the specified `batch_size` with the number of processes before creating the mini-batch, to replicate the gradient computation in single-gpu setting.
 
 # Language Model on PTB #
 
