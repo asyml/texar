@@ -223,6 +223,7 @@ checkpoints/
 /language_models/
 /examples/language_model_ptb/simple-examples/
 simple-examples.tgz
+/examples/hierarchical_dialog/data/
 /examples/sequence_tagging/data/
 /examples/sequence_tagging/tmp/
 /examples/sentence_classifier/data/
@@ -238,6 +239,7 @@ simple-examples.tgz
 /examples/seq2seq_configs/data.zip
 /examples/seq2seq_config/iwslt14.zip
 /examples/seq2seq_config/toy_copy.zip
+/examples/seq2seq_exposure_bias/data/
 /examples/text_style_transfer/checkpoints/
 /examples/text_style_transfer/samples/
 /examples/text_style_transfer/data/
@@ -247,3 +249,9 @@ simple-examples.tgz
 /examples/transformer/data/
 /examples/transformer/temp/
 /examples/transformer/outputs/
+/examples/bert/data/
+!/examples/bert/data/download_glue_data.py
+!/examples/bert/data/README.md
+/examples/bert/bert_pretrained_models/
+!/examples/bert/bert_pretrained_models/download_model.sh
+/examples/bert/output

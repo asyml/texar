@@ -13,7 +13,7 @@ data_hparams = {
                 "variable_utterance": True,
                 "max_utterance_cnt": max_utterance_cnt,
                 "files": [
-                    os.path.join(data_root, 
+                    os.path.join(data_root,
                                  '{}-source.txt'.format(stage))],
                 "vocab_file": os.path.join(data_root, 'vocab.txt'),
                 "embedding_init": {
@@ -30,13 +30,13 @@ data_hparams = {
                 "data_name": "target"
             },
         ] + [{ # source speaker token
-                "files": os.path.join(data_root, 
+                "files": os.path.join(data_root,
                                       '{}-source-spk-{}.txt'.format(stage, i)),
                 "data_type": "float",
                 "data_name": "spk_{}".format(i)
             } for i in range(max_utterance_cnt)
         ] + [{ # target speaker token
-                "files": os.path.join(data_root, 
+                "files": os.path.join(data_root,
                                       '{}-target-spk.txt'.format(stage)),
                 "data_type": "float",
                 "data_name": "spk_tgt"
@@ -44,7 +44,7 @@ data_hparams = {
         ] + [{ # target refs for BLEU evaluation
                 "variable_utterance": True,
                 "max_utterance_cnt": 10,
-                "files": [os.path.join(data_root, 
+                "files": [os.path.join(data_root,
                                        '{}-target-refs.txt'.format(stage))],
                 "vocab_share_with": 0,
                 "data_name": "refs"

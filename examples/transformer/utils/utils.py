@@ -30,7 +30,7 @@ def set_random_seed(myseed):
     np.random.seed(myseed)
     random.seed(myseed)
 
-def batch_size_fn(new, count, sofar):
+def batch_size_fn(new, count, size_so_far):
     max_src_in_batch, max_tgt_in_batch = 0, 0
     max_src_in_batch = max(max_src_in_batch, len(new[0] + 1))
     max_tgt_in_batch = max(max_tgt_in_batch, len(new[1] + 1))

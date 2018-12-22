@@ -98,7 +98,7 @@ def mask_and_reduce(sequence,
     if time_major:
         sequence = rnn._transpose_batch_time(sequence)
 
-    if sequence_length is None:
+    if sequence_length is not None:
         sequence = mask_sequences(sequence, sequence_length, dtype=dtype,
                                   time_major=False, tensor_rank=rank)
 

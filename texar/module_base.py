@@ -29,7 +29,6 @@ from texar.hyperparams import HParams
 __all__ = [
     "ModuleBase"
 ]
-
 class ModuleBase(object):
     """Base class inherited by modules that create Variables and are
     configurable through hyperparameters.

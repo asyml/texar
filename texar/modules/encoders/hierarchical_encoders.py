@@ -203,13 +203,13 @@ class HierarchicalRNNEncoder(EncoderBase):
                 for the major encoder.
                 If not specified, :meth:`flatten` is used for processing
                 the minor's final states.
+            sequence_length_major (optional): The `sequence_length` argument
+                sent to major encoder. This is a 1-D Tensor of shape
+                `[B]`.
             sequence_length_minor (optional): The `sequence_length` argument
                 sent to minor encoder. It can be either a 1-D Tensor of shape
                 `[B*T]`, or a 2-D Tensor of shape `[B, T]` or `[T, B]`
                 according to :attr:`order`.
-            sequence_length_major (optional): The `sequence_length` argument
-                sent to major encoder. This is a 1-D Tensor of shape
-                `[B]`.
             **kwargs: Other keyword arguments for the major and minor encoders,
                 such as `initial_state`, etc.
                 Note that `sequence_length`, and `time_major`
@@ -242,6 +242,8 @@ class HierarchicalRNNEncoder(EncoderBase):
             return kwargs_minor, kwargs_major
 
         kwargs_minor, kwargs_major = _kwargs_split(kwargs)
+        if sequence_length_minor is not None:
+            sequence_length_minor = tf.reshape(sequence_length_minor, [-1])
         kwargs_minor['sequence_length'] = sequence_length_minor
         kwargs_major['sequence_length'] = sequence_length_major
 

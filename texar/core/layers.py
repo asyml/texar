@@ -81,8 +81,8 @@ def default_rnn_cell_hparams():
             "type": "LSTMCell",
             "kwargs": {
                 "num_units": 256
-            }
-            "num_layers": 1
+            },
+            "num_layers": 1,
             "dropout": {
                 "input_keep_prob": 1.0,
                 "output_keep_prob": 1.0,
@@ -132,11 +132,11 @@ def default_rnn_cell_hparams():
     "dropout" : dict
         Dropout applied to the cell in **each** layer. See
         :tf_main:`DropoutWrapper <contrib/rnn/DropoutWrapper>` for details of
-        the hyperparameters. If all `*_keep_prob`=1, no dropout is applied.
+        the hyperparameters. If all "\*_keep_prob" = 1, no dropout is applied.
 
-        Specifically, if "variational_recurrent"=`True`,
+        Specifically, if "variational_recurrent" = `True`,
         the same dropout mask is applied across all time steps per run call.
-        If `True`, :attr:`"input_size"` is required, which is a list of input
+        If `True`, "input_size" is required, which is a list of input
         size of each cell layer. The input size of a cell layer is the last
         dimension size of its input tensor. For example, the
         input size of the first layer is usually the dimension of
@@ -148,22 +148,22 @@ def default_rnn_cell_hparams():
             # Assume embedding_dim = 100
             "type": "LSTMCell",
             "kwargs": { "num_units": 123 },
-            "num_layers": 3
+            "num_layers": 3,
             "dropout": {
                 "output_keep_prob": 0.5,
                 "variational_recurrent": True,
                 "input_size": [100, 123, 123]
             }
 
-    "residule" : bool
+    "residual" : bool
         If `True`, apply residual connection on the inputs and
         outputs of cell in **each** layer except the first layer. Ignored
-        if "num_layers"==1.
+        if "num_layers" = 1.
 
     "highway" : bool
         If True, apply highway connection on the inputs and
         outputs of cell in each layer except the first layer. Ignored if
-        "num_layers"==1.
+        "num_layers" = 1.
     """
     return {
         "type": "LSTMCell",
@@ -448,7 +448,7 @@ def get_activation_fn(fn_name="identity", kwargs=None):
     if fn_name is None:
         return None
 
-    fn_modules = ['tensorflow', 'tensorflow.nn', 'texar.custom']
+    fn_modules = ['tensorflow', 'tensorflow.nn', 'texar.custom', 'texar.core.layers']
     activation_fn_ = utils.get_function(fn_name, fn_modules)
     activation_fn = activation_fn_
 
@@ -549,12 +549,12 @@ def get_layer(hparams):
                 - Arguments named "activation" can be a callable, \
                 or a `str` of \
                 the name or module path to the activation function.
-                - Arguments named "*_regularizer" and "*_initializer" \
+                - Arguments named "\*_regularizer" and "\*_initializer" \
                 can be a class instance, or a `dict` of \
                 hyperparameters of \
                 respective regularizers and initializers. See
-                - Arguments named "*_constraint" can be a callable, or a `str` \
-                of the name or full path to the constraint function.
+                - Arguments named "\*_constraint" can be a callable, or a \
+                `str` of the name or full path to the constraint function.
 
     Returns:
         A layer instance. If hparams["type"] is a layer instance, returns it
@@ -1173,9 +1173,7 @@ _layer_class_to_default_kwargs_map = {
 }
 
 def layer_normalize(inputs,
-                    epsilon=1e-8,
-                    scope='ln',
-                    reuse=None):
+                    scope=None):
     '''Applies layer normalization. averaging over the last dimension
     Args:
         inputs: A tensor with 2 or more dimensions, where the first
@@ -1183,18 +1181,22 @@ def layer_normalize(inputs,
         epsilon: A floating number. A very small number for preventing
             ZeroDivision Error.
         scope: Optional scope for `variable_scope`.
-        reuse: Boolean, whether to reuse the weights of a previous layer
-            by the same name.
     Returns:
         A tensor with the same shape and data dtype as `inputs`.
     '''
-    with tf.variable_scope(scope, reuse=reuse):
-        filters = inputs.get_shape()[-1]
-        mean, variance = tf.nn.moments(inputs, [-1], keep_dims=True)
-        scale = tf.get_variable('layer_norm_scale',\
-            [filters], initializer=tf.ones_initializer())
-        bias = tf.get_variable('layer_norm_bias',\
-            [filters], initializer=tf.zeros_initializer())
-        norm_x = (inputs - mean) * tf.rsqrt(variance + epsilon)
-        outputs = norm_x * scale + bias
-    return outputs
+    return tf.contrib.layers.layer_norm(
+        inputs=inputs, begin_norm_axis=-1, begin_params_axis=-1, scope=scope
+    )
+
+
+def gelu(input_tensor):
+    """Gaussian Error Linear Unit.
+    This is a smoother version of the RELU.
+    Original paper: https://arxiv.org/abs/1606.08415
+    Args:
+      input_tensor: float Tensor to perform activation.
+    Returns:
+      `input_tensor` with the GELU activation applied.
+    """
+    cdf = 0.5 * (1.0 + tf.erf(input_tensor / tf.sqrt(2.0)))
+    return input_tensor * cdf

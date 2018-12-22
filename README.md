@@ -89,12 +89,12 @@ pip install -e .
 If you use Texar, please cite the [report](https://arxiv.org/abs/1809.00794) with the following BibTex entry:
 ```
 Texar: A Modularized, Versatile, and Extensible Toolkit for Text Generation
-Zhiting Hu, Haoran Shi, Zichao Yang, Bowen Tan, Tiancheng Zhao, Junxian He, Wentao Wang, Xingjiang Yu, Lianhui Qin, Di Wang, Xuezhe Ma, Hector Liu, Xiaodan Liang, Wanrong Zhu, Devendra Singh Sachan, Eric P. Xing
+Zhiting Hu, Haoran Shi, Zichao Yang, Bowen Tan, Tiancheng Zhao, Junxian He, Wentao Wang, Lianhui Qin, Di Wang, Xuezhe Ma, Hector Liu, Xiaodan Liang, Wanrong Zhu, Devendra Singh Sachan, Eric P. Xing
 2018
 
 @article{hu2018texar,
   title={Texar: A Modularized, Versatile, and Extensible Toolkit for Text Generation},
-  author={Hu, Zhiting and Shi, Haoran and Yang, Zichao and Tan, Bowen and Zhao, Tiancheng and He, Junxian and Wang, Wentao and Yu, Xingjiang and Qin, Lianhui and Wang, Di and others},
+  author={Hu, Zhiting and Shi, Haoran and Yang, Zichao and Tan, Bowen and Zhao, Tiancheng and He, Junxian and Wang, Wentao and Qin, Lianhui and Wang, Di and others},
   journal={arXiv preprint arXiv:1809.00794},
   year={2018}
 }

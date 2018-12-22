@@ -257,26 +257,30 @@ class SinusoidsPositionEmbedder(EmbedderBase):
             {
                 'min_timescale': 1.0,
                 'max_timescale': 10000.0,
+                'dim': 512,
                 'name':'sinusoid_posisiton_embedder',
             }
         """
         hparams = {
             'min_timescale': 1.0,
             'max_timescale': 1.0e4,
+            'dim': 512,
             'name':'sinusoid_posisiton_embedder',
         }
         return hparams
 
-    def _build(self, position_size, dim):
+    def _build(self, positions):
         """Embeds.
 
         Args:
-            position_size: The number of positions, generally the max sequence length.
-            dim: The dimension of the position embedding.
+            positions (optional): An integer tensor containing the position
+                ids to embed.
         Returns:
             A `Tensor` of shape `[1, position_size, dim]`.
         """
-        position = tf.to_float(tf.range(position_size))
+        dim = self._hparams.dim
+        position = tf.to_float(tf.squeeze(positions, axis=0))
+        position_size = tf.shape(position)[0]
         num_timescales = dim // 2
         min_timescale = self._hparams.min_timescale
         max_timescale = self._hparams.max_timescale
