@@ -146,8 +146,8 @@ def _main(_):
                                   hparams=config.update_opt_hparams)
     reward = tx.losses.discount_reward(
         reward, sequence_length=tf.squeeze(sequence_length), tensor_rank=2)
-    update_loss = tf.reduce_mean(tf.log(infer_logits) *
-                                 tf.expand_dims(reward, -1))
+    update_loss = -tf.reduce_mean(tf.log(infer_logits) *
+                                  tf.expand_dims(reward, -1))
     update_loss.set_shape(())
     gen_op = tx.core.get_train_op(update_loss,
                                   global_step=global_step,
