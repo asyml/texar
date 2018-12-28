@@ -440,6 +440,7 @@ def get_train_op(loss, variables=None,
         step is created and returned.
     """
     hparams = HParams(hparams, default_optimization_hparams())
+    grad_clip_fn = get_gradient_clip_fn(hparams["gradient_clip"])
 
     if not isinstance(optimizer, tf.train.Optimizer):
         opt_hparams = hparams["optimizer"]
@@ -452,23 +453,8 @@ def get_train_op(loss, variables=None,
                 opt_argspec = utils.get_default_arg_values(
                     optimizer_class.__init__)
             learning_rate = opt_argspec.get("learning_rate", None)
-        lr_decay_fn = get_learning_rate_decay_fn(hparams["learning_rate_decay"])
-
-    grad_clip_fn = get_gradient_clip_fn(hparams["gradient_clip"])
-
-    if isinstance(optimizer, tf.train.Optimizer):
-        train_op = tf.contrib.layers.optimize_loss(
-            loss=loss,
-            global_step=global_step,
-            learning_rate=None,
-            optimizer=optimizer,
-            gradient_noise_scale=hparams["gradient_noise_scale"],
-            clip_gradients=grad_clip_fn,
-            variables=variables,
-            name=hparams["name"],
-            increment_global_step=increment_global_step)
-    else:
-        exit()
+        lr_decay_fn = get_learning_rate_decay_fn(
+            hparams["learning_rate_decay"])
         train_op = tf.contrib.layers.optimize_loss(
             loss=loss,
             global_step=global_step,
@@ -477,6 +463,18 @@ def get_train_op(loss, variables=None,
             gradient_noise_scale=hparams["gradient_noise_scale"],
             clip_gradients=grad_clip_fn,
             learning_rate_decay_fn=lr_decay_fn,
+            variables=variables,
+            name=hparams["name"],
+            increment_global_step=increment_global_step)
+
+    else:
+        train_op = tf.contrib.layers.optimize_loss(
+            loss=loss,
+            global_step=global_step,
+            learning_rate=None,
+            optimizer=optimizer,
+            gradient_noise_scale=hparams["gradient_noise_scale"],
+            clip_gradients=grad_clip_fn,
             variables=variables,
             name=hparams["name"],
             increment_global_step=increment_global_step)

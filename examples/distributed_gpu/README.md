@@ -10,7 +10,7 @@ Compared to the single-machine version, there are a few things different:
     - `hvd.DistributedOptimizer`: wrap your optimizer.
     - `hvd.broadcast_global_variables(0).run()` broadcast your global variables to different processes from rank-0 process.
 - Data feeding:
-    - As introduced in the [official Horovod Repository](https://github.com/uber/horovod/issues/223), you should split your dataset into shards before sending them to different processes, to make sure different GPUs are fed different mini-batch in each iteration.
+    - You should split your dataset into shards before sending them to different processes, to make sure different GPUs are fed different mini-batch in each iteration.
     - Because we update the global variables based on the mini-batches in different processes, we may need to adjust the `learning rate`, `batch_size` to fit the distributed settings. In this example, we scale down the specified `batch_size` with the number of processes before feeding the mini-batch into the graph, to replicate the gradient computation in single-gpu setting.
 
 # Language Model on PTB #
@@ -54,6 +54,6 @@ As per the TensorFlow official PTB example, the perplexity of different configs 
 
 | config | epochs | train | valid  | test  |
 | -------| -------| ------| -------| ------|
-| small  | 13     | 37.99 | 121.39 | 115.91|
-| medium | 39     | 48.45 |  86.16 |  82.07|
+| small  | 13     | 40.81 | 118.99 | 114.63|
+| medium | 39     | 44.18 |  87.63 |  84.42|
 | large  | 55     | 37.87 |  82.62 |  78.29|

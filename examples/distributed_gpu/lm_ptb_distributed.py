@@ -181,6 +181,7 @@ def _main(_):
                       ((step+1) * 1.0 / epoch_size, ppl,
                        iters * batch_size / (time.time() - start_time)))
 
+        tf.logging.info("epoch time elapsed: %f" % (time.time() - start_time()))
         ppl = np.exp(loss / iters)
         return ppl
 
