@@ -52,8 +52,8 @@ mpirun -np 2 \
 
 As per the TensorFlow official PTB example, the perplexity of different configs is:
 
-| config | epochs | train | valid  | test  |
+| config | epochs | train | valid  | test  | time/epoch (2-gpu) | time/epoch(single-gpu) |
 | -------| -------| ------| -------| ------|
-| small  | 13     | 40.81 | 118.99 | 114.63|
+| small  | 13     | 40.81 | 118.99 | 114.63|    | 184.73s
 | medium | 39     | 44.18 |  87.63 |  84.42|
 | large  | 55     | 37.87 |  82.62 |  78.29|

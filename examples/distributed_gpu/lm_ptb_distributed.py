@@ -180,10 +180,10 @@ def _main(_):
                 tf.logging.info("%.3f perplexity: %.3f speed: %.0f wps" %
                       ((step+1) * 1.0 / epoch_size, ppl,
                        iters * batch_size / (time.time() - start_time)))
-
-        tf.logging.info("epoch time elapsed: %f" % (time.time() - start_time()))
+        _elapsed_time = time.time() - start_time
+        tf.logging.info("epoch time elapsed: %f" % (_elapsed_time))
         ppl = np.exp(loss / iters)
-        return ppl
+        return ppl, _elapsed_time
 
     # broadcase global variables from rank-0 process
     bcast = hvd.broadcast_global_variables(0)
@@ -198,27 +198,32 @@ def _main(_):
 
         bcast.run()
 
+        _times = []
         for epoch in range(config.num_epochs):
             # Train
             train_data_iter = ptb_iterator(
                 data["train_text_id"], config.batch_size, num_steps,
                 is_train=True)
-            train_ppl = _run_epoch(
+            train_ppl, train_time = _run_epoch(
                 sess, train_data_iter, epoch, is_train=True, verbose=True)
+            _times.append(train_time)
             tf.logging.info("Epoch: %d Train Perplexity: %.3f" % (epoch, train_ppl))
             # Valid in the main process
             if hvd.rank() == 0:
                 valid_data_iter = ptb_iterator(
                     data["valid_text_id"], config.batch_size, num_steps)
-                valid_ppl = _run_epoch(sess, valid_data_iter, epoch)
+                valid_ppl, _ = _run_epoch(sess, valid_data_iter, epoch)
                 tf.logging.info("Epoch: %d Valid Perplexity: %.3f"
                                 % (epoch, valid_ppl))
 
+        tf.logging.info('train times: %s' % (_times))
+        tf.logging.info('average train time/epoch %f'
+                        % np.mean(np.array(_times)))
         # Test in the main process
         if hvd.rank() == 0:
             test_data_iter = ptb_iterator(
                 data["test_text_id"], batch_size, num_steps)
-            test_ppl = _run_epoch(sess, test_data_iter, 0)
+            test_ppl, _ = _run_epoch(sess, test_data_iter, 0)
             tf.logging.info("Test Perplexity: %.3f" % (test_ppl))
 
 if __name__ == '__main__':
