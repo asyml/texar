@@ -352,8 +352,8 @@ def get_gradient_clip_fn(hparams=None):
 
 def get_optimizer(variables=None, learning_rate=None,
                   global_step=None, hparams=None):
-    """Creates a optimizer instance.
 
+    """Creates a optimizer instance.
     Args:
         variables (optional): A list of Variables to optimize. If
             `None`, all trainable variables are used.
@@ -373,7 +373,7 @@ def get_optimizer(variables=None, learning_rate=None,
             all hyperparameters and default values.
 
     Returns:
-        optimizer instance
+        optimizer: the tf.train.Optimizer instance specified in hparams.
     """
     hparams = HParams(hparams, default_optimization_hparams())
 
@@ -435,9 +435,7 @@ def get_train_op(loss, variables=None,
             all hyperparameters and default values.
 
     Returns:
-        tuple: (train_op, global_step). If :attr:`global_step` is provided, the
-        same :attr:`global_step` variable is returned, otherwise a new global
-        step is created and returned.
+        train_op: the operator used for variables optimization.
     """
     hparams = HParams(hparams, default_optimization_hparams())
     grad_clip_fn = get_gradient_clip_fn(hparams["gradient_clip"])
