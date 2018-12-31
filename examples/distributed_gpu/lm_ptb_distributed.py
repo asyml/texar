@@ -73,7 +73,7 @@ def _main(_):
     # Data
     tf.logging.set_verbosity(tf.logging.INFO)
 
-    ## 1.
+    ## 1. initialize the horovod
     hvd.init()
 
     batch_size = config.batch_size
@@ -188,10 +188,10 @@ def _main(_):
         ppl = np.exp(loss / iters)
         return ppl, _elapsed_time
 
-    # set to broadcase global variables from rank-0 process
+    # 3. set broadcase global variables from rank-0 process
     bcast = hvd.broadcast_global_variables(0)
 
-    # 3. set visible GPU
+    # 4. set visible GPU
     session_config = tf.ConfigProto()
     session_config.gpu_options.visible_device_list = str(hvd.local_rank())
 
