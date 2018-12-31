@@ -72,6 +72,8 @@ config = importlib.import_module(FLAGS.config)
 def _main(_):
     # Data
     tf.logging.set_verbosity(tf.logging.INFO)
+
+    ## 1.
     hvd.init()
 
     batch_size = config.batch_size

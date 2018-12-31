@@ -29,11 +29,11 @@ pip install horovod
 
 Compared to the single-machine version, there are a few things different:
 
-- Basic setting of Horovod in your codes. Generally, you will need in insert the horovod wrappers in appropriate portion of your codes
-    - `hvd.init()`: initialize the horovod
-    - set visible GPU list by `config.gpu_options.visible_device_list = str(hvd.local_rank())`, to make each process see the attached single GPU.
-    - `hvd.DistributedOptimizer`: wrap your optimizer.
-    - `hvd.broadcast_global_variables(0).run()` broadcast your global variables to different processes from rank-0 process.
+- Basic setting of Horovod in your codes. Generally, you will need in insert the horovod wrappers in appropriate portion of your codes.
+    1. [hvd.init()](): initialize the horovod
+    2. set visible GPU list by `config.gpu_options.visible_device_list = str(hvd.local_rank())`, to make each process see the attached single GPU.
+    3. `hvd.DistributedOptimizer`: wrap your optimizer.
+    4. `hvd.broadcast_global_variables(0).run()` broadcast your global variables to different processes from rank-0 process.
 - Data feeding:
     - You should split your dataset into shards before sending them to different processes, to make sure different GPUs are fed different mini-batch in each iteration.
     - Because we update the global variables based on the mini-batches in different processes, we may need to adjust the `learning rate`, `batch_size` to fit the distributed settings. In this example, we scale down the specified `batch_size` with the number of processes before feeding the mini-batch into the graph, to replicate the gradient computation in single-gpu setting.
@@ -64,10 +64,13 @@ The model will begin training, and will evaluate on the validation data periodic
 
 ## Results ##
 
-As per the TensorFlow official PTB example, the perplexity of different configs is:
+We test the performance on two AWS p2.xlarge instances. 
+Since the language model is just a small example and the communication cost is considerable, it doesn't scale well in 2-GPU in terms of speedup rate. But the performance in multi-gpu is the same as that of the single-gpu environment, which is shown as follows:
 
 | config | epochs | train | valid  | test  | time/epoch (2-gpu) | time/epoch(single-gpu) |
 | -------| -------| ------| -------| ------|
-| small  | 13     | 40.81 | 118.99 | 114.63|    | 137.004802s
-| medium | 39     | 44.18 |  87.63 |  84.42|
+| small  | 13     | 40.81 | 118.99 | 114.72| 207.28s | 137.00s |
+| medium | 39     | 44.18 |  87.63 |  84.42| 461.56s |
 | large  | 55     | 37.87 |  82.62 |  78.29|
+
+You can refer to the corresponding single-gpu version of this example [here](https://github.com/asyml/texar/tree/master/examples/language_model_ptb).
