@@ -69,6 +69,7 @@ def _main(_):
                  "max_decoding_length_infer": config.max_num_steps + 2})
     initial_state = decoder.zero_state(batch_size=batch_size,
                                        dtype=tf.float32)
+    g_variables = tx.utils.collect_trainable_variables([g_embedder, decoder])
 
     # ------------Pretrain Generator---------------
     outputs, _, _ = decoder(
@@ -84,6 +85,7 @@ def _main(_):
 
     global_step = tf.Variable(0, trainable=False)
     gen_train_op = tx.core.get_train_op(mle_loss,
+                                        variables=g_variables,
                                         global_step=global_step,
                                         increment_global_step=True,
                                         hparams=config.g_opt_hparams)
@@ -108,14 +110,16 @@ def _main(_):
         hparams={"clas_strategy": "time_wise", "num_classes": 1})
     d_embedder = tx.modules.WordEmbedder(vocab_size=vocab_size,
                                          hparams=config.emb_hparams)
+    d_variables = tx.utils.collect_trainable_variables([discriminator, d_embedder])
 
-    r_logits, _ = discriminator(d_embedder(data_batch["text_ids"]))
-    f_logits, _ = discriminator(d_embedder(infer_sample_ids))
+    r_logits, _ = discriminator(d_embedder(data_batch["text_ids"][:, 1:]),
+                                sequence_length=data_batch["length"] - 1)
+    f_logits, _ = discriminator(d_embedder(infer_sample_ids), sequence_length=sequence_length)
 
     r_loss = tx.losses.sequence_sigmoid_cross_entropy(
-        labels=tf.ones_like(data_batch["text_ids"], dtype=tf.float32),
+        labels=tf.ones_like(data_batch["text_ids"][:, 1:], dtype=tf.float32),
         logits=tf.squeeze(r_logits),
-        sequence_length=data_batch["length"])  # r_preds -> 1.
+        sequence_length=data_batch["length"] - 1)  # r_preds -> 1.
     f_loss = tx.losses.sequence_sigmoid_cross_entropy(
         labels=tf.zeros_like(infer_sample_ids, dtype=tf.float32),
         logits=tf.squeeze(f_logits),
@@ -124,6 +128,7 @@ def _main(_):
     dis_loss.set_shape(())
 
     dis_train_op = tx.core.get_train_op(dis_loss,
+                                        variables=d_variables,
                                         global_step=global_step,
                                         increment_global_step=False,
                                         hparams=config.d_opt_hparams)
@@ -140,15 +145,17 @@ def _main(_):
     exp_reward_loss = -tf.reduce_mean(tf.abs(reward))
     exp_reward_loss.set_shape(())
     exp_op = tx.core.get_train_op(exp_reward_loss,
+                                  variables=[expected_reward],
                                   global_step=global_step,
                                   increment_global_step=False,
                                   hparams=config.update_opt_hparams)
     reward = tx.losses.discount_reward(
         reward, sequence_length=tf.squeeze(sequence_length), tensor_rank=2)
-    update_loss = tf.reduce_mean(tf.log(infer_logits) *
-                                 tf.expand_dims(reward, -1))
+    update_loss = -tf.reduce_mean(tf.log(infer_logits) *
+                                  tf.expand_dims(reward, -1))
     update_loss.set_shape(())
     gen_op = tx.core.get_train_op(update_loss,
+                                  variables=g_variables,
                                   global_step=global_step,
                                   increment_global_step=True,
                                   hparams=config.update_opt_hparams)
@@ -235,14 +242,13 @@ def _main(_):
                 steps += rtns['num_steps']
 
                 if mode_string == 'test':
-                    targets = _id2word_map(rtns['target_sample_id'].tolist())
+                    targets = _id2word_map(rtns['target_sample_id'][:, 1:].tolist())  # remove <BOS>
                     for t in targets:
                         target_list.extend(t.split('<EOS>')[0].strip().split())
 
                     inferences = _id2word_map(rtns['infer_sample_id'].tolist())
                     for inf in inferences:
-                        inference_list.extend( # remove <BOS>
-                            inf.split('<EOS>')[0].strip().split()[1:])
+                        inference_list.extend(inf.split('<EOS>')[0].strip().split())
 
             except tf.errors.OutOfRangeError:
                 break
