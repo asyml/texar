@@ -128,6 +128,7 @@ def _main(_):
         hparams=config.opt
     )
 
+    # 2. wrap the optimizer
     opt = hvd.DistributedOptimizer(opt)
 
     train_op = tx.core.get_train_op(
@@ -187,9 +188,10 @@ def _main(_):
         ppl = np.exp(loss / iters)
         return ppl, _elapsed_time
 
-    # broadcase global variables from rank-0 process
+    # set to broadcase global variables from rank-0 process
     bcast = hvd.broadcast_global_variables(0)
 
+    # 3. set visible GPU
     session_config = tf.ConfigProto()
     session_config.gpu_options.visible_device_list = str(hvd.local_rank())
 
@@ -198,6 +200,7 @@ def _main(_):
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
 
+        # 5. run the broadcast_global_variables node before training
         bcast.run()
 
         _times = []

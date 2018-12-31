@@ -30,10 +30,11 @@ pip install horovod
 Compared to the single-machine version, there are a few things different:
 
 - Basic setting of Horovod in your codes. Generally, you will need in insert the horovod wrappers in appropriate portion of your codes.
-    1. [hvd.init()](): initialize the horovod
-    2. set visible GPU list by `config.gpu_options.visible_device_list = str(hvd.local_rank())`, to make each process see the attached single GPU.
-    3. `hvd.DistributedOptimizer`: wrap your optimizer.
-    4. `hvd.broadcast_global_variables(0).run()` broadcast your global variables to different processes from rank-0 process.
+    1. [hvd.init()](https://github.com/haoransh/texar_private/blob/master/examples/distributed_gpu/lm_ptb_distributed.py#L76): initialize the horovod
+    2. `hvd.DistributedOptimizer`: wrap your optimizer.
+    3. [set visible GPU list]() by `config.gpu_options.visible_device_list = str(hvd.local_rank())`, to make each process see the attached single GPU.
+    4. `hvd.broadcast_global_variables(0)`: set to broadcast your global variables to different processes from rank-0 process.
+    5. [run the broadcast node]()
 - Data feeding:
     - You should split your dataset into shards before sending them to different processes, to make sure different GPUs are fed different mini-batch in each iteration.
     - Because we update the global variables based on the mini-batches in different processes, we may need to adjust the `learning rate`, `batch_size` to fit the distributed settings. In this example, we scale down the specified `batch_size` with the number of processes before feeding the mini-batch into the graph, to replicate the gradient computation in single-gpu setting.

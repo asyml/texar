@@ -49,6 +49,8 @@ def ptb_iterator(data, batch_size, num_steps, is_train=False):
         return data
 
     if is_train:
+        # split the dataset into shards to make sure
+        # different processed are loaded with different training data
         data = _sharded_data(data)
 
     for i in range(epoch_size):
