@@ -70,8 +70,8 @@ mpirun -np 2 \
 ```
 The key configurations of multi-gpu training:
 
-    * `-np`: total number of processes
-    * `-H`: IP addresses of different servers and the number of processes used in each server. For example, `-H 192.168.11.22:1,192.168.33.44:1`
+* `-np`: total number of processes
+* `-H`: IP addresses of different servers and the number of processes used in each server. For example, `-H 192.168.11.22:1,192.168.33.44:1`
 
 Please refer to [distributed_gpu](https://github.com/asyml/texar/tree/master/examples/distributed_gpu) example for more details of the other multi-gpu configurations.
 
