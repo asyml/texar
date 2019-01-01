@@ -42,12 +42,14 @@ The model will start training and will evaluate perplexity and BLEU score every 
 
 We compare the results of SeqGAN and MLE (maximum likelihood training) provided by our and official implemantations, using the default official parameter settings. Each cell below presents the BLEU scores on both the test set and the training set (in the parentheses). 
 
+We use standard BLEU evaluation function `texar.evals.sentence_bleu_moses` to calculate BLEU scores for the official and our implementation,
+which result in the difference BLEU scores compared to [Official results](https://github.com/geek-ai/Texygen).
 |    |Texar - SeqGAN   | Official - SeqGAN | Texar - MLE | Official - MLE |
 |---------------|-------------|----------------|-------------|----------------|
-|BLEU-1 | 0.5670 (0.6850) | 0.5140 (0.6660) | 0.7130 (0.9360) | 0.5720 (0.7560) |
-|BLEU-2 | 0.3490 (0.5330) | 0.2420 (0.4260) | 0.4510 (0.7590) | 0.2830 (0.5350) |
-|BLEU-3 | 0.1940 (0.3480) | 0.0920 (0.2180) | 0.2490 (0.4990) | 0.1160 (0.2950) |
-|BLEU-4 | 0.0940 (0.1890) | 0.0300 (0.0900) | 0.1170 (0.2680) | 0.0410 (0.1330)|
+|BLEU-1 | 0.5670 (0.6850) | 0.6260 (0.7900) | 0.7130 (0.9360) | 0.6620 (0.8770) |
+|BLEU-2 | 0.3490 (0.5330) | 0.3570 (0.5880) | 0.4510 (0.7590) | 0.3780 (0.6910) |
+|BLEU-3 | 0.1940 (0.3480) | 0.1660 (0.3590) | 0.2490 (0.4990) | 0.1790 (0.4470) |
+|BLEU-4 | 0.0940 (0.1890) | 0.0710 (0.1800) | 0.1170 (0.2680) | 0.0790 (0.2390)|
 
 ### PTB
 
