@@ -4,21 +4,6 @@ This is a Texar implementation of Google's BERT model, which allows to load pre-
 
 With Texar, building the BERT model is as simple as creating a [`TransformerEncoder`](https://texar.readthedocs.io/en/latest/code/modules.html#transformerencoder) instance. We can initialize the parameters of the TransformerEncoder using a pre-trained BERT checkpoint by calling `init_bert_checkpoint(path_to_bert_checkpoint)`. 
 
-## Updates:
-
-You can run the `python bert_classifier_main.py` with `--distributed` to enable the distributed training of the model. The only thing you need to do is to install [horovod](https://github.com/uber/horovod).
-
-For example, you can run
-```
-mpirun -np 2 \
-    -H  server1:1,server2:1\
-    -bind-to none -map-by slot \
-    -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
-    -mca pml ob1 -mca btl tcp,self \
-    -mca btl_tcp_if_include ens3 \
-    python bert_classifier_main.py --do_train --do_eval --do_test --output_dir='distributed_output'
-```
-
 ## Quick Start
 
 ### Download Dataset
@@ -43,20 +28,33 @@ Under `bert_pretrained_models/uncased_L-12_H-768_A-12`, you can find 5 files, wh
 
 ### Train and Evaluate
 
-To train the classifier and evaluate on the dev set, run the following cmd. The training updates the classification layer and fine-tunes the pre-trained BERT parameters.
+To train the classifier and evaluate on the dev set, run the following cmd. The training updates the classification layer and fine-tunes the pre-trained BERT parameters. Notice that only the training are distributed among multiple GPUs, and the evaluation and test phrase are only executed on one single GPU.
 ```
-python bert_classifier_main.py --do_train --do_eval
-[--task=mrpc]
-[--config_bert_pretrain=uncased_L-12_H-768_A-12]
-[--config_downstream=config_classifier]
-[--config_data=config_data_mrpc]
-[--output_dir=output] 
+mpirun -np 2 \
+    -H  localhost:2\
+    -bind-to none -map-by slot \
+    -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
+    -mca pml ob1 -mca btl tcp,self \
+    -mca btl_tcp_if_include ens3 \
+    python bert_classifier_main.py --do_train --do_eval --distributed
+    [--task=mrpc]
+    [--config_bert_pretrain=uncased_L-12_H-768_A-12]
+    [--config_downstream=config_classifier]
+    [--config_data=config_data_mrpc]
+    [--output_dir=output] 
 ```
+- `-np`: number of processes
+- `-H`: specifies the address of different servers and the number of processes used in each server.
+- `--bind-to none`: specifies Open MPI to not bind a training process to a single CPU core (which would hurt performance).
+- `-map-by slot`: allows you to have a mixture of different NUMA configurations because the default behavior is to bind to the socket.
+- `-mca`: set the MPI communication interface. Use the setting specified above to avoid many multiprocessing and network communication issues.
+- `-x`: to specify (-x NCCL_DEBUG=INFO) or copy (-x LD_LIBRARY_PATH) an environment variable to all the workers.
 - `task`: Specifies which dataset to experiment on.
 - `config_bert_pretrain`: Specifies the architecture of pre-trained BERT model to use.
 - `config_downstream`: Configuration of the downstream part. In this example, [`config_classifier.py`](https://github.com/asyml/texar/blob/master/examples/bert/bert_classifier_main.py) configs the classification layer and the optimization method.
 - `config_data`: The data configuration.
 - `output_dir`: The output path where checkpoints and summaries for tensorboard visualization are saved.
+
 
 After convergence, the evaluation performance is around the following. Due to certain randomness (e.g., random initialization of the classification layer), the evaluation accuracy is reasonable as long as it's `>0.84`.
 ```
