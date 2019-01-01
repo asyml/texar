@@ -40,9 +40,9 @@ Based on the [single-GPU code](https://github.com/asyml/texar/tree/master/exampl
     3. [`hvd.broadcast_global_variables(0)`](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/lm_ptb_distributed.py#L191): set the operator to broadcast your global variables to different processes from rank-0 process.
     4. [set visible GPU list](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/lm_ptb_distributed.py#L194) by `config.gpu_options.visible_device_list = str(hvd.local_rank())`, to make each process see the attached single GPU.
     5. [run the broadcast node](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/lm_ptb_distributed.py#L203): run the broadcast operator before training
-- Data feeding:
-    - You should [split your dataset into shards](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/ptb_reader.py#L52) before sending them to different processes, to make sure different GPUs are fed different mini-batch in each iteration.
-    - Because we update the global variables based on the mini-batches in different processes, we may need to adjust the `learning rate`, `batch_size` to fit the distributed settings. In this example, we [scale down the specified `batch_size` with the number of processes](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/ptb_reader.py#L45) before feeding the mini-batch into the graph, to replicate the gradient computation in single-gpu setting.
+- Data sharding:
+    1. To make sure different GPUs (processors) receive different data batches in each iteration, we [shard the training data](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/lm_ptb_distributed.py#L194) into `N` parts, where `N` is the number of GPUs (processors).
+    2. In this example, `batch_size` in the config files denotes the total batch size in each iteration of all processors. That is, in each iteration, each processor receives `batch_size`/`N` data instances. This replicates the gradients in the single-GPU setting, and we use the same `learning_rate` as in single-GPU.
 
 ## Usage ##
 
