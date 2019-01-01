@@ -70,7 +70,7 @@ We test the performance on two AWS p2.xlarge instances.
 Since the language model is just a small example and the communication cost is considerable, it doesn't scale well in 2-GPU 2-machine in terms of speedup rate. But the performance in multi-gpu is the same as that of the single-gpu environment, which is shown as follows:
 
 | config | epochs | train | valid  | test  | time/epoch (2-gpu) | time/epoch(single-gpu) |
-| -------| -------| ------| -------| ------|
+| -------| -------| ------| -------| ------| -----| -----|
 | small  | 13     | 40.81 | 118.99 | 114.72| 207s | 137s |
 | medium | 39     | 44.18 |  87.63 |  84.42| 461s | 311s |
 | large  | 55     | 36.54 |  82.55 |  78.72| 1765s | 931s |

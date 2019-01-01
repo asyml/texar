@@ -466,7 +466,7 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
 
             if is_distributed:
                 import horovod.tensorflow as hvd
-                tf.logging.info('distributed mode is enabled'
+                tf.logging.info('distributed mode is enabled.'
                                 'size:{} rank:{}'.format(hvd.size(), hvd.rank()))
                 # https://github.com/uber/horovod/issues/223
                 d = d.shard(hvd.size(), hvd.rank())
