@@ -73,7 +73,7 @@ Here:
       - `--config`: specifies the config file to use. E.g., the above use the configuration defined in config_small.py
       - `--data_path`: specifies the directory containing PTB raw data (e.g., ptb.train.txt). If the data files do not exist, the program will automatically download, extract, and pre-process the data.
 
-The model will begin training on the specified GPUs, and evaluate on the validation data periodically. Evaluation on the test data is performed after the training is done. Note that both validation and test are performed on each of the GPUs independently (i.e., they are not distributed). 
+The model will begin training on the specified GPUs, and evaluate on the validation data periodically. Evaluation on the test data is performed after the training is done. Note that both validation and test are performed only on the rank-0 GPU (i.e., they are not distributed). 
 
 ## Results ##
 
