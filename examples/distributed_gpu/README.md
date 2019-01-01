@@ -32,11 +32,11 @@ Compared to the single-machine version, there are a few things different:
 - Basic setting of Horovod in your codes. Generally, you will need in insert the horovod wrappers in appropriate portion of your codes.
     1. [`hvd.init()`](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/lm_ptb_distributed.py#L76): initialize the horovod
     2. [`hvd.DistributedOptimizer`](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/lm_ptb_distributed.py#L131): wrap your optimizer.
-    3. [`hvd.broadcast_global_variables(0)`](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/lm_ptb_distributed.py#L194): set the operator to broadcast your global variables to different processes from rank-0 process.
+    3. [`hvd.broadcast_global_variables(0)`](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/lm_ptb_distributed.py#L191): set the operator to broadcast your global variables to different processes from rank-0 process.
     4. [set visible GPU list](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/lm_ptb_distributed.py#L194) by `config.gpu_options.visible_device_list = str(hvd.local_rank())`, to make each process see the attached single GPU.
-    5. [run the broadcast node](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/lm_ptb_distributed.py#L194): run the broadcast operator before training
+    5. [run the broadcast node](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/lm_ptb_distributed.py#L203): run the broadcast operator before training
 - Data feeding:
-    - You should [split your dataset into shards](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/lm_ptb_distributed.py#L194) before sending them to different processes, to make sure different GPUs are fed different mini-batch in each iteration.
+    - You should [split your dataset into shards](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/ptb_reader.py#L52) before sending them to different processes, to make sure different GPUs are fed different mini-batch in each iteration.
     - Because we update the global variables based on the mini-batches in different processes, we may need to adjust the `learning rate`, `batch_size` to fit the distributed settings. In this example, we [scale down the specified `batch_size` with the number of processes](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/ptb_reader.py#L45) before feeding the mini-batch into the graph, to replicate the gradient computation in single-gpu setting.
 
 ## Usage ##
