@@ -445,12 +445,12 @@ def get_train_op(loss, variables=None,
         optimizer_fn, optimizer_class = get_optimizer_fn(opt_hparams)
         if learning_rate is None:
             learning_rate = opt_hparams["kwargs"].get("learning_rate", None)
-            if learning_rate is None:
-                # Try to get learning_rate from the default value of the
-                # optimizer's argument
-                opt_argspec = utils.get_default_arg_values(
-                    optimizer_class.__init__)
-            learning_rate = opt_argspec.get("learning_rate", None)
+        if learning_rate is None:
+            # Try to get learning_rate from the default value of the
+            # optimizer's argument
+            opt_argspec = utils.get_default_arg_values(
+                optimizer_class.__init__)
+        learning_rate = opt_argspec.get("learning_rate", None)
         lr_decay_fn = get_learning_rate_decay_fn(
             hparams["learning_rate_decay"])
         train_op = tf.contrib.layers.optimize_loss(
