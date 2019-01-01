@@ -28,7 +28,7 @@ Under `bert_pretrained_models/uncased_L-12_H-768_A-12`, you can find 5 files, wh
 
 ### Train and Evaluate
 
-To train the classifier and evaluate on the dev set, run the following cmd. The training updates the classification layer and fine-tunes the pre-trained BERT parameters. Notice that only the training are distributed among multiple GPUs, and the evaluation and test phrase are only executed on one single GPU.
+To train the classifier and evaluate on the dev set, run the following cmd. The training updates the classification layer and fine-tunes the pre-trained BERT parameters. Notice that only the training is distributed among multiple GPUs, and the evaluation and test phrase are only executed on one single GPU.
 ```
 mpirun -np 2 \
     -H  localhost:2\

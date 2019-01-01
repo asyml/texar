@@ -182,22 +182,3 @@ def set_random_seed(myseed):
     tf.set_random_seed(myseed)
     np.random.seed(myseed)
     random.seed(myseed)
-
-class SaveAtEnd(tf.train.SessionRunHook):
-    '''a training hook for saving the final variables'''
-    def __init__(self, filename, variables):
-        '''hook constructor
-        Args:
-            filename: where the model will be saved
-            variables: the variables that will be saved'''
-
-        self.filename = filename
-
-    def begin(self):
-        '''this will be run at session creation'''
-        self._saver = tf.train.Saver()
-
-    def end(self, session):
-        '''this will be run at session closing'''
-
-        self._saver.save(session, self.filename)
