@@ -44,6 +44,7 @@ We compare the results of SeqGAN and MLE (maximum likelihood training) provided 
 
 We use standard BLEU evaluation function `texar.evals.sentence_bleu_moses` to calculate BLEU scores for the official and our implementation,
 which result in the difference BLEU scores compared to [Official results](https://github.com/geek-ai/Texygen).
+
 |    |Texar - SeqGAN   | Official - SeqGAN | Texar - MLE | Official - MLE |
 |---------------|-------------|----------------|-------------|----------------|
 |BLEU-1 | 0.5670 (0.6850) | 0.6260 (0.7900) | 0.7130 (0.9360) | 0.6620 (0.8770) |
