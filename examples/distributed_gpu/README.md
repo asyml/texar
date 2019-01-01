@@ -55,7 +55,7 @@ mpirun -np 2 \
     -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
     -mca pml ob1 -mca btl tcp,self \
     -mca btl_tcp_if_include ens3 \
-    python lm_ptb_distributed.py [--config config_small] [--data_path ./]
+    python lm_ptb_distributed.py --config config_small --data_path ./
 ```
 
 Here:
