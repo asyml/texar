@@ -151,13 +151,13 @@ def _main(_):
         }
         if is_train:
             fetches["train_op"] = train_op
+            epoch_size = (len(data["train_text_id"]) // batch_size - 1)\
+                // num_steps
 
         mode = (tf.estimator.ModeKeys.TRAIN
                 if is_train
                 else tf.estimator.ModeKeys.EVAL)
 
-        epoch_size = (len(data["train_text_id"]) // batch_size - 1)\
-            // num_steps
 
         for step, (x, y) in enumerate(data_iter):
             if step == 0:
@@ -178,7 +178,7 @@ def _main(_):
             iters += num_steps
 
             ppl = np.exp(loss / iters)
-            if verbose and hvd.rank() == 0 \
+            if verbose and is_train and hvd.rank() == 0 \
                 and (step+1) % (epoch_size // 10) == 0:
                 tf.logging.info("%.3f perplexity: %.3f speed: %.0f wps" %
                       ((step+1) * 1.0 / epoch_size, ppl,
