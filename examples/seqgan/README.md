@@ -2,10 +2,10 @@
 
 This example is an implementation of [(Yu et al.) SeqGAN: Sequence Generative Adversarial Nets with Policy Gradient](https://arxiv.org/pdf/1609.05473.pdf), with a language model as the generator and an RNN-based classifier as the discriminator.
 
-Model structure and parameter settings are in line with the [official implementation](https://github.com/geek-ai/Texygen) of SeqGAN, except that we replace the MC-Tree rollout strategy with token-level reward by the RNN discriminator, which is simpler and provides competitive performance.
+Model architecture and parameter settings are in line with the [official implementation](https://github.com/geek-ai/Texygen) of SeqGAN, except that we replace the MC-Tree rollout strategy with token-level reward by the RNN discriminator, which is simpler and provides competitive performance.
 
 Experiments are performed on two datasets:
-* The standard [PTB dataset](https://corochann.com/penn-tree-bank-ptb-dataset-introduction-1456.html)
+* The [PTB dataset](https://corochann.com/penn-tree-bank-ptb-dataset-introduction-1456.html) standard for language modeling
 * The [COCO Captions dataset](http://cocodataset.org/#download): with 2K vocabularies and an average sentence length of 25. We use the [data](https://github.com/geek-ai/Texygen/tree/master/data) provided in the official implementation, where train/test datasets contain 10K sentences, respectively.
 
 ## Usage
@@ -42,8 +42,8 @@ The model will start training and will evaluate perplexity and BLEU score every 
 
 We compare the results of SeqGAN and MLE (maximum likelihood training) provided by our and official implemantations, using the default official parameter settings. Each cell below presents the BLEU scores on both the test set and the training set (in the parentheses). 
 
-We use standard BLEU evaluation function `texar.evals.sentence_bleu_moses` to calculate BLEU scores for the official and our implementation,
-which result in the difference BLEU scores compared to [Official results](https://github.com/geek-ai/Texygen).
+We use the standard BLEU function [`texar.evals.sentence_bleu_moses`](https://texar.readthedocs.io/en/latest/code/evals.html#sentence-bleu-moses) to evaluate BLEU scores for both the official and our implementations,
+which result in the different BLEU scores compared to [the official results](https://github.com/geek-ai/Texygen).
 
 |    |Texar - SeqGAN   | Official - SeqGAN | Texar - MLE | Official - MLE |
 |---------------|-------------|----------------|-------------|----------------|
