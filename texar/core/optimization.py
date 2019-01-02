@@ -350,13 +350,26 @@ def get_gradient_clip_fn(hparams=None):
 
     return grad_clip_fn
 
-def get_optimizer(variables=None, learning_rate=None,
-                  global_step=None, hparams=None):
+def get_static_lr(learning_rate=None, hparams=None):
+    """Return the base static learning_rate.
+        A helper function for creating the optimization function.
+    """
+    hparams = HParams(hparams, default_optimization_hparams())
+    opt_hparams = hparams['optimizer']
+    _, optimizer_class = get_optimizer_fn(opt_hparams)
+    if learning_rate is None:
+        learning_rate = opt_hparams["kwargs"].get("learning_rate", None)
+    if learning_rate is None:
+        # Try to get learning_rate from the default value of the
+        # optimizer's argument
+        opt_argspec = utils.get_default_arg_values(optimizer_class.__init__)
+        learning_rate = opt_argspec.get("learning_rate", None)
+    return learning_rate
+
+def get_optimizer(learning_rate=None, global_step=None, hparams=None):
 
     """Creates a optimizer instance.
     Args:
-        variables (optional): A list of Variables to optimize. If
-            `None`, all trainable variables are used.
         learning_rate (float or Tensor, optional): If `None`, learning rate
             specified in :attr:`hparams`, or the default learning rate
             of the optimizer will be used (if exists).
@@ -378,25 +391,19 @@ def get_optimizer(variables=None, learning_rate=None,
     hparams = HParams(hparams, default_optimization_hparams())
 
     opt_hparams = hparams["optimizer"]
-    optimizer_fn, optimizer_class = get_optimizer_fn(opt_hparams)
+    optimizer_fn, _ = get_optimizer_fn(opt_hparams)
 
-    if learning_rate is None:
-        learning_rate = opt_hparams["kwargs"].get("learning_rate", None)
-    if learning_rate is None:
-        # Try to get learning_rate from the default value of the
-        # optimizer's argument
-        opt_argspec = utils.get_default_arg_values(optimizer_class.__init__)
-        learning_rate = opt_argspec.get("learning_rate", None)
+    static_lr = get_static_lr(learning_rate, hparams)
 
     lr_decay_fn = get_learning_rate_decay_fn(hparams["learning_rate_decay"])
     if lr_decay_fn is not None:
-        lr = lr_decay_fn(learning_rate=learning_rate,
-                         global_step=global_step)
+        learning_rate = lr_decay_fn(learning_rate=static_lr,
+                                    global_step=global_step)
     else:
-        lr = learning_rate
-        tf.summary.scalar("learning_rate", lr)
+        learning_rate = static_lr
+        tf.summary.scalar("learning_rate", learning_rate)
 
-    optimizer = optimizer_fn(learning_rate=lr)
+    optimizer = optimizer_fn(learning_rate=learning_rate)
 
     return optimizer
 
@@ -442,15 +449,8 @@ def get_train_op(loss, variables=None,
 
     if not isinstance(optimizer, tf.train.Optimizer):
         opt_hparams = hparams["optimizer"]
-        optimizer_fn, optimizer_class = get_optimizer_fn(opt_hparams)
-        if learning_rate is None:
-            learning_rate = opt_hparams["kwargs"].get("learning_rate", None)
-        if learning_rate is None:
-            # Try to get learning_rate from the default value of the
-            # optimizer's argument
-            opt_argspec = utils.get_default_arg_values(
-                optimizer_class.__init__)
-            learning_rate = opt_argspec.get("learning_rate", None)
+        optimizer_fn, _ = get_optimizer_fn(opt_hparams)
+        learning_rate = get_static_lr(learning_rate, hparams)
         lr_decay_fn = get_learning_rate_decay_fn(
             hparams["learning_rate_decay"])
         train_op = tf.contrib.layers.optimize_loss(
@@ -506,8 +506,10 @@ class AdamWeightDecayOptimizer(tf.train.Optimizer):
         self.epsilon = epsilon
         self.exclude_from_weight_decay = exclude_from_weight_decay
 
+    # pylint: disable=too-many-locals
     def apply_gradients(self, grads_and_vars, global_step=None, name=None):
         """See base class."""
+        # pylint: disable=redefined-argument-from-local
         with tf.name_scope(name, self._name) as name:
             assignments = []
             for (grad, param) in grads_and_vars:
