@@ -350,13 +350,12 @@ def get_gradient_clip_fn(hparams=None):
 
     return grad_clip_fn
 
-def get_static_lr(learning_rate=None, hparams=None):
+def _get_static_lr(learning_rate=None, optimizer_class=None, hparams=None):
     """Return the base static learning_rate.
         A helper function for creating the optimization function.
     """
     hparams = HParams(hparams, default_optimization_hparams())
     opt_hparams = hparams['optimizer']
-    _, optimizer_class = get_optimizer_fn(opt_hparams)
     if learning_rate is None:
         learning_rate = opt_hparams["kwargs"].get("learning_rate", None)
     if learning_rate is None:
@@ -391,9 +390,9 @@ def get_optimizer(learning_rate=None, global_step=None, hparams=None):
     hparams = HParams(hparams, default_optimization_hparams())
 
     opt_hparams = hparams["optimizer"]
-    optimizer_fn, _ = get_optimizer_fn(opt_hparams)
+    optimizer_fn, optimizer_class = get_optimizer_fn(opt_hparams)
 
-    static_lr = get_static_lr(learning_rate, hparams)
+    static_lr = _get_static_lr(learning_rate, optimizer_class, hparams)
 
     lr_decay_fn = get_learning_rate_decay_fn(hparams["learning_rate_decay"])
     if lr_decay_fn is not None:
@@ -401,7 +400,8 @@ def get_optimizer(learning_rate=None, global_step=None, hparams=None):
                                     global_step=global_step)
     else:
         learning_rate = static_lr
-        tf.summary.scalar("learning_rate", learning_rate)
+
+    tf.summary.scalar("learning_rate", learning_rate)
 
     optimizer = optimizer_fn(learning_rate=learning_rate)
 
@@ -449,8 +449,8 @@ def get_train_op(loss, variables=None,
 
     if not isinstance(optimizer, tf.train.Optimizer):
         opt_hparams = hparams["optimizer"]
-        optimizer_fn, _ = get_optimizer_fn(opt_hparams)
-        learning_rate = get_static_lr(learning_rate, hparams)
+        optimizer_fn, optimizer_class = get_optimizer_fn(opt_hparams)
+        learning_rate = _get_static_lr(learning_rate, optimizer_class, hparams)
         lr_decay_fn = get_learning_rate_decay_fn(
             hparams["learning_rate_decay"])
         train_op = tf.contrib.layers.optimize_loss(
