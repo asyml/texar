@@ -11,7 +11,7 @@ Two third-party packages are required:
 * `openmpi >= 3.0.0`
 * `horovod`
 
-The following commands install [OpenNMT](https://www.open-mpi.org) 4.0.0 to the path `/usr/local/openmpi`. Run `mpirun --version` to check the version of installed OpenNMT.
+The following commands install [OpenMPI](https://www.open-mpi.org) 4.0.0 to the path `/usr/local/openmpi`. Run `mpirun --version` to check the version of installed OpenNMT.
 ```
 # Download and install OpenMPI
 wget https://download.open-mpi.org/release/open-mpi/v4.0/openmpi-4.0.0.tar.gz
@@ -41,7 +41,7 @@ Based on the [single-GPU code](https://github.com/asyml/texar/tree/master/exampl
     4. [set visible GPU list](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/lm_ptb_distributed.py#L194) by `config.gpu_options.visible_device_list = str(hvd.local_rank())`, to make each process see the attached single GPU.
     5. [run the broadcast node](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/lm_ptb_distributed.py#L203): run the broadcast operator before training
 - Data sharding:
-    1. To make sure different GPUs (processors) receive different data batches in each iteration, we [shard the training data](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/lm_ptb_distributed.py#L194) into `N` parts, where `N` is the number of GPUs (processors).
+    1. To make sure different GPUs (processors) receive different data batches in each iteration, we [shard the training data](https://github.com/asyml/texar/blob/master/examples/distributed_gpu/ptb_reader.py#L52) into `N` parts, where `N` is the number of GPUs (processors).
     2. In this example, `batch_size` in the config files denotes the total batch size in each iteration of all processors. That is, in each iteration, each processor receives `batch_size`/`N` data instances. This replicates the gradients in the single-GPU setting, and we use the same `learning_rate` as in single-GPU.
 
 ## Usage ##

@@ -99,6 +99,10 @@ Optimization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.core.get_optimizer
 
+:hidden:`get_static_lr`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.core.get_static_lr
+
 :hidden:`get_learning_rate_decay_fn`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.core.get_learning_rate_decay_fn
