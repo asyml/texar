@@ -29,6 +29,7 @@ Users can construct their own models at a high conceptual level just like assemb
 * Easy-to-use APIs: 1) Convenient automatic variable re-use---no worry about the complicated TF variable scopes; 2) PyTorch-like callable modules; 3) Rich configuration options for each module, all with default values; ...
 * Well-structured high-quality code of uniform design patterns and consistent styles. 
 * Clean, detailed [documentation](https://texar.readthedocs.io) and rich [examples](./examples).
+* Distributed model training with multiple GPUs.
 
 ### Library API Example
 Builds a (self-)attentional sequence encoder-decoder model, with different learning algorithms:
