@@ -109,13 +109,14 @@ def _main(_):
     d_embedder = tx.modules.WordEmbedder(vocab_size=vocab_size,
                                          hparams=config.emb_hparams)
 
-    r_logits, _ = discriminator(d_embedder(data_batch["text_ids"]))
-    f_logits, _ = discriminator(d_embedder(infer_sample_ids))
+    r_logits, _ = discriminator(d_embedder(data_batch["text_ids"][:, 1:]),
+                                sequence_length=data_batch["length"] - 1)
+    f_logits, _ = discriminator(d_embedder(infer_sample_ids), sequence_length=sequence_length)
 
     r_loss = tx.losses.sequence_sigmoid_cross_entropy(
-        labels=tf.ones_like(data_batch["text_ids"], dtype=tf.float32),
+        labels=tf.ones_like(data_batch["text_ids"][:, 1:], dtype=tf.float32),
         logits=tf.squeeze(r_logits),
-        sequence_length=data_batch["length"])  # r_preds -> 1.
+        sequence_length=data_batch["length"] - 1)  # r_preds -> 1.
     f_loss = tx.losses.sequence_sigmoid_cross_entropy(
         labels=tf.zeros_like(infer_sample_ids, dtype=tf.float32),
         logits=tf.squeeze(f_logits),
@@ -145,8 +146,8 @@ def _main(_):
                                   hparams=config.update_opt_hparams)
     reward = tx.losses.discount_reward(
         reward, sequence_length=tf.squeeze(sequence_length), tensor_rank=2)
-    update_loss = tf.reduce_mean(tf.log(infer_logits) *
-                                 tf.expand_dims(reward, -1))
+    update_loss = -tf.reduce_mean(tf.log(infer_logits) *
+                                  tf.expand_dims(reward, -1))
     update_loss.set_shape(())
     gen_op = tx.core.get_train_op(update_loss,
                                   global_step=global_step,
