@@ -42,8 +42,7 @@ The model will start training and will evaluate perplexity and BLEU score every 
 
 We compare the results of SeqGAN and MLE (maximum likelihood training) provided by our and official implemantations, using the default official parameter settings. Each cell below presents the BLEU scores on both the test set and the training set (in the parentheses). 
 
-We use the standard BLEU function [`texar.evals.sentence_bleu_moses`](https://texar.readthedocs.io/en/latest/code/evals.html#sentence-bleu-moses) to evaluate BLEU scores for both the official and our implementations,
-which result in the different BLEU scores compared to [the official results](https://github.com/geek-ai/Texygen).
+We use the standard BLEU function [`texar.evals.sentence_bleu_moses`](https://texar.readthedocs.io/en/latest/code/evals.html#sentence-bleu-moses) to evaluate BLEU scores for both the official and our implementations.
 
 |    |Texar - SeqGAN   | Official - SeqGAN | Texar - MLE | Official - MLE |
 |---------------|-------------|----------------|-------------|----------------|
@@ -54,7 +53,7 @@ which result in the different BLEU scores compared to [the official results](htt
 
 ### PTB
 
-We also compare the result of SeqGAN provided by our and official implementation, using three different parameter configurations.
+On PTB data, we use three different hyperparameter configurations which result in models of different sizes.
 The perplexity on both the test set and the training set are listed in the following table.
 
 |config|train   |Official - train |test    |  Official - test |
