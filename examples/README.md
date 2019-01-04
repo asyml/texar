@@ -9,11 +9,12 @@ More examples are continuously added...
 ### RNN / Seq2seq ###
 
 * [language_model_ptb](./language_model_ptb): Basic RNN language model
+* [distributed_gpu](./distributed_gpu): Basic RNN language model with distributed training
 * [seq2seq_attn](./seq2seq_attn): Attentional seq2seq
-* [seq2seq_configs](./seq2seq_configs): Seq2seq implemented with Texar model template.
-* [seq2seq_rl](./seq2seq_rl): Attentional seq2seq trained with policy gradient.
-* [seq2seq_exposure_bias](./seq2seq_exposure_bias): Various algorithms tackling exposure bias in sequence generation.
-* [hierarchical_dialog](./hierarchical_dialog): Hierarchical recurrent encoder-decoder model for conversation response generation.
+* [seq2seq_configs](./seq2seq_configs): Seq2seq implemented with Texar model template
+* [seq2seq_rl](./seq2seq_rl): Attentional seq2seq trained with policy gradient
+* [seq2seq_exposure_bias](./seq2seq_exposure_bias): Various algorithms tackling exposure bias in sequence generation
+* [hierarchical_dialog](./hierarchical_dialog): Hierarchical recurrent encoder-decoder model for conversation response generation
 * [torchtext](./torchtext): Use of torchtext data loader
 
 ### Transformer (Self-attention) ###
@@ -94,3 +95,13 @@ More examples are continuously added...
 ### Games ###
 
 * [rl_gym](./rl_gym): Various RL algoritms for games on OpenAI Gym
+
+---
+
+## MISC ##
+
+### Distributed training ###
+
+* [distributed_gpu](./distributed_gpu): Basic example of distributed training.
+* [bert](./bert): Distributed training of BERT.
+
