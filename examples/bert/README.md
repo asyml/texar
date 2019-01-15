@@ -14,7 +14,7 @@ In sum, this example showcases:
 
 ### Download Dataset
 
-We explain the use of the example code based on the Microsoft Research Paraphrase Corpus (MRPC) corpus for sentence classification. See 
+We explain the use of the example code based on the Microsoft Research Paraphrase Corpus (MRPC) corpus for sentence classification. 
 
 Download the data with the following cmd
 ```
