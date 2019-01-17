@@ -70,7 +70,7 @@ The implementation here gives the following performance after 10 epochs of pre-t
 
 | Accuracy (by the `Classifier` part)  | BLEU (with the original sentence) |
 | -------------------------------------| ----------------------------------|
-| 0.54 | 0.92  |
+| 0.92 | 54.0  |
 
 Also refer to the following papers that used this code and compared to other text style transfer approaches:
 
