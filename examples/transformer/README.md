@@ -100,17 +100,17 @@ Here is an hands-on tutorial on running Transformer with your own customized dat
 
 Create a data directory and put the raw data in the directory. To be compatible with the data preprocessing in the next step, you may follow the convention below:
 
-* The data directory should be named as `data/${src_language}_${tgt_language}/`. Take the data downloaded with `scripts/iwslt15_en_vi.sh` for example, the data directory is `data/en_vi`.
+* The data directory should be named as `data/${src}_${tgt}/`. Take the data downloaded with `scripts/iwslt15_en_vi.sh` for example, the data directory is `data/en_vi`.
 * The raw data should have 6 files, which contains source and target sentences of training/dev/test sets, respectively. In the `iwslt15_en_vi` example, `data/en_vi/train.en` contains the source sentences of the training set, where each line is a sentence. Other files are `train.vi`, `dev.en`, `dev.vi`, `test.en`, `test.vi`. 
 
 ### 2. Preprocess the data
 
-Run `preprocess_data.sh ${encoder} ${src_language} ${tgt_language}` to obtain the processed dataset. The `encoder` parameter can be `bpe`(byte pairwise encoding), `spm` (sentence piece encoding), or
+Run `preprocess_data.sh ${encoder} ${src} ${tgt}` to obtain the processed dataset. The `encoder` parameter can be `bpe`(byte pairwise encoding), `spm` (sentence piece encoding), or
 `raw`(no subword encoding).
 
 In the `iwslt15_en_vi` example, the cmd is `preprocess_data.sh spm en vi`.
 
-By default, the preprocessed data are dumped under `temp/run_${src_language}_${tgt_language}_${encoder}`. In the `iwslt15_en_vi` example, the directory is `temp/run_en_vi_spm`.
+By default, the preprocessed data are dumped under `temp/run_${src}_${tgt}_${encoder}`. In the `iwslt15_en_vi` example, the directory is `temp/run_en_vi_spm`.
 
 If you choose to use `raw` encoding method, notice that:
 
