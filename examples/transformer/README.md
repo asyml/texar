@@ -101,7 +101,7 @@ Here is an hands-on tutorial on running Transformer with your own customized dat
 Create a data directory and put the raw data in the directory. To be compatible with the data preprocessing in the next step, you may follow the convention below:
 
 * The data directory should be named as `data/${src}_${tgt}/`. Take the data downloaded with `scripts/iwslt15_en_vi.sh` for example, the data directory is `data/en_vi`.
-* The raw data should have 6 files, which contains source and target sentences of training/dev/test sets, respectively. In the `iwslt15_en_vi` example, `data/en_vi/train.en` contains the source sentences of the training set, where each line is a sentence. Other files are `train.vi`, `dev.en`, `dev.vi`, `test.en`, `test.vi`. 
+* The raw data should have 6 files, which contain source and target sentences of training/dev/test sets, respectively. In the `iwslt15_en_vi` example, `data/en_vi/train.en` contains the source sentences of the training set, where each line is a sentence. Other files are `train.vi`, `dev.en`, `dev.vi`, `test.en`, `test.vi`. 
 
 ### 2. Preprocess the data
 
