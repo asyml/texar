@@ -114,7 +114,7 @@ By default, the preprocessed data are dumped under `temp/run_${src}_${tgt}_${enc
 
 If you choose to use `raw` encoding method, notice that:
 
-- By default, the word embedding layer is built with the combination of source vocabulary and target vocabulary. For example, if the source has a vocabulary of size 3K and the target has a vocabulary of size 3K, then the vocabulary used in the model is of size 6K.
+- By default, the word embedding layer is built with the combination of source vocabulary and target vocabulary. For example, if the source vocabulary is of size 3K and the target vocabulary of size 3K and there is no overlap between the two vocabularies, then the final vocabulary used in the model is of size 6K.
 - By default, the final output layer of transformer decoder (hidden_state -> logits) shares the parameters with the word embedding layer.
 
 ### 3. Specify data and model configuration
