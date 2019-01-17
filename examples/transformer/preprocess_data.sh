@@ -17,13 +17,8 @@
 
 # This file provides a script to preprocess raw text corpora to generate
 # vocabulary with sentence piece encoding or byte pairwise encoding.
-# You can provide customed source language and target language if the
-# correpsonding corpora are saved in the correct path.
-# By default, the vocab_size is set to 32000.
 #
-# Run it with `preprocess_data.sh source_language target_language`.
-# For example, `preprocess_data.sh en vi`
-
+# By default, the vocab size is 32000 and maximum sequence length is 70.
 ###########################################################################
 
 
@@ -33,6 +28,8 @@ export PATH=$PATH:$TF/../../bin/utils/
 encoder=$1
 src_language=$2
 tgt_language=$3
+vocab_size=${4:-32000}
+max_seq_length=${5:-70}
 
 # update these variables
 data=${TF}"/data/${src_language}_${tgt_language}"
@@ -45,7 +42,6 @@ valid_src=$data/dev.${src_language}
 valid_tgt=$data/dev.${tgt_language}
 test_src=$data/test.${src_language}
 test_tgt=$data/test.${tgt_language}
-vocab_size=32000
 
 #====== EXPERIMENT BEGIN ======
 echo "Output dir = $out"
@@ -85,10 +81,11 @@ case ${encoder} in
         cp ${valid_tgt} $out/data/valid.${tgt_language}.raw
         cp ${test_tgt} $out/data/test.${tgt_language}.raw
 esac
+# TODO(zhiting): Truncate vocab when encoder==raw
 
 python ${TF}/utils/preprocess.py -i ${out}/data \
     --src ${src_language}.${encoder} \
     --tgt ${tgt_language}.${encoder} \
     --save_data processed. \
-    --max_seq_length=70 \
+    --max_seq_length=${max_seq_length} \
     --pre_encoding=${encoder}

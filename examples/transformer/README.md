@@ -105,10 +105,20 @@ Create a data directory and put the raw data in the directory. To be compatible 
 
 ### 2. Preprocess the data
 
-Run `preprocess_data.sh ${encoder} ${src} ${tgt}` to obtain the processed dataset. The `encoder` parameter can be `bpe`(byte pairwise encoding), `spm` (sentence piece encoding), or
-`raw`(no subword encoding).
+To obtain the processed dataset, run
+```
+preprocess_data.sh ${encoder} ${src} ${tgt} ${vocab_size} ${max_seq_length}
+```
+where
 
-In the `iwslt15_en_vi` example, the cmd is `preprocess_data.sh spm en vi`.
+* The `encoder` parameter can be `bpe`(byte pairwise encoding), `spm` (sentence piece encoding), or
+`raw`(no subword encoding).
+* `vocab_size` is optional. The default is 32000. 
+  - At this point, this parameter is used only when `encoder` is set to `bpe` or `spm`. For `raw` encoding, you'd have to truncate the vocabulary by yourself.
+  - For `spm` encoding, the preprocessing may fail (due to the Python sentencepiece module) if `vocab_size` is too large. So you may want to try smaller `vocab_size` if it happens. 
+* `max_seq_length` is optional. The default is 70.
+
+In the `iwslt15_en_vi` example, the cmd is `sh preprocess_data.sh spm en vi`.
 
 By default, the preprocessed data are dumped under `temp/run_${src}_${tgt}_${encoder}`. In the `iwslt15_en_vi` example, the directory is `temp/run_en_vi_spm`.
 
