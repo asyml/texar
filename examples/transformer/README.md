@@ -44,7 +44,8 @@ Train the model with the cmd:
 ```
 python transformer_main.py --run_mode=train_and_evaluate --config_model=config_model --config_data=config_iwslt15
 ```
-* You can also specify `--model_dir` to dump model checkpoints, training logs, and tensorboard summaries to a desired directory. By default it is set to `./outputs`. 
+* Specify `--model_dir` to dump model checkpoints, training logs, and tensorboard summaries to a desired directory. By default it is set to `./outputs`. 
+* Specifying `--model_dir` will also restore the latest model checkpoint under the directory, if any checkpoint is there.
 * Specify `--config_data=config_wmt14` to train on the WMT'14 data.
 
 ### Test a trained model ###
