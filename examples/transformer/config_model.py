@@ -27,6 +27,9 @@ encoder = {
         'num_heads': 8,
         # See documentation for more optional hyperparameters
     },
+    'position_embedder_hparams': {
+        'dim': hidden_dim
+    },
     'initializer': {
         'type': 'variance_scaling_initializer',
         'kwargs': {
