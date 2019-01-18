@@ -22,9 +22,10 @@ emb = {
 
 encoder = {
     'dim': hidden_dim,
-    'num_block': 6,
+    'num_blocks': 6,
     'multihead_attention': {
         'num_heads': 8,
+        'output_dim': hidden_dim
         # See documentation for more optional hyperparameters
     },
     'position_embedder_hparams': {
