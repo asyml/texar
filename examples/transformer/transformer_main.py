@@ -207,7 +207,8 @@ def main():
             hwords = tx.utils.str_join(hwords)
             rwords = tx.utils.str_join(rwords)
             hyp_fn, ref_fn = tx.utils.write_paired_text(
-                hwords, rwords, fname, mode='s')
+                hwords, rwords, fname, mode='s',
+                src_fname_suffix='hyp', tgt_fname_suffix='ref')
             logger.info('Test output writtn to file: %s', hyp_fn)
             print('Test output writtn to file: %s' % hyp_fn)
 
