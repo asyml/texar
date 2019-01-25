@@ -84,8 +84,7 @@ def sentence_bleu(references, hypothesis, max_order=4, lowercase=False,
             Each hypothesis can be either a list of string tokens, or a
             string containing tokenized tokens separated with whitespaces.
             List can also be numpy array.
-        lowercase (bool): If `True`, pass the "-lc" flag to the multi-bleu
-            script.
+        lowercase (bool): If `True`, lowercase reference and hypothesis tokens.
         max_order (int): Maximum n-gram order to use when computing BLEU score.
         smooth (bool): Whether or not to apply (Lin et al. 2004) smoothing.
         return_all (bool): If `True`, returns BLEU and all n-gram precisions.

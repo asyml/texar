@@ -172,7 +172,6 @@ def _get_assignment_map_from_checkpoint(tvars, init_checkpoint):
 
 def init_bert_checkpoint(init_checkpoint):
     tvars = tf.trainable_variables()
-
     initialized_variable_names = []
     if init_checkpoint:
         (assignment_map, initialized_variable_names
