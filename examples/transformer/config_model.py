@@ -22,6 +22,15 @@ emb = {
 
 encoder = {
     'dim': hidden_dim,
+    'num_blocks': 6,
+    'multihead_attention': {
+        'num_heads': 8,
+        'output_dim': hidden_dim
+        # See documentation for more optional hyperparameters
+    },
+    'position_embedder_hparams': {
+        'dim': hidden_dim
+    },
     'initializer': {
         'type': 'variance_scaling_initializer',
         'kwargs': {

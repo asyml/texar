@@ -142,9 +142,9 @@ class TransformerEncoder(EncoderBase):
             # pylint: disable=protected-access
             if self._hparams.dim != \
                 self.position_embedder._hparams.dim:
-                raise ValueError('The "dim" in the hparams of'
-                                 'TransformerEncoder should be equal'
-                                 'to the "dim" in its '
+                raise ValueError('"dim" in '
+                                 'TransformerEncoder hparams must be equal '
+                                 'to "dim" in its '
                                  'position_embedder_hparams.')
 
             self.multihead_attention_list = []

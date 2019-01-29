@@ -52,6 +52,7 @@ import importlib
 import numpy as np
 import tensorflow as tf
 import texar as tx
+import horovod.tensorflow as hvd
 
 from ptb_reader import prepare_data, ptb_iterator
 
@@ -70,13 +71,20 @@ config = importlib.import_module(FLAGS.config)
 
 def _main(_):
     # Data
+    tf.logging.set_verbosity(tf.logging.INFO)
+
+    ## 1. initialize the horovod
+    hvd.init()
+
     batch_size = config.batch_size
     num_steps = config.num_steps
     data = prepare_data(FLAGS.data_path)
     vocab_size = data["vocab_size"]
 
-    inputs = tf.placeholder(tf.int32, [batch_size, num_steps])
-    targets = tf.placeholder(tf.int32, [batch_size, num_steps])
+    inputs = tf.placeholder(tf.int32, [None, num_steps],
+                            name='inputs')
+    targets = tf.placeholder(tf.int32, [None, num_steps],
+                             name='targets')
 
     # Model architecture
     initializer = tf.random_uniform_initializer(
@@ -91,14 +99,21 @@ def _main(_):
 
         decoder = tx.modules.BasicRNNDecoder(
             vocab_size=vocab_size, hparams={"rnn_cell": config.cell})
-        initial_state = decoder.zero_state(batch_size, tf.float32)
+
+        # This _batch_size equals to batch_size // hvd.size() in
+        # distributed training.
+        # because the mini-batch is distributed to multiple GPUs
+
+        _batch_size = tf.shape(inputs)[0]
+        initial_state = decoder.zero_state(_batch_size,
+                                           tf.float32)
+        seq_length = tf.broadcast_to([num_steps], (_batch_size, ))
         outputs, final_state, seq_lengths = decoder(
             decoding_strategy="train_greedy",
             impute_finished=True,
             inputs=emb_inputs,
-            sequence_length=[num_steps]*batch_size,
+            sequence_length=seq_length,
             initial_state=initial_state)
-
     # Losses & train ops
     mle_loss = tx.losses.sequence_sparse_softmax_cross_entropy(
         labels=targets,
@@ -107,15 +122,28 @@ def _main(_):
 
     # Use global_step to pass epoch, for lr decay
     global_step = tf.placeholder(tf.int32)
+
+    opt = tx.core.get_optimizer(
+        global_step=global_step,
+        hparams=config.opt
+    )
+
+    # 2. wrap the optimizer
+    opt = hvd.DistributedOptimizer(opt)
+
     train_op = tx.core.get_train_op(
-        mle_loss, global_step=global_step, increment_global_step=False,
-        hparams=config.opt)
+        loss=mle_loss,
+        optimizer=opt,
+        global_step=global_step,
+        learning_rate=None,
+        increment_global_step=False,
+        hparams=config.opt
+    )
 
     def _run_epoch(sess, data_iter, epoch, is_train=False, verbose=False):
         start_time = time.time()
         loss = 0.
         iters = 0
-        state = sess.run(initial_state)
 
         fetches = {
             "mle_loss": mle_loss,
@@ -130,7 +158,12 @@ def _main(_):
                 if is_train
                 else tf.estimator.ModeKeys.EVAL)
 
+
         for step, (x, y) in enumerate(data_iter):
+            if step == 0:
+                state = sess.run(initial_state,
+                                 feed_dict={inputs: x})
+
             feed_dict = {
                 inputs: x, targets: y, global_step: epoch,
                 tx.global_mode(): mode,
@@ -145,36 +178,58 @@ def _main(_):
             iters += num_steps
 
             ppl = np.exp(loss / iters)
-            if verbose and is_train and step % (epoch_size // 10) == 10:
-                print("%.3f perplexity: %.3f speed: %.0f wps" %
+            if verbose and is_train and hvd.rank() == 0 \
+                and (step+1) % (epoch_size // 10) == 0:
+                tf.logging.info("%.3f perplexity: %.3f speed: %.0f wps" %
                       ((step+1) * 1.0 / epoch_size, ppl,
                        iters * batch_size / (time.time() - start_time)))
-
+        _elapsed_time = time.time() - start_time
+        tf.logging.info("epoch time elapsed: %f" % (_elapsed_time))
         ppl = np.exp(loss / iters)
-        return ppl
+        return ppl, _elapsed_time
 
-    with tf.Session() as sess:
+    # 3. set broadcase global variables from rank-0 process
+    bcast = hvd.broadcast_global_variables(0)
+
+    # 4. set visible GPU
+    session_config = tf.ConfigProto()
+    session_config.gpu_options.visible_device_list = str(hvd.local_rank())
+
+    with tf.Session(config=session_config) as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
 
+        # 5. run the broadcast_global_variables node before training
+        bcast.run()
+
+        _times = []
         for epoch in range(config.num_epochs):
             # Train
             train_data_iter = ptb_iterator(
-                data["train_text_id"], config.batch_size, num_steps)
-            train_ppl = _run_epoch(
+                data["train_text_id"], config.batch_size, num_steps,
+                is_train=True)
+            train_ppl, train_time = _run_epoch(
                 sess, train_data_iter, epoch, is_train=True, verbose=True)
-            print("Epoch: %d Train Perplexity: %.3f" % (epoch, train_ppl))
-            # Valid
-            valid_data_iter = ptb_iterator(
-                data["valid_text_id"], config.batch_size, num_steps)
-            valid_ppl = _run_epoch(sess, valid_data_iter, epoch)
-            print("Epoch: %d Valid Perplexity: %.3f" % (epoch, valid_ppl))
-        # Test
-        test_data_iter = ptb_iterator(
-            data["test_text_id"], batch_size, num_steps)
-        test_ppl = _run_epoch(sess, test_data_iter, 0)
-        print("Test Perplexity: %.3f" % (test_ppl))
+            _times.append(train_time)
+            tf.logging.info("Epoch: %d Train Perplexity: %.3f" % (epoch, train_ppl))
+            # Valid in the main process
+            if hvd.rank() == 0:
+                valid_data_iter = ptb_iterator(
+                    data["valid_text_id"], config.batch_size, num_steps)
+                valid_ppl, _ = _run_epoch(sess, valid_data_iter, epoch)
+                tf.logging.info("Epoch: %d Valid Perplexity: %.3f"
+                                % (epoch, valid_ppl))
+
+        tf.logging.info('train times: %s' % (_times))
+        tf.logging.info('average train time/epoch %f'
+                        % np.mean(np.array(_times)))
+        # Test in the main process
+        if hvd.rank() == 0:
+            test_data_iter = ptb_iterator(
+                data["test_text_id"], batch_size, num_steps)
+            test_ppl, _ = _run_epoch(sess, test_data_iter, 0)
+            tf.logging.info("Test Perplexity: %.3f" % (test_ppl))
 
 if __name__ == '__main__':
     tf.app.run(main=_main)

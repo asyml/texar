@@ -22,11 +22,11 @@ import numpy as np
 
 def load_data_numpy(input_dir, prefix):
     train_data = np.load(os.path.join(input_dir,\
-        prefix + 'train.npy')).tolist()
+        prefix + 'train.npy'), encoding='latin1').tolist()
     dev_data = np.load(os.path.join(input_dir,\
-        prefix + 'valid.npy')).tolist()
+        prefix + 'valid.npy'), encoding='latin1').tolist()
     test_data = np.load(os.path.join(input_dir,\
-        prefix + 'test.npy')).tolist()
+        prefix + 'test.npy'), encoding='latin1').tolist()
     print('train data size:{}'.format(len(train_data)))
     return train_data, dev_data, test_data
 

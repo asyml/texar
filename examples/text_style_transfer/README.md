@@ -70,7 +70,12 @@ The implementation here gives the following performance after 10 epochs of pre-t
 
 | Accuracy (by the `Classifier` part)  | BLEU (with the original sentence) |
 | -------------------------------------| ----------------------------------|
-| 0.54 | 0.92  |
+| 0.92 | 54.0  |
+
+Also refer to the following papers that used this code and compared to other text style transfer approaches:
+
+* [Unsupervised Text Style Transfer using Language Models as Discriminators](https://papers.nips.cc/paper/7959-unsupervised-text-style-transfer-using-language-models-as-discriminators.pdf). Zichao Yang, Zhiting Hu, Chris Dyer, Eric Xing, Taylor Berg-Kirkpatrick. NeurIPS 2018
+* [Structured Content Preservation for Unsupervised Text Style Transfer](https://arxiv.org/pdf/1810.06526.pdf). Youzhi Tian, Zhiting Hu, Zhou Yu. 2018
 
 ### Samples ###
 Here are some randomly-picked samples. In each pair, the first sentence is the original sentence and the second is the generated.

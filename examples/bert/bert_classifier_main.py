@@ -62,6 +62,7 @@ flags.DEFINE_bool(
 flags.DEFINE_bool("do_train", False, "Whether to run training.")
 flags.DEFINE_bool("do_eval", False, "Whether to run eval on the dev set.")
 flags.DEFINE_bool("do_test", False, "Whether to run test on the test set.")
+flags.DEFINE_bool("distributed", False, "Whether to run in distributed mode.")
 
 config_data = importlib.import_module(FLAGS.config_data)
 config_downstream = importlib.import_module(FLAGS.config_downstream)
@@ -70,6 +71,11 @@ def main(_):
     """
     Builds the model and runs.
     """
+
+    if FLAGS.distributed:
+        import horovod.tensorflow as hvd
+        hvd.init()
+
     tf.logging.set_verbosity(tf.logging.INFO)
     tx.utils.maybe_create_dir(FLAGS.output_dir)
     bert_pretrain_dir = 'bert_pretrained_models/%s' % FLAGS.config_bert_pretrain
@@ -104,7 +110,9 @@ def main(_):
 
     train_dataset = data_utils.get_dataset(
         processor, tokenizer, config_data.data_dir, config_data.max_seq_length,
-        config_data.train_batch_size, mode='train', output_dir=FLAGS.output_dir)
+        config_data.train_batch_size, mode='train', output_dir=FLAGS.output_dir,
+        is_distributed=FLAGS.distributed)
+
     eval_dataset = data_utils.get_dataset(
         processor, tokenizer, config_data.data_dir, config_data.max_seq_length,
         config_data.eval_batch_size, mode='eval', output_dir=FLAGS.output_dir)
@@ -173,11 +181,20 @@ def main(_):
     lr = model_utils.get_lr(global_step, num_train_steps, # lr is a Tensor
                             num_warmup_steps, static_lr)
 
-    train_op = tx.core.get_train_op(
-        loss,
+    opt = tx.core.get_optimizer(
         global_step=global_step,
         learning_rate=lr,
-        hparams=config_downstream.opt)
+        hparams=config_downstream.opt
+    )
+
+    if FLAGS.distributed:
+        opt = hvd.DistributedOptimizer(opt)
+
+    train_op = tf.contrib.layers.optimize_loss(
+        loss=loss,
+        global_step=global_step,
+        learning_rate=None,
+        optimizer=opt)
 
     # Train/eval/test routine
 
@@ -187,6 +204,7 @@ def main(_):
             'batch_size': batch_size,
             'step': global_step,
             'loss': loss,
+            'input_ids': input_ids,
         }
 
         if mode == 'train':
@@ -222,7 +240,7 @@ def main(_):
                 except tf.errors.OutOfRangeError:
                     break
 
-            tf.logging.info('dev accu: {}'.format(cum_acc / nsamples))
+            tf.logging.info('dev accu: {} nsamples: {}'.format(cum_acc / nsamples, nsamples))
 
         if mode == 'test':
             _all_preds = []
@@ -241,14 +259,22 @@ def main(_):
             with tf.gfile.GFile(output_file, "w") as writer:
                 writer.write('\n'.join(str(p) for p in _all_preds))
 
+    # Loads pretrained BERT model parameters
+    init_checkpoint = os.path.join(bert_pretrain_dir, 'bert_model.ckpt')
+    model_utils.init_bert_checkpoint(init_checkpoint)
+
+    # broadcast global variables from rank-0 process
+    if FLAGS.distributed:
+        bcast = hvd.broadcast_global_variables(0)
+
     with tf.Session() as sess:
-        # Loads pretrained BERT model parameters
-        init_checkpoint = os.path.join(bert_pretrain_dir, 'bert_model.ckpt')
-        model_utils.init_bert_checkpoint(init_checkpoint)
 
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
+
+        if FLAGS.distributed:
+            bcast.run()
 
         # Restores trained model if specified
         saver = tf.train.Saver()

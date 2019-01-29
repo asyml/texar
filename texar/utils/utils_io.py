@@ -151,7 +151,9 @@ def load_config(config_path, config=None):
 
     return config
 
-def write_paired_text(src, tgt, fname, append=False, mode='h', sep='\t'):
+# pylint: disable=too-many-locals
+def write_paired_text(src, tgt, fname, append=False, mode='h', sep='\t',
+                      src_fname_suffix='src', tgt_fname_suffix='tgt'):
     """Writes paired text to a file.
 
     Args:
@@ -177,10 +179,17 @@ def write_paired_text(src, tgt, fname, append=False, mode='h', sep='\t'):
 
             - **'s'**: The "separate" mode. Each source target pair is \
                     written in corresponding lines of two files named \
-                    as `"{fname}.src"` and `"fname.tgt"`, respectively.
+                    as `"{fname}.{src_fname_suffix}"` \
+                    and `"{fname}.{tgt_fname_suffix}"`, respectively.
 
         sep (str): The string intervening between source and target. Used
             when :attr:`mode` is set to 'h'.
+        src_fname_suffix (str): Used when :attr:`mode` is 's'. The suffix to
+            the source output filename. E.g., with
+            `(fname='output', src_fname_suffix='src')`, the output source file
+            is named as `output.src`.
+        tgt_fname_suffix (str): Used when :attr:`mode` is 's'. The suffix to
+            the target output filename.
 
     Returns:
         The fileanme(s). If `mode` == 'h' or 'v', returns
@@ -189,8 +198,8 @@ def write_paired_text(src, tgt, fname, append=False, mode='h', sep='\t'):
     """
     fmode = 'a' if append else 'w'
     if mode == 's':
-        fn_src = '{}.src'.format(fname)
-        fn_tgt = '{}.tgt'.format(fname)
+        fn_src = '{}.{}'.format(fname, src_fname_suffix)
+        fn_tgt = '{}.{}'.format(fname, tgt_fname_suffix)
         with open(fn_src, fmode, encoding='utf-8') as fs:
             fs.write(as_text('\n'.join(src)))
             fs.write('\n')

@@ -13,7 +13,7 @@ The example shows:
 The following cmd trains a small-size model:
 
 ```
-python lm_ptb.py --config config_small --data_path ./
+python lm_ptb.py [--config config_small] [--data_path ./]
 ```
 
 Here:

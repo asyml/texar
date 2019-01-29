@@ -29,8 +29,8 @@ from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.utils import transformer_utils
 
 from utils import data_utils, utils
-from bleu_tool import bleu_wrapper
 from utils.preprocess import bos_token_id, eos_token_id
+from bleu_tool import bleu_wrapper
 # pylint: disable=invalid-name, too-many-locals
 
 flags = tf.flags
@@ -207,7 +207,8 @@ def main():
             hwords = tx.utils.str_join(hwords)
             rwords = tx.utils.str_join(rwords)
             hyp_fn, ref_fn = tx.utils.write_paired_text(
-                hwords, rwords, fname, mode='s')
+                hwords, rwords, fname, mode='s',
+                src_fname_suffix='hyp', tgt_fname_suffix='ref')
             logger.info('Test output writtn to file: %s', hyp_fn)
             print('Test output writtn to file: %s' % hyp_fn)
 
@@ -257,14 +258,25 @@ def main():
 
         if FLAGS.run_mode == 'train_and_evaluate':
             logger.info('Begin running with train_and_evaluate mode')
+
+            if tf.train.latest_checkpoint(FLAGS.model_dir) is not None:
+                logger.info('Restore latest checkpoint in %s' % FLAGS.model_dir)
+                saver.restore(sess, tf.train.latest_checkpoint(FLAGS.model_dir))
+
             step = 0
             for epoch in range(config_data.max_train_epoch):
                 step = _train_epoch(sess, epoch, step, smry_writer)
 
         elif FLAGS.run_mode == 'test':
             logger.info('Begin running with test mode')
+
+            logger.info('Restore latest checkpoint in %s' % FLAGS.model_dir)
             saver.restore(sess, tf.train.latest_checkpoint(FLAGS.model_dir))
+
             _eval_epoch(sess, 0, mode='test')
+
+        else:
+            raise ValueError('Unknown mode: {}'.format(FLAGS.run_mode))
 
 
 if __name__ == '__main__':

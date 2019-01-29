@@ -2,7 +2,11 @@
 
 This is an implementation of the Transformer model described in [Vaswani, Ashish, et al. "Attention is all you need."](http://papers.nips.cc/paper/7181-attention-is-all-you-need.pdf).
 
-## Usage ##
+[Quick Start](https://github.com/asyml/texar/tree/master/examples/transformer#quick-start): Prerequisites & use on machine translation datasets
+
+[Run Your Customized Experiments](https://github.com/asyml/texar/tree/master/examples/transformer#run-your-customized-experiments): Hands-on tutorial of data preparation, configuration, and model training/test
+
+## Quick Start ##
 
 ### Prerequisites ###
 
@@ -40,7 +44,8 @@ Train the model with the cmd:
 ```
 python transformer_main.py --run_mode=train_and_evaluate --config_model=config_model --config_data=config_iwslt15
 ```
-* You can also specify `--model_dir` to dump model checkpoints, training logs, and tensorboard summaries to a desired directory. By default it is set to `./outputs`. 
+* Specify `--model_dir` to dump model checkpoints, training logs, and tensorboard summaries to a desired directory. By default it is set to `./outputs`. 
+* Specifying `--model_dir` will also restore the latest model checkpoint under the directory, if any checkpoint is there.
 * Specify `--config_data=config_wmt14` to train on the WMT'14 data.
 
 ### Test a trained model ###
@@ -49,11 +54,11 @@ To only evaluate a model checkpoint without training, first load the checkpoint 
 ```
 python transformer_main.py --run_mode=test --config_data=config_iwslt15 --model_dir=./outputs
 ```
-The latest checkpoint in `./outputs` is used. Generated samples are in the file `./outputs/test.output`. 
+The latest checkpoint in `./outputs` is used. Generated samples are in the file `./outputs/test.output.hyp`, and reference sentences are in the file `./outputs/test.output.ref` 
 
 Next, decode the samples with respective decoder, and evaluate with `bleu_tool`:
 ```
-../../bin/utils/spm_decode --infile ./outputs/test.output.src --outfile temp/test.output.spm --model temp/run_en_vi_spm/data/spm-codes.32000.model --input_format=piece 
+../../bin/utils/spm_decode --infile ./outputs/test.output.hyp --outfile temp/test.output.spm --model temp/run_en_vi_spm/data/spm-codes.32000.model --input_format=piece 
 
 python bleu_tool.py --reference=data/en_vi/test.vi --translation=temp/test.output.spm
 ```
@@ -64,20 +69,20 @@ For WMT'14, the corresponding cmds are:
 python transformer_main.py --run_mode=test --config_data=config_wmt14 --log_dir=./outputs
 
 # BPE decoding
-cat outputs/test.output.src | sed -E 's/(@@ )|(@@ ?$)//g' > temp/test.output.bpe
+cat outputs/test.output.hyp | sed -E 's/(@@ )|(@@ ?$)//g' > temp/test.output.bpe
 
 # Evaluates BLEU
 python bleu_tool.py --reference=data/en_de/test.de --translation=temp/test.output.bpe
 ```
 
-## Results
+### Results
 
 * On IWSLT'15, the implementation achieves around `BLEU_cased=28.54` and `BLEU_uncased=29.30` (by [bleu_tool.py](./bleu_tool.py)), which are comparable to the base_single_gpu results by the [official implementation](https://github.com/tensorflow/tensor2tensor/blob/master/tensor2tensor/models/transformer.py) (`28.12` and `28.97`, respectively, as reported [here](https://github.com/tensorflow/tensor2tensor/pull/611)).
 
 * On WMT'14, the implementation achieves around `BLEU_cased=25.12` (setting: base_single_gpu, batch_size=3072).
 
 
-## Example training log
+### Example training log
 
 ```
 12:02:02,686:INFO:step:500 loss: 7.3735
@@ -86,52 +91,77 @@ python bleu_tool.py --reference=data/en_de/test.de --translation=temp/test.outpu
 ```
 Using an Nvidia GTX 1080Ti, the model usually converges within 5 hours (~15 epochs) on IWSLT'15.
 
+---
 
-## Hands on your customed experiments!
+## Run Your Customized Experiments
 
-The following is the instructions on how to experiment on you customed dataset with Transformer.
+Here is an hands-on tutorial on running Transformer with your own customized dataset.
 
-### 1. Prepare your dataset
+### 1. Prepare raw data
 
-create the directory and store the original paired dataset in the directory. The dataset directory should 
-`data/${src_language}_${tgt_language}`. There shoule be at least six files in the corresponding directory,
-aka, `train/dev/test.src_language/tgt_language`. 
+Create a data directory and put the raw data in the directory. To be compatible with the data preprocessing in the next step, you may follow the convention below:
 
-For example, after you run `sh scripts/iwslt15_en_vi.sh`, you can find the directory `data/en_vi/` and
-six corpus files in that directory.
+* The data directory should be named as `data/${src}_${tgt}/`. Take the data downloaded with `scripts/iwslt15_en_vi.sh` for example, the data directory is `data/en_vi`.
+* The raw data should have 6 files, which contain source and target sentences of training/dev/test sets, respectively. In the `iwslt15_en_vi` example, `data/en_vi/train.en` contains the source sentences of the training set, where each line is a sentence. Other files are `train.vi`, `dev.en`, `dev.vi`, `test.en`, `test.vi`. 
 
 ### 2. Preprocess the data
 
-Run `preprocess_data.sh ${encoder} ${src_language} ${tgt_language}` to obtain the processed dataset.
-The `encoder` parameter can be `bpe`(byte pairwise encoding), `spm` (sentence piece encoding), or
+To obtain the processed dataset, run
+```
+preprocess_data.sh ${encoder} ${src} ${tgt} ${vocab_size} ${max_seq_length}
+```
+where
+
+* The `encoder` parameter can be `bpe`(byte pairwise encoding), `spm` (sentence piece encoding), or
 `raw`(no subword encoding).
+* `vocab_size` is optional. The default is 32000. 
+  - At this point, this parameter is used only when `encoder` is set to `bpe` or `spm`. For `raw` encoding, you'd have to truncate the vocabulary by yourself.
+  - For `spm` encoding, the preprocessing may fail (due to the Python sentencepiece module) if `vocab_size` is too large. So you may want to try smaller `vocab_size` if it happens. 
+* `max_seq_length` is optional. The default is 70.
 
-The above examples are using `bpe` or `spm`. If you choose to use `raw` encoding method, Notice that:
+In the `iwslt15_en_vi` example, the cmd is `sh preprocess_data.sh spm en vi`.
 
-- By default, the word embedding layer is built with the combination of source language vocabulary and target language vocabulary.
+By default, the preprocessed data are dumped under `temp/run_${src}_${tgt}_${encoder}`. In the `iwslt15_en_vi` example, the directory is `temp/run_en_vi_spm`.
+
+If you choose to use `raw` encoding method, notice that:
+
+- By default, the word embedding layer is built with the combination of source vocabulary and target vocabulary. For example, if the source vocabulary is of size 3K and the target vocabulary of size 3K and there is no overlap between the two vocabularies, then the final vocabulary used in the model is of size 6K.
 - By default, the final output layer of transformer decoder (hidden_state -> logits) shares the parameters with the word embedding layer.
 
-### 3. Define your model configuratoin and data configuration
+### 3. Specify data and model configuration
 
-Create your customed python files to define your transformer configuration and data loading configuration.
+Customize the Python configuration files to config the model and data.
 
-You can refer to the provided templated named `config_iwslt15.py` and `config_model.py`.
+Please refer to the example configuration files `config_model.py` for model configuration and `config_iwslt15.py` for data configuration.
 
 ### 4. Train the model
 
-Train:
+Train the model with the following cmd:
 ```
 python transformer_main.py --run_mode=train_and_evaluate --config_model=custom_config_model --config_data=custom_config_data
-
 ```
+where the model and data configuration files are `custom_config_model.py` and `custom_config_data.py`, respectively.
+
+Outputs such as model checkpoints are by default under `outputs/`.
 
 ### 5. Test the model
-Test:
+
+Test with the following cmd:
 ```
 python transformer_main.py --run_mode=test --config_data=custom_config_data --model_dir=./outputs
 ```
 
-Inferenced test samples are in `outputs/test.output`.
-You can want to decode the samples with respective decoder if you choose to use `bpe` or `spm` encoder before.
-Finally, you can use
-`python bleu_tool.py --reference=you_reference_file --translation=your_decoded_file` to calculate the BLEU score.
+Generated samples on the test set are in `outputs/test.output.hyp`, and reference sentences are in `outputs/test.output.ref`. If you've used `bpe` or `spm` encoding in the data preprocessing step, the text in these files are in the respective encoding too. To decode, use the respective cmd:
+```
+# BPE decoding
+cat outputs/test.output.hyp | sed -E 's/(@@ )|(@@ ?$)//g' > temp/test.output.hyp.final
+
+# SPM decoding (take `iwslt15_en_vi` for example)
+../../bin/utils/spm_decode --infile ./outputs/test.output.hyp --outfile temp/test.output.hyp.final --model temp/run_en_vi_spm/data/spm-codes.32000.model --input_format=piece 
+```
+
+Finally, to evaluate the BLEU score against the ground truth on the test set:
+```
+python bleu_tool.py --reference=you_reference_file --translation=temp/test.output.hyp.final
+```
+E.g., in the `iwslt15_en_vi` example, with `--reference=data/en_vi/test.vi`

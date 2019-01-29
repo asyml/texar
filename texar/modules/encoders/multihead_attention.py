@@ -97,7 +97,7 @@ class MultiheadAttentionEncoder(EncoderBase):
 
         "num_units" : int
             Hidden dimension of the unsplitted attention space.
-            Should be devicible by `num_heads`.
+            Should be devisible by `num_heads`.
 
         "dropout_rate: : float
             Dropout rate in the attention.

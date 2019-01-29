@@ -431,7 +431,7 @@ def file_based_convert_examples_to_features(
         writer.write(tf_example.SerializeToString())
 
 def file_based_input_fn_builder(input_file, seq_length, is_training,
-                                drop_remainder):
+                                drop_remainder, is_distributed=False):
     """Creates an `input_fn` closure to be passed to TPUEstimator."""
 
     name_to_features = {
@@ -463,13 +463,37 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
         # For eval, we want no shuffling and parallel reading doesn't matter.
         d = tf.data.TFRecordDataset(input_file)
         if is_training:
-            d = d.repeat()
-            d = d.shuffle(buffer_size=100)
 
-        d = d.apply(
-            tf.contrib.data.map_and_batch(
-                lambda record: _decode_record(record, name_to_features),
-                batch_size=batch_size, drop_remainder=drop_remainder))
+            if is_distributed:
+                import horovod.tensorflow as hvd
+                tf.logging.info('distributed mode is enabled.'
+                                'size:{} rank:{}'.format(hvd.size(), hvd.rank()))
+                # https://github.com/uber/horovod/issues/223
+                d = d.shard(hvd.size(), hvd.rank())
+
+                d = d.repeat()
+                d = d.shuffle(buffer_size=100)
+                d = d.apply(
+                    tf.contrib.data.map_and_batch(
+                        lambda record: _decode_record(record, name_to_features),
+                        batch_size=batch_size//hvd.size(),
+                        drop_remainder=drop_remainder))
+            else:
+                tf.logging.info('distributed mode is not enabled.')
+                d = d.repeat()
+                d = d.shuffle(buffer_size=100)
+                d = d.apply(
+                    tf.contrib.data.map_and_batch(
+                        lambda record: _decode_record(record, name_to_features),
+                        batch_size=batch_size,
+                        drop_remainder=drop_remainder))
+
+        else:
+            d = d.apply(
+                tf.contrib.data.map_and_batch(
+                    lambda record: _decode_record(record, name_to_features),
+                    batch_size=batch_size,
+                    drop_remainder=drop_remainder))
 
         return d
     return input_fn
@@ -497,7 +521,8 @@ def get_dataset(processor,
                 max_seq_length,
                 batch_size,
                 mode,
-                output_dir):
+                output_dir,
+                is_distributed=False):
     """
     Args:
         processor: Data Preprocessor, must have get_lables,
@@ -520,8 +545,9 @@ def get_dataset(processor,
         dataset = file_based_input_fn_builder(
             input_file=train_file,
             seq_length=max_seq_length,
+            is_training=True,
             drop_remainder=True,
-            is_training=True)({'batch_size': batch_size})
+            is_distributed=is_distributed)({'batch_size': batch_size})
     elif mode == 'eval':
         eval_examples = processor.get_dev_examples(data_dir)
         eval_file = os.path.join(output_dir, "eval.tf_record")
