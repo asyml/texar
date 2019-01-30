@@ -38,6 +38,7 @@ class TransformerDecoderTest(tf.test.TestCase):
         self._embedding = tf.random_uniform(
             [self._vocab_size, self._emb_dim], maxval=1, dtype=tf.float32)
         self._start_tokens = tf.fill([self._batch_size], 1)
+        self._end_token = 2
         self.max_decoding_length = self._max_time
 
     def test_train(self):
@@ -72,9 +73,8 @@ class TransformerDecoderTest(tf.test.TestCase):
             memory_attention_bias=None,
             inputs=None,
             decoding_strategy='infer_greedy',
-            beam_width=1,
             start_tokens=self._start_tokens,
-            end_token=2,
+            end_token=self._end_token,
             max_decoding_length=self._max_decode_len,
             mode=tf.estimator.ModeKeys.PREDICT)
         with self.test_session() as sess:
@@ -92,9 +92,8 @@ class TransformerDecoderTest(tf.test.TestCase):
             memory_attention_bias=None,
             inputs=None,
             decoding_strategy='infer_sample',
-            beam_width=1,
             start_tokens=self._start_tokens,
-            end_token=2,
+            end_token=self._end_token,
             max_decoding_length=self._max_decode_len,
             mode=tf.estimator.ModeKeys.PREDICT)
         with self.test_session() as sess:
@@ -114,7 +113,7 @@ class TransformerDecoderTest(tf.test.TestCase):
             inputs=None,
             beam_width=5,
             start_tokens=self._start_tokens,
-            end_token=2,
+            end_token=self._end_token,
             max_decoding_length=self._max_decode_len,
             mode=tf.estimator.ModeKeys.PREDICT)
         with self.test_session() as sess:

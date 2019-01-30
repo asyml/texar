@@ -114,11 +114,12 @@ def default_transformer_poswise_net_hparams(output_dim=512):
 class TransformerEncoder(EncoderBase):
     """Transformer encoder that applies multi-head self attention for encoding
     sequences.
-    Stacked `~texar.modules.encoders.MultiheadAttentionEncoder`,
-    `~texar.modules.FeedForwardNetwork` and residual connections.
+    Stacked :class:`~texar.modules.encoders.MultiheadAttentionEncoder`,
+    :class:`~texar.modules.FeedForwardNetwork` and residual connections.
+
     Args:
         hparams (dict or HParams, optional): Hyperparameters. Missing
-            hyperparamerter will be set to default values. See
+            hyperparameter will be set to default values. See
             :meth:`default_hparams` for the hyperparameter sturcture and
             default values.
 
@@ -159,8 +160,8 @@ class TransformerEncoder(EncoderBase):
                     # pylint: disable=protected-access
                     if self._hparams.dim != \
                         multihead_attention._hparams.output_dim:
-                        raise ValueError('The "dim" in the hparams of'
-                                         'multihead_attention should be equal'
+                        raise ValueError('The "dim" in the hparams of '
+                                         'multihead_attention should be equal '
                                          'to the "dim" of TransformerEncoder')
                     poswise_network = FeedForwardNetwork(
                         hparams=self._hparams['poswise_feedforward'])
@@ -168,8 +169,8 @@ class TransformerEncoder(EncoderBase):
                     if self._hparams.dim != \
                         poswise_network._hparams.layers[-1]['kwargs']['units']:
                         # poswise_network._hparams.layers[-1]['units']:
-                        raise ValueError('The "units" in the "kwargs" of'
-                                         'FeedForwardNetwork should be equal'
+                        raise ValueError('The "units" in the "kwargs" of '
+                                         'FeedForwardNetwork should be equal '
                                          'to the "dim" of TransformerEncoder')
                     self.poswise_networks.append(poswise_network)
     @staticmethod
@@ -243,7 +244,7 @@ class TransformerEncoder(EncoderBase):
         "residual_dropout" :  float
             Dropout rate of the residual connections.
 
-        "poswise_feedforward" : dict,
+        "poswise_feedforward" : dict
             Hyperparameters for a feed-forward network used in residual
             connections.
             Make sure the dimension of the output tensor is equal to `dim`.
@@ -251,12 +252,11 @@ class TransformerEncoder(EncoderBase):
             See :func:`~texar.modules.default_transformer_poswise_net_hparams`
             for details.
 
-        "multihead_attention": dict,
+        "multihead_attention" : dict
             Hyperparameters for the multihead attention strategy.
             Make sure the "output_dim" in this module is equal to "dim".
-            See :func:
-                `~texar.modules.encoder.MultiheadAttentionEncoder.
-                default_harams` for details.
+            See :func:`~texar.modules.MultiheadAttentionEncoder.default_harams`
+            for details.
 
         "initializer" : dict, optional
             Hyperparameters of the default initializer that initializes

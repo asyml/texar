@@ -1173,19 +1173,19 @@ _layer_class_to_default_kwargs_map = {
 }
 
 def layer_normalize(inputs,
-                    scope=None):
+                    scope=None,
+                    **kwargs):
     '''Applies layer normalization. averaging over the last dimension
     Args:
         inputs: A tensor with 2 or more dimensions, where the first
             dimension has `batch_size`.
-        epsilon: A floating number. A very small number for preventing
-            ZeroDivision Error.
         scope: Optional scope for `variable_scope`.
     Returns:
         A tensor with the same shape and data dtype as `inputs`.
     '''
     return tf.contrib.layers.layer_norm(
-        inputs=inputs, begin_norm_axis=-1, begin_params_axis=-1, scope=scope
+        inputs=inputs, begin_norm_axis=-1, begin_params_axis=-1, scope=scope,
+        **kwargs
     )
 
 
