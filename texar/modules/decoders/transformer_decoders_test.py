@@ -124,5 +124,23 @@ class TransformerDecoderTest(tf.test.TestCase):
             self.assertEqual(outputs_['sample_id'].shape,
                              (self._batch_size, self._max_decode_len, 5))
 
+    def test_greedy_embedding_helper(self):
+        """Tests with tf.contrib.seq2seq.GreedyEmbeddingHelper
+        """
+        decoder = TransformerDecoder(embedding=self._embedding)
+        helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(
+            self._embedding, self._start_tokens, self._end_token)
+        outputs, length = decoder(
+            memory=self._memory,
+            memory_sequence_length=self._memory_sequence_length,
+            memory_attention_bias=None,
+            helper=helper,
+            max_decoding_length=self._max_decode_len,
+            mode=tf.estimator.ModeKeys.PREDICT)
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            outputs_ = sess.run(outputs)
+            self.assertIsInstance(outputs_, TransformerDecoderOutput)
+
 if __name__ == "__main__":
     tf.test.main()
