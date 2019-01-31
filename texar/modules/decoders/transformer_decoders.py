@@ -783,8 +783,8 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             sample_id=sample_ids)
         return outputs, next_state, next_inputs, finished
 
-    #def finalize(self, outputs, final_state, sequence_lengths):
-    #    return outputs, final_state
+    def finalize(self, outputs, final_state, sequence_lengths):
+        return outputs, final_state
 
     @property
     def vocab_size(self):
