@@ -20,14 +20,14 @@ from __future__ import division
 from __future__ import print_function
 
 # pylint: disable=no-name-in-module, too-many-arguments, too-many-locals
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name, too-many-instance-attributes,
+# pylint: disable=too-many-branches
 
 import collections
 
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import Decoder as TFDecoder
 from tensorflow.contrib.seq2seq import dynamic_decode
-from tensorflow.contrib.framework import nest
 
 from texar.core import layers
 from texar.module_base import ModuleBase
@@ -299,7 +299,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                mode=None):
         """Performs decoding.
 
-        The function provides **3 ways** to specify the decoding method, with
+        The interface is very similar to that of RNN decoders
+        (:meth:`texar.modules.RNNDecoderBase._build`). In particular,
+        the function provides **3 ways** to specify the decoding method, with
         varying flexibility:
 
         1. The :attr:`decoding_strategy` argument.
@@ -325,12 +327,17 @@ class TransformerDecoder(ModuleBase, TFDecoder):
 
         2. The :attr:`helper` argument: An instance of subclass of
            :tf_main:`tf.contrib.seq2seq.Helper <contrib/seq2seq/Helper>`.
-           Similar to :meth:`~texar.modules.RNNDecoderBase._build`, this
-           provides a superset of decoding strategies than above. Please
-           reference there for detailed usage. However, using
-           :tf_main:`TrainingHelper<contrib/seq2seq/TrainingHelper>` is not
-           equivalent to "train_greedy" strategy, because we implement
-           "train_greedy" strategy differently for efficiency.
+           This provides a superset of decoding strategies than above.
+           The interface is the same as in RNN decoders.
+           Please refer to :meth:`texar.modules.RNNDecoderBase._build` for
+           detailed usage and examples.
+
+           Note that, here, though using a :tf_main:`TrainingHelper
+           <contrib/seq2seq/TrainingHelper>` corresponding to the
+           "train_greedy" strategy above, the implementation is *slower* than
+           directly setting `decoding_strategy="train_greedy"` (though the
+           output results are the same).
+
            Argument :attr:`max_decoding_length` is optional.
 
         3. **Beam search**: set :attr:`beam_width` to use beam search decoding.
@@ -547,7 +554,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                               mode=None):
         """Stacked multihead attention module.
         """
-        def layer_norm(x):
+        def _layer_norm(x):
             return layers.layer_normalize(x)
 
         inputs = tf.layers.dropout(inputs,
@@ -568,7 +575,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     multihead_attention = \
                         self.multihead_attentions['self_att'][i]
                     selfatt_output = multihead_attention(
-                        queries=layer_norm(x),
+                        queries=_layer_norm(x),
                         memory=None,
                         memory_attention_bias=decoder_self_attention_bias,
                         cache=layer_cache,
@@ -584,7 +591,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                         multihead_attention = \
                             self.multihead_attentions['encdec_att'][i]
                         encdec_output = multihead_attention(
-                            queries=layer_norm(x),
+                            queries=_layer_norm(x),
                             memory=memory,
                             memory_attention_bias=memory_attention_bias,
                             mode=mode,
@@ -596,13 +603,13 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 poswise_network = self.poswise_networks[i]
                 with tf.variable_scope('past_poswise_ln'):
                     sub_output = tf.layers.dropout(
-                        poswise_network(layer_norm(x)),
+                        poswise_network(_layer_norm(x)),
                         rate=self._hparams.residual_dropout,
                         training=is_train_mode(mode),
                     )
                     x = x + sub_output
 
-        return layer_norm(x)
+        return _layer_norm(x)
 
     def _build_output_layer(self, dim):
         if self._hparams.embedding_tie:
@@ -692,12 +699,12 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                      decode_length=256,
                      beam_width=5,
                      alpha=0.6):
-        def symbols_to_logits_fn(ids, step, cache):
+        def _symbols_to_logits_fn(ids, step, cache):
             return self._inputs_to_outputs(
                 self._prepare_tokens_to_embeds(ids[:, -1]), step, cache)
 
         outputs, log_prob = beam_search.beam_search(
-            symbols_to_logits_fn,
+            _symbols_to_logits_fn,
             start_tokens,
             beam_width,
             decode_length,
@@ -775,6 +782,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             logits=outputs,
             sample_id=sample_ids)
         return outputs, next_state, next_inputs, finished
+
+    #def finalize(self, outputs, final_state, sequence_lengths):
+    #    return outputs, final_state
 
     @property
     def vocab_size(self):
