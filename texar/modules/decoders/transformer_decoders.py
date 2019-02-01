@@ -554,8 +554,8 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                               mode=None):
         """Stacked multihead attention module.
         """
-        def _layer_norm(x):
-            return layers.layer_normalize(x)
+        def _layer_norm(x, scope):
+            return layers.layer_normalize(x, reuse=tf.AUTO_REUSE, scope=scope)
 
         inputs = tf.layers.dropout(inputs,
                                    rate=self._hparams.embedding_dropout,
@@ -570,12 +570,12 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         for i in range(self._hparams.num_blocks):
             layer_name = 'layer_{}'.format(i)
             layer_cache = cache[layer_name] if cache is not None else None
-            with tf.variable_scope(layer_name):
+            with tf.variable_scope(layer_name) as layer_scope:
                 with tf.variable_scope("self_attention"):
                     multihead_attention = \
                         self.multihead_attentions['self_att'][i]
                     selfatt_output = multihead_attention(
-                        queries=_layer_norm(x),
+                        queries=_layer_norm(x, layer_scope),
                         memory=None,
                         memory_attention_bias=decoder_self_attention_bias,
                         cache=layer_cache,
@@ -587,11 +587,12 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                         training=is_train_mode(mode),
                     )
                 if memory is not None:
-                    with tf.variable_scope('encdec_attention'):
+                    with tf.variable_scope('encdec_attention') as \
+                            encdec_attention_scope:
                         multihead_attention = \
                             self.multihead_attentions['encdec_att'][i]
                         encdec_output = multihead_attention(
-                            queries=_layer_norm(x),
+                            queries=_layer_norm(x, encdec_attention_scope),
                             memory=memory,
                             memory_attention_bias=memory_attention_bias,
                             mode=mode,
@@ -601,15 +602,16 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                             rate=self._hparams.residual_dropout,
                             training=is_train_mode(mode))
                 poswise_network = self.poswise_networks[i]
-                with tf.variable_scope('past_poswise_ln'):
+                with tf.variable_scope('past_poswise_ln') as \
+                        past_poswise_ln_scope:
                     sub_output = tf.layers.dropout(
-                        poswise_network(_layer_norm(x)),
+                        poswise_network(_layer_norm(x, past_poswise_ln_scope)),
                         rate=self._hparams.residual_dropout,
                         training=is_train_mode(mode),
                     )
                     x = x + sub_output
 
-        return _layer_norm(x)
+        return _layer_norm(x, scope=self.variable_scope)
 
     def _build_output_layer(self, dim):
         if self._hparams.embedding_tie:
