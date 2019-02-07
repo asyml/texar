@@ -17,7 +17,6 @@ ENV PATH /opt/conda/bin:$PATH
 
 WORKDIR /opt/texar
 COPY . .
-RUN ls
 RUN pip install -e . && pip install -r requirements.txt
 RUN pip install tensorflow==1.13.0-rc0
 RUN pip install tensorflow-gpu==1.13.0-rc0
