@@ -39,10 +39,11 @@ class EmbeddingTest(tf.test.TestCase):
         """Tests the load_glove function.
         """
         word_vec_lines = ["word 1.2 3.4 5.6", "词 1. 3. 5."]
-        glove_file = tempfile.NamedTemporaryFile(mode="w+")
         if Py3:
+            glove_file = tempfile.NamedTemporaryFile(mode="w+", encoding='utf-8')
             glove_file.write('\n'.join(word_vec_lines))
         else:
+            glove_file = tempfile.NamedTemporaryFile(mode="w+")
             glove_file.write('\n'.join(word_vec_lines).encode("utf-8"))
         glove_file.flush()
         vocab = {"word": 0, "词": 1}
