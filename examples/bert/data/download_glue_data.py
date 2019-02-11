@@ -125,13 +125,11 @@ def main(arguments):
             import subprocess
             if not os.path.exists("data/MRPC"):
                 subprocess.run("mkdir data/MRPC", shell=True)
-            subprocess.run("wget https://download.microsoft.com/download/D/4/6/D46FF87A-F6B9-4252-AA8B-3604ED519838/MSRParaphraseCorpus.msi", shell=True)
-            subprocess.run("cabextract MSRParaphraseCorpus.msi -d data/MRPC", shell=True)
-            subprocess.run("cat data/MRPC/_2DEC3DBE877E4DB192D17C0256E90F1D | tr -d $'\r' > data/MRPC/msr_paraphrase_train.txt", shell=True)
-            subprocess.run("cat data/MRPC/_D7B391F9EAFF4B1B8BCE8F21B20B1B61 | tr -d $'\r' > data/MRPC/msr_paraphrase_test.txt", shell=True)
-            subprocess.run("rm data/MRPC/_*", shell=True)
-            subprocess.run("rm MSRParaphraseCorpus.msi", shell=True)
+            subprocess.run('wget -P data/MRPC/ https://dl.fbaipublicfiles.com/senteval/senteval_data/msr_paraphrase_train.txt', shell=True)
+            subprocess.run('wget -P data/MRPC/ https://dl.fbaipublicfiles.com/senteval/senteval_data/msr_paraphrase_test.txt', shell=True)
             format_mrpc(args.data_dir, args.path_to_mrpc)
+            subprocess.run('rm data/MRPC/msr_paraphrase_train.txt', shell=True)
+            subprocess.run('rm data/MRPC/msr_paraphrase_test.txt', shell=True)
         elif task == 'diagnostic':
             download_diagnostic(args.data_dir)
         else:
