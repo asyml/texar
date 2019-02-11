@@ -28,6 +28,8 @@ import tensorflow as tf
 from tensorflow.contrib.slim.python.slim.data import data_decoder
 
 from texar.data.vocabulary import SpecialTokens
+from texar.utils import dtypes
+
 
 # pylint: disable=too-many-instance-attributes, too-many-arguments,
 # pylint: disable=no-member, invalid-name
@@ -35,7 +37,8 @@ from texar.data.vocabulary import SpecialTokens
 __all__ = [
     "ScalarDataDecoder",
     "TextDataDecoder",
-    "VarUttTextDataDecoder"
+    "VarUttTextDataDecoder",
+    "TFRecordDataDecoder",
 ]
 
 def _append_token(token):
@@ -78,7 +81,7 @@ class ScalarDataDecoder(data_decoder.DataDecoder):
         if data.dtype is tf.string:
             decoded_data = tf.string_to_number(data, out_type=self._dtype)
         else:
-            decoded_data = tf.cast(data, self._dtype),
+            decoded_data = tf.cast(data, self._dtype)
         outputs = {
             self._data_name: decoded_data
         }
@@ -460,3 +463,63 @@ class VarUttTextDataDecoder(data_decoder.DataDecoder):
         """The added text length due to appended bos and eos tokens.
         """
         return self._added_length
+
+class TFRecordDataDecoder(data_decoder.DataDecoder):
+    """A data decoder that decodes a TFRecord file, e.g., the
+    TFRecord file.
+
+    The only operation is to parse the TFRecord data into a
+    specified data type that can be accessed by features.
+
+    Args:
+        feature_key_and_dtype: A `dict` that contains the map
+            from the feature name key in `str` to the feature
+            dtype name in `str`
+    """
+
+    def __init__(self, feature_key_and_dtype, data_name="data"):
+        self._data_name = data_name
+        if self._data_name is None:
+            self._data_name = "data"
+        self._feature_key_and_dtype = feature_key_and_dtype
+    def __call__(self, data):
+        outputs = self.decode(data, self.list_items())
+        return dict(zip(self.list_items(), outputs))
+
+    def decode(self, data, items):
+        """Decodes the data to return the tensors specified by the list of
+        items.
+
+        Args:
+            data: The TFRecords data to decode.
+            items: A list of strings, each of which is the name of the resulting
+                tensors to retrieve.
+
+        Returns:
+            A list of tensors, each of which corresponds to each item.
+        """
+
+        feature_description = {
+            key: tf.FixedLenFeature([], dtypes.get_tf_dtype(value)) \
+            for key, value in  self._feature_key_and_dtype.items()
+        }
+        decoded_data = tf.parse_single_example(data,\
+            feature_description)
+        outputs = {
+            self._data_name: decoded_data
+        }
+        return [outputs[item] for item in items]
+
+    def list_items(self):
+        """Returns the list of item names that the decoder can produce.
+
+        Returns:
+            A list of strings can be passed to :meth:`decode()`.
+        """
+        return [self._data_name]
+
+    @property
+    def data_tensor_name(self):
+        """The name of the data tensor.
+        """
+        return self._data_name
