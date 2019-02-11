@@ -1,21 +1,8 @@
-''' Script for downloading all GLUE data.
+"""Script for downloading all GLUE data.
 
-Note: for legal reasons, we are unable to host MRPC.
-You can either use the version hosted by the SentEval team, which is already tokenized,
-or you can download the original data from (https://download.microsoft.com/download/D/4/6/D46FF87A-F6B9-4252-AA8B-3604ED519838/MSRParaphraseCorpus.msi) and extract the data from it manually.
-For Windows users, you can run the .msi file. For Mac and Linux users, consider an external library such as 'cabextract' (see below for an example).
-You should then rename and place specific files in a folder (see below for an example).
+Adapted from https://gist.github.com/W4ngatang/60c2bdb54d156a41194446737ce03e2e
 
-mkdir MRPC
-cabextract MSRParaphraseCorpus.msi -d MRPC
-cat MRPC/_2DEC3DBE877E4DB192D17C0256E90F1D | tr -d $'\r' > MRPC/msr_paraphrase_train.txt
-cat MRPC/_D7B391F9EAFF4B1B8BCE8F21B20B1B61 | tr -d $'\r' > MRPC/msr_paraphrase_test.txt
-rm MRPC/_*
-rm MSRParaphraseCorpus.msi
-
-1/30/19: It looks like SentEval is no longer hosting their extracted and tokenized MRPC data, so you'll need to download the data from the original source for now.
-'''
-
+"""
 import os
 import sys
 import shutil
