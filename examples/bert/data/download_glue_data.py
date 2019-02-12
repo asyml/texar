@@ -1,21 +1,8 @@
-''' Script for downloading all GLUE data.
+"""Script for downloading all GLUE data.
 
-Copied from https://gist.github.com/W4ngatang/60c2bdb54d156a41194446737ce03e2e
+Adapted from https://gist.github.com/W4ngatang/60c2bdb54d156a41194446737ce03e2e
 
-Note: for legal reasons, we are unable to host MRPC.
-You can either use the version hosted by the SentEval team, which is already tokenized,
-or you can download the original data from (https://download.microsoft.com/download/D/4/6/D46FF87A-F6B9-4252-AA8B-3604ED519838/MSRParaphraseCorpus.msi) and extract the data from it manually.
-For Windows users, you can run the .msi file. For Mac and Linux users, consider an external library such as 'cabextract' (see below for an example).
-You should then rename and place specific files in a folder (see below for an example).
-
-mkdir MRPC
-cabextract MSRParaphraseCorpus.msi -d MRPC
-cat MRPC/_2DEC3DBE877E4DB192D17C0256E90F1D | tr -d $'\r' > MRPC/msr_paraphrase_train.txt
-cat MRPC/_D7B391F9EAFF4B1B8BCE8F21B20B1B61 | tr -d $'\r' > MRPC/msr_paraphrase_test.txt
-rm MRPC/_*
-rm MSRParaphraseCorpus.msi
-'''
-
+"""
 import os
 import sys
 import shutil
@@ -32,13 +19,10 @@ TASK2PATH = {"CoLA":'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-re
              "STS":'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FSTS-B.zip?alt=media&token=bddb94a7-8706-4e0d-a694-1109e12273b5',
              "MNLI":'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FMNLI.zip?alt=media&token=50329ea1-e339-40e2-809c-10c40afff3ce',
              "SNLI":'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FSNLI.zip?alt=media&token=4afcfbb2-ff0c-4b2d-a09a-dbf07926f4df',
-             "QNLI":'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FQNLI.zip?alt=media&token=c24cad61-f2df-4f04-9ab6-aa576fa829d0',
+             "QNLI": 'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FQNLIv2.zip?alt=media&token=6fdcf570-0fc5-4631-8456-9505272d1601',
              "RTE":'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FRTE.zip?alt=media&token=5efa7e85-a0bb-4f19-8ea2-9e1840f077fb',
              "WNLI":'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FWNLI.zip?alt=media&token=068ad0a0-ded7-4bd7-99a5-5e00222e0faf',
              "diagnostic":'https://storage.googleapis.com/mtl-sentence-representations.appspot.com/tsvsWithoutLabels%2FAX.tsv?GoogleAccessId=firebase-adminsdk-0khhl@mtl-sentence-representations.iam.gserviceaccount.com&Expires=2498860800&Signature=DuQ2CSPt2Yfre0C%2BiISrVYrIFaZH1Lc7hBVZDD4ZyR7fZYOMNOUGpi8QxBmTNOrNPjR3z1cggo7WXFfrgECP6FBJSsURv8Ybrue8Ypt%2FTPxbuJ0Xc2FhDi%2BarnecCBFO77RSbfuz%2Bs95hRrYhTnByqu3U%2FYZPaj3tZt5QdfpH2IUROY8LiBXoXS46LE%2FgOQc%2FKN%2BA9SoscRDYsnxHfG0IjXGwHN%2Bf88q6hOmAxeNPx6moDulUF6XMUAaXCSFU%2BnRO2RDL9CapWxj%2BDl7syNyHhB7987hZ80B%2FwFkQ3MEs8auvt5XW1%2Bd4aCU7ytgM69r8JDCwibfhZxpaa4gd50QXQ%3D%3D'}
-
-MRPC_TRAIN = 'https://s3.amazonaws.com/senteval/senteval_data/msr_paraphrase_train.txt'
-MRPC_TEST = 'https://s3.amazonaws.com/senteval/senteval_data/msr_paraphrase_test.txt'
 
 def download_and_extract(task, data_dir):
     print("Downloading and extracting %s..." % task)
@@ -60,8 +44,6 @@ def format_mrpc(data_dir, path_to_data):
     else:
         mrpc_train_file = os.path.join(mrpc_dir, "msr_paraphrase_train.txt")
         mrpc_test_file = os.path.join(mrpc_dir, "msr_paraphrase_test.txt")
-        urllib.request.urlretrieve(MRPC_TRAIN, mrpc_train_file)
-        urllib.request.urlretrieve(MRPC_TEST, mrpc_test_file)
     assert os.path.isfile(mrpc_train_file), "Train data not found at %s" % mrpc_train_file
     assert os.path.isfile(mrpc_test_file), "Test data not found at %s" % mrpc_test_file
     urllib.request.urlretrieve(TASK2PATH["MRPC"], os.path.join(mrpc_dir, "dev_ids.tsv"))
@@ -83,7 +65,6 @@ def format_mrpc(data_dir, path_to_data):
                 dev_fh.write("%s\t%s\t%s\t%s\t%s\n" % (label, id1, id2, s1, s2))
             else:
                 train_fh.write("%s\t%s\t%s\t%s\t%s\n" % (label, id1, id2, s1, s2))
-
     with open(mrpc_test_file) as data_fh, \
             open(os.path.join(mrpc_dir, "test.tsv"), 'w') as test_fh:
         header = data_fh.readline()
@@ -115,7 +96,7 @@ def get_tasks(task_names):
 
 def main(arguments):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', help='directory to save data to', type=str, default='./data')
+    parser.add_argument('--data_dir', help='directory to save data to', type=str, default='data')
     parser.add_argument('--tasks', help='tasks to download data for as a comma separated string',
                         type=str, default='all')
     parser.add_argument('--path_to_mrpc', help='path to directory containing extracted MRPC data, msr_paraphrase_train.txt and msr_paraphrase_text.txt',
@@ -128,7 +109,14 @@ def main(arguments):
 
     for task in tasks:
         if task == 'MRPC':
+            import subprocess
+            if not os.path.exists("data/MRPC"):
+                subprocess.run("mkdir data/MRPC", shell=True)
+            subprocess.run('wget -P data/MRPC/ https://dl.fbaipublicfiles.com/senteval/senteval_data/msr_paraphrase_train.txt', shell=True)
+            subprocess.run('wget -P data/MRPC/ https://dl.fbaipublicfiles.com/senteval/senteval_data/msr_paraphrase_test.txt', shell=True)
             format_mrpc(args.data_dir, args.path_to_mrpc)
+            subprocess.run('rm data/MRPC/msr_paraphrase_train.txt', shell=True)
+            subprocess.run('rm data/MRPC/msr_paraphrase_test.txt', shell=True)
         elif task == 'diagnostic':
             download_diagnostic(args.data_dir)
         else:
