@@ -40,18 +40,15 @@ def _default_tfrecord_dataset_hparams():
 
     See :meth:`texar.data.TFRecordData.default_hparams` for details.
     """
-    """
-    Add new features like `operations_and_keys`
-    TODO
-    """
     return {
         "files": [],
-        "feature_key_and_types": {},
-        "operations_and_keys": {},
+        "feature_original_types": {},
+        "feature_convert_types": {},
+        "image_options": {},
         "compression_type": None,
         "data_name": None,
         "other_transformations": [],
-        "@no_typecheck": ["files", "feature_key_and_types"],
+        "@no_typecheck": ["files", "feature_original_types", "feature_convert_types", "image_options"],
     }
 
 class TFRecordData(DataBase):
@@ -66,7 +63,7 @@ class TFRecordData(DataBase):
     whose element can be the data for the traning or testing data feeds. 
     Along with the TF dataset the processor also construct the feature description to 
     parse TFRecord data through reading the feature, which is specified in 
-    :attr:`hparams["dataset"]["feature_key_and_types"]`. User should input `dict` with
+    :attr:`hparams["dataset"]["feature_original_types"]`. User should input `dict` with
     key as the feature name in `str`, and value as the feature Dtype in `str`, the feature 
     names and Dtype pairs should match the TFRecords file.
     
@@ -78,7 +75,7 @@ class TFRecordData(DataBase):
             hparams={
                 'dataset': { 
                     'files': 'image.tfrecord', 
-                    'feature_key_and_types': {
+                    'feature_original_types': {
                         'height': 'tf.int64',
                         'width': 'tf.int64',
                         'label': 'tf.int64',
@@ -117,7 +114,9 @@ class TFRecordData(DataBase):
                         name_prefix=None):
         # Create data decoder
         decoder = TFRecordDataDecoder(
-            feature_key_and_dtype=dataset_hparams.feature_key_and_types,
+            feature_original_types=dataset_hparams.feature_original_types,
+            feature_convert_types = dataset_hparams.feature_convert_types,
+            image_options = dataset_hparams.image_options,
             data_name=name_prefix)
         # Create other transformations
         data_spec.add_spec(decoder=decoder)
@@ -192,7 +191,7 @@ class TFRecordData(DataBase):
                 # (1) Hyperparams specific to scalar dataset
                 'dataset': { 
                     'files': [], 
-                    'feature_key_and_types': {},
+                    'feature_original_types': {},
                     "compression_type": None,
                     "data_name": None,
                     "other_transformations": [],
@@ -220,7 +219,7 @@ class TFRecordData(DataBase):
 
                 Path to the TFRecords file, each line contains a single data batch.
 
-            "feature_key_and_types" : dict
+            "feature_original_types" : dict
                 The feature name keys and their data types, both keys and types are in `str`
 
             "compression_type" : str, optional

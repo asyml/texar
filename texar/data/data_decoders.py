@@ -29,6 +29,7 @@ from tensorflow.contrib.slim.python.slim.data import data_decoder
 
 from texar.data.vocabulary import SpecialTokens
 from texar.utils import dtypes
+from texar.hyperparams import HParams
 
 
 # pylint: disable=too-many-instance-attributes, too-many-arguments,
@@ -477,14 +478,58 @@ class TFRecordDataDecoder(data_decoder.DataDecoder):
             dtype name in `str`
     """
 
-    def __init__(self, feature_key_and_dtype, data_name="data"):
+    def __init__(self, 
+                feature_original_types, 
+                feature_convert_types, 
+                image_options, 
+                data_name="data"):
         self._data_name = data_name
-        if self._data_name is None:
-            self._data_name = "data"
-        self._feature_key_and_dtype = feature_key_and_dtype
+        self._feature_original_types = feature_original_types
+        self._feature_convert_types = feature_convert_types
+        self._image_options = image_options
+
     def __call__(self, data):
         outputs = self.decode(data, self.list_items())
         return dict(zip(self.list_items(), outputs))
+
+    def _decode_image_str_byte(self, image_option_feature, decoded_data):
+        # Get image
+        output_type = tf.uint8
+        image_key = image_option_feature.get('feature_name')
+        resize_height = image_option_feature.get("resize_height")
+        resize_width = image_option_feature.get("resize_width")
+        resize_method = image_option_feature.get("resize_method")
+        if image_key is None:
+            return
+        image_byte = decoded_data.get(image_key)
+        if image_byte is None:
+            return
+
+        def _find_resize_method(resize_method):
+            if resize_method in {"AREA", "ResizeMethod.AREA", "tf.image.ResizeMethod.AREA", tf.image.ResizeMethod.AREA}:
+                resize_method = tf.image.ResizeMethod.AREA
+            elif resize_method in {"BICUBIC", "ResizeMethod.BICUBIC", "tf.image.ResizeMethod.BICUBIC", tf.image.ResizeMethod.BICUBIC}:
+                resize_method = tf.image.ResizeMethod.BICUBIC
+            elif resize_method in {"NEAREST_NEIGHBOR", "ResizeMethod.NEAREST_NEIGHBOR", "tf.image.ResizeMethod.NEAREST_NEIGHBOR", tf.image.ResizeMethod.NEAREST_NEIGHBOR}:
+                resize_method = tf.image.ResizeMethod.AREA
+            else:
+                resize_method = tf.image.ResizeMethod.BILINEAR
+            return resize_method
+
+        # Decode image
+        image_decoded = tf.cond(
+            tf.image.is_jpeg(image_byte),
+            lambda: tf.image.decode_jpeg(image_byte),
+            lambda: tf.image.decode_png(image_byte))
+        decoded_data[image_key] = image_decoded
+
+        # Resize the image
+        if resize_height and resize_width:
+            resize_method = _find_resize_method(resize_method)
+            image_resized = tf.image.resize_images(image_decoded, (resize_height, resize_width), method=resize_method)
+            image_resized_converted = tf.cast(image_resized, output_type)
+            decoded_data[image_key] = image_resized_converted
+        return
 
     def decode(self, data, items):
         """Decodes the data to return the tensors specified by the list of
@@ -499,12 +544,38 @@ class TFRecordDataDecoder(data_decoder.DataDecoder):
             A list of tensors, each of which corresponds to each item.
         """
 
-        feature_description = {
-            key: tf.FixedLenFeature([], dtypes.get_tf_dtype(value)) \
-            for key, value in  self._feature_key_and_dtype.items()
-        }
-        decoded_data = tf.parse_single_example(data,\
-            feature_description)
+        '''feature_description = {
+            key: tf.FixedLenFeature([], dtypes.get_tf_dtype(value[0])) \
+                for key, value in  self._feature_original_types.items() 
+        }'''
+        feature_description = dict()
+        for key, value in  self._feature_original_types.items():
+            if len(value) < 2 or value[1] == 'FixedLenFeature':
+                feature_description.update({key: tf.FixedLenFeature([], dtypes.get_tf_dtype(value[0]))})
+            elif value[1] == 'VarLenFeature':
+                feature_description.update({key: tf.VarLenFeature(dtypes.get_tf_dtype(value[0]))})
+        decoded_data = tf.parse_single_example(data, feature_description)
+
+        # Handle TFRecords containing images
+        if isinstance(self._image_options, dict):
+            self._decode_image_str_byte(self._image_options, decoded_data)
+        elif isinstance(self._image_options, HParams):
+            self._decode_image_str_byte(self._image_options.todict(), decoded_data)
+        elif isinstance(self._image_options, list):
+            _ = list(map(lambda x: self._decode_image_str_byte(x, decoded_data), self._image_options))
+
+        # Convert Dtypes
+        for key, value in self._feature_convert_types.items():
+            from_type = decoded_data[key].dtype
+            to_type = dtypes.get_tf_dtype(value)
+            if from_type is to_type:
+                continue
+            elif to_type is tf.string:
+                decoded_data[key] = tf.dtypes.as_string(decoded_data[key])
+            elif from_type is tf.string:
+                decoded_data[key] = tf.string_to_number(decoded_data[key], to_type)
+            else:
+                decoded_data[key] = tf.cast(decoded_data[key], to_type)
         outputs = {
             self._data_name: decoded_data
         }
