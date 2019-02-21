@@ -62,18 +62,17 @@ class TransformerDecoderOutput(
 
 
 class TransformerDecoder(ModuleBase, TFDecoder):
-    """Transformer decoder that applies multi-head attention for
+    """Transformer decoder that applies multi-head self-attention for
     sequence decoding.
-    Stacked :class:`~texar.modules.encoders.MultiheadAttentionEncoder` for
-    encoder-decoder attention and self attention,
-    :class:`~texar.modules.FeedForwardNetwork` and residual connections.
 
-    Use the passed `embedding` variable as the parameters of the
-    transform layer from output to logits.
+    It is a stack of :class:`~texar.modules.encoders.MultiheadAttentionEncoder`,
+    :class:`~texar.modules.FeedForwardNetwork`, and residual connections.
 
     Args:
         embedding: A Tensor of shape `[vocab_size, dim]` containing the
-            word embedding. The Tensor is used as the decoder output layer.
+            word embedding matrix. The Tensor is used as the decoder output
+            layer that computes logits over vocabulary. Ignored if
+            `hparams['embedding_tie']` is False.
         hparams (dict or HParams, optional): Hyperparameters. Missing
             hyperparameter will be set to default values. See
             :meth:`default_hparams` for the hyperparameter sturcture and
@@ -208,7 +207,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
 
         "embedding_tie" : bool
             Whether to use the word embedding matrix as the output layer
-            that computes logits. If `False`, an additional dense layer
+            that computes logits. If `False`, a new dense layer
             is created.
 
         "output_layer_bias" : bool

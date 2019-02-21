@@ -448,7 +448,8 @@ def get_activation_fn(fn_name="identity", kwargs=None):
     if fn_name is None:
         return None
 
-    fn_modules = ['tensorflow', 'tensorflow.nn', 'texar.custom', 'texar.core.layers']
+    fn_modules = ['tensorflow', 'tensorflow.nn', 'texar.custom',
+                  'texar.core.layers']
     activation_fn_ = utils.get_function(fn_name, fn_modules)
     activation_fn = activation_fn_
 
@@ -1175,14 +1176,16 @@ _layer_class_to_default_kwargs_map = {
 def layer_normalize(inputs,
                     scope=None,
                     **kwargs):
-    '''Applies layer normalization. averaging over the last dimension
+    """Applies layer normalization. Normalizes over the last dimension.
+
     Args:
         inputs: A tensor with 2 or more dimensions, where the first
-            dimension has `batch_size`.
-        scope: Optional scope for `variable_scope`.
+            dimension must be `batch_size`.
+        scope (optional): variable scope.
+
     Returns:
         A tensor with the same shape and data dtype as `inputs`.
-    '''
+    """
     return tf.contrib.layers.layer_norm(
         inputs=inputs, begin_norm_axis=-1, begin_params_axis=-1, scope=scope,
         **kwargs
@@ -1191,10 +1194,13 @@ def layer_normalize(inputs,
 
 def gelu(input_tensor):
     """Gaussian Error Linear Unit.
+
     This is a smoother version of the RELU.
     Original paper: https://arxiv.org/abs/1606.08415
+
     Args:
       input_tensor: float Tensor to perform activation.
+
     Returns:
       `input_tensor` with the GELU activation applied.
     """
