@@ -127,7 +127,6 @@ def main():
     predictions = decoder(
         memory=encoder_output,
         memory_sequence_length=encoder_input_length,
-        decoding_strategy='infer_greedy',
         beam_width=beam_width,
         alpha=config_model.alpha,
         start_tokens=start_tokens,
@@ -135,12 +134,8 @@ def main():
         max_decoding_length=config_data.max_decoding_length,
         mode=tf.estimator.ModeKeys.PREDICT
     )
-    if beam_width <= 1:
-        inferred_ids = predictions[0].sample_id
-    else:
-        # Uses the best sample by beam search
-        inferred_ids = predictions['sample_id'][:, :, 0]
-
+    # Uses the best sample by beam search
+    beam_search_ids = predictions['sample_id'][:, :, 0]
 
     saver = tf.train.Saver(max_to_keep=5)
     best_results = {'score': 0, 'epoch': -1}
@@ -163,11 +158,11 @@ def main():
                 tx.global_mode(): tf.estimator.ModeKeys.EVAL,
             }
             fetches = {
-                'inferred_ids': inferred_ids,
+                'beam_search_ids': beam_search_ids,
             }
             fetches_ = sess.run(fetches, feed_dict=feed_dict)
 
-            hypotheses.extend(h.tolist() for h in fetches_['inferred_ids'])
+            hypotheses.extend(h.tolist() for h in fetches_['beam_search_ids'])
             references.extend(r.tolist() for r in targets)
             hypotheses = utils.list_strip_eos(hypotheses, eos_token_id)
             references = utils.list_strip_eos(references, eos_token_id)
