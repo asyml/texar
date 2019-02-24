@@ -33,14 +33,14 @@ mv test.out test.out.bpe
 cat test.out.bpe | sed -E 's/(@@ )|(@@ ?$)//g' > test.out
 ```
 
-##### Evaluate Using t2t-bleu
+##### Evaluate Using Transformer's BLEU tool
 ```bash
-t2t-bleu --translation=test.out --reference=test.tgt
+python [TEXAR]/examples/transformer/bleu_tool.py --translation=test.out --reference=test.tgt
 ```
 
 ### Word Piece Model (WPM) pipeline
 
-* This requires installation of *[sentencepiece](https://github.com/google/sentencepiece#python-module) library
+* This requires installation of the [sentencepiece](https://github.com/google/sentencepiece#python-module) library
 ```bash
 pip install sentencepiece
 ```
