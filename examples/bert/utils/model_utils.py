@@ -9,10 +9,11 @@ import tensorflow as tf
 import numpy as np
 from texar import HParams
 
-"""
-Load the Json config file and transform it into Texar style configuration.
-"""
+
 def transform_bert_to_texar_config(input_json):
+    """
+    Load the Json config file and transform it into Texar style configuration.
+    """
     config_ckpt = json.loads(
         open(input_json).read())
     configs = {}
@@ -171,6 +172,12 @@ def _get_assignment_map_from_checkpoint(tvars, init_checkpoint):
     return (assignment_map, initialized_variable_names)
 
 def init_bert_checkpoint(init_checkpoint):
+    """Initializes BERT model parameters from a checkpoint provided by 
+    Google.
+    
+    Args:
+        init_checkpoint (str): Path to the checkpoint.
+    """
     tvars = tf.trainable_variables()
     initialized_variable_names = []
     if init_checkpoint:
