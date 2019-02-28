@@ -32,10 +32,11 @@ from tensorflow.contrib.seq2seq import dynamic_decode
 from texar.core import layers
 from texar.module_base import ModuleBase
 from texar.modules.networks.networks import FeedForwardNetwork
-from texar.modules.embedders.position_embedders import SinusoidsPositionEmbedder
-from texar.modules.encoders.transformer_encoders import \
+from texar.modules.embedders.position_embedders import\
+    SinusoidsPositionEmbedder, PositionEmbedder
+from texar.modules.encoders.transformer_encoders import\
     default_transformer_poswise_net_hparams
-from texar.modules.encoders.multihead_attention import \
+from texar.modules.encoders.multihead_attention import\
     MultiheadAttentionEncoder
 from texar.utils import beam_search
 from texar.utils.shapes import shape_list, mask_sequences
@@ -89,15 +90,20 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
 
-            self.position_embedder = \
-                SinusoidsPositionEmbedder(
+            if self._hparams.position_embedder_type == 'sinusoids':
+                self.position_embedder = SinusoidsPositionEmbedder(
                     self._hparams.position_embedder_hparams)
+            else:
+                self.position_embedder = PositionEmbedder(
+                    position_size=self._hparams.position_size,
+                    hparams=self._hparams.position_embedder_hparams)
 
             self._embedding = embedding
             self._vocab_size = self._embedding.get_shape().as_list()[0]
 
             self.output_layer = \
                 self._build_output_layer(shape_list(self._embedding)[-1])
+
             self.multihead_attentions = {
                 'self_att': [],
                 'encdec_att': []
@@ -146,31 +152,54 @@ class TransformerDecoder(ModuleBase, TFDecoder):
 
             {
                 # Same as in TransformerEncoder
+                "scale_embeds": True,
                 "num_blocks": 6,
                 "dim": 512,
+                'position_embedder_type': 'sinusoids',
+                'position_size': None,
                 "position_embedder_hparams": None,
                 "embedding_dropout": 0.1,
                 "residual_dropout": 0.1,
                 "poswise_feedforward": default_transformer_poswise_net_hparams,
                 "multihead_attention": {
-                    "num_units": 512,
-                    "num_heads": 8,
+                    'name': 'multihead_attention',
+                    'num_units': 512,
+                    'output_dim': 512,
+                    'num_heads': 8,
+                    'dropout_rate': 0.1,
+                    'output_dim': 512,
+                    'use_bias': False,
                 },
                 "initializer": None,
+                "name": "transformer_decoder"
+
                 # Additional for TransformerDecoder
                 "embedding_tie": True,
                 "output_layer_bias": False,
                 "max_decoding_length": int(1e10),
-                "name": "transformer_decoder"
             }
 
         Here:
+        "scale_embeds": bool
+            Scale the word embedding with the square root of its dimension. True by default.
+            This should be False when loading the pretrained GPT-2 Model.
 
         "num_blocks" : int
             Number of stacked blocks.
 
         "dim" : int
             Hidden dimension of the encoder.
+
+        "position_embedder_type":
+            Choose from "sinusoids" or "variables".
+
+            "sinusoids":
+                create the position embedding as sinusoids, which is fixed.
+            "variables":
+                create the position embedding as trainable variables.
+        "position_size": int
+            The size of position embeddings.
+            Only be used when "position_embedder_type"is "variables".
 
         "position_embedder_hparams" : dict, optional
             Hyperparameters of a
@@ -226,8 +255,11 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             Name of the module.
         """
         return {
+            "scale_embeds": True,
             "num_blocks": 6,
-            "initializer": None,
+            "dim": 512,
+            'position_embedder_type': 'sinusoids',
+            'position_size': None,
             "position_embedder_hparams": None,
             "embedding_tie": True,
             "output_layer_bias": False,
@@ -236,12 +268,15 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             "residual_dropout": 0.1,
             "poswise_feedforward": default_transformer_poswise_net_hparams(),
             'multihead_attention': {
+                'name': 'multihead_attention',
                 'num_units': 512,
+                'num_heads': 8,
                 'dropout_rate': 0.1,
                 'output_dim': 512,
-                'num_heads': 8,
+                'use_bias': False,
+                'num_units': 512,
             },
-            "dim": 512,
+            "initializer": None,
             "name": "transformer_decoder",
         }
 
@@ -267,13 +302,21 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             and updated cache.
             """
             # Multiply embedding by sqrt of its dimention
-            inputs *= self._embedding.shape.as_list()[-1]**0.5
+            if self._hparams.scale_embeds:
+                inputs *= self._embedding.shape.as_list()[-1]**0.5
             inputs += timing_signal[:, step]
-            outputs = self._self_attention_stack(
-                tf.expand_dims(inputs, axis=1),
-                memory=cache['memory'],
-                cache=cache,
-            )
+            if cache.get('memory') is not None:
+                outputs = self._self_attention_stack(
+                    tf.expand_dims(inputs, axis=1),
+                    memory=cache['memory'],
+                    cache=cache,
+                )
+            else:
+                outputs = self._self_attention_stack(
+                    tf.expand_dims(inputs, axis=1),
+                    memory=None,
+                    cache=cache,
+                )
             outputs = self.output_layer(outputs)
             outputs = tf.squeeze(outputs, axis=[1])
             return outputs, cache
@@ -281,16 +324,18 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         return _impl
 
     def _build(self,    # pylint: disable=arguments-differ
-               memory,
+               memory=None,
                memory_sequence_length=None,
                memory_attention_bias=None,
                inputs=None,
                sequence_length=None,
                decoding_strategy='train_greedy',
                beam_width=None,
-               alpha=0.,
+               length_penalty=0.,
                start_tokens=None,
                end_token=None,
+               context=None,
+               context_sequence_length=None,
                softmax_temperature=None,
                max_decoding_length=None,
                impute_finished=False,
@@ -344,7 +389,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
            and argument :attr:`max_decoding_length` is optional.
 
         Args:
-            memory: The memory to attend, e.g., the output of an RNN encoder.
+            memory (optional): The memory to attend, e.g., the output of an RNN encoder.
                 A Tensor of shape `[batch_size, memory_max_time, dim]`.
             memory_sequence_length (optional): A Tensor of shape `[batch_size]`
                 containing the sequence lengths for the batch entries in
@@ -374,17 +419,23 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 :attr:`beam_width` or :attr:`helper` is set.
             beam_width (int): Set to use beam search. If given,
                 :attr:`decoding_strategy` is ignored.
-            alpha (float): Length penalty coefficient used in beam search
+            length_penalty (float): Length penalty coefficient used in beam search
                 decoding. Refer to https://arxiv.org/abs/1609.08144
                 for more details.
+                It Should be larger if longer sentences are wanted.
             start_tokens (optional): An int Tensor of shape `[batch_size]`,
                 containing the start tokens.
                 Used when :attr:`decoding_strategy` = "infer_greedy" or
                 "infer_sample", or :attr:`beam_width` is set.
+                Ignored when context is set.
             end_token (optional): An int 0D Tensor, the token that marks end
                 of decoding.
                 Used when :attr:`decoding_strategy` = "infer_greedy" or
                 "infer_sample", or :attr:`beam_width` is set.
+            context (optional): An int Tensor of shape `[batch_size, length]`,
+                containing the starting tokens for decoding.
+                If context is set, the start_tokens will be ignored.
+            context_sequence_length (optional): specify the length of context.
             softmax_temperature (optional): A float 0D Tensor, value to divide
                 the logits by before computing the softmax. Larger values
                 (above 1.0) result in more random samples. Must > 0. If `None`,
@@ -435,19 +486,28 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 `[batch_size, beam_width]` containing the log probability \
                 of each sequence sample.
         """
-        if memory_attention_bias is None:
-            if memory_sequence_length is None:
-                raise ValueError(
-                    "`memory_sequence_length` is required if "
-                    "`memory_attention_bias` is not given.")
 
-            #enc_padding = 1 - mask_sequences(tf.ones_like(memory),
-            #                                 memory_sequence_length,
-            #                                 tensor_rank=3)[:, :, 0]
-            enc_padding = 1 - tf.sequence_mask(
-                memory_sequence_length, tf.shape(memory)[1], dtype=tf.float32)
-            memory_attention_bias = attn.attention_bias_ignore_padding(
-                enc_padding)
+        if memory is not None:
+            if memory_attention_bias is None:
+                if memory_sequence_length is None:
+                    raise ValueError(
+                        "`memory_sequence_length` is required if "
+                        "`memory_attention_bias` is not given.")
+
+                enc_padding = 1 - tf.sequence_mask(
+                    memory_sequence_length, tf.shape(memory)[1],
+                    dtype=tf.float32)
+                memory_attention_bias = attn.attention_bias_ignore_padding(
+                    enc_padding)
+
+        # record the context, which will be used in step function
+        # for dynamic_decode
+        if context is not None:
+            start_tokens = context[:, 0]
+            self.context = context[:, 1:]
+            self.context_sequence_length = context_sequence_length - 1
+        else:
+            self.context = None
 
         if helper is None and beam_width is None and \
                 decoding_strategy == 'train_greedy': # Teacher-forcing
@@ -457,7 +517,8 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             decoder_self_attention_bias = (
                 attn.attention_bias_lower_triangle(
                     shape_list(inputs)[1]))
-            target_inputs = inputs * self._hparams.dim**0.5
+            if self._hparams.scale_embeds:
+                target_inputs = inputs * self._hparams.dim**0.5
 
             _, lengths, _ = shape_list(target_inputs)
             positions = tf.expand_dims(tf.range(lengths, dtype=tf.int32), 0)
@@ -507,12 +568,34 @@ class TransformerDecoder(ModuleBase, TFDecoder):
 
                 self._cache = self._init_cache(memory, memory_attention_bias,
                                                beam_search_decoding=False)
+                if context is not None:
+                    self.context = tf.pad(
+                        self.context,
+                        [[0, 0],
+                         [0, max_decoding_length-tf.shape(self.context)[1]]]
+                    )
 
                 outputs, cache, sequence_lengths = dynamic_decode(
                     decoder=self, impute_finished=impute_finished,
                     maximum_iterations=max_decoding_length,
                     output_time_major=False,
                     scope=self.variable_scope)
+
+                if context is not None:
+                    # Here the length of sample_id will be larger than that
+                    # of logit by 1, because there will be a additional
+                    # start_token in the returned sample_id.
+                    # the start_id should be the first token of the
+                    # given context
+                    outputs = TransformerDecoderOutput(
+                        logits=outputs.logits,
+                        sample_id=tf.concat(
+                            [tf.expand_dims(start_tokens, 1),
+                             outputs.sample_id],
+                            axis=1
+                        )
+                    )
+                    sequence_lengths = sequence_lengths + 1
                 rets = outputs, sequence_lengths
 
             else: #Beam-search decoding
@@ -521,16 +604,17 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 if helper is not None:
                     raise ValueError("Must not set 'beam_width' and 'helper' "
                                      "simultaneously.")
-
+                _batch_size = tf.shape(start_tokens)[0]
                 self._cache = self._init_cache(memory, memory_attention_bias,
-                                               beam_search_decoding=True)
+                                               beam_search_decoding=True,
+                                               batch_size=_batch_size)
 
                 # The output format is different when running beam search
                 sample_id, log_prob = self._beam_decode(
                     start_tokens,
                     end_token,
                     beam_width=beam_width,
-                    alpha=alpha,
+                    length_penalty=length_penalty,
                     decode_length=max_decoding_length,
                 )
                 rets = {
@@ -560,8 +644,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                                    rate=self._hparams.embedding_dropout,
                                    training=is_train_mode(mode))
         if cache is not None:
-            memory_attention_bias = \
-                cache['memory_attention_bias']
+            if memory is not None:
+                memory_attention_bias = \
+                    cache['memory_attention_bias']
         else:
             assert decoder_self_attention_bias is not None
 
@@ -640,7 +725,10 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             layer.build([None, dim])
             return layer
 
-    def _init_cache(self, memory, memory_attention_bias, beam_search_decoding):
+    def _init_cache(
+        self, memory, memory_attention_bias,
+        beam_search_decoding,
+        batch_size=None):
         """Returns an initialized cache.
 
         In order to support both inference-like decoding and beam-search
@@ -651,8 +739,10 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         beam-search decoding, a tf.Tensor of shape
         `[batch_size, current_steps, num_units]` is maintained, where
         `current_steps` is the number of steps currently decoded.
+
         """
-        batch_size = tf.shape(memory)[0]
+        if batch_size is None:
+            batch_size = self.batch_size
 
         def _shape(batch_size, from_shape):
             if (not isinstance(from_shape, tf.TensorShape) or
@@ -680,18 +770,28 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         _create_fn = _create_empty_tensor if beam_search_decoding else \
             _create_ta
 
-        cache = {
-            'memory': memory,
-            'memory_attention_bias': memory_attention_bias,
-        }
         s = tf.TensorShape([self._hparams.multihead_attention.num_units])
-        for l in range(self._hparams.num_blocks):
-            cache['layer_{}'.format(l)] = {
-                'self_keys': _create_fn(s, tf.float32),
-                'self_values': _create_fn(s, tf.float32),
-                'memory_keys': _create_fn(s, tf.float32),
-                'memory_values': _create_fn(s, tf.float32),
+
+        if memory is not None:
+            cache = {
+                'memory': memory,
+                'memory_attention_bias': memory_attention_bias,
             }
+            for l in range(self._hparams.num_blocks):
+                cache['layer_{}'.format(l)] = {
+                    'self_keys': _create_fn(s, tf.float32),
+                    'self_values': _create_fn(s, tf.float32),
+                    'memory_keys': _create_fn(s, tf.float32),
+                    'memory_values': _create_fn(s, tf.float32),
+                }
+        else:
+            cache = {}
+            for l in range(self._hparams.num_blocks):
+                cache['layer_{}'.format(l)] = {
+                    'self_keys': _create_fn(s, tf.float32),
+                    'self_values': _create_fn(s, tf.float32),
+                }
+
         return cache
 
     def _beam_decode(self,
@@ -699,7 +799,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                      end_token,
                      decode_length=256,
                      beam_width=5,
-                     alpha=0.6):
+                     length_penalty=0.6):
         def _symbols_to_logits_fn(ids, step, cache):
             return self._inputs_to_outputs(
                 self._prepare_tokens_to_embeds(ids[:, -1]), step, cache)
@@ -710,7 +810,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             beam_width,
             decode_length,
             self._vocab_size,
-            alpha,
+            length_penalty,
             states=self._cache,
             eos_id=end_token)
 
@@ -774,6 +874,15 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         outputs, state = self._inputs_to_outputs(inputs, time, state)
         sample_ids = self._helper.sample(
             time=time, outputs=outputs, state=state)
+        print('sample_ids.shape:{}'.format(sample_ids))
+        if self.context is not None:
+            _times = tf.ones([self.batch_size], dtype=tf.int32) * time
+            sample_ids = tf.where(
+                self.context_sequence_length>_times,
+                self.context[:, time],
+                sample_ids
+            )
+
         finished, next_inputs, next_state = self._helper.next_inputs(
             time=time,
             outputs=outputs,
