@@ -827,6 +827,14 @@ class MergeLayer(tf.layers.Layer):
             add_variable(
                 layer._non_trainable_weights, self._non_trainable_weights)
 
+    @property
+    def trainable_weights(self):
+        return self._trainable_weights
+
+    @property
+    def non_trainable_weights(self):
+        return self._non_trainable_weights
+
     def call(self, inputs):
         if self._layers is None:
             layer_outputs = inputs
@@ -938,6 +946,14 @@ class SequentialLayer(tf.layers.Layer):
                     layer._trainable_weights, self._non_trainable_weights)
             add_variable(
                 layer._non_trainable_weights, self._non_trainable_weights)
+
+    @property
+    def trainable_weights(self):
+        return self._trainable_weights
+
+    @property
+    def non_trainable_weights(self):
+        return self._non_trainable_weights
 
     def call(self, inputs, mode=None): # pylint: disable=arguments-differ
         training = is_train_mode(mode)
