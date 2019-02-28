@@ -3,7 +3,14 @@ This directory contains several utilities for, e.g., data pre-processing.
 
 Instructions of using BPE and WPM encoding are as follows. 
 See [examples/transformer](https://github.com/asyml/texar/tree/master/examples/transformer)
-for a real example of using these encoding.
+for a real example of using these encodings.
+
+**Note that** there are a few different (sub-)word encoding approaches and implementations which are used by several popular models. For example:
+
+* **BPE by Rico Sennrich**: Used in [Transformer](https://github.com/asyml/texar/tree/master/examples/transformer) for machine translation. This is the version in this folder, including both BPE training and encoding/decoding. 
+* **BPE by OpenAI**: Used in [GPT-2]() language model. Includes BPE encoding/decoding and provided BPE vocab (no training).
+* **BPE by WordPiece**: Used in [BERT](https://github.com/asyml/texar/tree/master/examples/bert) for text embedding. Includes BPE encoding/decoding and provided BPE vocab (no training).
+* **SPM by sentencepiece**: Used in [Transformer](https://github.com/asyml/texar/tree/master/examples/transformer) for machine translation. This is the version in this folder, including both SPM training and encoding/decoding. 
 
 ### *[Byte Pair Encoding (BPE)](https://arxiv.org/abs/1508.07909)* pipeline
 
@@ -33,14 +40,14 @@ mv test.out test.out.bpe
 cat test.out.bpe | sed -E 's/(@@ )|(@@ ?$)//g' > test.out
 ```
 
-##### Evaluate Using t2t-bleu
+##### Evaluate Using Transformer's BLEU tool
 ```bash
-t2t-bleu --translation=test.out --reference=test.tgt
+python [TEXAR]/examples/transformer/bleu_tool.py --translation=test.out --reference=test.tgt
 ```
 
 ### Word Piece Model (WPM) pipeline
 
-* This requires installation of *[sentencepiece](https://github.com/google/sentencepiece#python-module) library
+* This requires installation of the [sentencepiece](https://github.com/google/sentencepiece#python-module) library
 ```bash
 pip install sentencepiece
 ```

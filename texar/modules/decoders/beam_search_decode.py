@@ -218,7 +218,7 @@ def beam_search_decode(decoder_or_cell,
             end_token=end_token,
             initial_state=initial_state,
             beam_width=beam_width,
-            output_layer=output_layer,
+            output_layer=None if output_layer is tf.identity else output_layer,
             length_penalty_weight=length_penalty_weight)
 
         if 'maximum_iterations' in kwargs:
