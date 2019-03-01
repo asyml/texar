@@ -58,10 +58,10 @@ flags.DEFINE_string("config_model", "configs.config_model",
                     "The model config file to use. The config file type is "
                     "define by the 'config_type',it an be of texar type or "
                     "json type."
-                    "For '--config_type=json', input the json config file "
+                    "For '--config_type=json', set the json config file "
                     "like: '--config_model gpt2_pretrained_models/model_117M/"
                     "hparams.json';"
-                    "For '--config_type=texar', input the texar config file "
+                    "For '--config_type=texar', set the texar config file "
                     "like: '--config_model configs.config_model';")
 
 def main(_):
