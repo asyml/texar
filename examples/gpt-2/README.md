@@ -139,7 +139,7 @@ output, output_length = decoder(
 output, output_length = decoder(
     memory=source_hidden_states, 
     memory_sequence_length=src_len,
-    inputs=truth_target,
+    inputs=truth_target[:, :-1],
     sequence_length=tgt_len-1,
     decoding_strategy='train_greedy')
     
