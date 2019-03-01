@@ -35,7 +35,7 @@ flags = tf.flags
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("checkpoint", "gpt2_pretrained_models/117M/model.ckpt",
+flags.DEFINE_string("checkpoint", "gpt2_pretrained_models/model_117M/model.ckpt",
                     "Model checkpoint to load model weights from.")
 flags.DEFINE_integer("seed", None, "Random seed.")
 flags.DEFINE_integer("nsamples", 1, "The number of samples per input.")
@@ -49,17 +49,20 @@ flags.DEFINE_integer("top_k", 40,
                      "The number of top most likely candidates from a vocab "
                      "distribution.")
 flags.DEFINE_boolean("is_interactive", False, "Interactive mode or not.")
-flags.DEFINE_string("config_model", "configs.config_model",
-                    "The model config file to use. "
-                    "Can be of texar type or json type,"
-                    "for json, use it like "
-                    "'--config_model gpt2_pretrained_models/117M/"
-                    "hparams.json'")
-flags.DEFINE_string("config_type", "json",
+flags.DEFINE_string("config_type", "texar",
                     "The configuration file format. Set to 'json' if the GPT-2 "
                     "config file is in the same format of the official GPT-2 "
                     "config file. Set to 'texar' if GPT-2 config file is in "
                     "Texar format.")
+flags.DEFINE_string("config_model", "configs.config_model",
+                    "The model config file to use. The config file type is "
+                    "define by the 'config_type',it an be of texar type or "
+                    "json type."
+                    "For '--config_type=json', input the json config file "
+                    "like: '--config_model gpt2_pretrained_models/model_117M/"
+                    "hparams.json';"
+                    "For '--config_type=texar', input the texar config file "
+                    "like: '--config_model configs.config_model';")
 
 def main(_):
     """
@@ -90,8 +93,8 @@ def main(_):
         "nsamples must be dividable by batch_size")
 
     # Create a data pre-processor for, e.g., BPE encoding
-    proc = processor.get_encoder("gpt2_pretrained_models"
-                                        "/117M")
+    proc = processor.get_encoder(
+        "gpt2_pretrained_models/model_117M")
 
     context = tf.placeholder(tf.int32, [batch_size, None])
     context_length = tf.placeholder(tf.int32, [batch_size])

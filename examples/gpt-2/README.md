@@ -15,9 +15,9 @@ In sum, this example showcases:
 
 Download the GPT-2 model checkpoint with the following command:
 ```
-sh gpt2_pretrained_models/download_model.sh 117M
+sh gpt2_pretrained_models/download_model.sh model_117M
 ```
-By default, it will download a pretrained model named `117M` to `gpt2_pretrained_models/`.
+By default, it will download a pretrained model named `model_117M` to `gpt2_pretrained_models/`.
 
 ### Usage
 | WARNING: Samples are unfiltered and may contain offensive content. |
@@ -28,7 +28,7 @@ By default, it will download a pretrained model named `117M` to `gpt2_pretrained
 This mode will initialize an interactive interface, which allows users to type in the context sentence. The model then generates continuation of the context. Top-K sample decoding is used.
 
 ```
-python generative_pretraining_main.py --is_interactive \
+python gpt2_generate_main.py --is_interactive=True \
 --max_decoding_length=100 \
 --temperature=0.7 \
 --top_k=40
@@ -65,7 +65,7 @@ The last time we saw him on stage, he
 This mode generates a batch of samples from scratch.
 
 ```
-python generative_pretraining_main.py
+python gpt2_generate_main.py \
 --nsamples=1 \
 --batch_size=1 \
 --max_decoding_len=100 \
