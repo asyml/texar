@@ -136,7 +136,7 @@ output, output_length = decoder(
 **Ex. Use 3): Fine-tuning for conditional generation**
 
 ```python
-output, output_length = decoder(
+output = decoder(
     memory=source_hidden_states, 
     memory_sequence_length=src_len,
     inputs=truth_target[:, :-1],
