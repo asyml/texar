@@ -255,5 +255,4 @@ simple-examples.tgz
 /examples/bert/bert_pretrained_models/
 !/examples/bert/bert_pretrained_models/download_model.sh
 /examples/bert/output
-/examples/gpt-2/gpt2_pretrained_models/
-!/examples/gpt-2/gpt2_pretrained_models/download_model.sh
+
