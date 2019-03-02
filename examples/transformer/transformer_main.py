@@ -128,7 +128,7 @@ def main():
         memory=encoder_output,
         memory_sequence_length=encoder_input_length,
         beam_width=beam_width,
-        alpha=config_model.alpha,
+        length_penalty=config_model.length_penalty,
         start_tokens=start_tokens,
         end_token=eos_token_id,
         max_decoding_length=config_data.max_decoding_length,
