@@ -28,7 +28,7 @@ By default, it will download a pretrained model named `model_117M` to `gpt2_pret
 This mode will initialize an interactive interface, which allows users to type in the context sentence. The model then generates continuation of the context. Top-K sample decoding is used.
 
 ```
-python gpt2_generate_main.py --is_interactive=True \
+python gpt2_generate_main.py --is_interactive \
 --max_decoding_length=100 \
 --temperature=0.7 \
 --top_k=40
@@ -65,7 +65,7 @@ The last time we saw him on stage, he
 This mode generates a batch of samples from scratch.
 
 ```
-python gpt2_generate_main.py \
+python gpt2_generate_main.py
 --nsamples=1 \
 --batch_size=1 \
 --max_decoding_len=100 \
