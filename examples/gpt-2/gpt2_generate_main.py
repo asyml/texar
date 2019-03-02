@@ -26,6 +26,7 @@ import texar as tx
 from texar.modules.decoders.transformer_decoders import TransformerDecoder
 
 from utils import model_utils, processor
+import configs
 
 # pylint: disable=invalid-name, too-many-locals, too-many-statements, no-member
 # pylint: disable=too-many-branches
@@ -34,10 +35,9 @@ flags = tf.flags
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("checkpoint", "gpt2_pretrained_models/117M/model.ckpt",
+flags.DEFINE_string("checkpoint", "gpt2_pretrained_models/"
+                                  "model_117M/model.ckpt",
                     "Model checkpoint to load model weights from.")
-flags.DEFINE_string("config_gpt2", "117M",
-                    "The of the GPT-2 config file to use.")
 flags.DEFINE_integer("seed", None, "Random seed.")
 flags.DEFINE_integer("nsamples", 1, "The number of samples per input.")
 flags.DEFINE_integer("batch_size", 1, "The batch size of input.")
@@ -50,11 +50,20 @@ flags.DEFINE_integer("top_k", 40,
                      "The number of top most likely candidates from a vocab "
                      "distribution.")
 flags.DEFINE_boolean("is_interactive", False, "Interactive mode or not.")
-flags.DEFINE_string("config_format", "json",
-                    "The configuration file format. Set to 'json' if the GPT-2 "
-                    "config file is in the same format of the official GPT-2 "
+flags.DEFINE_string("config_type", "texar",
+                    "The configuration file type. Set to 'json' if the GPT-2 "
+                    "config file is in the same type of the official GPT-2 "
                     "config file. Set to 'texar' if GPT-2 config file is in "
-                    "Texar format.")
+                    "Texar type.")
+flags.DEFINE_string("config_model", "configs.config_model",
+                    "The model configuration file to configure the model. "
+                    "The config file type is define by the 'config_type',"
+                    "it be of texar type or json type."
+                    "For '--config_type=json', set the json config file path"
+                    "like: '--config_model gpt2_pretrained_models/model_117M/"
+                    "hparams.json';"
+                    "For '--config_type=texar', set the texar config file "
+                    "like: '--config_model configs.config_model'.")
 
 def main(_):
     """
@@ -69,16 +78,15 @@ def main(_):
 
     
     ckpt_path = FLAGS.checkpoint
-    gpt2_config_dir = "gpt2_pretrained_models/%s" % FLAGS.config_gpt2
     # Load GPT-2 model configuration
-    if FLAGS.config_format == "json":
+    if FLAGS.config_type == "json":
         gpt2_config = model_utils.transform_gpt2_to_texar_config(
-            os.path.join(gpt2_config_dir, 'hparams.json'))
-    elif FLAGS.config_format == 'texar':
+            FLAGS.config_model)
+    elif FLAGS.config_type == 'texar':
         gpt2_config = importlib.import_module(
-            'gpt2_config_lib.config_model_{}'.format(FLAGS.config_gpt2))
+            FLAGS.config_model)
     else:
-        raise ValueError('Unknown config_format.')
+        raise ValueError('Unknown config_type.')
 
     assert max_decoding_length <= gpt2_config.decoder["position_size"], (
         "max_decoding_length should be smaller than position size")
@@ -86,7 +94,8 @@ def main(_):
         "nsamples must be dividable by batch_size")
 
     # Create a data pre-processor for, e.g., BPE encoding
-    proc = processor.get_encoder(gpt2_config_dir)
+    proc = processor.get_encoder(
+        "gpt2_pretrained_models/model_117M")
 
     context = tf.placeholder(tf.int32, [batch_size, None])
     context_length = tf.placeholder(tf.int32, [batch_size])

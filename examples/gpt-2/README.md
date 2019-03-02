@@ -15,9 +15,9 @@ In sum, this example showcases:
 
 Download the GPT-2 model checkpoint with the following command:
 ```
-sh gpt2_pretrained_models/download_model.sh 117M
+sh gpt2_pretrained_models/download_model.sh model_117M
 ```
-By default, it will download a pretrained model named `117M` to `gpt2_pretrained_models/`.
+By default, it will download a pretrained model named `model_117M` to `gpt2_pretrained_models/`.
 
 ### Usage
 | WARNING: Samples are unfiltered and may contain offensive content. |

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+#
 """
 Byte pair encoding utilities
 
