@@ -35,7 +35,8 @@ flags = tf.flags
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("checkpoint", "gpt2_pretrained_models/model_117M/model.ckpt",
+flags.DEFINE_string("checkpoint", "gpt2_pretrained_models/"
+                                  "model_117M/model.ckpt",
                     "Model checkpoint to load model weights from.")
 flags.DEFINE_integer("seed", None, "Random seed.")
 flags.DEFINE_integer("nsamples", 1, "The number of samples per input.")
@@ -50,19 +51,19 @@ flags.DEFINE_integer("top_k", 40,
                      "distribution.")
 flags.DEFINE_boolean("is_interactive", False, "Interactive mode or not.")
 flags.DEFINE_string("config_type", "texar",
-                    "The configuration file format. Set to 'json' if the GPT-2 "
-                    "config file is in the same format of the official GPT-2 "
+                    "The configuration file type. Set to 'json' if the GPT-2 "
+                    "config file is in the same type of the official GPT-2 "
                     "config file. Set to 'texar' if GPT-2 config file is in "
-                    "Texar format.")
+                    "Texar type.")
 flags.DEFINE_string("config_model", "configs.config_model",
-                    "The model config file to use. The config file type is "
-                    "define by the 'config_type',it an be of texar type or "
-                    "json type."
-                    "For '--config_type=json', set the json config file "
+                    "The model configuration file to configure the model. "
+                    "The config file type is define by the 'config_type',"
+                    "it be of texar type or json type."
+                    "For '--config_type=json', set the json config file path"
                     "like: '--config_model gpt2_pretrained_models/model_117M/"
                     "hparams.json';"
                     "For '--config_type=texar', set the texar config file "
-                    "like: '--config_model configs.config_model';")
+                    "like: '--config_model configs.config_model'.")
 
 def main(_):
     """
