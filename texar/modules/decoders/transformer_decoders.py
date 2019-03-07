@@ -274,7 +274,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 'dropout_rate': 0.1,
                 'output_dim': 512,
                 'use_bias': False,
-                'num_units': 512,
             },
             "initializer": None,
             "name": "transformer_decoder",
