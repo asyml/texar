@@ -3,6 +3,7 @@
 
 ### New features
 
+* `GPT-2`: OpenAI pretrained language model. ([#91](https://github.com/asyml/texar/pull/91), [example](https://github.com/asyml/texar/tree/master/examples/gpt-2))
 * `TopKSampleEmbeddingHelper` to perform top_k random sample decoding. ([baa09ff](https://github.com/asyml/texar/commit/baa09ff0ec898996d7be2535e73bedd1e92c1fb2))
 
 ### Feature improvements
