@@ -14,8 +14,7 @@ import copy
 import shutil
 import tempfile
 import tensorflow as tf
-from tfrecords_data import TFRecordData
-from texar.utils import dtypes
+import texar as tx
 
 
 class TFRecordDataTest(tf.test.TestCase):
@@ -146,7 +145,7 @@ class TFRecordDataTest(tf.test.TestCase):
 
     def _run_and_test(self, hparams):
         # Construct database
-        tfrecord_data = TFRecordData(hparams)
+        tfrecord_data = tx.data.TFRecordData(hparams)
         iterator = tfrecord_data.dataset.make_initializable_iterator()
         data_batch = iterator.get_next()
 
@@ -184,8 +183,8 @@ class TFRecordDataTest(tf.test.TestCase):
                             self.assertTrue(isinstance(value, bytes))
                         else:
                             dtype_matched = (
-                                dtypes.get_tf_dtype(str(value.dtype))
-                                is dtypes.get_tf_dtype(item))
+                                tx.utils.dtypes.get_tf_dtype(str(value.dtype))
+                                is tx.utils.dtypes.get_tf_dtype(item))
                             self.assertTrue(dtype_matched)
 
                     # Check image decoding and resize
