@@ -48,33 +48,39 @@ def _default_tfrecord_dataset_hparams():
         "compression_type": None,
         "data_name": None,
         "other_transformations": [],
-        "@no_typecheck": ["files", "feature_original_types", "feature_convert_types", "image_options"],
+        "@no_typecheck": [
+            "files",
+            "feature_original_types",
+            "feature_convert_types",
+            "image_options"],
     }
 
 class TFRecordData(DataBase):
-    """TFRecord data where each line of the files is a single data batch content,
-    e.g., an image example.
+    """TFRecord data where each line of the files is a single data batch
+    content, e.g., an image example.
 
     Args:
-        hparams (dict): Hyperparameters. See :meth:`default_hparams` for the
-            defaults.
+        hparams (dict): Hyperparameters. See :meth:`default_hparams`
+        for the defaults.
 
-    The processor reads and process raw data in a TF dataset, the TFRecords file,
-    whose element can be the data for the traning or testing data feeds. 
-    Along with the TF dataset the processor also construct the feature description to 
-    parse TFRecord data through reading the feature, which is specified in 
-    :attr:`hparams["dataset"]["feature_original_types"]`. User should input `dict` with
-    key as the feature name in `str`, and value as the feature Dtype in `str`, the feature 
-    names and Dtype pairs should match the TFRecords file.
-    
+    The processor reads and restores data from TFRecords file and
+    results in a TF Dataset whose element is a python `dict` including
+    one field. The field name is specified in
+    :attr:`hparams["dataset"]["data_name"]`. If not specified, the
+    default name is `"data"`. The field name can be accessed through
+    :attr:`data_name`.
+
+    This field is a `dict` with keys from
+    :attr:`hparams["dataset"]["feature_original_types"]`, which are
+    feature names from TFRecords file, as keys, and restored data as values.
 
     Example:
 
         .. code-block:: python
 
             hparams={
-                'dataset': { 
-                    'files': 'image.tfrecord', 
+                'dataset': {
+                    'files': 'image.tfrecord',
                     'feature_original_types': {
                         'height': 'tf.int64',
                         'width': 'tf.int64',
@@ -115,8 +121,8 @@ class TFRecordData(DataBase):
         # Create data decoder
         decoder = TFRecordDataDecoder(
             feature_original_types=dataset_hparams.feature_original_types,
-            feature_convert_types = dataset_hparams.feature_convert_types,
-            image_options = dataset_hparams.image_options,
+            feature_convert_types=dataset_hparams.feature_convert_types,
+            image_options=dataset_hparams.image_options,
             data_name=name_prefix)
         # Create other transformations
         data_spec.add_spec(decoder=decoder)
@@ -189,12 +195,13 @@ class TFRecordData(DataBase):
 
             {
                 # (1) Hyperparams specific to scalar dataset
-                'dataset': { 
-                    'files': [], 
+                'dataset': {
+                    'files': [],
                     'feature_original_types': {},
-                    "compression_type": None,
-                    "data_name": None,
+                    'feature_convert_types': {},
+                    'image_options': {},
                     "other_transformations": [],
+                    "data_name": None,
                 }
                 # (2) General hyperparams
                 "num_epochs": 1,
@@ -215,15 +222,38 @@ class TFRecordData(DataBase):
         1. For the hyperparameters in the :attr:`"dataset"` field:
 
             "files" : str or list
-                A (list of) file path(s).
-
-                Path to the TFRecords file, each line contains a single data batch.
+                A (list of) TFRecords file path(s).
 
             "feature_original_types" : dict
-                The feature name keys and their data types, both keys and types are in `str`
+                The feature names (str) with their data types and length types,
+                key and value in pair
+                `<feature_name: [dtype, feature_len_type]>`, type of `dtype`
+                can be `tf DType <DType>` or `str`, e.g., 'tf.int32',
+                'tf.float32', tf.int32, etc.
+                `feature_len_type` is of `str` can be 'FixedLenFeature' or
+                'VarLenFeature' for fixed length  features and non-fixed
+                length features.
 
-            "compression_type" : str, optional
-                One of "" (no compression), "ZLIB", or "GZIP".
+            "feature_convert_types" : dict, optional
+                The feature names (str) with data types they are converted into,
+                key and value in pair  `<feature_name: dtype>`, type of `dtype`
+                can be `tf DType <DType>` or `str`, e.g., 'tf.int32',
+                'tf.float32', tf.int32, etc. If not set, data type conversion
+                will not be performed.
+
+            "image_options" : dict, optional
+                Specifies the image feature name and performs resize the image
+                data, includes three fields:
+
+                    - "image_feature_name":
+                        Type of `str`, the name of the feature which containing
+                        the image data.
+                    - "resize_height":
+                        Type of `int`, the height of the image after resizing.
+                    - "resize_width":
+                        Type of `int`, the width of the image after resizing
+
+                If not set, image data resizing will not be performed.
 
             "other_transformations" : list
                 A list of transformation functions or function names/paths to
