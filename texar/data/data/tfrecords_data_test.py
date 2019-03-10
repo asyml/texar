@@ -10,6 +10,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import os
+import sys
 import copy
 import shutil
 import tempfile
@@ -43,7 +44,10 @@ class TFRecordDataTest(tf.test.TestCase):
             Returns a bytes_list from a string / byte.
             """
             if isinstance(value, str):
-                value = str.encode(value)
+                if sys.version_info < (3, 0):
+                    value = bytes(value)
+                else:
+                    value = bytes(value, 'utf8')
             return tf.train.Feature(
                 bytes_list=tf.train.BytesList(value=[value]))
 
