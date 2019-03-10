@@ -206,7 +206,7 @@ class BasicRNNDecoder(RNNDecoderBase):
             A dictionary of RNN cell hyperparameters. Ignored if
             :attr:`cell` is given to the decoder constructor.
             The default value is defined in
-            :meth:`~texar.core.layers.default_rnn_cell_hparams`.
+            :func:`~texar.core.default_rnn_cell_hparams`.
 
         "max_decoding_length_train": int or None
             Maximum allowed number of decoding steps in training mode.

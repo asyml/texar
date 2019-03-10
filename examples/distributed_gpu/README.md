@@ -61,7 +61,7 @@ Here:
   * The key configurations for ordinary users:
   
       - `-np`: total number of processes
-      - `-H`: IP addresses of different servers and the number of processes used in each server. For example, `-H 192.168.11.22:1,192.168.33.44:1`
+      - `-H`: IP addresses of different servers and the number of processes used in each server. For example, `-H 192.168.11.22:1,192.168.33.44:1`. To run on local machines, set, e.g., `-H localhost:1,localhost:2`.
   * Other advanced configurations:
   
       - `--bind-to none`: specifies OpenMPI to not bind a training process to a single CPU core (which would hurt performance).

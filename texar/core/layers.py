@@ -448,7 +448,8 @@ def get_activation_fn(fn_name="identity", kwargs=None):
     if fn_name is None:
         return None
 
-    fn_modules = ['tensorflow', 'tensorflow.nn', 'texar.custom', 'texar.core.layers']
+    fn_modules = ['tensorflow', 'tensorflow.nn', 'texar.custom',
+                  'texar.core.layers']
     activation_fn_ = utils.get_function(fn_name, fn_modules)
     activation_fn = activation_fn_
 
@@ -826,6 +827,14 @@ class MergeLayer(tf.layers.Layer):
             add_variable(
                 layer._non_trainable_weights, self._non_trainable_weights)
 
+    @property
+    def trainable_weights(self):
+        return self._trainable_weights
+
+    @property
+    def non_trainable_weights(self):
+        return self._non_trainable_weights
+
     def call(self, inputs):
         if self._layers is None:
             layer_outputs = inputs
@@ -937,6 +946,14 @@ class SequentialLayer(tf.layers.Layer):
                     layer._trainable_weights, self._non_trainable_weights)
             add_variable(
                 layer._non_trainable_weights, self._non_trainable_weights)
+
+    @property
+    def trainable_weights(self):
+        return self._trainable_weights
+
+    @property
+    def non_trainable_weights(self):
+        return self._non_trainable_weights
 
     def call(self, inputs, mode=None): # pylint: disable=arguments-differ
         training = is_train_mode(mode)
@@ -1173,28 +1190,33 @@ _layer_class_to_default_kwargs_map = {
 }
 
 def layer_normalize(inputs,
-                    scope=None):
-    '''Applies layer normalization. averaging over the last dimension
+                    scope=None,
+                    **kwargs):
+    """Applies layer normalization. Normalizes over the last dimension.
+
     Args:
         inputs: A tensor with 2 or more dimensions, where the first
-            dimension has `batch_size`.
-        epsilon: A floating number. A very small number for preventing
-            ZeroDivision Error.
-        scope: Optional scope for `variable_scope`.
+            dimension must be `batch_size`.
+        scope (optional): variable scope.
+
     Returns:
         A tensor with the same shape and data dtype as `inputs`.
-    '''
+    """
     return tf.contrib.layers.layer_norm(
-        inputs=inputs, begin_norm_axis=-1, begin_params_axis=-1, scope=scope
+        inputs=inputs, begin_norm_axis=-1, begin_params_axis=-1, scope=scope,
+        **kwargs
     )
 
 
 def gelu(input_tensor):
     """Gaussian Error Linear Unit.
+
     This is a smoother version of the RELU.
     Original paper: https://arxiv.org/abs/1606.08415
+
     Args:
       input_tensor: float Tensor to perform activation.
+
     Returns:
       `input_tensor` with the GELU activation applied.
     """

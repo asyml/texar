@@ -365,7 +365,8 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
                                           tf.float32)
         _ = beam_cell(cell_input, cell_state)
         # Test if beam_cell is sharing variables with decoder cell.
-        self.assertEqual(len(beam_cell.trainable_variables), 0)
+        for tvar in beam_cell.trainable_variables:
+            self.assertTrue(tvar in decoder.trainable_variables)
 
 if __name__ == "__main__":
     tf.test.main()

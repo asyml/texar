@@ -9,7 +9,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import tensorflow as tf
-
+import numpy as np
 from texar.modules.decoders.transformer_decoders import TransformerDecoder
 from texar.modules.decoders.transformer_decoders import TransformerDecoderOutput
 
@@ -38,7 +38,13 @@ class TransformerDecoderTest(tf.test.TestCase):
         self._embedding = tf.random_uniform(
             [self._vocab_size, self._emb_dim], maxval=1, dtype=tf.float32)
         self._start_tokens = tf.fill([self._batch_size], 1)
+        self._end_token = 2
         self.max_decoding_length = self._max_time
+
+        _context = [[3, 4, 5, 2, 0], [4, 3, 5, 7, 2]]
+        _context_length = [4, 5]
+        self._context = tf.Variable(_context)
+        self._context_length = tf.Variable(_context_length)
 
     def test_train(self):
         """Tests train_greedy
@@ -72,9 +78,28 @@ class TransformerDecoderTest(tf.test.TestCase):
             memory_attention_bias=None,
             inputs=None,
             decoding_strategy='infer_greedy',
-            beam_width=1,
             start_tokens=self._start_tokens,
-            end_token=2,
+            end_token=self._end_token,
+            max_decoding_length=self._max_decode_len,
+            mode=tf.estimator.ModeKeys.PREDICT)
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            outputs_ = sess.run(outputs)
+            self.assertIsInstance(outputs_, TransformerDecoderOutput)
+
+    def test_infer_greedy_with_context_without_memory(self):
+        """Tests train_greedy with context
+        """
+        decoder = TransformerDecoder(embedding=self._embedding)
+        outputs, length = decoder(
+            memory=None,
+            memory_sequence_length=None,
+            memory_attention_bias=None,
+            inputs=None,
+            decoding_strategy='infer_greedy',
+            context=self._context,
+            context_sequence_length=self._context_length,
+            end_token=self._end_token,
             max_decoding_length=self._max_decode_len,
             mode=tf.estimator.ModeKeys.PREDICT)
         with self.test_session() as sess:
@@ -92,9 +117,8 @@ class TransformerDecoderTest(tf.test.TestCase):
             memory_attention_bias=None,
             inputs=None,
             decoding_strategy='infer_sample',
-            beam_width=1,
             start_tokens=self._start_tokens,
-            end_token=2,
+            end_token=self._end_token,
             max_decoding_length=self._max_decode_len,
             mode=tf.estimator.ModeKeys.PREDICT)
         with self.test_session() as sess:
@@ -114,7 +138,7 @@ class TransformerDecoderTest(tf.test.TestCase):
             inputs=None,
             beam_width=5,
             start_tokens=self._start_tokens,
-            end_token=2,
+            end_token=self._end_token,
             max_decoding_length=self._max_decode_len,
             mode=tf.estimator.ModeKeys.PREDICT)
         with self.test_session() as sess:
@@ -124,6 +148,24 @@ class TransformerDecoderTest(tf.test.TestCase):
                              (self._batch_size, 5))
             self.assertEqual(outputs_['sample_id'].shape,
                              (self._batch_size, self._max_decode_len, 5))
+
+    def test_greedy_embedding_helper(self):
+        """Tests with tf.contrib.seq2seq.GreedyEmbeddingHelper
+        """
+        decoder = TransformerDecoder(embedding=self._embedding)
+        helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(
+            self._embedding, self._start_tokens, self._end_token)
+        outputs, length = decoder(
+            memory=self._memory,
+            memory_sequence_length=self._memory_sequence_length,
+            memory_attention_bias=None,
+            helper=helper,
+            max_decoding_length=self._max_decode_len,
+            mode=tf.estimator.ModeKeys.PREDICT)
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            outputs_ = sess.run(outputs)
+            self.assertIsInstance(outputs_, TransformerDecoderOutput)
 
 if __name__ == "__main__":
     tf.test.main()

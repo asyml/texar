@@ -129,6 +129,11 @@ Decoders
 .. autoclass:: texar.modules.TransformerDecoderOutput
     :members:
 
+:hidden:`TopKSampleEmbeddingHelper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.TopKSampleEmbeddingHelper
+    :members:
+
 :hidden:`SoftmaxEmbeddingHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.SoftmaxEmbeddingHelper

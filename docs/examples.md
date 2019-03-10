@@ -21,6 +21,7 @@ More examples are continuously added...
 
 * [transformer](https://github.com/asyml/texar/tree/master/examples/transformer): Transformer for machine translation
 * [bert](https://github.com/asyml/texar/tree/master/examples/bert): Pre-trained BERT model for text representation
+* [gpt-2](https://github.com/asyml/texar/tree/master/examples/gpt-2): Pre-trained OpenAI GPT-2 language model
 * [vae_text](https://github.com/asyml/texar/tree/master/examples/vae_text): VAE with a transformer decoder for improved language modeling 
 
 ### Variational Autoencoder (VAE) ###
@@ -58,6 +59,7 @@ More examples are continuously added...
 
 ### Language Modeling ###
 
+* [gpt-2](https://github.com/asyml/texar/tree/master/examples/gpt-2): Pre-trained OpenAI GPT-2 language model
 * [language_model_ptb](https://github.com/asyml/texar/tree/master/examples/language_model_ptb): Basic RNN language model
 * [vae_text](https://github.com/asyml/texar/tree/master/examples/vae_text): VAE language model
 * [seqGAN](https://github.com/asyml/texar/tree/master/examples/seqgan): GAN + policy gradient
