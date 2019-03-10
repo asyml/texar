@@ -43,7 +43,7 @@ class TFRecordDataTest(tf.test.TestCase):
             """
             Returns a bytes_list from a string / byte.
             """
-            if isinstance(value, str):
+            if isinstance(value, [str, unicode]):
                 if sys.version_info < (3, 0):
                     value = bytes(value)
                 else:
