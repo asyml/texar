@@ -8,8 +8,12 @@ embed = {
     "dim": dim,
 }
 
+pos_embed = {
+    'dim': dim
+}
+position_size = 1024
+
 decoder = {
-    "scale_embeds": False,
     "dim": dim,
     "num_blocks": 12,
     "multihead_attention": {
@@ -17,11 +21,6 @@ decoder = {
         "num_units": dim,
         "num_heads": 12,
         "output_dim": dim,
-    },
-    "position_embedder_type": "variables",
-    "position_size": 1024,
-    "position_embedder_hparams": {
-        "dim": dim,
     },
     "initializer": {
         "type": "variance_scaling_initializer",

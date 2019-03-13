@@ -21,8 +21,9 @@ from __future__ import print_function
 
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import TrainingHelper as TFTrainingHelper
+
+from texar.modules.decoders.helper import GreedyEmbeddingHelper
 from tensorflow.contrib.seq2seq import Helper as TFHelper
-from tensorflow.contrib.seq2seq import GreedyEmbeddingHelper
 from tensorflow.python.ops.distributions import categorical
 from tensorflow.contrib.distributions import RelaxedOneHotCategorical \
     as GumbelSoftmax

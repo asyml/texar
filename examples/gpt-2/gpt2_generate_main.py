@@ -76,7 +76,6 @@ def main(_):
     batch_size = FLAGS.batch_size
     max_decoding_length = FLAGS.max_decoding_length
 
-    
     ckpt_path = FLAGS.checkpoint
     # Load GPT-2 model configuration
     if FLAGS.config_type == "json":
@@ -88,8 +87,8 @@ def main(_):
     else:
         raise ValueError('Unknown config_type.')
 
-    assert max_decoding_length <= gpt2_config.decoder["position_size"], (
-        "max_decoding_length should be smaller than position size")
+    assert max_decoding_length <= gpt2_config.position_size, (
+        "max_decoding_length should not be greater than position size")
     assert nsamples % batch_size == 0, (
         "nsamples must be dividable by batch_size")
 
@@ -107,20 +106,33 @@ def main(_):
         start_tokens = tf.fill([batch_size], end_token)
 
     # Build the GPT-2 modle
-    embedder = tx.modules.WordEmbedder(
+    word_embedder = tx.modules.WordEmbedder(
         vocab_size=gpt2_config.vocab_size,
         hparams=gpt2_config.embed)
 
+    pos_embedder = tx.modules.PositionEmbedder(
+        position_size=gpt2_config.position_size,
+        hparams=gpt2_config.pos_embed
+    )
+
+    def my_embedding_fn(x, y):
+        return word_embedder(x) + pos_embedder(y)
+
     helper = tx.modules.TopKSampleEmbeddingHelper(
-        embedding=embedder,
+        embedding=my_embedding_fn,
         start_tokens=start_tokens,
         end_token=end_token,
         top_k=FLAGS.top_k,
         softmax_temperature=FLAGS.temperature)
+    print('start_tokens:{}'.format(helper._start_tokens.shape))
+    print('first_input:{}'.format(helper._start_inputs.shape))
+    output_layer = tf.transpose(word_embedder.embedding, (1, 0))
 
     decoder = TransformerDecoder(
-        embedding=embedder.embedding, hparams=gpt2_config.decoder)
-
+        vocab_size=gpt2_config.vocab_size,
+        output_layer=output_layer,
+        hparams=gpt2_config.decoder
+    )
 
     with tf.Session() as sess:
 

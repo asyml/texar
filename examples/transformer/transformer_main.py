@@ -25,7 +25,9 @@ import importlib
 from torchtext import data
 import tensorflow as tf
 import texar as tx
+from texar.modules.decoders import helper as tx_helper
 from texar.modules import TransformerEncoder, TransformerDecoder
+from texar.utils.shapes import mask_sequences, shape_list
 from texar.utils import transformer_utils
 
 from utils import data_utils, utils
@@ -82,11 +84,26 @@ def main():
     global_step = tf.Variable(0, dtype=tf.int64, trainable=False)
     learning_rate = tf.placeholder(tf.float64, shape=(), name='lr')
 
-    embedder = tx.modules.WordEmbedder(
+    src_embedder = tx.modules.WordEmbedder(
         vocab_size=vocab_size, hparams=config_model.emb)
-    encoder = TransformerEncoder(hparams=config_model.encoder)
+    src_word_embeds = src_embedder(encoder_input)
+    src_word_embeds = src_word_embeds * config_model.hidden_dim ** 0.5
+    src_word_embeds = mask_sequences(src_word_embeds, encoder_input_length,
+                                     tensor_rank=3)
 
-    encoder_output = encoder(inputs=embedder(encoder_input),
+    pos_embedder = tx.modules.SinusoidsPositionEmbedder(
+        position_size=config_data.max_decoding_length,
+        hparams=config_model.position_embedder_hparams
+    )
+
+    _, src_lengths = shape_list(encoder_input)
+    src_positions = tf.expand_dims(tf.range(src_lengths, dtype=tf.int32), 0)
+    src_pos_embeds = pos_embedder(src_positions)
+
+    src_input_embedding = src_word_embeds + src_pos_embeds
+
+    encoder = TransformerEncoder(hparams=config_model.encoder)
+    encoder_output = encoder(inputs=src_input_embedding,
                              sequence_length=encoder_input_length)
 
     # The decoder ties the input word embedding with the output logit layer.
@@ -94,14 +111,31 @@ def main():
     # <PAD> has all-zero embedding, so here we explicitly set <PAD>'s embedding
     # to all-zero.
     tgt_embedding = tf.concat(
-        [tf.zeros(shape=[1, embedder.dim]), embedder.embedding[1:, :]], axis=0)
-    decoder = TransformerDecoder(embedding=tgt_embedding,
+        [tf.zeros(shape=[1, src_embedder.dim]),
+         src_embedder.embedding[1:, :]],
+        axis=0)
+    tgt_embedder = tx.modules.WordEmbedder(tgt_embedding)
+    tgt_word_embeds = tgt_embedder(decoder_input)
+    tgt_word_embeds = tgt_word_embeds * config_model.hidden_dim ** 0.5
+    tgt_word_embeds = mask_sequences(tgt_word_embeds, decoder_input_length,
+                                     tensor_rank=3)
+
+    _, tgt_lengths = shape_list(decoder_input)
+    tgt_positions = tf.expand_dims(tf.range(tgt_lengths, dtype=tf.int32), 0)
+    tgt_pos_embeds = pos_embedder(tgt_positions)
+
+    tgt_input_embedding = tgt_word_embeds + tgt_pos_embeds
+
+    _output_w = tf.transpose(tgt_embedder.embedding, (1, 0))
+
+    decoder = TransformerDecoder(vocab_size=vocab_size,
+                                 output_layer=_output_w,
                                  hparams=config_model.decoder)
     # For training
     outputs = decoder(
         memory=encoder_output,
         memory_sequence_length=encoder_input_length,
-        inputs=embedder(decoder_input),
+        inputs=tgt_input_embedding,
         sequence_length=decoder_input_length,
         decoding_strategy='train_greedy',
         mode=tf.estimator.ModeKeys.TRAIN
@@ -124,6 +158,10 @@ def main():
     # For inference
     start_tokens = tf.fill([tx.utils.get_batch_size(encoder_input)],
                            bos_token_id)
+
+    def my_embedding_fn(x, y):
+        return tgt_embedder(x) * config_model.hidden_dim ** 0.5 + pos_embedder(y)
+
     predictions = decoder(
         memory=encoder_output,
         memory_sequence_length=encoder_input_length,
@@ -131,6 +169,7 @@ def main():
         length_penalty=config_model.length_penalty,
         start_tokens=start_tokens,
         end_token=eos_token_id,
+        embedding=my_embedding_fn,
         max_decoding_length=config_data.max_decoding_length,
         mode=tf.estimator.ModeKeys.PREDICT
     )

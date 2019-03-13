@@ -32,12 +32,11 @@ from tensorflow.contrib.seq2seq import dynamic_decode
 from texar.core import layers
 from texar.module_base import ModuleBase
 from texar.modules.networks.networks import FeedForwardNetwork
-from texar.modules.embedders.position_embedders import\
-    SinusoidsPositionEmbedder, PositionEmbedder
 from texar.modules.encoders.transformer_encoders import\
     default_transformer_poswise_net_hparams
 from texar.modules.encoders.multihead_attention import\
     MultiheadAttentionEncoder
+from texar.modules.decoders import helper as tx_helper
 from texar.utils import beam_search
 from texar.utils.shapes import shape_list, mask_sequences
 from texar.utils import transformer_attentions as attn
@@ -82,27 +81,44 @@ class TransformerDecoder(ModuleBase, TFDecoder):
     .. document private functions
     .. automethod:: _build
     """
-    def __init__(self, embedding, hparams=None):
+    def __init__(self, vocab_size, output_layer, hparams=None):
         ModuleBase.__init__(self, hparams)
-
+        self._vocab_size = vocab_size
         with tf.variable_scope(self.variable_scope):
             if self._hparams.initializer:
                 tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
+            if callable(output_layer):
+                self.output_layer = output_layer
+            elif tf.contrib.framework.is_tensor(output_layer):
+                if self._hparams.output_layer_bias is True:
+                    with tf.variable_scope(self.variable_scope):
+                        affine_bias = tf.get_variable(
+                            'affine_bias', [self._vocab_size])
+                else:
+                    affine_bias = None
 
-            if self._hparams.position_embedder_type == 'sinusoids':
-                self.position_embedder = SinusoidsPositionEmbedder(
-                    self._hparams.position_embedder_hparams)
-            else:
-                self.position_embedder = PositionEmbedder(
-                    position_size=self._hparams.position_size,
-                    hparams=self._hparams.position_embedder_hparams)
+                def _outputs_to_logits(outputs):
+                    dim = self._hparams.dim
+                    shape = shape_list(outputs)
+                    outputs = tf.reshape(outputs, [-1, dim])
+                    logits = tf.matmul(outputs, output_layer)
+                    if affine_bias is not None:
+                        logits += affine_bias
+                    logits = tf.reshape(logits, shape[:-1] + [self._vocab_size])
+                    return logits
+                self.output_layer = _outputs_to_logits
 
-            self._embedding = embedding
-            self._vocab_size = self._embedding.get_shape().as_list()[0]
-
-            self.output_layer = \
-                self._build_output_layer(shape_list(self._embedding)[-1])
+            elif output_layer is None:
+                if self._vocab_size is None:
+                    raise ValueError(
+                        "Either `output_layer` or `vocab_size` must be provided. "
+                        "Set `output_layer=tf.identity` if no output layer is "
+                        "wanted.")
+                with tf.variable_scope(self.variable_scope):
+                    self.output_layer = tf.layers.Dense(
+                        units=self._vocab_size, use_bias=self._hparams.output_layer_bias)
+                    self.output_layer.build([None, shape_list(self._embedding)[-1]])
 
             self.multihead_attentions = {
                 'self_att': [],
@@ -152,12 +168,8 @@ class TransformerDecoder(ModuleBase, TFDecoder):
 
             {
                 # Same as in TransformerEncoder
-                "scale_embeds": True,
                 "num_blocks": 6,
                 "dim": 512,
-                'position_embedder_type': 'sinusoids',
-                'position_size': None,
-                "position_embedder_hparams": None,
                 "embedding_dropout": 0.1,
                 "residual_dropout": 0.1,
                 "poswise_feedforward": default_transformer_poswise_net_hparams,
@@ -172,7 +184,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 },
                 "initializer": None,
                 "name": "transformer_decoder"
-
                 # Additional for TransformerDecoder
                 "embedding_tie": True,
                 "output_layer_bias": False,
@@ -180,33 +191,11 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             }
 
         Here:
-        "scale_embeds": bool
-            Scale the word embedding with the square root of its dimension. True by default.
-            This should be False when loading the pretrained GPT-2 Model.
-
         "num_blocks" : int
             Number of stacked blocks.
 
         "dim" : int
             Hidden dimension of the encoder.
-
-        "position_embedder_type":
-            Choose from "sinusoids" or "variables".
-
-            "sinusoids":
-                create the position embedding as sinusoids, which is fixed.
-            "variables":
-                create the position embedding as trainable variables.
-        "position_size": int
-            The size of position embeddings.
-            Only be used when "position_embedder_type"is "variables".
-
-        "position_embedder_hparams" : dict, optional
-            Hyperparameters of a
-            :class:`~texar.modules.SinusoidsPositionEmbedder` as position
-            embedder. If `None`, the
-            :meth:`~texar.modules.SinusoidsPositionEmbedder.default_hparams`
-            is used.
 
         "embedding_dropout": float
             Dropout rate of the input word and position embeddings.
@@ -234,13 +223,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             variables created in this module.
             See :func:`~texar.core.get_initializer` for details.
 
-        "embedding_tie" : bool
-            Whether to use the word embedding matrix as the output layer
-            that computes logits. If `False`, a new dense layer
-            is created.
-
         "output_layer_bias" : bool
             Whether to use bias to the output layer.
+            Only be used when `output_layer` is None when the instance is initialized.
 
         "max_decoding_length" : int
             The maximum allowed number of decoding steps.
@@ -255,12 +240,8 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             Name of the module.
         """
         return {
-            "scale_embeds": True,
             "num_blocks": 6,
             "dim": 512,
-            'position_embedder_type': 'sinusoids',
-            'position_size': None,
-            "position_embedder_hparams": None,
             "embedding_tie": True,
             "output_layer_bias": False,
             "max_decoding_length": int(1e10),
@@ -279,48 +260,60 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             "name": "transformer_decoder",
         }
 
-    def _prepare_tokens_to_embeds(self, tokens):
-        """ a callable function to transform tokens into embeddings."""
-        token_emb = tf.nn.embedding_lookup(self._embedding, tokens)
-        return token_emb
+    def _inputs_to_outputs(self, inputs, step, cache):
+        """The function is called in dynamic decoding.
 
-    def _inputs_to_outputs_fn(self, max_length):
-        """Returns a function that accepts the inputs and related
-        decoding status, and returns the outputs of this step (for example,
-        the predicted logits of the next token).
+        `inputs` should be of shape `[batch_size, dim]`.
+
+        Returns outputs (i.e. logits) of shape `[batch_size, vocab_size]`
+        and updated cache.
         """
-        positions = tf.expand_dims(tf.range(max_length, dtype=tf.int32), 0)
-        timing_signal = self.position_embedder(positions)
+        _batch_size = tf.shape(inputs)[0]
+        # Multiply embedding by sqrt of its dimention
+        if cache.get('memory') is not None:
+            outputs = self._self_attention_stack(
+                tf.expand_dims(inputs, axis=1),
+                memory=cache['memory'],
+                cache=cache,
+            )
+        else:
+            outputs = self._self_attention_stack(
+                tf.expand_dims(inputs, axis=1),
+                memory=None,
+                cache=cache,
+            )
+        outputs = self.output_layer(outputs)
+        outputs = tf.squeeze(outputs, axis=[1])
+        return outputs, cache
 
-        def _impl(inputs, step, cache):
-            """The function is called in dynamic decoding.
+    def _input_ids_to_outputs(self, input_ids, step, cache):
+        """The function is called in dynamic decoding.
 
-            `inputs` should be of shape `[batch_size, dim]`.
+        `inputs` should be of shape `[batch_size, dim]`.
 
-            Returns outputs (i.e. logits) of shape `[batch_size, vocab_size]`
-            and updated cache.
-            """
-            # Multiply embedding by sqrt of its dimention
-            if self._hparams.scale_embeds:
-                inputs *= self._embedding.shape.as_list()[-1]**0.5
-            inputs += timing_signal[:, step]
-            if cache.get('memory') is not None:
-                outputs = self._self_attention_stack(
-                    tf.expand_dims(inputs, axis=1),
-                    memory=cache['memory'],
-                    cache=cache,
-                )
-            else:
-                outputs = self._self_attention_stack(
-                    tf.expand_dims(inputs, axis=1),
-                    memory=None,
-                    cache=cache,
-                )
-            outputs = self.output_layer(outputs)
-            outputs = tf.squeeze(outputs, axis=[1])
-            return outputs, cache
+        Returns outputs (i.e. logits) of shape `[batch_size, vocab_size]`
+        and updated cache.
+        """
+        _batch_size = shape_list(input_ids)[0]
+        times = tf.ones([_batch_size], dtype=tf.int32) * step
+        inputs = self.embedding(input_ids, step)
 
-        return _impl
+        # Multiply embedding by sqrt of its dimention
+        if cache.get('memory') is not None:
+            outputs = self._self_attention_stack(
+                tf.expand_dims(inputs, axis=1),
+                memory=cache['memory'],
+                cache=cache,
+            )
+        else:
+            outputs = self._self_attention_stack(
+                tf.expand_dims(inputs, axis=1),
+                memory=None,
+                cache=cache,
+            )
+        outputs = self.output_layer(outputs)
+        outputs = tf.squeeze(outputs, axis=[1])
+        return outputs, cache
 
     def _build(self,    # pylint: disable=arguments-differ
                memory=None,
@@ -338,6 +331,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                softmax_temperature=None,
                max_decoding_length=None,
                impute_finished=False,
+               embedding=None,
                helper=None,
                mode=None):
         """Performs decoding.
@@ -508,24 +502,14 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         else:
             self.context = None
 
+        self.embedding = embedding
+
         if helper is None and beam_width is None and \
                 decoding_strategy == 'train_greedy': # Teacher-forcing
-            if sequence_length is not None:
-                inputs = mask_sequences(inputs, sequence_length, tensor_rank=3)
 
             decoder_self_attention_bias = (
                 attn.attention_bias_lower_triangle(
                     shape_list(inputs)[1]))
-            if self._hparams.scale_embeds:
-                target_inputs = inputs * self._hparams.dim**0.5
-            else:
-                target_inputs = inputs 
-                
-            _, lengths, _ = shape_list(target_inputs)
-            positions = tf.expand_dims(tf.range(lengths, dtype=tf.int32), 0)
-            pos_embeds = self.position_embedder(positions)
-
-            inputs = target_inputs + pos_embeds
 
             decoder_output = self._self_attention_stack(
                 inputs,
@@ -545,21 +529,19 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             if max_decoding_length is None:
                 max_decoding_length = self._hparams.max_decoding_length
 
-            self._inputs_to_outputs = self._inputs_to_outputs_fn(
-                max_decoding_length + 1)
-
             if beam_width is None: #Inference-like decoding
                 # Prepare helper
                 if helper is not None:
                     # ignore `decoding_strategy`
-                    pass
+                    self.embedding = helper._embedding_fn
                 else:
+                    assert embedding is not None
                     if decoding_strategy == "infer_greedy":
-                        helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(
-                            self._embedding, start_tokens, end_token)
+                        helper = tx_helper.GreedyEmbeddingHelper(
+                            embedding, start_tokens, end_token)
                     elif decoding_strategy == "infer_sample":
-                        helper = tf.contrib.seq2seq.SampleEmbeddingHelper(
-                            self._embedding, start_tokens, end_token,
+                        helper = tx_helper.SampleEmbeddingHelper(
+                            embedding, start_tokens, end_token,
                             softmax_temperature)
                     else:
                         raise ValueError(
@@ -698,34 +680,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
 
         return _layer_norm(x, scope=self.variable_scope)
 
-    def _build_output_layer(self, dim):
-        if self._hparams.embedding_tie:
-            if self._hparams.output_layer_bias:
-                with tf.variable_scope(self.variable_scope):
-                    affine_bias = tf.get_variable(
-                        'affine_bias', [self._vocab_size])
-            else:
-                affine_bias = None
-
-            transposed_embedding = tf.transpose(self._embedding)
-
-            def _outputs_to_logits(outputs):
-                shape = shape_list(outputs)
-                outputs = tf.reshape(outputs, [-1, dim])
-                logits = tf.matmul(outputs, transposed_embedding)
-                if affine_bias is not None:
-                    logits += affine_bias
-                logits = tf.reshape(logits, shape[:-1] + [self._vocab_size])
-                return logits
-
-            return _outputs_to_logits
-        else:
-            layer = tf.layers.Dense(
-                self._vocab_size,
-                use_bias=self._hparams.output_layer_bias)
-            layer.build([None, dim])
-            return layer
-
     def _init_cache(
         self, memory, memory_attention_bias,
         beam_search_decoding,
@@ -802,8 +756,8 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                      beam_width=5,
                      length_penalty=0.6):
         def _symbols_to_logits_fn(ids, step, cache):
-            return self._inputs_to_outputs(
-                self._prepare_tokens_to_embeds(ids[:, -1]), step, cache)
+            return self._input_ids_to_outputs(
+                ids[:, -1], step, cache)
 
         outputs, log_prob = beam_search.beam_search(
             _symbols_to_logits_fn,
@@ -872,10 +826,10 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             as input for the next step, `finished` is a boolean tensor telling
             whether the sequence is complete, for each sequence in the batch.
         """
+
         outputs, state = self._inputs_to_outputs(inputs, time, state)
         sample_ids = self._helper.sample(
             time=time, outputs=outputs, state=state)
-        print('sample_ids.shape:{}'.format(sample_ids))
         if self.context is not None:
             _times = tf.ones([self.batch_size], dtype=tf.int32) * time
             sample_ids = tf.where(

@@ -23,7 +23,8 @@ import os
 import importlib
 import tensorflow as tf
 import texar as tx
-
+from texar.utils.shapes import shape_list
+from texar.modules.embedders.position_embedders import PositionEmbedder
 from utils import data_utils, model_utils, tokenization
 
 # pylint: disable=invalid-name, too-many-locals, too-many-statements
@@ -142,7 +143,14 @@ def main(_):
             hparams=bert_config.segment_embed)
         segment_embeds = segment_embedder(segment_ids)
 
-        input_embeds = word_embeds + segment_embeds
+        position_embedder = PositionEmbedder(
+            position_size=bert_config.position_size,
+            hparams=bert_config.position_embed)
+        _, lengths = shape_list(input_ids)
+        positions = tf.expand_dims(tf.range(lengths, dtype=tf.int32), 0)
+        pos_embeds = position_embedder(positions)
+
+        input_embeds = word_embeds + segment_embeds + pos_embeds
 
         # The BERT model (a TransformerEncoder)
         encoder = tx.modules.TransformerEncoder(hparams=bert_config.encoder)

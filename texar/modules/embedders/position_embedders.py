@@ -243,8 +243,25 @@ class SinusoidsPositionEmbedder(EmbedderBase):
     .. document private functions
     .. automethod:: _build
     """
-    def __init__(self, hparams=None):
+    def __init__(self, position_size, hparams=None):
         EmbedderBase.__init__(self, hparams=hparams)
+
+        dim = self._hparams.dim
+        num_timescales = dim // 2
+        min_timescale = self._hparams.min_timescale
+        max_timescale = self._hparams.max_timescale
+
+        positions = tf.to_float(tf.range(position_size, dtype=tf.int32))
+        log_timescale_increment = (
+            math.log(float(max_timescale) / float(min_timescale)) /
+            (tf.to_float(num_timescales) - 1))
+        inv_timescales = min_timescale * tf.exp(
+            tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
+        scaled_time = tf.expand_dims(positions, 1) \
+            * tf.expand_dims(inv_timescales, 0)
+        signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=1)
+        signal = tf.pad(signal, [[0, 0], [0, tf.mod(dim, 2)]])
+        self.signal = signal
 
     def default_hparams(self):
         """Returns a dictionary of hyperparameters with default values
@@ -278,22 +295,8 @@ class SinusoidsPositionEmbedder(EmbedderBase):
         Returns:
             A `Tensor` of shape `[1, position_size, dim]`.
         """
-        dim = self._hparams.dim
-        position = tf.to_float(tf.squeeze(positions, axis=0))
-        position_size = tf.shape(position)[0]
-        num_timescales = dim // 2
-        min_timescale = self._hparams.min_timescale
-        max_timescale = self._hparams.max_timescale
-        log_timescale_increment = (
-            math.log(float(max_timescale) / float(min_timescale)) /
-            (tf.to_float(num_timescales) - 1))
-        inv_timescales = min_timescale * tf.exp(
-            tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
-        scaled_time = tf.expand_dims(position, 1) \
-            * tf.expand_dims(inv_timescales, 0)
-        signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=1)
-        signal = tf.pad(signal, [[0, 0], [0, tf.mod(dim, 2)]])
-        signal = tf.reshape(signal, [1, position_size, dim])
-
-        return signal
+        inputs = positions
+        embedding = self.signal
+        outputs = tf.nn.embedding_lookup(embedding, inputs)
+        return outputs
 

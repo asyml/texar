@@ -10,6 +10,13 @@ segment_embed = {
 }
 type_vocab_size = 2
 
+position_embed = {
+    'dim': 768,
+    'name': 'position_embeddings'
+}
+position_size = 512
+
+
 encoder = {
     'dim': 768,
     'embedding_dropout': 0.1,
@@ -23,11 +30,6 @@ encoder = {
     },
     'name': 'encoder',
     'num_blocks': 12,
-    'position_embedder_hparams': {
-        'dim': 768
-    },
-    'position_embedder_type': 'variables',
-    'position_size': 512,
     'poswise_feedforward': {
         'layers': [
             {   'kwargs': {

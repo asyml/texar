@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+"""u'se
 Transformer encoders with multihead self attention.
 """
 
@@ -23,8 +23,6 @@ import tensorflow as tf
 
 from texar.core import layers
 from texar.utils import transformer_attentions as attn
-from texar.modules.embedders.position_embedders import\
-    SinusoidsPositionEmbedder, PositionEmbedder
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.encoders.multihead_attention import MultiheadAttentionEncoder
 from texar.modules.networks.networks import FeedForwardNetwork
@@ -133,20 +131,6 @@ class TransformerEncoder(EncoderBase):
             if self._hparams.initializer:
                 tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
-            if self._hparams.position_embedder_type == 'sinusoids':
-                self.position_embedder = SinusoidsPositionEmbedder(
-                    self._hparams.position_embedder_hparams)
-            else:
-                self.position_embedder = PositionEmbedder(
-                    position_size=self._hparams.position_size,
-                    hparams=self._hparams.position_embedder_hparams)
-            # pylint: disable=protected-access
-            if self._hparams.dim != \
-                self.position_embedder._hparams.dim:
-                raise ValueError('"dim" in '
-                                 'TransformerEncoder hparams must be equal '
-                                 'to "dim" in its '
-                                 'position_embedder_hparams.')
 
             self.multihead_attention_list = []
             self.poswise_networks = []
@@ -182,9 +166,6 @@ class TransformerEncoder(EncoderBase):
             {
                 "num_blocks": 6,
                 "dim": 512,
-                'position_embedder_type': 'sinusoids',
-                'position_size': None,
-                'position_embedder_hparams': None,
                 "embedding_dropout": 0.1,
                 "residual_dropout": 0.1,
                 "poswise_feedforward": default_transformer_poswise_net_hparams,
@@ -214,10 +195,15 @@ class TransformerEncoder(EncoderBase):
             If False, apply the default Transformer Encoder architecture.
             If True, apply the Transformer Encoder architecture used in BERT.
             The differences lie in:
-                1. The Normalization of the input embedding with dimension
-                2. The attention bias for padding tokens.
-                3. The residual connections between the internal tensors.
-
+                2. BERT doesn't restrict the word embedding of PAD token as all zero.
+                    Original Transformer does.
+                3. The attention bias for padding tokens.
+                    BERT uses -1e4 for nagative attention mask, while standard
+                    transformer uses -1e8.
+                4. The residual connections between the internal tensors.
+                    BERT use residual layer to connect the tensor after
+                    layer normalization, while standard transformer connects
+                    the tensor before layer normalization.
         "position_embedder_type":
             Choose from "sinusoids" or "variables".
 
@@ -312,10 +298,6 @@ class TransformerEncoder(EncoderBase):
         """
         # Multiply input embedding with the sqrt of its dimension for
         # normalization
-        if not self._hparams.use_bert_config:
-            inputs = inputs * self._hparams.dim**0.5
-            inputs = mask_sequences(inputs, sequence_length, tensor_rank=3)
-        _, lengths, _ = shape_list(inputs)
 
         inputs_padding = 1 - tf.sequence_mask(
             sequence_length, tf.shape(inputs)[1], dtype=tf.float32)
@@ -325,13 +307,9 @@ class TransformerEncoder(EncoderBase):
         else:
             ignore_padding = attn.attention_bias_ignore_padding(
                 inputs_padding)
-
         encoder_self_attention_bias = ignore_padding
 
-        positions = tf.expand_dims(tf.range(lengths, dtype=tf.int32), 0)
-        pos_embeds = self.position_embedder(positions)
-
-        input_embedding = inputs + pos_embeds
+        input_embedding = inputs
 
         if self._hparams.use_bert_config:
             x = layers.layer_normalize(input_embedding)

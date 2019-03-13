@@ -28,14 +28,15 @@ def transform_bert_to_texar_config(input_json):
         'name': 'token_type_embeddings',
         'dim': hidden_dim}
     configs['type_vocab_size'] = config_ckpt['type_vocab_size']
+    configs['position_embed'] = {
+        'name': 'position_embeddings',
+        'dim': hidden_dim}
+
+    configs['position_size'] = config_ckpt['max_position_embeddings']
 
     configs['encoder'] = {
         'name': 'encoder',
-        'position_embedder_type': 'variables',
-        'position_size': config_ckpt['max_position_embeddings'],
-        'position_embedder_hparams': {
-            'dim': hidden_dim,
-        },
+        'scale_embeds': False,
         'embedding_dropout': config_ckpt['hidden_dropout_prob'],
         'num_blocks': config_ckpt['num_hidden_layers'],
         'multihead_attention': {
@@ -128,7 +129,7 @@ def _get_assignment_map_from_checkpoint(tvars, init_checkpoint):
         'bert/embeddings/word_embeddings': 'bert/word_embeddings/w',
         'bert/embeddings/token_type_embeddings': 'bert/token_type_embeddings/w',
         'bert/embeddings/position_embeddings':
-            'bert/encoder/position_embedder/w',
+            'bert/position_embeddings/w',
         'bert/embeddings/LayerNorm/beta': 'bert/encoder/LayerNorm/beta',
         'bert/embeddings/LayerNorm/gamma': 'bert/encoder/LayerNorm/gamma',
     }
