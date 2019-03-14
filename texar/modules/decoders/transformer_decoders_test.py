@@ -24,7 +24,7 @@ class TransformerDecoderTest(tf.test.TestCase):
     def setUp(self):
         tf.test.TestCase.setUp(self)
         self._vocab_size = 15
-        self._batch_size = 6
+        self._batch_size = 2
         self._max_time = 10
         self._emb_dim = 512
         self._max_decode_len = 32
