@@ -12,6 +12,7 @@ import tensorflow as tf
 import numpy as np
 from texar.modules.decoders.transformer_decoders import TransformerDecoder
 from texar.modules.decoders.transformer_decoders import TransformerDecoderOutput
+from texar.modules.decoders import helper as tx_helper
 
 # pylint: disable=too-many-instance-attributes
 
@@ -41,6 +42,13 @@ class TransformerDecoderTest(tf.test.TestCase):
             [self._vocab_size, self._emb_dim], maxval=1, dtype=tf.float32)
         self._pos_embedding = tf.random.uniform(
             [self._max_decode_len, self._emb_dim], maxval=1, dtype=tf.float32)
+
+        def my_embedding_fn(x, y):
+            return tf.nn.embedding_lookup(self._embedding,
+                                          x) * self._emb_dim ** 0.5 + \
+                   tf.nn.embedding_lookup(self._pos_embedding,
+                                          y)
+        self._embedding_fn = my_embedding_fn
 
         self._output_layer = tf.random_uniform(
             [self._vocab_size, self._emb_dim], maxval=1, dtype=tf.float32)
@@ -86,14 +94,15 @@ class TransformerDecoderTest(tf.test.TestCase):
             vocab_size=self._vocab_size,
             output_layer=self._output_layer
         )
+        helper = tx_helper.GreedyEmbeddingHelper(
+            self._embedding_fn, self._start_tokens, self._end_token)
+
         outputs, length = decoder(
             memory=self._memory,
             memory_sequence_length=self._memory_sequence_length,
             memory_attention_bias=None,
             inputs=None,
-            decoding_strategy='infer_greedy',
-            start_tokens=self._start_tokens,
-            end_token=self._end_token,
+            helper=helper,
             max_decoding_length=self._max_decode_len,
             mode=tf.estimator.ModeKeys.PREDICT)
         with self.test_session() as sess:
@@ -108,12 +117,16 @@ class TransformerDecoderTest(tf.test.TestCase):
             vocab_size=self._vocab_size,
             output_layer=self._output_layer
         )
+        helper = tx_helper.GreedyEmbeddingHelper(
+            self._embedding_fn, self._start_tokens, self._end_token)
+
         outputs, length = decoder(
             memory=None,
             memory_sequence_length=None,
             memory_attention_bias=None,
             inputs=None,
             decoding_strategy='infer_greedy',
+            helper=helper,
             context=self._context,
             context_sequence_length=self._context_length,
             end_token=self._end_token,
@@ -131,14 +144,15 @@ class TransformerDecoderTest(tf.test.TestCase):
             vocab_size=self._vocab_size,
             output_layer=self._output_layer
         )
+        helper = tx_helper.SampleEmbeddingHelper(
+            self._embedding_fn, self._start_tokens, self._end_token)
+
         outputs, length = decoder(
             memory=self._memory,
             memory_sequence_length=self._memory_sequence_length,
             memory_attention_bias=None,
             inputs=None,
-            decoding_strategy='infer_sample',
-            start_tokens=self._start_tokens,
-            end_token=self._end_token,
+            helper=helper,
             max_decoding_length=self._max_decode_len,
             mode=tf.estimator.ModeKeys.PREDICT)
         with self.test_session() as sess:
@@ -146,23 +160,27 @@ class TransformerDecoderTest(tf.test.TestCase):
             outputs_ = sess.run(outputs)
             self.assertIsInstance(outputs_, TransformerDecoderOutput)
 
-
     def test_beam_search(self):
         """Tests beam_search
         """
         decoder = TransformerDecoder(
             vocab_size=self._vocab_size,
             output_layer=self._output_layer
-        )        outputs = decoder(
+        )
+
+        outputs = decoder(
             memory=self._memory,
             memory_sequence_length=self._memory_sequence_length,
             memory_attention_bias=None,
             inputs=None,
+            embedding=self._embedding_fn,
             beam_width=5,
             start_tokens=self._start_tokens,
             end_token=self._end_token,
             max_decoding_length=self._max_decode_len,
-            mode=tf.estimator.ModeKeys.PREDICT)
+            mode=tf.estimator.ModeKeys.PREDICT
+        )
+
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
             outputs_ = sess.run(outputs)
@@ -191,6 +209,7 @@ class TransformerDecoderTest(tf.test.TestCase):
             sess.run(tf.global_variables_initializer())
             outputs_ = sess.run(outputs)
             self.assertIsInstance(outputs_, TransformerDecoderOutput)
+
 
 if __name__ == "__main__":
     tf.test.main()
