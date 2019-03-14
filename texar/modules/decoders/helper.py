@@ -506,8 +506,12 @@ class GreedyEmbeddingHelper(Helper):
 
         Args:
           embedding_fn: A callable that takes a vector tensor of `ids` (argmax ids),
-            or the `params` argument for `embedding_lookup`. The returned tensor
-            will be passed to the decoder input.
+            or the `params` argument for `embedding_lookup`.
+            It can also accept two arguments for token indexes, transform two
+            kinds of token indexes into embedding and return the sum of these two
+            embeddings. This can be used when you want to add the word embeddings
+            and position embeddings.
+            The returned tensor will be passed to the decoder input.
           start_tokens: `int32` vector shaped `[batch_size]`, the start tokens.
           end_token: `int32` scalar, the token that marks end of decoding.
 

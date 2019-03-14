@@ -39,6 +39,9 @@ class TransformerDecoderTest(tf.test.TestCase):
 
         self._embedding = tf.random_uniform(
             [self._vocab_size, self._emb_dim], maxval=1, dtype=tf.float32)
+        self._pos_embedding = tf.random.uniform(
+            [self._max_decode_len, self._emb_dim], maxval=1, dtype=tf.float32)
+
         self._output_layer = tf.random_uniform(
             [self._vocab_size, self._emb_dim], maxval=1, dtype=tf.float32)
 
@@ -174,7 +177,8 @@ class TransformerDecoderTest(tf.test.TestCase):
         decoder = TransformerDecoder(
             vocab_size=self._vocab_size,
             output_layer=self._output_layer
-        )        helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(
+        )
+        helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(
             self._embedding, self._start_tokens, self._end_token)
         outputs, length = decoder(
             memory=self._memory,

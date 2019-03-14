@@ -445,6 +445,13 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 and outputs have the correct values and that backprop ignores
                 time steps that were marked as finished. Ignored in
                 "train_greedy" decoding.
+            embedding: A callable that takes a vector tensor of `ids` (argmax ids),
+                or the `params` argument for `embedding_lookup`.
+                It can also accept two arguments for token indexes, transform two
+                kinds of token indexes into embedding and return the sum of these two
+                embeddings. This can be used when you want to add the word embeddings
+                and position embeddings.
+            The returned tensor will be passed to the decoder input.
             helper (optional): An instance of
                 :tf_main:`Helper <contrib/seq2seq/Helper>` that defines the
                 decoding strategy. If given, :attr:`decoding_strategy` is
