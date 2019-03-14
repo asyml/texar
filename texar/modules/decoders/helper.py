@@ -522,7 +522,6 @@ class GreedyEmbeddingHelper(Helper):
         if callable(embedding):
             self._embedding_fn = embedding
         else:
-            print('embedding:{}'.format(embedding))
             self._embedding_fn = (
                 lambda ids: embedding_ops.embedding_lookup(embedding, ids))
 
@@ -537,7 +536,6 @@ class GreedyEmbeddingHelper(Helper):
             raise ValueError("end_token must be a scalar")
 
         self._embedding_args_cnt = len(tx.utils.get_args(self._embedding_fn))
-        print('args cnt:{}'.format(self._embedding_args_cnt))
         if self._embedding_args_cnt == 1:
             self._start_inputs = self._embedding_fn(self._start_tokens)
         elif self._embedding_args_cnt == 2:

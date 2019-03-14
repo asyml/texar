@@ -51,7 +51,7 @@ class TransformerDecoderTest(tf.test.TestCase):
         self._embedding_fn = my_embedding_fn
 
         self._output_layer = tf.random_uniform(
-            [self._vocab_size, self._emb_dim], maxval=1, dtype=tf.float32)
+            [self._emb_dim, self._vocab_size], maxval=1, dtype=tf.float32)
 
         self._start_tokens = tf.fill([self._batch_size], 1)
         self._end_token = 2
