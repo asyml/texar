@@ -62,7 +62,7 @@ class TransformerDecoderTest(tf.test.TestCase):
         self._context = tf.Variable(_context)
         self._context_length = tf.Variable(_context_length)
 
-    def test_train(self):
+    def test_decode_train(self):
         """Tests train_greedy
         """
         decoder = TransformerDecoder(
@@ -87,7 +87,7 @@ class TransformerDecoderTest(tf.test.TestCase):
 
             self.assertIsInstance(outputs_, TransformerDecoderOutput)
 
-    def test_infer_greedy(self):
+    def test_decode_infer_greedy(self):
         """Tests train_greedy
         """
         decoder = TransformerDecoder(
@@ -137,7 +137,7 @@ class TransformerDecoderTest(tf.test.TestCase):
             outputs_ = sess.run(outputs)
             self.assertIsInstance(outputs_, TransformerDecoderOutput)
 
-    def test_infer_sample(self):
+    def test_decode_infer_sample(self):
         """Tests infer_sample
         """
         decoder = TransformerDecoder(
