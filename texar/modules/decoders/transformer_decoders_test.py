@@ -40,7 +40,7 @@ class TransformerDecoderTest(tf.test.TestCase):
 
         self._embedding = tf.random_uniform(
             [self._vocab_size, self._emb_dim], maxval=1, dtype=tf.float32)
-        self._pos_embedding = tf.random.uniform(
+        self._pos_embedding = tf.random_uniform(
             [self._max_decode_len, self._emb_dim], maxval=1, dtype=tf.float32)
 
         def my_embedding_fn(x, y):
