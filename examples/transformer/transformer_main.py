@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,14 +25,14 @@ import importlib
 from torchtext import data
 import tensorflow as tf
 import texar as tx
-from texar.modules.decoders import helper as tx_helper
 from texar.modules import TransformerEncoder, TransformerDecoder
-from texar.utils.shapes import mask_sequences, shape_list
+from texar.utils.shapes import mask_sequences
 from texar.utils import transformer_utils
 
 from utils import data_utils, utils
 from utils.preprocess import bos_token_id, eos_token_id
 from bleu_tool import bleu_wrapper
+
 # pylint: disable=invalid-name, too-many-locals
 
 flags = tf.flags
@@ -72,6 +72,7 @@ def main():
     # Build model graph
     encoder_input = tf.placeholder(tf.int64, shape=(None, None))
     decoder_input = tf.placeholder(tf.int64, shape=(None, None))
+    batch_size = tf.shape(encoder_input)[0]
     # (text sequence length excluding padding)
     encoder_input_length = tf.reduce_sum(
         1 - tf.to_int32(tf.equal(encoder_input, 0)), axis=1)
@@ -84,21 +85,20 @@ def main():
     global_step = tf.Variable(0, dtype=tf.int64, trainable=False)
     learning_rate = tf.placeholder(tf.float64, shape=(), name='lr')
 
-    src_embedder = tx.modules.WordEmbedder(
+    # Source word embedding
+    src_word_embedder = tx.modules.WordEmbedder(
         vocab_size=vocab_size, hparams=config_model.emb)
-    src_word_embeds = src_embedder(encoder_input)
+    src_word_embeds = src_word_embedder(encoder_input)
     src_word_embeds = src_word_embeds * config_model.hidden_dim ** 0.5
     src_word_embeds = mask_sequences(src_word_embeds, encoder_input_length,
                                      tensor_rank=3)
 
+    # Position embedding (shared b/w source and target)
     pos_embedder = tx.modules.SinusoidsPositionEmbedder(
         position_size=config_data.max_decoding_length,
-        hparams=config_model.position_embedder_hparams
-    )
-
-    _, src_lengths = shape_list(encoder_input)
-    src_positions = tf.expand_dims(tf.range(src_lengths, dtype=tf.int32), 0)
-    src_pos_embeds = pos_embedder(src_positions)
+        hparams=config_model.position_embedder_hparams)
+    src_seq_len = tf.ones([batch_size], tf.int32) * tf.shape(encoder_input)[1]
+    src_pos_embeds = pos_embedder(sequence_length=src_seq_len)
 
     src_input_embedding = src_word_embeds + src_pos_embeds
 
@@ -111,8 +111,8 @@ def main():
     # <PAD> has all-zero embedding, so here we explicitly set <PAD>'s embedding
     # to all-zero.
     tgt_embedding = tf.concat(
-        [tf.zeros(shape=[1, src_embedder.dim]),
-         src_embedder.embedding[1:, :]],
+        [tf.zeros(shape=[1, src_word_embedder.dim]),
+         src_word_embedder.embedding[1:, :]],
         axis=0)
     tgt_embedder = tx.modules.WordEmbedder(tgt_embedding)
     tgt_word_embeds = tgt_embedder(decoder_input)
@@ -120,9 +120,8 @@ def main():
     tgt_word_embeds = mask_sequences(tgt_word_embeds, decoder_input_length,
                                      tensor_rank=3)
 
-    _, tgt_lengths = shape_list(decoder_input)
-    tgt_positions = tf.expand_dims(tf.range(tgt_lengths, dtype=tf.int32), 0)
-    tgt_pos_embeds = pos_embedder(tgt_positions)
+    tgt_seq_len = tf.ones([batch_size], tf.int32) * tf.shape(decoder_input)[1]
+    tgt_pos_embeds = pos_embedder(sequence_length=tgt_seq_len)
 
     tgt_input_embedding = tgt_word_embeds + tgt_pos_embeds
 
@@ -155,12 +154,11 @@ def main():
     tf.summary.scalar('mle_loss', mle_loss)
     summary_merged = tf.summary.merge_all()
 
-    # For inference
-    start_tokens = tf.fill([tx.utils.get_batch_size(encoder_input)],
-                           bos_token_id)
+    # For inference (beam-search)
+    start_tokens = tf.fill([batch_size], bos_token_id)
 
-    def my_embedding_fn(x, y):
-        return tgt_embedder(x) * config_model.hidden_dim ** 0.5 + pos_embedder(y)
+    def _embedding_fn(x, y):
+        return tgt_embedder(x) * config_model.hidden_dim**0.5 + pos_embedder(y)
 
     predictions = decoder(
         memory=encoder_output,
@@ -169,10 +167,9 @@ def main():
         length_penalty=config_model.length_penalty,
         start_tokens=start_tokens,
         end_token=eos_token_id,
-        embedding=my_embedding_fn,
+        embedding=_embedding_fn,
         max_decoding_length=config_data.max_decoding_length,
-        mode=tf.estimator.ModeKeys.PREDICT
-    )
+        mode=tf.estimator.ModeKeys.PREDICT)
     # Uses the best sample by beam search
     beam_search_ids = predictions['sample_id'][:, :, 0]
 
