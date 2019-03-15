@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""u'se
+"""
 Transformer encoders with multihead self attention.
 """
 
@@ -27,10 +27,11 @@ from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.encoders.multihead_attention import MultiheadAttentionEncoder
 from texar.modules.networks.networks import FeedForwardNetwork
 from texar import utils
-from texar.utils.shapes import shape_list, mask_sequences
+from texar.utils.shapes import shape_list
 from texar.utils.mode import is_train_mode
 
 # pylint: disable=too-many-locals, invalid-name
+# pylint: disable=arguments-differ, too-many-branches, too-many-statements
 
 __all__ = [
     "default_transformer_poswise_net_hparams",
@@ -136,27 +137,28 @@ class TransformerEncoder(EncoderBase):
             self.poswise_networks = []
             for i in range(self._hparams.num_blocks):
                 with tf.variable_scope("layer_{}".format(i)):
+
                     with tf.variable_scope('attention'):
-                        multihead_attention = MultiheadAttentionEncoder(
+                        mh_attn = MultiheadAttentionEncoder(
                             self._hparams.multihead_attention)
-                        self.multihead_attention_list.append(
-                            multihead_attention)
-                    # pylint: disable=protected-access
-                    if self._hparams.dim != \
-                        multihead_attention._hparams.output_dim:
-                        raise ValueError('The "dim" in the hparams of '
-                                         'multihead_attention should be equal '
-                                         'to the "dim" of TransformerEncoder')
-                    poswise_network = FeedForwardNetwork(
+                        self.multihead_attention_list.append(mh_attn)
+
+                        if self._hparams.dim != mh_attn.hparams.output_dim:
+                            raise ValueError(
+                                'The "dim" in the hparams of '
+                                '"multihead_attention" should be equal to the '
+                                '"dim" of TransformerEncoder')
+
+                    pw_net = FeedForwardNetwork(
                         hparams=self._hparams['poswise_feedforward'])
-                    # pylint: disable=protected-access
-                    if self._hparams.dim != \
-                        poswise_network._hparams.layers[-1]['kwargs']['units']:
-                        # poswise_network._hparams.layers[-1]['units']:
-                        raise ValueError('The "units" in the "kwargs" of '
-                                         'FeedForwardNetwork should be equal '
-                                         'to the "dim" of TransformerEncoder')
-                    self.poswise_networks.append(poswise_network)
+                    final_dim = pw_net.hparams.layers[-1]['kwargs']['units']
+                    if self._hparams.dim != final_dim:
+                        raise ValueError(
+                            'The output dimenstion of '
+                            '"poswise_feedforward" should be equal '
+                            'to the "dim" of TransformerEncoder.')
+                    self.poswise_networks.append(pw_net)
+
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
@@ -191,19 +193,26 @@ class TransformerEncoder(EncoderBase):
         "dim" : int
             Hidden dimension of the encoders.
 
-        "use_bert_config": bool
-            If False, apply the default Transformer Encoder architecture.
-            If True, apply the Transformer Encoder architecture used in BERT.
+        "use_bert_config" : bool
+            If `False`, apply the standard Transformer Encoder architecture from
+            the original paper `(Vaswani et al.) "Attention is All You Need"`.
+            If `True`, apply the Transformer Encoder architecture used in BERT
+            `(Devlin et al.)`.
+
             The differences lie in:
-                2. BERT doesn't restrict the word embedding of PAD token as all zero.
-                    Original Transformer does.
-                3. The attention bias for padding tokens.
-                    BERT uses -1e4 for nagative attention mask, while standard
-                    transformer uses -1e8.
-                4. The residual connections between the internal tensors.
-                    BERT use residual layer to connect the tensor after
-                    layer normalization, while standard transformer connects
-                    the tensor before layer normalization.
+
+                1. The standard arch restricts the word embedding of PAD token \
+                   to all zero. The BERT arch does not.
+
+                2. The attention bias for padding tokens: \
+                   The standard arch uses `-1e8` for nagative attention mask. \
+                   BERT uses `-1e4` instead.
+
+                3. The residual connections between internal tensors: \
+                   In BERT, a residual layer connects the tensors *after* \
+                   layer normalization. In the standard arch, the tensors are \
+                   connected *before* layer normalization.
+
         "position_embedder_type":
             Choose from "sinusoids" or "variables".
 
@@ -274,7 +283,6 @@ class TransformerEncoder(EncoderBase):
             'name': 'transformer_encoder',
         }
 
-    # pylint: disable=arguments-differ, too-many-branches, too-many-statements
     def _build(self, inputs, sequence_length, mode=None):
         """Encodes the inputs.
 
@@ -330,6 +338,7 @@ class TransformerEncoder(EncoderBase):
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("layer_{}".format(i)):
                 multihead_attention = self.multihead_attention_list[i]
+
                 # trivial difference between BERT and original Transformer
                 if self._hparams.use_bert_config:
                     _queries_input = x
@@ -354,6 +363,7 @@ class TransformerEncoder(EncoderBase):
                         y = x
                     else:
                         y = layers.layer_normalize(x)
+
                 poswise_network = self.poswise_networks[i]
                 with tf.variable_scope(poswise_network.variable_scope):
                     original_shape = shape_list(y)

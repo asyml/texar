@@ -13,6 +13,8 @@
 # limitations under the License.
 # ==============================================================================
 """A library of helpers for use with SamplingDecoders.
+
+Adapted from the `tensorflow.contrib.seq2seq` package.
 """
 
 from __future__ import absolute_import
@@ -38,8 +40,7 @@ from tensorflow.python.ops.distributions import bernoulli
 from tensorflow.python.ops.distributions import categorical
 from tensorflow.python.util import nest
 
-import texar as tx
-from texar.utils.shapes import shape_list
+from texar.utils.utils import get_args
 
 __all__ = [
     "Helper",
@@ -505,13 +506,14 @@ class GreedyEmbeddingHelper(Helper):
         """Initializer.
 
         Args:
-          embedding_fn: A callable that takes a vector tensor of `ids` (argmax ids),
-            or the `params` argument for `embedding_lookup`.
-            It can also accept two arguments for token indexes, transform two
-            kinds of token indexes into embedding and return the sum of these two
-            embeddings. This can be used when you want to add the word embeddings
-            and position embeddings.
-            The returned tensor will be passed to the decoder input.
+          embedding: A callable or the `params` argument for `embedding_lookup`.
+            If a callable, it can take a vector tensor of `ids` (argmax ids),
+            or take two arguments (`ids`, `times`), where `ids` is a vector
+            tensor of argmax ids, and `times` is a vector tensor of current
+            time steps (i.e., position ids). The latter case can be used when
+            attr:`embedding` is a combination of word embedding and position
+            embedding.
+            The returned tensor will be returned by :meth:`next_inputs`.
           start_tokens: `int32` vector shaped `[batch_size]`, the start tokens.
           end_token: `int32` scalar, the token that marks end of decoding.
 
@@ -535,15 +537,15 @@ class GreedyEmbeddingHelper(Helper):
         if self._end_token.get_shape().ndims != 0:
             raise ValueError("end_token must be a scalar")
 
-        self._embedding_args_cnt = len(tx.utils.get_args(self._embedding_fn))
+        self._embedding_args_cnt = len(get_args(self._embedding_fn))
         if self._embedding_args_cnt == 1:
             self._start_inputs = self._embedding_fn(self._start_tokens)
         elif self._embedding_args_cnt == 2:
-            # the position index is 0 in the beginning
-            times = tf.ones([shape_list(self._start_tokens)[0]], dtype=tf.int32) * 0
+            # Position index is 0 in the beginning
+            times = tf.zeros([self._batch_size], dtype=tf.int32)
             self._start_inputs = self._embedding_fn(self._start_tokens, times)
         else:
-            raise ValueError('embedding should expect 1 or 2 arguments!')
+            raise ValueError('`embedding` should expect 1 or 2 arguments.')
 
     @property
     def batch_size(self):
@@ -575,9 +577,6 @@ class GreedyEmbeddingHelper(Helper):
         """next_inputs_fn for GreedyEmbeddingHelper."""
         finished = math_ops.equal(sample_ids, self._end_token)
         all_finished = math_ops.reduce_all(finished)
-        # prepare the position embedding of the next step
-
-        times = tf.ones([shape_list(outputs)[0]], dtype=tf.int32) * time
 
         if self._embedding_args_cnt == 1:
             del time, outputs  # unused by next_inputs_fn
@@ -586,15 +585,17 @@ class GreedyEmbeddingHelper(Helper):
                 # If we're finished, the next_inputs value doesn't matter
                 lambda: self._start_inputs,
                 lambda: self._embedding_fn(sample_ids))
-            return (finished, next_inputs, state)
         elif self._embedding_args_cnt == 2:
+            del outputs
+            # Prepare the position embedding of the next step
+            times = tf.ones(self._batch_size, dtype=tf.int32) * time
             next_inputs = control_flow_ops.cond(
                 all_finished,
                 # If we're finished, the next_inputs value doesn't matter
                 lambda: self._start_inputs,
                 lambda: self._embedding_fn(sample_ids, times))
 
-            return (finished, next_inputs, state)
+        return (finished, next_inputs, state)
 
 
 class SampleEmbeddingHelper(GreedyEmbeddingHelper):
@@ -609,9 +610,14 @@ class SampleEmbeddingHelper(GreedyEmbeddingHelper):
         """Initializer.
 
         Args:
-          embedding: A callable that takes a vector tensor of `ids` (argmax ids),
-            or the `params` argument for `embedding_lookup`. The returned tensor
-            will be passed to the decoder input.
+          embedding: A callable or the `params` argument for `embedding_lookup`.
+            If a callable, it can take a vector tensor of `ids` (argmax ids),
+            or take two arguments (`ids`, `times`), where `ids` is a vector
+            tensor of argmax ids, and `times` is a vector tensor of current
+            time steps (i.e., position ids). The latter case can be used when
+            attr:`embedding` is a combination of word embedding and position
+            embedding.
+            The returned tensor will be returned by :meth:`next_inputs`.
           start_tokens: `int32` vector shaped `[batch_size]`, the start tokens.
           end_token: `int32` scalar, the token that marks end of decoding.
           softmax_temperature: (Optional) `float32` scalar, value to divide the

@@ -20,15 +20,14 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from tensorflow.contrib.seq2seq import TrainingHelper as TFTrainingHelper
-
-from texar.modules.decoders.helper import GreedyEmbeddingHelper
-from tensorflow.contrib.seq2seq import Helper as TFHelper
+from tensorflow.python.ops import array_ops
 from tensorflow.python.ops.distributions import categorical
 from tensorflow.contrib.distributions import RelaxedOneHotCategorical \
     as GumbelSoftmax
 
-from texar.modules.embedders.embedder_base import EmbedderBase
+from texar.modules.decoders.tf_helpers import \
+        Helper, TrainingHelper, GreedyEmbeddingHelper
+from texar.modules.embedders.embedder_utils import soft_embedding_lookup
 from texar.utils import utils
 
 # pylint: disable=not-context-manager, too-many-arguments
@@ -40,8 +39,8 @@ __all__ = [
     "get_helper",
     "_get_training_helper",
     "TopKSampleEmbeddingHelper",
+    "SoftmaxEmbeddingHelper",
     "GumbelSoftmaxEmbeddingHelper",
-    "SoftmaxEmbeddingHelper"
 ]
 
 def default_helper_train_hparams():
@@ -131,7 +130,8 @@ def get_helper(helper_type,
     """
     module_paths = [
         'texar.modules.decoders.rnn_decoder_helpers',
-        'tensorflow.contrib.seq2seq',
+        'texar.modules.decoders.tf_helpers',
+        #'tensorflow.contrib.seq2seq',
         'texar.custom']
     class_kwargs = {"inputs": inputs,
                     "sequence_length": sequence_length,
@@ -170,10 +170,10 @@ def _get_training_helper( #pylint: disable=invalid-name
         ValueError: if `sequence_length` is not a 1D tensor.
     """
     if embedding is None:
-        return TFTrainingHelper(inputs=inputs,
-                                sequence_length=sequence_length,
-                                time_major=time_major,
-                                name=name)
+        return TrainingHelper(inputs=inputs,
+                              sequence_length=sequence_length,
+                              time_major=time_major,
+                              name=name)
 
     with tf.name_scope(name, "TrainingHelper", [embedding, inputs]):
         if callable(embedding):
@@ -182,10 +182,10 @@ def _get_training_helper( #pylint: disable=invalid-name
             embedding_fn = (
                 lambda ids: tf.nn.embedding_lookup(embedding, ids))
         emb_inputs = embedding_fn(inputs)
-    helper = TFTrainingHelper(inputs=emb_inputs,
-                              sequence_length=sequence_length,
-                              time_major=time_major,
-                              name=name)
+    helper = TrainingHelper(inputs=emb_inputs,
+                            sequence_length=sequence_length,
+                            time_major=time_major,
+                            name=name)
     return helper
 
 
@@ -223,11 +223,14 @@ class TopKSampleEmbeddingHelper(GreedyEmbeddingHelper):
         """Initializer.
 
         Args:
-            embedding: A callable that takes a vector tensor of `ids`
-                (argmax ids), or the `params` argument for
-                :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`, or an
-                instance of subclass of :class:`texar.modules.EmbedderBase`.
-                The returned tensor will be passed to the decoder input.
+            embedding: A callable or the `params` argument for
+                `embedding_lookup`. If a callable, it can take a vector tensor
+                of `ids` (argmax ids),
+                or take two arguments (`ids`, `times`), where `ids` is a vector
+                tensor of argmax ids, and `times` is a vector tensor of current
+                time steps (i.e., position ids). The latter case can be used
+                when attr:`embedding` is a combination of word embedding and
+                position embedding.
             start_tokens: `int32` vector shaped `[batch_size]`, the start
                 tokens.
             end_token: `int32` scalar, the token that marks end of decoding.
@@ -270,7 +273,7 @@ class TopKSampleEmbeddingHelper(GreedyEmbeddingHelper):
 
         return sample_ids
 
-class SoftmaxEmbeddingHelper(TFHelper):
+class SoftmaxEmbeddingHelper(Helper):
     """A helper that feeds softmax probabilities over vocabulary
     to the next step.
     Uses the softmax probability vector to pass through word embeddings to
@@ -282,15 +285,24 @@ class SoftmaxEmbeddingHelper(TFHelper):
     in inference mode.
 
     Args:
-        embedding: An embedding argument (:attr:`params`) for
-            :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`, or an
-            instance of subclass of :class:`texar.modules.EmbedderBase`.
-            Note that other callables are not acceptable here.
+        embedding: A callable or the `params` argument for
+            :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`.
+            If a callable, it can take a float tensor named `soft_ids` which is
+            a distribution over indexes. For example, the shape of the tensor
+            is typically `[batch_size, vocab_size]`. The callable can also
+            take two arguments (`soft_ids`, `times`), where `soft_ids` is
+            as above, and `times` is an int vector tensor of current
+            time steps (i.e., position ids). The latter case can be used
+            when attr:`embedding` is a combination of word embedding and
+            position embedding.
         start_tokens: An int tensor shaped `[batch_size]`. The
             start tokens.
         end_token: An int scalar tensor. The token that marks end of
             decoding.
         tau: A float scalar tensor, the softmax temperature.
+        embedding_size (optional): An int scalar tensor, the number of
+            embedding vectors. Usually it is the vocab size. Required if
+            :attr:`embedding` is a callable.
         stop_gradient (bool): Whether to stop the gradient backpropagation
             when feeding softmax vector to the next step.
         use_finish (bool): Whether to stop decoding once `end_token` is
@@ -299,23 +311,43 @@ class SoftmaxEmbeddingHelper(TFHelper):
     """
 
     def __init__(self, embedding, start_tokens, end_token, tau,
-                 stop_gradient=False, use_finish=True):
-        if isinstance(embedding, EmbedderBase):
-            embedding = embedding.embedding
-
+                 embedding_size=None, stop_gradient=False, use_finish=True):
         if callable(embedding):
-            raise ValueError("`embedding` must be an embedding tensor or an "
-                             "instance of subclass of `EmbedderBase`.")
+            self._embedding_fn = embedding
+
+            if embedding_size is None:
+                raise ValueError('`embedding_size` must be provided if '
+                                 '`embedding` is a callable.')
+            self._embedding_size = tf.convert_to_tensor(
+                embedding_size, dtype=tf.int32, name="embedding_size")
         else:
-            self._embedding = embedding
             self._embedding_fn = (
-                lambda ids: tf.nn.embedding_lookup(embedding, ids))
+                lambda soft_ids: soft_embedding_lookup(embedding, soft_ids))
+            self._embedding_size = tf.shape(embedding)[0]
 
         self._start_tokens = tf.convert_to_tensor(
             start_tokens, dtype=tf.int32, name="start_tokens")
         self._end_token = tf.convert_to_tensor(
             end_token, dtype=tf.int32, name="end_token")
-        self._start_inputs = self._embedding_fn(self._start_tokens)
+        if self._start_tokens.get_shape().ndims != 1:
+            raise ValueError("start_tokens must be a vector")
+        self._batch_size = array_ops.size(start_tokens)
+        if self._end_token.get_shape().ndims != 0:
+            raise ValueError("end_token must be a scalar")
+
+        soft_start_tokens = tf.one_hot(
+            self._start_tokens, self._embedding_size, dtype=tf.float32)
+        self._embedding_args_cnt = len(utils.get_args(self._embedding_fn))
+        if self._embedding_args_cnt == 1:
+            self._start_inputs = self._embedding_fn(soft_ids=soft_start_tokens)
+        elif self._embedding_args_cnt == 2:
+            # Position index is 0 in the beginning
+            times = tf.zeros([self._batch_size], dtype=tf.int32)
+            self._start_inputs = self._embedding_fn(
+                soft_ids=soft_start_tokens, times=times)
+        else:
+            raise ValueError('`embedding` should expect 1 or 2 arguments.')
+
         self._batch_size = tf.size(self._start_tokens)
         self._tau = tau
         self._stop_gradient = stop_gradient
@@ -331,7 +363,10 @@ class SoftmaxEmbeddingHelper(TFHelper):
 
     @property
     def sample_ids_shape(self):
-        return self._embedding.get_shape()[:1]
+        # A trick to convert a scalar Tensor `self._embedding_size` to
+        # a `TensorShape`
+        oh = tf.one_hot(0, self._embedding_size)
+        return oh.get_shape()[:1]
 
     def initialize(self, name=None):
         finished = tf.tile([False], [self._batch_size])
@@ -352,7 +387,16 @@ class SoftmaxEmbeddingHelper(TFHelper):
             finished = tf.tile([False], [self._batch_size])
         if self._stop_gradient:
             sample_ids = tf.stop_gradient(sample_ids)
-        next_inputs = tf.matmul(sample_ids, self._embedding)
+
+        #next_inputs = tf.matmul(sample_ids, self._embedding)
+        if self._embedding_args_cnt == 1:
+            del time, outputs  # unused by next_inputs_fn
+            next_inputs = self._embedding_fn(soft_ids=sample_ids)
+        elif self._embedding_args_cnt == 2:
+            # Prepare the position embedding of the next step
+            times = tf.ones(self._batch_size, dtype=tf.int32) * time
+            next_inputs = self._embedding_fn(soft_ids=sample_ids, times=times)
+
         return (finished, next_inputs, state)
 
 
@@ -370,15 +414,24 @@ class GumbelSoftmaxEmbeddingHelper(SoftmaxEmbeddingHelper):
     gumbel softmax (instead of softmax) is used.
 
     Args:
-        embedding: An embedding argument (:attr:`params`) for
-            :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`, or an
-            instance of subclass of :class:`texar.modules.EmbedderBase`.
-            Note that other callables are not acceptable here.
+        embedding: A callable or the `params` argument for
+            :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`.
+            If a callable, it can take a float tensor named `soft_ids` which is
+            a distribution over indexes. For example, the shape of the tensor
+            is typically `[batch_size, vocab_size]`. The callable can also
+            take two arguments (`soft_ids`, `times`), where `soft_ids` is
+            as above, and `times` is an int vector tensor of current
+            time steps (i.e., position ids). The latter case can be used
+            when attr:`embedding` is a combination of word embedding and
+            position embedding.
         start_tokens: An int tensor shaped `[batch_size]`. The
             start tokens.
         end_token: An int scalar tensor. The token that marks end of
             decoding.
         tau: A float scalar tensor, the softmax temperature.
+        embedding_size (optional): An int scalar tensor, the number of
+            embedding vectors. Usually it is the vocab size. Required if
+            :attr:`embedding` is a callable.
         straight_through (bool): Whether to use straight through gradient
             between time steps. If `True`, a single token with highest
             probability (i.e., greedy sample) is fed to the next step and
@@ -391,9 +444,11 @@ class GumbelSoftmaxEmbeddingHelper(SoftmaxEmbeddingHelper):
             `max_decoding_length` of the decoder is reached.
     """
     def __init__(self, embedding, start_tokens, end_token, tau,
-                 straight_through=False, stop_gradient=False, use_finish=True):
+                 embedding_size=None, straight_through=False,
+                 stop_gradient=False, use_finish=True):
         super(GumbelSoftmaxEmbeddingHelper, self).__init__(
-            embedding, start_tokens, end_token, tau, stop_gradient, use_finish)
+            embedding, start_tokens, end_token, tau, embedding_size,
+            stop_gradient, use_finish)
         self._straight_through = straight_through
 
     def sample(self, time, outputs, state, name=None):

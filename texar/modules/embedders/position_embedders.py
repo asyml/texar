@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -223,7 +223,8 @@ class PositionEmbedder(EmbedderBase):
 class SinusoidsPositionEmbedder(EmbedderBase):
     """Sinusoid position embedder that maps position indexes into embeddings
     via sinusoid calculation. This module does not have trainable parameters.
-    Used in, e.g., :class:`~texar.modules.TransformerEncoder`.
+    Used in, e.g., Transformer models
+    `(Vaswani et al.) "Attention Is All You Need"`.
 
     Each channel of the input Tensor is incremented by a sinusoid of a
     different frequency and phase.
@@ -239,6 +240,10 @@ class SinusoidsPositionEmbedder(EmbedderBase):
     generate the two sinusoidal signals sin(timestep/timescale) and
     cos(timestep/timescale).  All of these sinusoids are concatenated in
     the dim dimension.
+
+    Args:
+        position_size (int): The number of possible positions, e.g., the maximum
+            sequence length.
 
     .. document private functions
     .. automethod:: _build

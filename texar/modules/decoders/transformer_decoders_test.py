@@ -9,10 +9,10 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import tensorflow as tf
-import numpy as np
+
 from texar.modules.decoders.transformer_decoders import TransformerDecoder
 from texar.modules.decoders.transformer_decoders import TransformerDecoderOutput
-from texar.modules.decoders import helper as tx_helper
+from texar.modules.decoders import tf_helpers as tx_helper
 
 # pylint: disable=too-many-instance-attributes
 

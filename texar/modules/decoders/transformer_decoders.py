@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,11 +36,11 @@ from texar.modules.encoders.transformer_encoders import\
     default_transformer_poswise_net_hparams
 from texar.modules.encoders.multihead_attention import\
     MultiheadAttentionEncoder
-from texar.modules.decoders import helper as tx_helper
-from texar.utils import beam_search
-from texar.utils.shapes import shape_list, mask_sequences
-from texar.utils import transformer_attentions as attn
+from texar.modules.decoders import tf_helpers as tx_helper
+from texar.utils import beam_search, transformer_attentions as attn
+from texar.utils.shapes import shape_list
 from texar.utils.mode import is_train_mode
+from texar.utils.dtypes import is_callable
 
 __all__ = [
     "TransformerDecoderOutput",
@@ -83,32 +83,19 @@ class TransformerDecoder(ModuleBase, TFDecoder):
     """
     def __init__(self, vocab_size, output_layer, hparams=None):
         ModuleBase.__init__(self, hparams)
+
         self._vocab_size = vocab_size
+
         with tf.variable_scope(self.variable_scope):
             if self._hparams.initializer:
                 tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
-            if callable(output_layer):
+
+            if is_callable(output_layer):
                 self.output_layer = output_layer
             elif tf.contrib.framework.is_tensor(output_layer):
-                if self._hparams.output_layer_bias is True:
-                    with tf.variable_scope(self.variable_scope):
-                        affine_bias = tf.get_variable(
-                            'affine_bias', [self._vocab_size])
-                else:
-                    affine_bias = None
-
-                def _outputs_to_logits(outputs):
-                    dim = self._hparams.dim
-                    shape = shape_list(outputs)
-                    outputs = tf.reshape(outputs, [-1, dim])
-                    logits = tf.matmul(outputs, output_layer)
-                    if affine_bias is not None:
-                        logits += affine_bias
-                    logits = tf.reshape(logits, shape[:-1] + [self._vocab_size])
-                    return logits
-                self.output_layer = _outputs_to_logits
-
+                self.output_layer = self._make_output_layer_from_tensor(
+                    output_layer, self._vocab_size)
             elif output_layer is None:
                 if self._vocab_size is None:
                     raise ValueError(
@@ -117,8 +104,10 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                         "wanted.")
                 with tf.variable_scope(self.variable_scope):
                     self.output_layer = tf.layers.Dense(
-                        units=self._vocab_size, use_bias=self._hparams.output_layer_bias)
-                    self.output_layer.build([None, shape_list(self._embedding)[-1]])
+                        units=self._vocab_size,
+                        use_bias=self._hparams.output_layer_bias)
+                    self.output_layer.build(
+                        [None, shape_list(self._embedding)[-1]])
 
             self.multihead_attentions = {
                 'self_att': [],
@@ -133,9 +122,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                             self._hparams.multihead_attention)
                         self.multihead_attentions['self_att'].append(
                             multihead_attention)
-                    # pylint: disable=protected-access
+
                     if self._hparams.dim != \
-                        multihead_attention._hparams.output_dim:
+                        multihead_attention.hparams.output_dim:
                         raise ValueError('The output dimenstion of '
                                          'MultiheadEncoder should be equal '
                                          'to the dim of TransformerDecoder')
@@ -145,20 +134,43 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                             self._hparams.multihead_attention)
                         self.multihead_attentions['encdec_att'].append(
                             multihead_attention)
+
                     if self._hparams.dim != \
-                        multihead_attention._hparams.output_dim:
+                        multihead_attention.hparams.output_dim:
                         raise ValueError('The output dimenstion of '
                                          'MultiheadEncoder should be equal '
                                          'to the dim of TransformerDecoder')
 
-                    poswise_network = FeedForwardNetwork(
+                    pw_net = FeedForwardNetwork(
                         hparams=self._hparams['poswise_feedforward'])
-                    if self._hparams.dim != \
-                        poswise_network._hparams.layers[-1]['kwargs']['units']:
-                        raise ValueError('The output dimenstion of '
-                                         'FeedForwardNetwork should be equal '
-                                         'to the dim of TransformerDecoder')
-                    self.poswise_networks.append(poswise_network)
+                    final_dim = pw_net.hparams.layers[-1]['kwargs']['units']
+                    if self._hparams.dim != final_dim:
+                        raise ValueError(
+                            'The output dimenstion of '
+                            '"poswise_feedforward" should be equal '
+                            'to the "dim" of TransformerDecoder.')
+                    self.poswise_networks.append(pw_net)
+
+    def _make_output_layer_from_tensor(self, output_layer_tensor, vocab_size):
+        """Creates an output layer from a Tensor. Used to tie word embedding
+        with the output layer weight.
+        """
+        affine_bias = None
+        if self._hparams.output_layer_bias:
+            with tf.variable_scope(self.variable_scope):
+                affine_bias = tf.get_variable('affine_bias', [vocab_size])
+
+        def _outputs_to_logits(outputs):
+            dim = self._hparams.dim
+            shape = shape_list(outputs)
+            outputs = tf.reshape(outputs, [-1, dim])
+            logits = tf.matmul(outputs, output_layer_tensor)
+            if affine_bias is not None:
+                logits += affine_bias
+            logits = tf.reshape(logits, shape[:-1] + [self._vocab_size])
+            return logits
+
+        return _outputs_to_logits
 
     @staticmethod
     def default_hparams():
@@ -225,7 +237,8 @@ class TransformerDecoder(ModuleBase, TFDecoder):
 
         "output_layer_bias" : bool
             Whether to use bias to the output layer.
-            Only be used when `output_layer` is None when the instance is initialized.
+            Used only if :attr:`output_layer` is `None` when constructing
+            the class instance.
 
         "max_decoding_length" : int
             The maximum allowed number of decoding steps.
@@ -315,7 +328,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         outputs = tf.squeeze(outputs, axis=[1])
         return outputs, cache
 
-    def _build(self,    # pylint: disable=arguments-differ
+    def _build(self,    # pylint: disable=arguments-differ, too-many-statements
                memory=None,
                memory_sequence_length=None,
                memory_attention_bias=None,
@@ -536,13 +549,12 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             if max_decoding_length is None:
                 max_decoding_length = self._hparams.max_decoding_length
 
-            if beam_width is None: #Inference-like decoding
+            if beam_width is None: # Inference-like decoding
                 # Prepare helper
                 if helper is not None:
-                    # ignore `decoding_strategy`
+                    # Ignore `decoding_strategy`
                     self.embedding = helper._embedding_fn
                 else:
-                    assert embedding is not None
                     if decoding_strategy == "infer_greedy":
                         helper = tx_helper.GreedyEmbeddingHelper(
                             embedding, start_tokens, end_token)
@@ -588,9 +600,8 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     sequence_lengths = sequence_lengths + 1
                 rets = outputs, sequence_lengths
 
-            else: #Beam-search decoding
-                # ignore `decoding_strategy`
-                # assume `helper` is not set
+            else: # Beam-search decoding
+                # Ignore `decoding_strategy`; Assume `helper` is not set
                 if helper is not None:
                     raise ValueError("Must not set 'beam_width' and 'helper' "
                                      "simultaneously.")
@@ -687,10 +698,8 @@ class TransformerDecoder(ModuleBase, TFDecoder):
 
         return _layer_norm(x, scope=self.variable_scope)
 
-    def _init_cache(
-        self, memory, memory_attention_bias,
-        beam_search_decoding,
-        batch_size=None):
+    def _init_cache(self, memory, memory_attention_bias, beam_search_decoding,
+                    batch_size=None):
         """Returns an initialized cache.
 
         In order to support both inference-like decoding and beam-search
@@ -701,7 +710,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         beam-search decoding, a tf.Tensor of shape
         `[batch_size, current_steps, num_units]` is maintained, where
         `current_steps` is the number of steps currently decoded.
-
         """
         if batch_size is None:
             batch_size = self.batch_size
@@ -840,7 +848,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         if self.context is not None:
             _times = tf.ones([self.batch_size], dtype=tf.int32) * time
             sample_ids = tf.where(
-                self.context_sequence_length>_times,
+                self.context_sequence_length > _times,
                 self.context[:, time],
                 sample_ids
             )
