@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,8 +23,7 @@ import os
 import importlib
 import tensorflow as tf
 import texar as tx
-from texar.utils.shapes import shape_list
-from texar.modules.embedders.position_embedders import PositionEmbedder
+
 from utils import data_utils, model_utils, tokenization
 
 # pylint: disable=invalid-name, too-many-locals, too-many-statements
@@ -132,24 +131,26 @@ def main(_):
 
     # Builds BERT
     with tf.variable_scope('bert'):
+        # Word embedding
         embedder = tx.modules.WordEmbedder(
             vocab_size=bert_config.vocab_size,
             hparams=bert_config.embed)
         word_embeds = embedder(input_ids)
 
-        # Creates segment embeddings for each type of tokens.
+        # Segment embedding for each type of tokens
         segment_embedder = tx.modules.WordEmbedder(
             vocab_size=bert_config.type_vocab_size,
             hparams=bert_config.segment_embed)
         segment_embeds = segment_embedder(segment_ids)
 
-        position_embedder = PositionEmbedder(
+        # Position embedding
+        position_embedder = tx.modules.PositionEmbedder(
             position_size=bert_config.position_size,
             hparams=bert_config.position_embed)
-        _, lengths = shape_list(input_ids)
-        positions = tf.expand_dims(tf.range(lengths, dtype=tf.int32), 0)
-        pos_embeds = position_embedder(positions)
+        seq_length = tf.ones([batch_size], tf.int32) * tf.shape(input_ids)[1]
+        pos_embeds = position_embedder(sequence_length=seq_length)
 
+        # Aggregates embeddings
         input_embeds = word_embeds + segment_embeds + pos_embeds
 
         # The BERT model (a TransformerEncoder)
@@ -248,7 +249,8 @@ def main(_):
                 except tf.errors.OutOfRangeError:
                     break
 
-            tf.logging.info('dev accu: {} nsamples: {}'.format(cum_acc / nsamples, nsamples))
+            tf.logging.info('dev accu: {} nsamples: {}'.format(
+                cum_acc / nsamples, nsamples))
 
         if mode == 'test':
             _all_preds = []

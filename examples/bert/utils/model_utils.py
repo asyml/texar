@@ -36,7 +36,7 @@ def transform_bert_to_texar_config(input_json):
 
     configs['encoder'] = {
         'name': 'encoder',
-        'scale_embeds': False,
+        #'scale_embeds': False,
         'embedding_dropout': config_ckpt['hidden_dropout_prob'],
         'num_blocks': config_ckpt['num_hidden_layers'],
         'multihead_attention': {
@@ -173,9 +173,9 @@ def _get_assignment_map_from_checkpoint(tvars, init_checkpoint):
     return (assignment_map, initialized_variable_names)
 
 def init_bert_checkpoint(init_checkpoint):
-    """Initializes BERT model parameters from a checkpoint provided by 
+    """Initializes BERT model parameters from a checkpoint provided by
     Google.
-    
+
     Args:
         init_checkpoint (str): Path to the checkpoint.
     """
