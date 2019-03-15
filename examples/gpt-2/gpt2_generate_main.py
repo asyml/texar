@@ -115,24 +115,21 @@ def main(_):
         hparams=gpt2_config.pos_embed
     )
 
-    def my_embedding_fn(x, y):
+    def _embedding_fn(x, y):
         return word_embedder(x) + pos_embedder(y)
 
     helper = tx.modules.TopKSampleEmbeddingHelper(
-        embedding=my_embedding_fn,
+        embedding=_embedding_fn,
         start_tokens=start_tokens,
         end_token=end_token,
         top_k=FLAGS.top_k,
         softmax_temperature=FLAGS.temperature)
-    print('start_tokens:{}'.format(helper._start_tokens.shape))
-    print('first_input:{}'.format(helper._start_inputs.shape))
     output_layer = tf.transpose(word_embedder.embedding, (1, 0))
 
     decoder = TransformerDecoder(
         vocab_size=gpt2_config.vocab_size,
         output_layer=output_layer,
-        hparams=gpt2_config.decoder
-    )
+        hparams=gpt2_config.decoder)
 
     with tf.Session() as sess:
 
