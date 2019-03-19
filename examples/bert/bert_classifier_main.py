@@ -267,8 +267,11 @@ def main(_):
     if FLAGS.distributed:
         bcast = hvd.broadcast_global_variables(0)
 
-    with tf.Session() as sess:
+    session_config = tf.ConfigProto()
+    if FLAGS.distributed:
+        session_config.gpu_options.visible_device_list = str(hvd.local_rank())
 
+    with tf.Session(config=session_config) as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         sess.run(tf.tables_initializer())
