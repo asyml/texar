@@ -12,16 +12,6 @@ In sum, this example showcases:
 
 ## Quick Start
 
-### Download Dataset
-
-We explain the use of the example code based on the Microsoft Research Paraphrase Corpus (MRPC) corpus for sentence classification. 
-
-Download the data with the following cmd
-```
-python data/download_glue_data.py --tasks=MRPC
-```
-By default, it will download the MRPC dataset into the `data` directory. FYI, the MRPC dataset part of the [GLUE](https://gluebenchmark.com/tasks) dataset collection.
-
 ### Download BERT Pre-train Model
 
 ```
@@ -32,20 +22,52 @@ By default, it will download a pretrained model (BERT-Base Uncased: 12-layer, 76
 Under `bert_pretrained_models/uncased_L-12_H-768_A-12`, you can find 5 files, where
 - `bert-config.json` is the model configuration of the BERT model. For the particular model we just downloaded, it is an uncased-vocabulary, 12-layer, 768-hidden, 12-heads Transformer model.
 
+### Download Dataset
+
+We explain the use of the example code based on the Microsoft Research Paraphrase Corpus (MRPC) corpus for sentence classification. 
+
+Download the data with the following cmd
+```
+python data/download_glue_data.py --tasks=MRPC
+```
+By default, it will download the MRPC dataset into the `data` directory. FYI, the MRPC dataset part of the [GLUE](https://gluebenchmark.com/tasks) dataset collection.
+
+### Prepare the data
+To generate TFRecords files for training, evaluation and test, run the following cmd, this will generate a new `data/tfrecords_files` directory containing `train.tf_record`, `eval.tf_record` and `test.tf_record`.
+Also, this will modify the default data configuration file `config_data.py`, if that file exist, it will overwrite the variable `max_seq_length` with the value from input parameter `--max_seq_length`, and variables `num_classes` and `num_train_data` with values computed based on the task dataset.
+
+```
+    python prepare_data.py --task=MRPC
+    [--max_seq_length=128]
+    [--vocab_file=bert_pretrained_models/uncased_L-12_H-768_A-12/vocab.txt]
+    [--tfrecords_output_dir=data/tfrecords_files] 
+```
+- `task`: Specifies which dataset to experiment on.
+- `max_seq_length`: The maxium length of sequence, longer sequence will be trimmed.
+- `vocab_file`: Path of vocabary file that bert uses for training
+- `tfrecords_output_dir`: The output path where TFRecord files will be generated.
+
+The cmd will generate printed logging as follows:
+```
+    INFO:tensorflow:Loading data
+    INFO:tensorflow:num_classes:2; num_train_data:3668
+    INFO:tensorflow:config_data.py has been updated
+    INFO:tensorflow:Data preparation finished
+```
+Please be noticed that variables `num_classes` and `num_train_data` are required for the building of model and training process respectively, and `max_seq_length` is required for reading data from TFRecords files, they should all exist in the data configuration file. Since we use `config_data.py` as our default data configuration file, we should make sure these variables are all configured in `config_data.py`
+
 ### Train and Evaluate
 
 For **single-GPU** training (and evaluation), run the following cmd. The training updates the classification layer and fine-tunes the pre-trained BERT parameters.
 ```
     python bert_classifier_main.py --do_train --do_eval
-    [--task=mrpc]
     [--config_bert_pretrain=uncased_L-12_H-768_A-12]
     [--config_downstream=config_classifier]
-    [--config_data=config_data_mrpc]
-    [--output_dir=output] 
+    [--config_data=config_data]
+    [--output_dir=output]
 ```
 Here:
 
-- `task`: Specifies which dataset to experiment on.
 - `config_bert_pretrain`: Specifies the architecture of pre-trained BERT model to use.
 - `config_downstream`: Configuration of the downstream part. In this example, [`config_classifier.py`](https://github.com/asyml/texar/blob/master/examples/bert/bert_classifier_main.py) configs the classification layer and the optimization method.
 - `config_data`: The data configuration.
@@ -62,10 +84,9 @@ mpirun -np 2 \
     -mca pml ob1 -mca btl tcp,self \
     -mca btl_tcp_if_include ens3 \
     python bert_classifier_main.py --do_train --do_eval --distributed
-    [--task=mrpc]
     [--config_bert_pretrain=uncased_L-12_H-768_A-12]
     [--config_downstream=config_classifier]
-    [--config_data=config_data_mrpc]
+    [--config_data=config_data]
     [--output_dir=output] 
 ```
 The key configurations of multi-gpu training:
@@ -95,10 +116,11 @@ The output is by default saved in `output/test_results.tsv`, where each line con
 
 ## Use other datasets/tasks
 
-`bert_classifier_main.py` also support other datasets/tasks. To do this, specify a different value to the `--task` flag, and use a corresponding data configuration file. 
+`bert_classifier_main.py` also support other datasets/tasks. To do this, specify a different value to the `--task` flag, and use `prepare_data.py` to create data of preparation and data configuration file, then use the corresponding data configuration file. 
 
 For example, use the following commands to download the SST (Stanford Sentiment Treebank) dataset and run for sentence classification.
 ```
 python data/download_glue_data.py --tasks=SST
-python bert_classifier_main.py --do_train --do_eval --task=sst --config_data=config_data_sst
+python prepare_data.py --task=SST
+python bert_classifier_main.py --do_train --do_eval --config_data=config_data
 ```
