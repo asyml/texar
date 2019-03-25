@@ -170,7 +170,7 @@ class TFRecordData(DataBase):
                         "input_ids": ["tf.int64", "FixedLenFeature", 128],
                         "input_mask": ["tf.int64", "FixedLenFeature", 128],
                         "segment_ids": ["tf.int64", "FixedLenFeature", 128],
-                        "name_lists": ["tf.string", "VarLenFeature"]
+                        "name_lists": ["tf.string", "VarLenFeature"],
                         "label_ids": ["tf.int64", "FixedLenFeature"]
                     }
                     ...
