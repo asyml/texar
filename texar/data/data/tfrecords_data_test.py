@@ -39,9 +39,10 @@ class TFRecordDataTest(tf.test.TestCase):
             'example_images/194px-New_East_River_Bridge_from_Brooklyn_'
             'det.4a09796u.jpg')
 
-        def _bytes_feature(value):
+        def _bytes_feature(value=None):
             """Returns a bytes_list from a string / byte.
             """
+            # pylint: disable=undefined-loop-variable
             if not isinstance(value, (bytes)):
                 if sys.version_info < (3, 0):
                     value = bytes(value)
@@ -50,7 +51,7 @@ class TFRecordDataTest(tf.test.TestCase):
             return tf.train.Feature(
                 bytes_list=tf.train.BytesList(value=[value]))
 
-        def _int64_feature(value):
+        def _int64_feature(value=None):
             """Returns an int64_list from a bool / enum / int / uint.
             """
             return tf.train.Feature(
@@ -84,7 +85,8 @@ class TFRecordDataTest(tf.test.TestCase):
                 'variable1': _bytes_feature('1234567890'),
                 'variable2': _int64_feature(9876543210),
             }
-            return tf.train.Example(features=tf.train.Features(feature=feature))
+            return tf.train.Example(
+                features=tf.train.Features(feature=feature))
 
         self._dataset_valid = {
             'height': [],

@@ -34,7 +34,7 @@ By default, it will download the MRPC dataset into the `data` directory. FYI, th
 
 ### Prepare data
 
-To generate TFRecords files for training, evaluation and test, run the following cmd, this will generate `train.tf_record`, `eval.tf_record` and `test.tf_record` under `data/{task_dataset}`, `task_dataset` is the task dataset that downloaded from last step ***Download Dataset***, E.g., the `data/{task_dataset}` should be `data/MRPC` by default.
+To generate TFRecords files for training, evaluation and test, run the following cmd, this will generate `train.tf_record`, `eval.tf_record` and `test.tf_record` under `data/{task_dataset}`, `task_dataset` is the task dataset that downloaded from the last step ***Download Dataset***, E.g., the `data/{task_dataset}` should be `data/MRPC` by default.
 
 Also, this will modify the default data configuration file `config_data.py`, if that file exist, it will overwrite the variable `max_seq_length` with the value from input parameter `--max_seq_length`, and variables `num_classes` and `num_train_data` with values computed based on the task dataset.
 
@@ -72,7 +72,7 @@ Here:
 
 - `config_bert_pretrain`: Specifies the architecture of pre-trained BERT model to use.
 - `config_downstream`: Configuration of the downstream part. In this example, [`config_classifier.py`](https://github.com/asyml/texar/blob/master/examples/bert/bert_classifier_main.py) configs the classification layer and the optimization method.
-- `config_data`: The data configuration. ***Be noticed***: the data configuration file should contain `num_classes`, `num_train_data` and `max_seq_length`, the `tfrecord_data_dir` should be the directory to the TFRecords files generated from last step ***Prepare data***.
+- `config_data`: The data configuration. ***Be noticed***: the data configuration file should contain `num_classes`, `num_train_data` and `max_seq_length`; The `tfrecord_data_dir` should match the `tfrecords_output_dir`, which is the directory of the TFRecords files generated from the last step ***Prepare data***.
 - `output_dir`: The output path where checkpoints and summaries for tensorboard visualization are saved.
 
 For **Multi-GPU training** on one or multiple machines, you may first install the prerequisite OpenMPI and Hovorod packages, as detailed in the [distributed_gpu](https://github.com/asyml/texar/tree/master/examples/distributed_gpu) example. 

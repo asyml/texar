@@ -154,12 +154,12 @@ class TFRecordData(DataBase):
                 `dtype` can be `tf DType <DType>` or `str`, e.g., 'tf.int32',
                 'tf.float32', etc.
 
-                - `feature_len_type` is of type `str` and can be 
-                    'FixedLenFeature' or 'VarLenFeature' for fixed length 
-                    features and non-fixed length features respectively.
+                - `feature_len_type` is of type `str` and can be \
+                'FixedLenFeature' or 'VarLenFeature' for fixed length \
+                features and non-fixed length features respectively.
 
-                - `len` is optional, it is the length for the
-                    'FixedLenFeature', can be a `int`.
+                - `len` is optional, it is the length for the \
+                'FixedLenFeature', can be a `int`.
 
                 E.g. it can be used as follows:
 
@@ -170,6 +170,7 @@ class TFRecordData(DataBase):
                         "input_ids": ["tf.int64", "FixedLenFeature", 128],
                         "input_mask": ["tf.int64", "FixedLenFeature", 128],
                         "segment_ids": ["tf.int64", "FixedLenFeature", 128],
+                        "name_lists": ["tf.string", "VarLenFeature"]
                         "label_ids": ["tf.int64", "FixedLenFeature"]
                     }
                     ...
@@ -180,7 +181,7 @@ class TFRecordData(DataBase):
                 can be a `tf DType <DType>` or `str`, e.g., 'tf.int32',
                 'tf.float32', etc. If not set, data type conversion
                 will not be performed.
-                
+
                 Be noticed that this converting process is after all the data
                 are restored, `feature_original_types` has to be set firstly.
 
@@ -308,10 +309,10 @@ class TFRecordData(DataBase):
     def _make_data(self):
         dataset = self._read_TFRecord_data()
         # Create and shuffle dataset
-        worker_num = self._hparams.dataset.num_shards
-        worker_id = self._hparams.dataset.shard_id
-        if worker_num is not None and worker_id is not None:
-            dataset = dataset.shard(worker_num, worker_id)
+        num_shards = self._hparams.dataset.num_shards
+        shard_id = self._hparams.dataset.shard_id
+        if num_shards is not None and shard_id is not None:
+            dataset = dataset.shard(num_shards, shard_id)
         dataset, dataset_size = self._shuffle_dataset(
             dataset, self._hparams, self._hparams.dataset.files)
         self._dataset_size = dataset_size
