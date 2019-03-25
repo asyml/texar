@@ -51,7 +51,6 @@ config_data = importlib.import_module(FLAGS.config_data)
 
 utils.set_random_seed(config_model.random_seed)
 
-
 def main():
     """Entrypoint.
     """
