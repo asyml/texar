@@ -1,3 +1,4 @@
+tfrecord_data_dir = "data/MRPC"
 max_seq_length = 128
 train_batch_size = 32
 max_train_epoch = 3
@@ -38,7 +39,7 @@ train_hparam = {
         "data_name": "data",
         "feature_convert_types": feature_convert_types,
         "feature_original_types": feature_original_types,
-        "files": "data/tfrecords_files/train.tf_record"
+        "files": "{}/train.tf_record".format(tfrecord_data_dir)
     },
 
     # Repeating
@@ -55,7 +56,7 @@ eval_hparam = {
         "data_name": "data",
         "feature_convert_types": feature_convert_types,
         "feature_original_types": feature_original_types,
-        "files": "data/tfrecords_files/eval.tf_record"
+        "files": "{}/eval.tf_record".format(tfrecord_data_dir)
     },
 
     # Non-repeating
@@ -71,7 +72,7 @@ test_hparam = {
         "data_name": "data",
         "feature_convert_types": feature_convert_types,
         "feature_original_types": feature_original_types,
-        "files": "data/tfrecords_files/predict.tf_record"
+        "files": "{}/predict.tf_record".format(tfrecord_data_dir)
     },
 
     # Non-repeating

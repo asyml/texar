@@ -41,7 +41,7 @@ flags.DEFINE_integer(
     "max_seq_length", 128,
     "The maxium length of sequence, longer sequence will be trimmed.")
 flags.DEFINE_string(
-    "tfrecords_output_dir", "data/tfrecords_files",
+    "tfrecords_output_dir", 'data/MRPC',
     "The output directory where the TFRecords files will be generated.")
 flags.DEFINE_bool(
     "do_lower_case", True,
@@ -58,15 +58,20 @@ def prepare_data():
     # Loads data
     tf.logging.info("Loading data")
 
-    tx.utils.maybe_create_dir(FLAGS.tfrecords_output_dir)
     task_datasets_rename = {
         "COLA": "CoLA",
         "SST": "SST-2",
     }
+    
     data_dir = 'data/{}'.format(FLAGS.task.upper())
     if FLAGS.task.upper() in task_datasets_rename:
         data_dir = 'data/{}'.format(
             task_datasets_rename[FLAGS.task.upper()])
+
+    if FLAGS.tfrecords_output_dir is None:
+        tfrecords_output_dir = data_dir
+    tx.utils.maybe_create_dir(tfrecords_output_dir)
+
     processors = {
         "cola": data_utils.ColaProcessor,
         "mnli": data_utils.MnliProcessor,
@@ -90,7 +95,7 @@ def prepare_data():
         tokenizer=tokenizer,
         data_dir=data_dir,
         max_seq_length=FLAGS.max_seq_length,
-        output_dir=FLAGS.tfrecords_output_dir)
+        output_dir=tfrecords_output_dir)
 
     # Modify the data configuration file
     config_data_exists = os.path.isfile('./config_data.py')
