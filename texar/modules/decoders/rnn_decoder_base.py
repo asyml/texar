@@ -36,6 +36,7 @@ from texar.utils import utils
 from texar.utils.mode import is_train_mode, is_train_mode_py
 from texar.module_base import ModuleBase
 from texar.modules.decoders import rnn_decoder_helpers
+from texar.utils.dtypes import is_callable
 
 __all__ = [
     "RNNDecoderBase"
@@ -74,19 +75,22 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         # Make the output layer
         self._vocab_size = vocab_size
         self._output_layer = output_layer
-        if output_layer is None:
+
+        if is_callable(output_layer):
+            self._output_layer = output_layer
+        elif tf.contrib.framework.is_tensor(output_layer):
+            self._output_layer = self._make_output_layer_from_tensor(
+                output_layer, self._vocab_size)
+        elif output_layer is None:
             if self._vocab_size is None:
                 raise ValueError(
                     "Either `output_layer` or `vocab_size` must be provided. "
-                    "Set `output_layer=tf.identity` if no output layer is "
+                    " Set `output_layer=tf.identity` if no output layer is "
                     "wanted.")
             with tf.variable_scope(self.variable_scope):
-                self._output_layer = tf.layers.Dense(units=self._vocab_size)
-        elif output_layer is not tf.identity:
-            if not isinstance(output_layer, tf.layers.Layer):
-                raise ValueError(
-                    "`output_layer` must be either `tf.identity` or "
-                    "an instance of `tf.layers.Layer`.")
+                self._output_layer = tf.layers.Dense(
+                    units=self._vocab_size,
+                    use_bias=self._hparams.output_layer_bias)
 
     @staticmethod
     def default_hparams():
@@ -103,7 +107,8 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             "helper_infer": rnn_decoder_helpers.default_helper_infer_hparams(),
             "max_decoding_length_train": None,
             "max_decoding_length_infer": None,
-            "name": "rnn_decoder"
+            "name": "rnn_decoder",
+            "output_layer_bias": True,
         }
 
     def _build(self,

@@ -51,6 +51,7 @@ config_data = importlib.import_module(FLAGS.config_data)
 
 utils.set_random_seed(config_model.random_seed)
 
+
 def main():
     """Entrypoint.
     """
@@ -158,7 +159,8 @@ def main():
     start_tokens = tf.fill([batch_size], bos_token_id)
 
     def _embedding_fn(x, y):
-        return tgt_embedder(x) * config_model.hidden_dim**0.5 + pos_embedder(y)
+        return tgt_embedder(x) * config_model.hidden_dim ** 0.5 + pos_embedder(
+            y)
 
     predictions = decoder(
         memory=encoder_output,
@@ -187,7 +189,7 @@ def main():
         references, hypotheses = [], []
         bsize = config_data.test_batch_size
         for i in range(0, len(eval_data), bsize):
-            sources, targets = zip(*eval_data[i:i+bsize])
+            sources, targets = zip(*eval_data[i:i + bsize])
             x_block = data_utils.source_pad_concat_convert(sources)
             feed_dict = {
                 encoder_input: x_block,

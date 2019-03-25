@@ -32,9 +32,9 @@ from tensorflow.contrib.seq2seq import dynamic_decode
 from texar.core import layers
 from texar.module_base import ModuleBase
 from texar.modules.networks.networks import FeedForwardNetwork
-from texar.modules.encoders.transformer_encoders import\
+from texar.modules.encoders.transformer_encoders import \
     default_transformer_poswise_net_hparams
-from texar.modules.encoders.multihead_attention import\
+from texar.modules.encoders.multihead_attention import \
     MultiheadAttentionEncoder
 from texar.modules.decoders import tf_helpers as tx_helper
 from texar.utils import beam_search, transformer_attentions as attn
@@ -49,8 +49,8 @@ __all__ = [
 
 
 class TransformerDecoderOutput(
-        collections.namedtuple("TransformerDecoderOutput",
-                               ("logits", "sample_id"))):
+    collections.namedtuple("TransformerDecoderOutput",
+                           ("logits", "sample_id"))):
     """The output of :class:`TransformerDecoder`.
 
     Attributes:
@@ -69,18 +69,20 @@ class TransformerDecoder(ModuleBase, TFDecoder):
     :class:`~texar.modules.FeedForwardNetwork`, and residual connections.
 
     Args:
-        embedding: A Tensor of shape `[vocab_size, dim]` containing the
-            word embedding matrix. The Tensor is used as the decoder output
-            layer that computes logits over vocabulary. Ignored if
-            `hparams['embedding_tie']` is False.
-        hparams (dict or HParams, optional): Hyperparameters. Missing
-            hyperparameter will be set to default values. See
-            :meth:`default_hparams` for the hyperparameter sturcture and
-            default values.
+        vocab_size:
+            Specify the size of the output vocabulary.
+            Ignored if output_layer is provided.
+        output_layer:
+            a callable function to transform the hidden states to logits.
+            Or a tensor which is used as the kernel weights to transform hidden
+                states into logits.
+            If it's not provided, use `vocab_size` and
+                `hparams.output_layer_bias` to create the output layer.
 
     .. document private functions
     .. automethod:: _build
     """
+
     def __init__(self, vocab_size, output_layer, hparams=None):
         ModuleBase.__init__(self, hparams)
 
@@ -92,22 +94,20 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     layers.get_initializer(self._hparams.initializer))
 
             if is_callable(output_layer):
-                self.output_layer = output_layer
+                self._output_layer = output_layer
             elif tf.contrib.framework.is_tensor(output_layer):
-                self.output_layer = self._make_output_layer_from_tensor(
+                self._output_layer = self._make_output_layer_from_tensor(
                     output_layer, self._vocab_size)
             elif output_layer is None:
                 if self._vocab_size is None:
                     raise ValueError(
-                        "Either `output_layer` or `vocab_size` must be provided. "
-                        "Set `output_layer=tf.identity` if no output layer is "
+                        "Either `output_layer` or `vocab_size` must be provided"
+                        " Set `output_layer=tf.identity` if no output layer is "
                         "wanted.")
                 with tf.variable_scope(self.variable_scope):
-                    self.output_layer = tf.layers.Dense(
+                    self._output_layer = tf.layers.Dense(
                         units=self._vocab_size,
                         use_bias=self._hparams.output_layer_bias)
-                    self.output_layer.build(
-                        [None, shape_list(self._embedding)[-1]])
 
             self.multihead_attentions = {
                 'self_att': [],
@@ -124,7 +124,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                             multihead_attention)
 
                     if self._hparams.dim != \
-                        multihead_attention.hparams.output_dim:
+                            multihead_attention.hparams.output_dim:
                         raise ValueError('The output dimenstion of '
                                          'MultiheadEncoder should be equal '
                                          'to the dim of TransformerDecoder')
@@ -136,7 +136,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                             multihead_attention)
 
                     if self._hparams.dim != \
-                        multihead_attention.hparams.output_dim:
+                            multihead_attention.hparams.output_dim:
                         raise ValueError('The output dimenstion of '
                                          'MultiheadEncoder should be equal '
                                          'to the dim of TransformerDecoder')
@@ -295,7 +295,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 memory=None,
                 cache=cache,
             )
-        outputs = self.output_layer(outputs)
+        outputs = self._output_layer(outputs)
         outputs = tf.squeeze(outputs, axis=[1])
         return outputs, cache
 
@@ -324,17 +324,16 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 memory=None,
                 cache=cache,
             )
-        outputs = self.output_layer(outputs)
+        outputs = self._output_layer(outputs)
         outputs = tf.squeeze(outputs, axis=[1])
         return outputs, cache
 
-    def _build(self,    # pylint: disable=arguments-differ, too-many-statements
+    def _build(self,  # pylint: disable=arguments-differ, too-many-statements
+               decoding_strategy='train_greedy',
+               inputs=None,
                memory=None,
                memory_sequence_length=None,
                memory_attention_bias=None,
-               inputs=None,
-               sequence_length=None,
-               decoding_strategy='train_greedy',
                beam_width=None,
                length_penalty=0.,
                start_tokens=None,
@@ -350,8 +349,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         """Performs decoding.
 
         The interface is very similar to that of RNN decoders
-        (:meth:`texar.modules.RNNDecoderBase._build`). In particular,
-        the function provides **3 ways** to specify the decoding method, with
+        (:meth:`texar.modules.RNNDecoderBase._build`), except the
+        `sequence_length` is not needed here.
+        The function provides **3 ways** to specify the decoding method, with
         varying flexibility:
 
         1. The :attr:`decoding_strategy` argument.
@@ -412,11 +412,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 shape `[batch_size, target_max_time, emb_dim]` containing the
                 target sequence word embeddings.
                 Used when :attr:`decoding_strategy` is set to "train_greedy".
-            sequence_length (optional): A Tensor of shape `[batch_size]`,
-                containing the sequence length of :attr:`inputs`.
-                Tokens beyond the respective sequence length are masked out.
-                Used when :attr:`decoding_strategy` is set to
-                "train_greedy".
             decoding_strategy (str): A string specifying the decoding
                 strategy, including "train_greedy", "infer_greedy",
                 "infer_sample".
@@ -458,12 +453,12 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 and outputs have the correct values and that backprop ignores
                 time steps that were marked as finished. Ignored in
                 "train_greedy" decoding.
-            embedding: A callable that takes a vector tensor of `ids` (argmax ids),
-                or the `params` argument for `embedding_lookup`.
-                It can also accept two arguments for token indexes, transform two
-                kinds of token indexes into embedding and return the sum of these two
-                embeddings. This can be used when you want to add the word embeddings
-                and position embeddings.
+            embedding: A callable that takes a vector tensor of `ids`
+                (argmax ids), or the `params` argument for `embedding_lookup`.
+                It can also accept two arguments for token indexes, transform
+                two kinds of token indexes into embedding and return the sum of
+                these two embeddings. This can be used when you want to add the
+                word embeddings and position embeddings.
             The returned tensor will be passed to the decoder input.
             helper (optional): An instance of
                 :tf_main:`Helper <contrib/seq2seq/Helper>` that defines the
@@ -525,7 +520,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         self.embedding = embedding
 
         if helper is None and beam_width is None and \
-                decoding_strategy == 'train_greedy': # Teacher-forcing
+                decoding_strategy == 'train_greedy':  # Teacher-forcing
 
             decoder_self_attention_bias = (
                 attn.attention_bias_lower_triangle(
@@ -538,7 +533,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 memory_attention_bias=memory_attention_bias,
                 cache=None,
                 mode=mode)
-            logits = self.output_layer(decoder_output)
+            logits = self._output_layer(decoder_output)
             preds = tf.to_int32(tf.argmax(logits, axis=-1))
             rets = TransformerDecoderOutput(
                 logits=logits,
@@ -549,7 +544,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             if max_decoding_length is None:
                 max_decoding_length = self._hparams.max_decoding_length
 
-            if beam_width is None: # Inference-like decoding
+            if beam_width is None:  # Inference-like decoding
                 # Prepare helper
                 if helper is not None:
                     # Ignore `decoding_strategy`
@@ -574,7 +569,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     self.context = tf.pad(
                         self.context,
                         [[0, 0],
-                         [0, max_decoding_length-tf.shape(self.context)[1]]]
+                         [0, max_decoding_length - tf.shape(self.context)[1]]]
                     )
 
                 outputs, cache, sequence_lengths = dynamic_decode(
@@ -600,7 +595,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     sequence_lengths = sequence_lengths + 1
                 rets = outputs, sequence_lengths
 
-            else: # Beam-search decoding
+            else:  # Beam-search decoding
                 # Ignore `decoding_strategy`; Assume `helper` is not set
                 if helper is not None:
                     raise ValueError("Must not set 'beam_width' and 'helper' "
@@ -638,6 +633,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                               mode=None):
         """Stacked multihead attention module.
         """
+
         def _layer_norm(x, scope):
             return layers.layer_normalize(x, reuse=tf.AUTO_REUSE, scope=scope)
 

@@ -213,26 +213,6 @@ class TransformerEncoder(EncoderBase):
                    layer normalization. In the standard arch, the tensors are \
                    connected *before* layer normalization.
 
-        "position_embedder_type":
-            Choose from "sinusoids" or "variables".
-
-            "sinusoids":
-                create the position embedding as sinusoids, which is fixed.
-            "variables":
-                create the position embedding as trainable variables.
-
-        "position_size": int
-            The size of position embeddings.
-            Only be used when "position_embedder_type"is "variables".
-
-        "position_embedder_hparams" : dict, optional
-            Hyperparameters of a
-            :class:`~texar.modules.PositionEmbedder` as position
-            embedder if "position_embedder_type" is "variables",
-            or Hyperparameters of a
-            :class:`~texar.modules.SinusoidsPositionEmbedder` as position
-            embedder if "position_embedder_type" is "sinusoids".
-
         "embedding_dropout" : float
             Dropout rate of the input word and position embeddings.
 
@@ -265,9 +245,6 @@ class TransformerEncoder(EncoderBase):
             'num_blocks': 6,
             'dim': 512,
             'use_bert_config': False,
-            'position_embedder_type': 'sinusoids',
-            'position_size': None,
-            'position_embedder_hparams': None,
             'embedding_dropout': 0.1,
             'residual_dropout': 0.1,
             'poswise_feedforward': default_transformer_poswise_net_hparams(),

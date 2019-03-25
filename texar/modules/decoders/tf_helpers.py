@@ -293,6 +293,12 @@ class ScheduledEmbeddingTrainingHelper(TrainingHelper):
             else:
                 self._embedding_fn = (
                     lambda ids: embedding_ops.embedding_lookup(embedding, ids))
+            self._embedding_args_cnt = len(get_args(self._embedding_fn))
+
+            self._embedding_args_cnt = len(get_args(self._embedding_fn))
+            if self._embedding_args_cnt != 1 and self._embedding_args_cnt != 2:
+                raise ValueError('`embedding` should expect 1 or 2 arguments.')
+
             self._sampling_probability = ops.convert_to_tensor(
                 sampling_probability, name="sampling_probability")
             if self._sampling_probability.get_shape().ndims not in (0, 1):
@@ -308,7 +314,8 @@ class ScheduledEmbeddingTrainingHelper(TrainingHelper):
                 name=name)
 
     def initialize(self, name=None):
-        return super(ScheduledEmbeddingTrainingHelper, self).initialize(name=name)
+        return super(ScheduledEmbeddingTrainingHelper, self).initialize(
+            name=name)
 
     def sample(self, time, outputs, state, name=None):
         with ops.name_scope(name, "ScheduledEmbeddingTrainingHelperSample",
@@ -344,7 +351,15 @@ class ScheduledEmbeddingTrainingHelper(TrainingHelper):
                 sample_ids_sampling = array_ops.gather_nd(sample_ids, where_sampling)
                 inputs_not_sampling = array_ops.gather_nd(
                     base_next_inputs, where_not_sampling)
-                sampled_next_inputs = self._embedding_fn(sample_ids_sampling)
+
+                if self._embedding_args_cnt == 1:
+                    sampled_next_inputs = self._embedding_fn(
+                        sample_ids_sampling)
+                elif self._embedding_args_cnt == 2:
+                    # Prepare the position embedding of the next step
+                    times = tf.ones(self._batch_size, dtype=tf.int32) * time
+                    sampled_next_inputs = self._embedding_fn(
+                        sample_ids_sampling, times)
                 base_shape = array_ops.shape(base_next_inputs)
                 return (array_ops.scatter_nd(indices=where_sampling,
                                              updates=sampled_next_inputs,
