@@ -121,7 +121,7 @@ class PositionEmbedder(EmbedderBase):
     def _build(self, positions=None, sequence_length=None, mode=None, **kwargs):
         """Embeds the positions.
 
-        Either :attr:`position` or :attr:`sequence_length` is required:
+        Either :attr:`positions` or :attr:`sequence_length` is required:
 
             - If both are given, :attr:`sequence_length` is used to mask out \
             embeddings of those time steps beyond the respective sequence \
@@ -291,16 +291,37 @@ class SinusoidsPositionEmbedder(EmbedderBase):
         }
         return hparams
 
-    def _build(self, positions):
+    def _build(self, positions=None, sequence_length=None):
         """Embeds.
+        Either :attr:`positions` or :attr:`sequence_length` is required:
+
+            - If both are given, :attr:`sequence_length` is used to mask out \
+            embeddings of those time steps beyond the respective sequence \
+            lengths.
+            - If only :attr:`sequence_length` is given, then positions \
+            from `0` to `sequence_length-1` are embedded.
 
         Args:
             positions (optional): An integer tensor containing the position
                 ids to embed.
+            sequence_length (optional): An integer tensor of shape
+                `[batch_size]`. Time steps beyond
+                the respective sequence lengths will have zero-valued
+                embeddings.
         Returns:
             A `Tensor` of shape `[1, position_size, dim]`.
         """
         inputs = positions
+        if positions is None:
+            if sequence_length is None:
+                raise ValueError(
+                    'Either `positions` or `sequence_length` is required.')
+            max_length = tf.reduce_max(sequence_length)
+            single_inputs = tf.range(start=0, limit=max_length, dtype=tf.int32)
+            # Expands `single_inputs` to have shape [batch_size, max_length]
+            expander = tf.expand_dims(tf.ones_like(sequence_length), -1)
+            inputs = expander * tf.expand_dims(single_inputs, 0)
+
         embedding = self.signal
         outputs = tf.nn.embedding_lookup(embedding, inputs)
         return outputs
