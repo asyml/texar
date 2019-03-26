@@ -508,7 +508,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                         "`memory_attention_bias` is not given.")
 
                 enc_padding = 1 - tf.sequence_mask(
-                    memory_sequence_length, tf.shape(memory)[1],
+                    memory_sequence_length, shape_list(memory)[1],
                     dtype=tf.float32)
                 memory_attention_bias = attn.attention_bias_ignore_padding(
                     enc_padding)
@@ -576,11 +576,12 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     self.context = tf.pad(
                         self.context,
                         [[0, 0],
-                         [0, max_decoding_length - tf.shape(self.context)[1]]]
+                         [0, max_decoding_length - shape_list(self.context)[1]]]
                     )
 
                 outputs, _, sequence_lengths = dynamic_decode(
-                    decoder=self, impute_finished=impute_finished,
+                    decoder=self,
+                    impute_finished=impute_finished,
                     maximum_iterations=max_decoding_length,
                     output_time_major=False,
                     scope=self.variable_scope)
@@ -607,7 +608,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 if helper is not None:
                     raise ValueError("Must not set 'beam_width' and 'helper' "
                                      "simultaneously.")
-                _batch_size = tf.shape(start_tokens)[0]
+                _batch_size = shape_list(start_tokens)[0]
                 self._cache = self._init_cache(memory, memory_attention_bias,
                                                beam_search_decoding=True,
                                                batch_size=_batch_size)

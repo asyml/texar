@@ -40,6 +40,7 @@ from tensorflow.python.ops.distributions import bernoulli
 from tensorflow.python.ops.distributions import categorical
 from tensorflow.python.util import nest
 
+from texar.utils.shapes import shape_list
 from texar.utils.utils import get_args
 
 __all__ = [
@@ -204,7 +205,7 @@ class TrainingHelper(Helper):
             self._zero_inputs = nest.map_structure(
                 lambda inp: array_ops.zeros_like(inp[0, :]), inputs)
 
-            self._batch_size = array_ops.size(sequence_length)
+            self._batch_size = shape_list(sequence_length)
 
     @property
     def inputs(self):
@@ -548,7 +549,7 @@ class GreedyEmbeddingHelper(Helper):
             end_token, dtype=dtypes.int32, name="end_token")
         if self._start_tokens.get_shape().ndims != 1:
             raise ValueError("start_tokens must be a vector")
-        self._batch_size = array_ops.size(start_tokens)
+        self._batch_size = shape_list(start_tokens)[0]
         if self._end_token.get_shape().ndims != 0:
             raise ValueError("end_token must be a scalar")
 
