@@ -135,7 +135,6 @@ def main():
         memory=encoder_output,
         memory_sequence_length=encoder_input_length,
         inputs=tgt_input_embedding,
-        sequence_length=decoder_input_length,
         decoding_strategy='train_greedy',
         mode=tf.estimator.ModeKeys.TRAIN
     )

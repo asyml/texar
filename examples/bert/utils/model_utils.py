@@ -24,14 +24,15 @@ def transform_bert_to_texar_config(input_json):
         'name': 'word_embeddings',
         'dim': hidden_dim}
     configs['vocab_size'] = config_ckpt['vocab_size']
+
     configs['segment_embed'] = {
         'name': 'token_type_embeddings',
         'dim': hidden_dim}
     configs['type_vocab_size'] = config_ckpt['type_vocab_size']
+
     configs['position_embed'] = {
         'name': 'position_embeddings',
         'dim': hidden_dim}
-
     configs['position_size'] = config_ckpt['max_position_embeddings']
 
     configs['encoder'] = {
