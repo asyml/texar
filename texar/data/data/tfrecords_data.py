@@ -75,9 +75,10 @@ class TFRecordData(DataBase):
 
         .. code-block:: python
 
+            # Read data from TFRecord file
             hparams={
                 'dataset': {
-                    'files': 'image.tfrecord',
+                    'files': 'image1.tfrecord',
                     'feature_original_types': {
                         'height': ['tf.int64', 'FixedLenFeature'],
                         'width': ['tf.int64', 'FixedLenFeature'],
@@ -101,6 +102,40 @@ class TFRecordData(DataBase):
             #        'image_raw': ['...'],
             #    }
             # }
+            # 'image_raw' is a list of image data bytes.
+
+            ...
+
+            # Read image data from TFRecord file and do resizing
+            hparams={
+                'dataset': {
+                    'files': 'image2.tfrecord',
+                    'feature_original_types': {
+                        'label': ['tf.int64', 'FixedLenFeature'],
+                        'image_raw': ['tf.string', 'FixedLenFeature']
+                    },
+                    'image_options': {
+                        'image_feature_name': 'image_raw',
+                        'resize_height': 512,
+                        'resize_width': 512,
+                    }
+                },
+                'batch_size': 1
+            }
+            data = TFRecordData(hparams)
+            iterator = DataIterator(data)
+            batch = iterator.get_next()
+
+            iterator.switch_to_dataset(sess) # initializes the dataset
+            batch_ = sess.run(batch)
+            # batch_ == {
+            #    'data': {
+            #        'label': [1],
+            #        'image_raw': [...],
+            #    }
+            # }
+            # "image_raw" is a list of "numpy.ndarray" images, with
+            # width is 512 and height is 512.
     """
 
     def __init__(self, hparams):
@@ -204,13 +239,16 @@ class TFRecordData(DataBase):
 
                 - "image_feature_name":
                     A `str`, the name of the feature which contains
-                    the image data.
+                    the image data. If set, the image data
+                    will be read in format `numpy.ndarray`.
                 - "resize_height":
                     A `int`, the height of the image after resizing.
                 - "resize_width":
                     A `int`, the width of the image after resizing
 
-                If not set, image data resizing will not be performed.
+                If either `resize_height` or `resize_width` is not set,
+                image data resizing will not be performed and the image
+                data will be read in original shape.
             "num_shards": int, optional
                 The number of shards in distributed mode. Usually the
                 shards number of the workflows.
