@@ -107,15 +107,6 @@ class MultiAlignedData(TextDataBase):
                     {'files': 'a.txt', 'vocab_file': 'v.a', 'data_name': 'x'},
                     {'files': 'b.txt', 'vocab_file': 'v.b', 'data_name': 'y'},
                     {'files': 'c.txt', 'data_type': 'int', 'data_name': 'z'}
-                    {
-                        'files': 'd.tfrecords',
-                        'data_type': 'tf_record',
-                        "feature_original_types": {
-                            'nunber': ['tf.int64', 'FixedLenFeature'],
-                            'text': ['tf.string', 'FixedLenFeature'],
-                        },
-                        'data_name': 't',
-                    }
                 ]
                 'batch_size': 1
             }
@@ -133,8 +124,44 @@ class MultiAlignedData(TextDataBase):
             #    'y_text_ids': [['1', '6', '10', '20', '2']],
             #    'y_length': [5],
             #    'z': [1000],
-            #    't_number': [128],
-            #    't_text': [b't sequence']
+            # }
+            
+            ...
+
+            hparams={
+                'datasets': [
+                    {'files': 'd.txt', 'vocab_file': 'v.d', 'data_name': 'm'},
+                    {
+                        'files': 'd.tfrecords',
+                        'data_type': 'tf_record',
+                        "feature_original_types": {
+                            'image': ['tf.string', 'FixedLenFeature']
+                        },
+                        'image_options': {
+                            'image_feature_name': 'image',
+                            'resize_height': 512,
+                            'resize_width': 512,
+                        },
+                        'data_name': 't',
+                    }
+                ]
+                'batch_size': 1
+            }
+            data = MultiAlignedData(hparams)
+            iterator = DataIterator(data)
+            batch = iterator.get_next()
+
+            iterator.switch_to_dataset(sess) # initializes the dataset
+            batch_ = sess.run(batch)
+            # batch_ == {
+            #    'x_text': [['<BOS>', 'NewYork', 'City', 'Map', '<EOS>']],
+            #    'x_text_ids': [['1', '100', '80', '65', '2']],
+            #    'x_length': [5],
+            #
+            #    # "t_image" is a list of a "numpy.ndarray" image
+            #    # in this example. Its width equals to 512 and
+            #    # its height equals to 512.
+            #    't_image': [...]
             # }
 
     """

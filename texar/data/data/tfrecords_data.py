@@ -102,10 +102,12 @@ class TFRecordData(DataBase):
             #        'height': [239],
             #        'width': [149],
             #        'label': [1],
+            #
+            #        # 'image_raw' is a list of image data bytes in this
+            #        # example.
             #        'image_raw': ['...'],
             #    }
             # }
-            # 'image_raw' is a list of image data bytes.
 
             ...
 
@@ -134,11 +136,14 @@ class TFRecordData(DataBase):
             # batch_ == {
             #    'data': {
             #        'label': [1],
-            #        'image_raw': [...],
+            #
+            #        # "image_raw" is a list of a "numpy.ndarray" image
+            #        # in this example. Its width equals to 512 and
+            #        # its height equals to 512.
+            #        'image_raw': [...]
             #    }
             # }
-            # "image_raw" is a list of "numpy.ndarray" images, with
-            # width is 512 and height is 512.
+
     """
 
     def __init__(self, hparams):
