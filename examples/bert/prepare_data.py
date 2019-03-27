@@ -63,10 +63,10 @@ def prepare_data():
         "SST": "SST-2",
     }
     
-    data_dir = 'data/{}'.format(FLAGS.task.upper())
+    data_dir = 'data/{}'.format(FLAGS.task)
     if FLAGS.task.upper() in task_datasets_rename:
         data_dir = 'data/{}'.format(
-            task_datasets_rename[FLAGS.task.upper()])
+            task_datasets_rename[FLAGS.task])
 
     if FLAGS.tfrecords_output_dir is None:
         tfrecords_output_dir = data_dir
@@ -79,7 +79,7 @@ def prepare_data():
         "XNLI": data_utils.XnliProcessor,
         'SST': data_utils.SSTProcessor
     }
-    processor = processors[FLAGS.task.upper()]()
+    processor = processors[FLAGS.task]()
 
     num_classes = len(processor.get_labels())
     num_train_data = len(processor.get_train_examples(data_dir))
