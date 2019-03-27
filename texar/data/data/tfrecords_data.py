@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,23 +53,26 @@ def _default_tfrecord_dataset_hparams():
             "files",
             "feature_original_types",
             "feature_convert_types",
-            "image_options"],
+            "image_options"
+        ],
     }
 
 class TFRecordData(DataBase):
-    """TFRecord data where each line of the files is a single data batch
-    content, e.g., a single image data example.
+    """TFRecord data which loads and processes TFRecord files.
+
+    This module can be used to process image data, features, etc.
 
     Args:
         hparams (dict): Hyperparameters. See :meth:`default_hparams`
-        for the defaults.
+            for the defaults.
 
-    The processor reads and restores data from TFRecords file and
-    results in a TF Dataset whose element is a python `dict` including
-    field(s) of the feature(s) data from input TFRecords files
-    each field contains the restored data for the feature of the same
-    name, which is from the key in
-    :attr:`hparams["dataset"]["feature_original_types"]`
+    The module reads and restores data from TFRecord files and
+    results in a TF Dataset whose element is a Python `dict` that maps feature
+    names to feature values. The features names and dtypes are specified in
+    :attr:`hparams["dataset"]["feature_original_types"]`.
+
+    The module also provides simple processing options for image data, such
+    as image resize.
 
     Example:
 
@@ -180,56 +183,60 @@ class TFRecordData(DataBase):
         1. For the hyperparameters in the :attr:`"dataset"` field:
 
             "files" : str or list
-                A (list of) TFRecords file path(s).
+                A (list of) TFRecord file path(s).
 
             "feature_original_types" : dict
                 The feature names (str) with their data types and length types,
                 key and value in pair
-                `<feature_name: [dtype, feature_len_type, len]>`, type of
-                `dtype` can be `tf DType <DType>` or `str`, e.g., 'tf.int32',
-                'tf.float32', etc.
+                `feature_name: [dtype, feature_len_type, len]`,
 
-                - `feature_len_type` is of type `str` and can be \
+                - `dtype` is a :tf_main:`TF Dtype <dtypes/DType>` such as\
+                `tf.string` and `tf.int32`, or its string name such as \
+                'tf.string' and 'tf.int32'. The feature will be read from the\
+                files and parsed into this dtype.
+
+                - `feature_len_type` is of type `str`, and can be either \
                 'FixedLenFeature' or 'VarLenFeature' for fixed length \
-                features and non-fixed length features respectively.
+                features and non-fixed length features, respectively.
 
-                - `len` is optional, it is the length for the \
-                'FixedLenFeature', can be a `int`.
+                - `len` is an `int` and is optional. It is the length for \
+                'FixedLenFeature'. Ignored if 'VarLenFeature' is used.
 
-                E.g. it can be used as follows:
+                Example:
 
                 .. code-block:: python
 
                     ...
                     feature_original_types = {
                         "input_ids": ["tf.int64", "FixedLenFeature", 128],
-                        "input_mask": ["tf.int64", "FixedLenFeature", 128],
-                        "segment_ids": ["tf.int64", "FixedLenFeature", 128],
+                        "label_ids": ["tf.int64", "FixedLenFeature"],
                         "name_lists": ["tf.string", "VarLenFeature"],
-                        "label_ids": ["tf.int64", "FixedLenFeature"]
                     }
                     ...
 
             "feature_convert_types" : dict, optional
-                The feature names (str) with data types they are converted into,
-                key and value in pair  `<feature_name: dtype>`, `dtype`
-                can be a `tf DType <DType>` or `str`, e.g., 'tf.int32',
-                'tf.float32', etc. If not set, data type conversion
-                will not be performed.
+                Specifies dtype converting after reading the data files. This
+                `dict` maps feature names to desired data dtypes. For example,
+                you can first read a feature into dtype `tf.float64` by
+                specifying in "feature_original_types" above, and convert
+                the feature to dtype "tf.int64" by specifying here.
+                Features not specified here will not do dtype-convert.
+
+                - `dtype` is a :tf_main:`TF Dtype <dtypes/DType>` such as\
+                `tf.string` and `tf.int32`, or its string name such as \
+                'tf.string' and 'tf.int32'.
 
                 Be noticed that this converting process is after all the data
                 are restored, `feature_original_types` has to be set firstly.
 
-                E.g. it can be used as follows:
+                Example:
 
                 .. code-block:: python
 
                     ...
                     feature_convert_types = {
                         "input_ids": "tf.int32",
-                        "input_mask": "tf.int32",
                         "label_ids": "tf.int32",
-                        "segment_ids": "tf.int32"
                     }
                     ...
 
@@ -250,14 +257,17 @@ class TFRecordData(DataBase):
                 image data resizing will not be performed and the image
                 data will be read in original shape.
             "num_shards": int, optional
-                The number of shards in distributed mode. Usually the
-                shards number of the workflows.
-                Combined with :attr:`"shard_id"`.
+                The number of data shards in distributed mode. Usually set to
+                the number of processes in distributed computing.
+                Used in combination with :attr:`"shard_id"`.
             "shard_id": int, optional
-                Set the unique id to identify a shard, the module will
-                process the corresponding shard of total data.
-                Combined with :attr:`"num_shards"`. E.g. 2 gpus are
-                distributed with equal workflows.
+                Sets the unique id to identify a shard. The module will
+                processes only the corresponding shard of the whole data.
+                Used in combination with :attr:`"num_shards"`.
+
+                E.g., in a case of distributed computing on 2 GPUs, the hparams
+                of the data module for the two processes can be as below,
+                respectively.
 
                 For gpu 0:
 
@@ -284,6 +294,8 @@ class TFRecordData(DataBase):
                         ...
                     }
                     ...
+
+                Also refer to `examples/bert` for a use case.
 
             "other_transformations" : list
                 A list of transformation functions or function names/paths to
@@ -379,3 +391,10 @@ class TFRecordData(DataBase):
             A list of strings.
         """
         return sorted(list(self._dataset.output_types.keys()))
+
+    @property
+    def feature_names(self):
+        """A list of feature names.
+        """
+        return self.list_items()
+
