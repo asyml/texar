@@ -9,6 +9,7 @@ In sum, this example showcases:
 * Use of pre-trained Google BERT models in Texar
 * Building and fine-tuning on downstream tasks
 * Distributed training of the models
+* Use of Texar `TFRecordData` module for data loading and processing
 
 ## Quick Start
 
@@ -24,7 +25,7 @@ Under `bert_pretrained_models/uncased_L-12_H-768_A-12`, you can find 5 files, wh
 
 ### Download Dataset
 
-We explain the use of the example code based on the Microsoft Research Paraphrase Corpus (MRPC) corpus for sentence classification. 
+We explain the use of the example code based on the Microsoft Research Paraphrase Corpus (MRPC) corpus for sentence classification.
 
 Download the data with the following cmd
 ```
@@ -34,29 +35,30 @@ By default, it will download the MRPC dataset into the `data` directory. FYI, th
 
 ### Prepare data
 
-To generate TFRecords files for training, evaluation and test, run the following cmd, this will generate `train.tf_record`, `eval.tf_record` and `test.tf_record` under `data/{task_dataset}`, `task_dataset` is the task dataset that downloaded from the last step ***Download Dataset***, E.g., the `data/{task_dataset}` should be `data/MRPC` by default.
-
-Also, this will modify the default data configuration file `config_data.py`, if that file exist, it will overwrite the variable `max_seq_length` with the value from input parameter `--max_seq_length`, and variables `num_classes` and `num_train_data` with values computed based on the task dataset.
-
+We first preprocess the downloaded raw data into [TFRecord](https://www.tensorflow.org/tutorials/load_data/tf_records) files. The preprocessing tokenizes raw text with BPE encoding, truncates sequences, adds special tokens, etc.
+Run the following cmd to this end: 
 ```
     python prepare_data.py --task=MRPC
     [--max_seq_length=128]
     [--vocab_file=bert_pretrained_models/uncased_L-12_H-768_A-12/vocab.txt]
     [--tfrecords_output_dir=data/MRPC] 
 ```
-- `task`: Specifies which dataset to experiment on.
-- `max_seq_length`: The maxium length of sequence, longer sequence will be trimmed.
-- `vocab_file`: Path of vocabary file that bert uses for training
-- `tfrecords_output_dir`: The output path where TFRecord files will be generated.
+- `task`: Specifies the dataset name to preprocess. BERT provides default support for `{'CoLA', 'MNLI', 'MRPC', 'XNLI', 'SST'}` data.
+- `max_seq_length`: The maxium length of sequence. This includes BERT special tokens that will be automatically added. Longer sequence will be trimmed. 
+- `vocab_file`: Path to a vocabary file used for tokenization.
+- `tfrecords_output_dir`: The output path where the resulting `TFRecord` files will be put in. Be default, it is set to `data/{task}` where `{task}` is the (upper-cased) dataset name specified in `--task` above. So in the above cmd, the `TFRecord` files are put in `data/MRPC`.
 
-The cmd will generate printed logging as follows:
-```
+**Outcome of the Preprocessing**:
+- The preprocessing will output 3 TFRecord data files `{train.tf_record, eval.tf_record, test.tf_record}` in the specified output directory.
+- The cmd also prints logs as follows:
+  ```
     INFO:tensorflow:Loading data
     INFO:tensorflow:num_classes:2; num_train_data:3668
     INFO:tensorflow:config_data.py has been updated
     INFO:tensorflow:Data preparation finished
-```
-**Please be noticed** that variables `num_classes` and `num_train_data` are required for the building of model and training process respectively, and `max_seq_length` is required for reading data from TFRecords files, they should all exist in the data configuration file. Since we use `config_data.py` as our default data configuration file, we should make sure these variables are all configured in `config_data.py`.
+  ```
+  **Note that** the data info `num_classes` and `num_train_data`, as well as `max_seq_length` specified in the cmd, are required for BERT training in the following. They should be specified in the data configuration file (e.g., `config_data.py`) passed to BERT training (see below). 
+- For convenience, the above cmd automatically writes `num_classes`, `num_train_data` and `max_seq_length` to `config_data.py`.
 
 ### Train and Evaluate
 
@@ -71,9 +73,9 @@ For **single-GPU** training (and evaluation), run the following cmd. The trainin
 Here:
 
 - `config_bert_pretrain`: Specifies the architecture of pre-trained BERT model to use.
-- `config_downstream`: Configuration of the downstream part. In this example, [`config_classifier.py`](https://github.com/asyml/texar/blob/master/examples/bert/bert_classifier_main.py) configs the classification layer and the optimization method.
-- `config_data`: The data configuration. ***Be noticed***: the data configuration file should contain `num_classes`, `num_train_data` and `max_seq_length`; The `tfrecord_data_dir` should match the `tfrecords_output_dir`, which is the directory of the TFRecords files generated from the last step ***Prepare data***.
-- `output_dir`: The output path where checkpoints and summaries for tensorboard visualization are saved.
+- `config_downstream`: Configuration of the downstream part. In this example, [`config_classifier.py`](https://github.com/asyml/texar/blob/master/examples/bert/bert_classifier_main.py) configures the classification layer and the optimization method.
+- `config_data`: The data configuration. See the default [`config_data.py`](https://github.com/TomNong/texar/blob/bert-add-TFrecord-module-refined/examples/bert/config_data.py). Make sure to specify `num_classes`, `num_train_data`, `max_seq_length`, and `tfrecord_data_dir` as used or output in the above [data preparation](https://github.com/TomNong/texar/tree/bert-add-TFrecord-module-refined/examples/bert#prepare-data) step.
+- `output_dir`: The output path where checkpoints and TensorBoard summaries are saved.
 
 For **Multi-GPU training** on one or multiple machines, you may first install the prerequisite OpenMPI and Hovorod packages, as detailed in the [distributed_gpu](https://github.com/asyml/texar/tree/master/examples/distributed_gpu) example. 
 
@@ -98,7 +100,7 @@ The key configurations of multi-gpu training:
 
 Please refer to [distributed_gpu](https://github.com/asyml/texar/tree/master/examples/distributed_gpu) example for more details of the other multi-gpu configurations.
 
-Note that we also specified the `--distributed` flag for multi-gpu training.
+Make sure to specifiy the `--distributed` flag as above for multi-gpu training.
 
 &nbsp;
 
@@ -118,9 +120,9 @@ The output is by default saved in `output/test_results.tsv`, where each line con
 
 ## Use other datasets/tasks
 
-`bert_classifier_main.py` also support other datasets/tasks. To do this, specify a different value to the `--task` flag, and use `prepare_data.py` to create data of preparation and data configuration file, then use the corresponding data configuration file. 
+`bert_classifier_main.py` also support other datasets/tasks. To do this, specify a different value to the `--task` flag when running [data preparation](https://github.com/TomNong/texar/tree/bert-add-TFrecord-module-refined/examples/bert#prepare-data).
 
-For example, use the following commands to download the SST (Stanford Sentiment Treebank) dataset and run for sentence classification.
+For example, use the following commands to download the SST (Stanford Sentiment Treebank) dataset and run for sentence classification. Make sure to specify the correct data path and other info in the data configuration file.
 ```
 python data/download_glue_data.py --tasks=SST
 python prepare_data.py --task=SST
