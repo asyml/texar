@@ -252,15 +252,14 @@ class TFRecordData(DataBase):
                 - "image_feature_name":
                     A `str`, the name of the feature which contains
                     the image data. If set, the image data
-                    will be read in format `numpy.ndarray`.
+                    will be restored in format `numpy.ndarray`.
                 - "resize_height":
                     A `int`, the height of the image after resizing.
                 - "resize_width":
                     A `int`, the width of the image after resizing
 
                 If either `resize_height` or `resize_width` is not set,
-                image data resizing will not be performed and the image
-                data will be read in original shape.
+                image data will be restored with original shape.
             "num_shards": int, optional
                 The number of data shards in distributed mode. Usually set to
                 the number of processes in distributed computing.

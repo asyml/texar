@@ -473,34 +473,42 @@ class TFRecordDataDecoder(data_decoder.DataDecoder):
     specified data type that can be accessed by features.
 
     Args:
-        feature_original_types (dict): The `dict` contains the feature name
-            of TFRecord data as key, which is of type `str`, and the list
-            `[dtype, feature_len_type, len]` as value.
-            In the list, `dtype` is the :tf_main:`tf DType <DType>`
-            of the feature, e.g., 'tf.int32', tf.float32,
-            type can be `tf DType <DType>` or 'str'
-            The `feature_len_type` is name of the feature length type to
-            tell if the feature has fixed length or non-fixed length,
-            can be 'FixedLenFeature' or 'VarLenFeature' respectively.
-            The `len` is optional, it is the length for the 'FixedLenFeature',
-            can be of type `int`
-        feature_convert_types (dict, optional): A `dict` used to convert
-            the feature `dtype` in the output. Key is the feature name of
-            TFRecord data, which is of type `str`; Value is
-            :tf_main:`tf DType <DType>` that feature data is cast into,
-            can be 'tf.int32', tf.float32,
-            type can be `tf DType <DType>` or 'str'
-            If not given, feature data conversion will not be performed.
-        image_options (dict, optional): Specify the image feature and
-            resize the image data, which is a `dict` including three fields:
+        "feature_original_types" (dict): The feature names (str) with their
+            data types and length types, key and value in pair
+            `<feature_name: [dtype, feature_len_type, len]>`, type of
+            `dtype` can be `tf DType <DType>` or `str`, e.g., 'tf.int32',
+            'tf.float32', etc.
 
-                - "image_feature_name":
-                    Type of `str`, the name of the feature which containing
-                    the image data.
-                - "resize_height":
-                    Type of `int`, the height of the image after resizing.
-                - "resize_width":
-                    Type of `int`, the width of the image after resizing
+            - `feature_len_type` is of type `str` and can be \
+            'FixedLenFeature' or 'VarLenFeature' for fixed length \
+            features and non-fixed length features respectively.
+
+            - `len` is optional, it is the length for the \
+                'FixedLenFeature', can be a `int`.
+
+        "feature_convert_types" (dict, optional): The feature names (str)
+            with data types they are converted into, key and value in pair
+            `<feature_name: dtype>`, `dtype` can be a `tf DType <DType>` or
+            `str`, e.g., 'tf.int32', 'tf.float32', etc. If not set, data type
+            conversion will not be performed.
+
+            Be noticed that this converting process is after all the data
+            are restored, `feature_original_types` has to be set firstly.
+
+        "image_options" (dict, optional): Specifies the image feature name
+            and performs image resizing, includes three fields:
+
+            - "image_feature_name":
+                A `str`, the name of the feature which contains
+                the image data. If set, the image data
+                will be restored in format `numpy.ndarray`.
+            - "resize_height":
+                A `int`, the height of the image after resizing.
+            - "resize_width":
+                A `int`, the width of the image after resizing
+
+            If either `resize_height` or `resize_width` is not set,
+            image data will be restored with original shape.
     """
 
     def __init__(self,
