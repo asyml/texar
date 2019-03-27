@@ -96,7 +96,9 @@ def prepare_data():
         data_dir=data_dir,
         max_seq_length=FLAGS.max_seq_length,
         output_dir=tfrecords_output_dir)
+    modify_config_data()
 
+def modify_config_data()
     # Modify the data configuration file
     config_data_exists = os.path.isfile('./config_data.py')
     if config_data_exists:
