@@ -31,7 +31,7 @@ flags = tf.flags
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string(
-    "task", "mrpc",
+    "task", "MRPC",
     "The task to run experiment on. One of "
     "{'COLA', 'MNLI', 'MRPC', 'XNLI', 'SST'}.")
 flags.DEFINE_string(
@@ -70,6 +70,8 @@ def prepare_data():
 
     if FLAGS.tfrecords_output_dir is None:
         tfrecords_output_dir = data_dir
+    else: 
+        tfrecords_output_dir = FLAGS.tfrecords_output_dir
     tx.utils.maybe_create_dir(tfrecords_output_dir)
 
     processors = {
@@ -96,9 +98,9 @@ def prepare_data():
         data_dir=data_dir,
         max_seq_length=FLAGS.max_seq_length,
         output_dir=tfrecords_output_dir)
-    modify_config_data()
+    modify_config_data(FLAGS.max_seq_length, num_train_data, num_classes)
 
-def modify_config_data()
+def modify_config_data(max_seq_length, num_train_data, num_classes):
     # Modify the data configuration file
     config_data_exists = os.path.isfile('./config_data.py')
     if config_data_exists:
@@ -116,12 +118,21 @@ def modify_config_data()
                     filedata_lines.pop(idx)
                     idx -= 1
                 idx += 1
+
+            if len(filedata_lines) > 0:
+                insert_idx = 1
+            else:
+                insert_idx = 0
             filedata_lines.insert(
-                0, '{} = {}'.format("max_seq_length", FLAGS.max_seq_length))
-            filedata_lines.append(
-                '{} = {}'.format("num_classes", num_classes))
-            filedata_lines.append(
-                '{} = {}'.format("num_train_data", num_train_data))
+                insert_idx, '{} = {}'.format(
+                    "num_train_data", num_train_data))
+            filedata_lines.insert(
+                insert_idx, '{} = {}'.format(
+                    "num_classes", num_classes))
+            filedata_lines.insert(
+                insert_idx, '{} = {}'.format(
+                    "max_seq_length", max_seq_length))
+
         with open("./config_data.py", 'w') as file:
             file.write('\n'.join(filedata_lines))
         tf.logging.info("config_data.py has been updated")

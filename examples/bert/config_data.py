@@ -1,5 +1,7 @@
 tfrecord_data_dir = "data/MRPC"
 max_seq_length = 128
+num_classes = 2
+num_train_data = 3668
 train_batch_size = 32
 max_train_epoch = 3
 display_steps = 50
@@ -80,7 +82,3 @@ test_hparam = {
     
     "shuffle": False
 }
-
-
-num_classes = 2
-num_train_data = 3668
