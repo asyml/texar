@@ -33,7 +33,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string(
     "task", "mrpc",
     "The task to run experiment on. One of "
-    "{'cola', 'mnli', 'mrpc', 'xnli', 'sst'}.")
+    "{'COLA', 'MNLI', 'MRPC', 'XNLI', 'SST'}.")
 flags.DEFINE_string(
     "vocab_file", 'bert_pretrained_models/uncased_L-12_H-768_A-12/vocab.txt',
     "The one-wordpiece-per-line vocabary file directory.")
@@ -73,13 +73,13 @@ def prepare_data():
     tx.utils.maybe_create_dir(tfrecords_output_dir)
 
     processors = {
-        "cola": data_utils.ColaProcessor,
-        "mnli": data_utils.MnliProcessor,
-        "mrpc": data_utils.MrpcProcessor,
-        "xnli": data_utils.XnliProcessor,
-        'sst': data_utils.SSTProcessor
+        "COLA": data_utils.ColaProcessor,
+        "MNLI": data_utils.MnliProcessor,
+        "MRPC": data_utils.MrpcProcessor,
+        "XNLI": data_utils.XnliProcessor,
+        'SST': data_utils.SSTProcessor
     }
-    processor = processors[FLAGS.task.lower()]()
+    processor = processors[FLAGS.task.upper()]()
 
     num_classes = len(processor.get_labels())
     num_train_data = len(processor.get_train_examples(data_dir))
