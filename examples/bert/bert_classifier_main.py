@@ -188,6 +188,8 @@ def main(_):
         """Trains on the training set, and evaluates on the dev set
         periodically.
         """
+        iterator.restart_dataset(sess, 'train')
+        
         fetches = {
             'train_op': train_op,
             'loss': loss,
@@ -212,8 +214,6 @@ def main(_):
                 if _is_head() and eval_steps > 0 and step % eval_steps == 0:
                     _eval_epoch(sess)
 
-                if rets['step'] == num_train_steps:
-                    break
             except tf.errors.OutOfRangeError:
                 break
 
@@ -296,8 +296,8 @@ def main(_):
         iterator.initialize_dataset(sess)
 
         if FLAGS.do_train:
-            iterator.restart_dataset(sess, 'train')
-            _train_epoch(sess)
+            for i in range(config_data.max_train_epoch):
+                _train_epoch(sess)
             saver.save(sess, FLAGS.output_dir + '/model.ckpt')
 
         if FLAGS.do_eval:

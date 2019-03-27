@@ -44,9 +44,6 @@ train_hparam = {
         "files": "{}/train.tf_record".format(tfrecord_data_dir)
     },
 
-    # Repeating
-    "num_epochs": -1,
-
     "shuffle": True,
     "shuffle_buffer_size": 100
 }
@@ -61,9 +58,6 @@ eval_hparam = {
         "files": "{}/eval.tf_record".format(tfrecord_data_dir)
     },
 
-    # Non-repeating
-    "num_epochs": 1,
-
     "shuffle": False
 }
 
@@ -76,9 +70,6 @@ test_hparam = {
         "feature_original_types": feature_original_types,
         "files": "{}/predict.tf_record".format(tfrecord_data_dir)
     },
-
-    # Non-repeating
-    "num_epochs": 1,
     
     "shuffle": False
 }
