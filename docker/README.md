@@ -4,7 +4,7 @@
 
 If you don't have Docker, please [install docker](https://docs.docker.com/engine/installation/) first.
 
-This Dockerfile is supplied to build image with Ubuntu 16.04, cuda 10.0 and cudnn v7. The image uses Miniconda to configure python environment. It uses python3.6 as default python, but you can pass `-e PYTHON_VERSION=x.y` flag in the building cmd to specify the python version for Miniconda, e.g. `-e PYTHON_VERSION=2.7` to use pytho2.7 in the image environment, otherwise leave it unset to use the default.
+This Dockerfile is supplied to build docker image with Ubuntu 16.04, cuda 10.0 and cudnn v7. The image uses Miniconda to configure python environment. It uses python3.6 by default, but you can pass `-e PYTHON_VERSION=x.y` flag in the building cmd to specify the python version for Miniconda, e.g. `-e PYTHON_VERSION=2.7` to use pytho2.7 in the image environment, otherwise leave it unset to use the default python3.6.
 
 The image need to be built from `texar` repo directory, because docker needs to copy `texar` repo into its filesystem to install `texar` into the image. So under current directory, run the following cmd to build image:
 
