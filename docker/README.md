@@ -20,7 +20,7 @@ To check if Texar is installed correctly, firstly run container shell from the i
 docker run -it texar /bin/bash
 ```
 
-Then import Texar in python, input the following cmd into container shell:
+Then import Texar in python, we can run the following cmd into container shell:
 
 ```bash
 python -c "import texar as tx;print(tx.data)"
