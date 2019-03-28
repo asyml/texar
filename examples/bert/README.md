@@ -37,10 +37,10 @@ Under `bert_pretrained_models/uncased_L-12_H-768_A-12`, you can find 5 files, wh
 For **single-GPU** training (and evaluation), run the following cmd. The training updates the classification layer and fine-tunes the pre-trained BERT parameters.
 ```
     python bert_classifier_main.py --do_train --do_eval
-    [--task=mrpc]
+    [--task=MRPC]
     [--config_bert_pretrain=uncased_L-12_H-768_A-12]
     [--config_downstream=config_classifier]
-    [--config_data=config_data_mrpc]
+    [--config_data=config_data]
     [--output_dir=output] 
 ```
 Here:
@@ -62,10 +62,10 @@ mpirun -np 2 \
     -mca pml ob1 -mca btl tcp,self \
     -mca btl_tcp_if_include ens3 \
     python bert_classifier_main.py --do_train --do_eval --distributed
-    [--task=mrpc]
+    [--task=MRCP]
     [--config_bert_pretrain=uncased_L-12_H-768_A-12]
     [--config_downstream=config_classifier]
-    [--config_data=config_data_mrpc]
+    [--config_data=config_data]
     [--output_dir=output] 
 ```
 The key configurations of multi-gpu training:
