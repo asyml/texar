@@ -73,7 +73,7 @@ For **single-GPU** training (and evaluation), run the following cmd. The trainin
 Here:
 
 - `config_bert_pretrain`: Specifies the architecture of pre-trained BERT model. Used to find architecture configs under `bert_pretrained_models/{config_bert_pretrain}`.
-- `config_downstream`: Configuration of the downstream part. In this example, [`config_classifier.py`](https://github.com/asyml/texar/blob/master/examples/bert/bert_classifier_main.py) configures the classification layer and the optimization method.
+- `config_downstream`: Configuration of the downstream part. In this example, [`config_classifier`](./config_classifier.py) configures the classification layer and the optimization method.
 - `config_data`: The data configuration. See the default [`config_data.py`](./config_data.py) for example. Make sure to specify `num_classes`, `num_train_data`, `max_seq_length`, and `tfrecord_data_dir` as used or output in the above [data preparation](#prepare-data) step.
 - `output_dir`: The output path where checkpoints and TensorBoard summaries are saved.
 
