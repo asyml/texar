@@ -69,7 +69,6 @@ def _main(_):
                  "max_decoding_length_infer": config.max_num_steps + 2})
     initial_state = decoder.zero_state(batch_size=batch_size,
                                        dtype=tf.float32)
-    g_variables = tx.utils.collect_trainable_variables([g_embedder, decoder])
 
     # ------------Pretrain Generator---------------
     outputs, _, _ = decoder(
@@ -84,6 +83,7 @@ def _main(_):
         sequence_length=data_batch["length"] - 1)
 
     global_step = tf.Variable(0, trainable=False)
+    g_variables = tx.utils.collect_trainable_variables([g_embedder, decoder])
     gen_train_op = tx.core.get_train_op(mle_loss,
                                         variables=g_variables,
                                         global_step=global_step,
@@ -110,7 +110,6 @@ def _main(_):
         hparams={"clas_strategy": "time_wise", "num_classes": 1})
     d_embedder = tx.modules.WordEmbedder(vocab_size=vocab_size,
                                          hparams=config.emb_hparams)
-    d_variables = tx.utils.collect_trainable_variables([discriminator, d_embedder])
 
     r_logits, _ = discriminator(d_embedder(data_batch["text_ids"][:, 1:]),
                                 sequence_length=data_batch["length"] - 1)
@@ -127,6 +126,7 @@ def _main(_):
     dis_loss = r_loss + f_loss
     dis_loss.set_shape(())
 
+    d_variables = tx.utils.collect_trainable_variables([discriminator, d_embedder])
     dis_train_op = tx.core.get_train_op(dis_loss,
                                         variables=d_variables,
                                         global_step=global_step,
