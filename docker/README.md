@@ -13,15 +13,15 @@ cd ..
 docker build -f docker/Dockerfile -t texar .
 ```
 
-## Check if Texar is installed
+## Check Texar installation
 
-Firstly run the image with its bash shell:
+To check if Texar is installed correctly, firstly run the image with its bash shell, use following cmd:
 
 ```bash
 docker run -it texar /bin/bash
 ```
 
-Then import Texar in python:
+Then import Texar in python, input the following cmd:
 
 ```bash
 python -c "import texar as tx;print(tx.data)"
