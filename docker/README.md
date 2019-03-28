@@ -21,7 +21,7 @@ Firstly run the image with its bash shell:
 docker run -it texar /bin/bash
 ```
 
-Then run Texar in python:
+Then import texar in python:
 
 ```bash
 python -c "import texar as tx;print(tx.data)"
