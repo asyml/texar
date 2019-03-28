@@ -2,25 +2,33 @@
 
 ## Build the docker image
 
-First [install docker](https://docs.docker.com/engine/installation/), and notice that [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) will be installed to run on Nvidia GPUs. Then in the main directory `#/texar` run the following command:
+If you don't have Docker, please [install docker](https://docs.docker.com/engine/installation/) first.
+
+This Dockerfile is supplied to build image with Ubuntu 16.04, cuda 10.0 and cudnn v7. The image uses Miniconda to configure python environment. It uses python3.6 as default python, but you can pass `-e PYTHON_VERSION=x.y` flag in the building cmd to specify the python version for Miniconda, e.g. `-e PYTHON_VERSION=2.7` to use pytho2.7 in the image environment, otherwise leave it unset to use the default.
+
+The image need to be built from `texar` repo directory, because docker needs to copy `texar` repo into its filesystem to install `texar` into the image. So under current directory, run the following cmd to build image:
 
 ```bash
+cd ..
 docker build -f docker/Dockerfile -t texar .
 ```
 
-To run the image with its bash shell:
+## Check if texar is installed
+
+Firstly run the image with its bash shell:
 
 ```bash
 docker run -it texar /bin/bash
 ```
 
-Then you can run Texar in python, e.g.:
+Then run Texar in python:
 
 ```bash
-#python -c "import texar as tx;print(tx.data)"
-<module 'texar.data' from '/opt/texar/texar/data/__init__.py'>
+python -c "import texar as tx;print(tx.data)"
 ```
 
-## Hosted containers
+If texar is installed, it should show:
 
-The image is based on Ubuntu 16.04, with cuda 9.0 and cuDNN 7
+```bash
+<module 'texar.data' from '/opt/texar/texar/data/__init__.py'>
+```
