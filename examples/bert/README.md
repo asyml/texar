@@ -74,7 +74,7 @@ Here:
 
 - `config_bert_pretrain`: Specifies the architecture of pre-trained BERT model. Used to find architecture configs under `bert_pretrained_models/{config_bert_pretrain}`.
 - `config_downstream`: Configuration of the downstream part. In this example, [`config_classifier.py`](https://github.com/asyml/texar/blob/master/examples/bert/bert_classifier_main.py) configures the classification layer and the optimization method.
-- `config_data`: The data configuration. See the default [`config_data.py`](https://github.com/TomNong/texar/blob/bert-add-TFrecord-module-refined/examples/bert/config_data.py) for example. Make sure to specify `num_classes`, `num_train_data`, `max_seq_length`, and `tfrecord_data_dir` as used or output in the above [data preparation](https://github.com/TomNong/texar/tree/bert-add-TFrecord-module-refined/examples/bert#prepare-data) step.
+- `config_data`: The data configuration. See the default [`config_data.py`](./config_data.py) for example. Make sure to specify `num_classes`, `num_train_data`, `max_seq_length`, and `tfrecord_data_dir` as used or output in the above [data preparation](#prepare-data) step.
 - `output_dir`: The output path where checkpoints and TensorBoard summaries are saved.
 
 For **Multi-GPU training** on one or multiple machines, you may first install the prerequisite OpenMPI and Hovorod packages, as detailed in the [distributed_gpu](https://github.com/asyml/texar/tree/master/examples/distributed_gpu) example. 
@@ -120,7 +120,7 @@ The output is by default saved in `output/test_results.tsv`, where each line con
 
 ## Use other datasets/tasks
 
-`bert_classifier_main.py` also support other datasets/tasks. To do this, specify a different value to the `--task` flag when running [data preparation](https://github.com/TomNong/texar/tree/bert-add-TFrecord-module-refined/examples/bert#prepare-data).
+`bert_classifier_main.py` also support other datasets/tasks. To do this, specify a different value to the `--task` flag when running [data preparation](#prepare-data).
 
 For example, use the following commands to download the SST (Stanford Sentiment Treebank) dataset and run for sentence classification. Make sure to specify the correct data path and other info in the data configuration file.
 ```
