@@ -65,8 +65,8 @@ class MultiAlignedDataTest(tf.test.TestCase):
             """Returns a bytes_list from a string / byte.
             """
             if not isinstance(value, (bytes)):
-                if sys.version_info < (3, 0):
-                    value = bytes(value)
+                if tuple(sys.version_info)[:2] < (3, 0):
+                    value = value.encode('utf8')
                 else:
                     value = bytes(value, 'utf8')
             return tf.train.Feature(
