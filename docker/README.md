@@ -9,7 +9,8 @@ This Dockerfile is supplied to build docker image with Ubuntu 16.04, cuda 10.0 a
 The image need to be built from `texar` repo directory, because docker needs to copy `texar` repo into its filesystem to install Texar into the image. So under current directory, run the following cmd to build image:
 
 ```bash
-cd .. && docker build -f docker/Dockerfile -t texar .
+cd .. 
+docker build -f docker/Dockerfile -t texar .
 ```
 
 ## Check Texar installation
