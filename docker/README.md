@@ -4,7 +4,7 @@
 
 If you don't have Docker, please [install docker](https://docs.docker.com/engine/installation/) first.
 
-This Dockerfile is supplied to build docker image with Ubuntu 16.04, cuda 10.0 and cudnn v7. The image uses Miniconda to configure python environment, ***Note that*** Tensorflow version is `1.13.0`. 
+This Dockerfile is supplied to build docker image with Ubuntu 16.04, cuda 10.0 and cudnn v7. The image uses Miniconda to configure python environment, ***Note that*** Tensorflow version is `1.13.0` in the environment. 
 
 The image need to be built from `texar` repo directory, because docker needs to copy `texar` repo into its filesystem to install Texar into the image. So under current directory, run the following cmds to build image:
 
