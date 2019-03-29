@@ -34,7 +34,7 @@ Then import Texar in python, we can run the following cmd into container shell:
 python -c "import texar as tx;print(tx.data)"
 ```
 
-If Texar is installed correctly, it should show:
+If Texar is installed correctly, the shell should return:
 
 ```bash
 <module 'texar.data' from '/opt/texar/texar/data/__init__.py'>
