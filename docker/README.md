@@ -13,7 +13,7 @@ cd ..
 docker build -f docker/Dockerfile -t texar .
 ```
 
-The Miniconda uses python3.6 by default, but you can pass `--build-arg PYTHON_VERSION=x.y` flag in the building cmd to specify the python version for Miniconda, e.g. `--build-arg PYTHON_VERSION=2.7` to use pytho2.7 in the image environment, otherwise leave it unset to use the default python3.6. E.g. under current directory, run following cmds to build image with python2.7:
+The Miniconda uses python3.6 by default, but you can pass `--build-arg PYTHON_VERSION=x.y` flag in the building cmd to specify the python version for Miniconda, otherwise leave it unset to use the default python3.6. E.g. under current directory, run following cmds to build image with python2.7:
 
 ```bash
 cd ..
