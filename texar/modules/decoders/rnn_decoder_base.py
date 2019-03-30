@@ -37,6 +37,7 @@ from texar.utils.mode import is_train_mode, is_train_mode_py
 from texar.module_base import ModuleBase
 from texar.modules.decoders import rnn_decoder_helpers
 from texar.utils.dtypes import is_callable
+from texar.utils.shapes import shape_list
 
 __all__ = [
     "RNNDecoderBase"
@@ -74,11 +75,11 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
 
         # Make the output layer
         self._vocab_size = vocab_size
-        self._output_layer = output_layer
 
         if is_callable(output_layer):
             self._output_layer = output_layer
         elif tf.contrib.framework.is_tensor(output_layer):
+            self._vocab_size = shape_list(output_layer)[1]
             self._output_layer = self._make_output_layer_from_tensor(
                 output_layer, self._vocab_size)
         elif output_layer is None:

@@ -116,13 +116,12 @@ class BasicRNNDecoder(RNNDecoderBase):
             Ignored if :attr:`cell` is given.
         vocab_size (int, optional): Vocabulary size. Required if
             :attr:`output_layer` is `None`.
-        output_layer (optional): An instance of
-            :tf_main:`tf.layers.Layer <layers/Layer>`, or
-            :tf_main:`tf.identity <identity>`. Apply to the RNN cell
-            output to get logits. If `None`, a dense layer
-            is used with output dimension set to :attr:`vocab_size`.
+        output_layer (optional): An instance of callable layer to transform
+            output to logits. Or a tensor which is used as the kernel weights
+            to transform hidden states into logits. If None, use `vocab_size`
+            and `hparams.output_layer_bias` to create the output layer.
             Set `output_layer=tf.identity` if you do not want to have an
-            output layer after the RNN cell outputs.
+            output layer after the cell outputs.
         hparams (dict, optional): Hyperparameters. Missing
             hyperparamerter will be set to default values. See
             :meth:`default_hparams` for the hyperparameter sturcture and
