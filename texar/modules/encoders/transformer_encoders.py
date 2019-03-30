@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -113,8 +113,17 @@ def default_transformer_poswise_net_hparams(output_dim=512):
 class TransformerEncoder(EncoderBase):
     """Transformer encoder that applies multi-head self attention for encoding
     sequences.
-    Stacked :class:`~texar.modules.encoders.MultiheadAttentionEncoder`,
+
+    This module basically stacks
+    :class:`~texar.modules.encoders.MultiheadAttentionEncoder`,
     :class:`~texar.modules.FeedForwardNetwork` and residual connections.
+
+    This module supports two types of architectures, namely, the standard
+    Transformer Encoder architecture first proposed in
+    `(Vaswani et al.) "Attention is All You Need"`, and
+    the variant first used in `(Devlin et al.)` BERT. See
+    :meth:`default_hparams` for the nuance between the two types of
+    architectures.
 
     Args:
         hparams (dict or HParams, optional): Hyperparameters. Missing
@@ -168,6 +177,7 @@ class TransformerEncoder(EncoderBase):
             {
                 "num_blocks": 6,
                 "dim": 512,
+                'use_bert_config': False,
                 "embedding_dropout": 0.1,
                 "residual_dropout": 0.1,
                 "poswise_feedforward": default_transformer_poswise_net_hparams,
@@ -182,7 +192,6 @@ class TransformerEncoder(EncoderBase):
                 },
                 "initializer": None,
                 "name": "transformer_encoder"
-                'use_bert_config': False,
             }
 
         Here:
@@ -214,7 +223,7 @@ class TransformerEncoder(EncoderBase):
                    connected *before* layer normalization.
 
         "embedding_dropout" : float
-            Dropout rate of the input word and position embeddings.
+            Dropout rate of the input embedding.
 
         "residual_dropout" :  float
             Dropout rate of the residual connections.
@@ -265,9 +274,10 @@ class TransformerEncoder(EncoderBase):
 
         Args:
             inputs: A 3D Tensor of shape `[batch_size, max_time, dim]`,
-                containing the word embeddings of input sequences. Note that
+                containing the embedding of input sequences. Note that
                 the embedding dimension `dim` must equal "dim" in
-                :attr:`hparams`.
+                :attr:`hparams`. The input embedding is typically an aggregation
+                of word embedding and position embedding.
             sequence_length: A 1D Tensor of shape `[batch_size]`. Input tokens
                 beyond respective sequence lengths are masked out
                 automatically.
