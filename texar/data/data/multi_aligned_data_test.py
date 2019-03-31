@@ -64,18 +64,19 @@ class MultiAlignedDataTest(tf.test.TestCase):
         def _bytes_feature(value):
             """Returns a bytes_list from a string / byte.
             """
-            if not isinstance(value, (bytes)):
-                if tuple(sys.version_info)[:2] < (3, 0):
-                    value = value.encode('utf8')
-                else:
-                    value = bytes(value, 'utf8')
+            value = tf.compat.as_bytes(
+                value,
+                encoding='utf-8'
+            )
             return tf.train.Feature(
                 bytes_list=tf.train.BytesList(value=[value]))
+
         def _int64_feature(value):
             """Returns an int64_list from a bool / enum / int / uint.
             """
             return tf.train.Feature(
                 int64_list=tf.train.Int64List(value=[value]))
+
         feature = {
             "number1": _int64_feature(128),
             "number2": _int64_feature(512),
