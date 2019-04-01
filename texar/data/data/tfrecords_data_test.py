@@ -43,11 +43,10 @@ class TFRecordDataTest(tf.test.TestCase):
             """Returns a bytes_list from a string / byte.
             """
             # pylint: disable=undefined-loop-variable
-            if not isinstance(value, (bytes)):
-                if sys.version_info < (3, 0):
-                    value = bytes(value)
-                else:
-                    value = bytes(value, 'utf8')
+            value = tf.compat.as_bytes(
+                value,
+                encoding='utf-8'
+            )
             return tf.train.Feature(
                 bytes_list=tf.train.BytesList(value=[value]))
 
