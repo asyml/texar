@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Data class that supports reading TFRecords data and data type converting.
+Data class that supports reading TFRecord data and data type converting.
 """
 
 from __future__ import absolute_import

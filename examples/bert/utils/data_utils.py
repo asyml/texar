@@ -459,7 +459,7 @@ def prepare_TFRecord_data(processor, tokenizer,
         max_seq_length: Max sequence length.
         batch_size: mini-batch size.
         model: `train`, `eval` or `test`.
-        output_dir: The directory to save the TFRecords in.
+        output_dir: The directory to save the TFRecord in.
     """
     label_list = processor.get_labels()
 

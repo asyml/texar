@@ -132,7 +132,7 @@ class MultiAlignedData(TextDataBase):
                 'datasets': [
                     {'files': 'd.txt', 'vocab_file': 'v.d', 'data_name': 'm'},
                     {
-                        'files': 'd.tfrecords',
+                        'files': 'd.tfrecord',
                         'data_type': 'tf_record',
                         "feature_original_types": {
                             'image': ['tf.string', 'FixedLenFeature']
