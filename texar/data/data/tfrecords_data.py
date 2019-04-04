@@ -109,7 +109,7 @@ class TFRecordData(DataBase):
             #    }
             # }
 
-            ...
+        .. code-block:: python
 
             # Read image data from TFRecord file and do resizing
             hparams={
@@ -138,8 +138,8 @@ class TFRecordData(DataBase):
             #        'label': [1],
             #
             #        # "image_raw" is a list of a "numpy.ndarray" image
-            #        # in this example. Its width equals to 512 and
-            #        # its height equals to 512.
+            #        # in this example. Each image has a width of 512 and
+            #        # height of 512.
             #        'image_raw': [...]
             #    }
             # }
