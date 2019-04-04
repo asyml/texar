@@ -69,6 +69,14 @@ Data
     :members:
     :inherited-members:
 
+:hidden:`TFRecordData`
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: texar.data.TFRecordData
+    :members:
+    :inherited-members:
+
+
 :hidden:`MultiAlignedData`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
