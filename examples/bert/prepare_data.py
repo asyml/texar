@@ -41,8 +41,10 @@ flags.DEFINE_integer(
     "max_seq_length", 128,
     "The maxium length of sequence, longer sequence will be trimmed.")
 flags.DEFINE_string(
-    "tfrecord_output_dir", 'data/MRPC',
-    "The output directory where the TFRecord files will be generated.")
+    "tfrecord_output_dir", None,
+    "The output directory where the TFRecord files will be generated. "
+    "By default it will be set to 'data/{task}'. E.g.: if "
+    "task is 'MRPC', it will be set as 'data/MRPC'")
 flags.DEFINE_bool(
     "do_lower_case", True,
     "Whether to lower case the input text. Should be True for uncased "

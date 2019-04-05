@@ -35,7 +35,7 @@ By default, it will download the MRPC dataset into the `data` directory. FYI, th
 
 ### Prepare data
 
-We first preprocess the downloaded raw data into [TFRecord](https://www.tensorflow.org/tutorials/load_data/tf_record) files. The preprocessing tokenizes raw text with BPE encoding, truncates sequences, adds special tokens, etc.
+We first preprocess the downloaded raw data into [TFRecord](https://www.tensorflow.org/tutorials/load_data/tf_records) files. The preprocessing tokenizes raw text with BPE encoding, truncates sequences, adds special tokens, etc.
 Run the following cmd to this end: 
 ```
     python prepare_data.py --task=MRPC
