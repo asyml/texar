@@ -582,7 +582,7 @@ class TFRecordDataDecoder(data_decoder.DataDecoder):
         items.
 
         Args:
-            data: The TFRecords data(serialized example) to decode.
+            data: The TFRecord data(serialized example) to decode.
             items: A list of strings, each of which is the name of the resulting
                 tensors to retrieve.
 
@@ -609,7 +609,7 @@ class TFRecordDataDecoder(data_decoder.DataDecoder):
                         dtypes.get_tf_dtype(value[0]))})
         decoded_data = tf.parse_single_example(data, feature_description)
 
-        # Handle TFRecords containing images
+        # Handle TFRecord containing images
         if isinstance(self._image_options, dict):
             self._decode_image_str_byte(
                 self._image_options,
