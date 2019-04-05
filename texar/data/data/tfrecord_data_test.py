@@ -104,11 +104,11 @@ class TFRecordDataTest(tf.test.TestCase):
             cat_in_snow: (213, 320, 3),
             williamsburg_bridge: (239, 194),
         }
-        _tfrecords_filepath = os.path.join(
+        _tfrecord_filepath = os.path.join(
             self._test_dir,
-            'test.tfrecords')
+            'test.tfrecord')
         # Prepare Validation data
-        with tf.python_io.TFRecordWriter(_tfrecords_filepath) as writer:
+        with tf.python_io.TFRecordWriter(_tfrecord_filepath) as writer:
             for image_path, label in _toy_image_labels_valid.items():
 
                 with open(image_path, 'rb') as fid:
@@ -136,7 +136,7 @@ class TFRecordDataTest(tf.test.TestCase):
             "batch_size": 1,
             "shuffle": False,
             "dataset": {
-                "files": _tfrecords_filepath,
+                "files": _tfrecord_filepath,
                 "feature_original_types": _feature_original_types,
                 "feature_convert_types": self._feature_convert_types,
                 "image_options": [_image_options],

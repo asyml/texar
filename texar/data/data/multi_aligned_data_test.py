@@ -80,15 +80,15 @@ class MultiAlignedDataTest(tf.test.TestCase):
         feature = {
             "number1": _int64_feature(128),
             "number2": _int64_feature(512),
-            "text": _bytes_feature("This is a sentence for TFRecords 词 词 。")
+            "text": _bytes_feature("This is a sentence for TFRecord 词 词 。")
         }
         data_example = tf.train.Example(
             features=tf.train.Features(feature=feature))
-        tfrecords_file = tempfile.NamedTemporaryFile(suffix=".tfrecords")
-        with tf.python_io.TFRecordWriter(tfrecords_file.name) as writer:
+        tfrecord_file = tempfile.NamedTemporaryFile(suffix=".tfrecord")
+        with tf.python_io.TFRecordWriter(tfrecord_file.name) as writer:
             writer.write(data_example.SerializeToString())
-        tfrecords_file.flush()
-        self._tfrecords_file = tfrecords_file
+        tfrecord_file.flush()
+        self._tfrecord_file = tfrecord_file
 
         # Construct database
         self._hparams = {
@@ -120,7 +120,7 @@ class MultiAlignedDataTest(tf.test.TestCase):
                     "data_name": "label"
                 },
                 { # dataset 4
-                    "files": self._tfrecords_file.name,
+                    "files": self._tfrecord_file.name,
                     "feature_original_types": {
                         'number1': ['tf.int64', 'FixedLenFeature'],
                         'number2': ['tf.int64', 'FixedLenFeature'],

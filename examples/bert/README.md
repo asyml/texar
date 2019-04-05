@@ -41,12 +41,12 @@ Run the following cmd to this end:
     python prepare_data.py --task=MRPC
     [--max_seq_length=128]
     [--vocab_file=bert_pretrained_models/uncased_L-12_H-768_A-12/vocab.txt]
-    [--tfrecords_output_dir=data/MRPC] 
+    [--tfrecord_output_dir=data/MRPC] 
 ```
 - `task`: Specifies the dataset name to preprocess. BERT provides default support for `{'CoLA', 'MNLI', 'MRPC', 'XNLI', 'SST'}` data.
 - `max_seq_length`: The maxium length of sequence. This includes BERT special tokens that will be automatically added. Longer sequence will be trimmed. 
 - `vocab_file`: Path to a vocabary file used for tokenization.
-- `tfrecords_output_dir`: The output path where the resulting TFRecord files will be put in. Be default, it is set to `data/{task}` where `{task}` is the (upper-cased) dataset name specified in `--task` above. So in the above cmd, the TFRecord files are output to `data/MRPC`.
+- `tfrecord_output_dir`: The output path where the resulting TFRecord files will be put in. Be default, it is set to `data/{task}` where `{task}` is the (upper-cased) dataset name specified in `--task` above. So in the above cmd, the TFRecord files are output to `data/MRPC`.
 
 **Outcome of the Preprocessing**:
 - The preprocessing will output 3 TFRecord data files `{train.tf_record, eval.tf_record, test.tf_record}` in the specified output directory.
