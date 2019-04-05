@@ -173,8 +173,8 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 affine_bias = tf.get_variable('affine_bias', [vocab_size])
 
         def _outputs_to_logits(outputs):
-            dim = self._hparams.dim
             shape = shape_list(outputs)
+            dim = shape[-1]
             outputs = tf.reshape(outputs, [-1, dim])
             logits = tf.matmul(outputs, output_layer_tensor)
             if affine_bias is not None:

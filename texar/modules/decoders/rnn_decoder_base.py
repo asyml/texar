@@ -92,6 +92,11 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 self._output_layer = tf.layers.Dense(
                     units=self._vocab_size,
                     use_bias=self._hparams.output_layer_bias)
+        else:
+            raise ValueError(
+                "output_layer should be tensor or callable layer or None."
+                "Unsupported type:", type(output_layer)
+            )
 
     @staticmethod
     def default_hparams():
@@ -457,6 +462,26 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 output_shape_with_unknown_batch)
             return nest.map_structure(lambda s: s[1:], layer_output_shape)
 
+    def _make_output_layer_from_tensor(self, output_layer_tensor):
+        """Creates an output layer from a Tensor.
+        """
+        affine_bias = None
+        vocab_size = self._vocab_size
+        if self._hparams.output_layer_xbias:
+            with tf.variable_scope(self.variable_scope):
+                affine_bias = tf.get_variable('affine_bias', [vocab_size])
+
+        def _outputs_to_logits(outputs):
+            shape = shape_list(outputs)
+            dim = shape[-1]
+            outputs = tf.reshape(outputs, [-1, dim])
+            logits = tf.matmul(outputs, output_layer_tensor)
+            if affine_bias is not None:
+                logits += affine_bias
+            logits = tf.reshape(logits, shape[:-1] + [vocab_size])
+            return logits
+
+        return _outputs_to_logits
     @property
     def batch_size(self):
         return self._helper.batch_size
