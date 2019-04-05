@@ -21,6 +21,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+# pylint: disable=no-name-in-module
+
 import abc
 
 import six
@@ -273,8 +275,13 @@ class ScheduledEmbeddingTrainingHelper(TrainingHelper):
         Args:
           inputs: A (structure of) input tensors.
           sequence_length: An int32 vector tensor.
-          embedding: A callable that takes a vector tensor of `ids` (argmax ids),
-            or the `params` argument for `embedding_lookup`.
+          embedding: A callable or the `params` argument for `embedding_lookup`.
+            If a callable, it can take a vector tensor of `ids` (argmax ids),
+            or take two arguments (`ids`, `times`), where `ids` is a vector
+            tensor of argmax ids, and `times` is a vector tensor of current
+            time steps (i.e., position ids). The latter case can be used when
+            attr:`embedding` is a combination of word embedding and position
+            embedding.
           sampling_probability: A 0D `float32` tensor: the probability of sampling
             categorically from the output ids instead of reading directly from the
             inputs.
@@ -294,7 +301,6 @@ class ScheduledEmbeddingTrainingHelper(TrainingHelper):
             else:
                 self._embedding_fn = (
                     lambda ids: embedding_ops.embedding_lookup(embedding, ids))
-            self._embedding_args_cnt = len(get_args(self._embedding_fn))
 
             self._embedding_args_cnt = len(get_args(self._embedding_fn))
             if self._embedding_args_cnt != 1 and self._embedding_args_cnt != 2:

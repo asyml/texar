@@ -21,7 +21,7 @@ from __future__ import print_function
 
 # pylint: disable=no-name-in-module, too-many-arguments, too-many-locals
 # pylint: disable=invalid-name, too-many-instance-attributes,
-# pylint: disable=too-many-branches
+# pylint: disable=too-many-branches, redefined-variable-type
 
 import collections
 
@@ -36,11 +36,12 @@ from texar.modules.encoders.transformer_encoders import \
     default_transformer_poswise_net_hparams
 from texar.modules.encoders.multihead_attention import \
     MultiheadAttentionEncoder
+from texar.modules.decoders.rnn_decoder_base import _make_output_layer
 from texar.modules.decoders import tf_helpers as tx_helper
 from texar.utils import beam_search, transformer_attentions as attn
 from texar.utils.shapes import shape_list
 from texar.utils.mode import is_train_mode
-from texar.utils.dtypes import is_callable
+
 
 __all__ = [
     "TransformerDecoderOutput",
@@ -71,12 +72,20 @@ class TransformerDecoder(ModuleBase, TFDecoder):
     Args:
         vocab_size (int, optional): Vocabulary size. Required if
             :attr:`output_layer` is `None`.
-        output_layer (optional): An instance of callable layer to transform
-            output to logits. Or a tensor which is used as the kernel weights
-            to transform hidden states into logits. If None, use `vocab_size`
-            and `hparams.output_layer_bias` to create the output layer.
-            Set `output_layer=tf.identity` if you do not want to have an
-            output layer after the outputs.
+        output_layer (optional): An output layer that transforms cell output
+            to logits. This can be:
+
+            - A callable layer, e.g., an instance \
+            of :tf_main:`tf.layers.Layer <layers/Layer>`.
+            - A tensor. A dense layer will be created using the tensor \
+            as the kernel weights. The bias of the dense layer is determined by\
+            `hparams.output_layer_bias`. This can be used to tie the output \
+            layer with the input embedding matrix, as proposed in \
+            https://arxiv.org/pdf/1608.05859.pdf
+            - `None`. A dense layer will be created based on attr:`vocab_size`\
+            and `hparams.output_layer_bias`.
+            - If no output layer after the cell output is needed, set \
+            `(vocab_size=None, output_layer=tf.identity)`.
 
     .. document private functions
     .. automethod:: _build
@@ -88,7 +97,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                  hparams=None):
         ModuleBase.__init__(self, hparams)
 
-        self._vocab_size = vocab_size
 
         with tf.variable_scope(self.variable_scope):
             if self._hparams.initializer:
@@ -96,27 +104,11 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     layers.get_initializer(self._hparams.initializer))
 
             # Make the output layer
-            if is_callable(output_layer):
-                self._output_layer = output_layer
-            elif tf.contrib.framework.is_tensor(output_layer):
-                self._vocab_size = shape_list(output_layer)[1]
-                self._output_layer = self._make_output_layer_from_tensor(
-                    output_layer)
-            elif output_layer is None:
-                if self._vocab_size is None:
-                    raise ValueError(
-                        "Either `output_layer` or `vocab_size` must be provided"
-                        " Set `output_layer=tf.identity` if no output layer is "
-                        "wanted.")
-                with tf.variable_scope(self.variable_scope):
-                    self._output_layer = tf.layers.Dense(
-                        units=self._vocab_size,
-                        use_bias=self._hparams.output_layer_bias)
-            else:
-                raise ValueError(
-                    "output_layer should be tensor or callable layer or None."
-                    "Unsupported type:", type(output_layer)
-                )
+            self._output_layer, self._vocab_size = _make_output_layer(
+                output_layer, vocab_size, self._hparams.output_layer_bias,
+                self.variable_scope)
+
+            # Make attention and poswise networks
             self.multihead_attentions = {
                 'self_att': [],
                 'encdec_att': []
@@ -165,28 +157,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             self.embedding = None
             self._helper = None
             self._cache = None
-
-    def _make_output_layer_from_tensor(self, output_layer_tensor):
-        """Creates an output layer from a Tensor. Used to tie word embedding
-        with the output layer weight.
-        """
-        affine_bias = None
-        vocab_size = self._vocab_size
-        if self._hparams.output_layer_bias:
-            with tf.variable_scope(self.variable_scope):
-                affine_bias = tf.get_variable('affine_bias', [vocab_size])
-
-        def _outputs_to_logits(outputs):
-            shape = shape_list(outputs)
-            dim = shape[-1]
-            outputs = tf.reshape(outputs, [-1, dim])
-            logits = tf.matmul(outputs, output_layer_tensor)
-            if affine_bias is not None:
-                logits += affine_bias
-            logits = tf.reshape(logits, shape[:-1] + [vocab_size])
-            return logits
-
-        return _outputs_to_logits
 
     @staticmethod
     def default_hparams():
@@ -364,9 +334,11 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                mode=None):
         """Performs decoding.
 
-        The interface is very similar to that of RNN decoders
-        (:meth:`texar.modules.RNNDecoderBase._build`), except the
-        `sequence_length` is not needed here.
+        The interface is mostly the same with that of RNN decoders
+        (see :meth:`~texar.modules.RNNDecoderBase._build`), except that
+        here `sequence_length` is not needed, and continuation generation is
+        additionally supported.
+
         The function provides **3 ways** to specify the decoding method, with
         varying flexibility:
 
@@ -376,7 +348,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
               feeding ground truth to decode the next step), and for each step
               sample is obtained by taking the `argmax` of logits.
               Argument :attr:`inputs` is required for this strategy.
-              :attr:`sequence_length` is optional.
             - **"infer_greedy"**: decoding in inference fashion (i.e., feeding
               `generated` sample to decode the next step), and for each step
               sample is obtained by taking the `argmax` of logits.

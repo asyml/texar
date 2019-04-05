@@ -40,8 +40,63 @@ from texar.utils.dtypes import is_callable
 from texar.utils.shapes import shape_list
 
 __all__ = [
-    "RNNDecoderBase"
+    "RNNDecoderBase",
+    "_make_output_layer"
 ]
+
+
+def _make_output_layer_from_tensor(output_layer_tensor, vocab_size,
+                                   output_layer_bias, variable_scope):
+    """Creates a dense layer from a Tensor. Used to tie word embedding
+    with the output layer weight.
+    """
+    affine_bias = None
+    if output_layer_bias:
+        with tf.variable_scope(variable_scope):
+            affine_bias = tf.get_variable('affine_bias', [vocab_size])
+
+    def _outputs_to_logits(outputs):
+        shape = shape_list(outputs)
+        dim = shape[-1]
+        outputs = tf.reshape(outputs, [-1, dim])
+        logits = tf.matmul(outputs, output_layer_tensor)
+        if affine_bias is not None:
+            logits += affine_bias
+        logits = tf.reshape(logits, shape[:-1] + [vocab_size])
+        return logits
+
+    return _outputs_to_logits
+
+
+def _make_output_layer(output_layer, vocab_size,
+                       output_layer_bias, variable_scope):
+    """Makes a decoder output layer.
+    """
+    _vocab_size = vocab_size
+    if is_callable(output_layer):
+        _output_layer = output_layer
+    elif tf.contrib.framework.is_tensor(output_layer):
+        _vocab_size = shape_list(output_layer)[1]
+        _output_layer = _make_output_layer_from_tensor(
+            output_layer, _vocab_size, output_layer_bias, variable_scope)
+    elif output_layer is None:
+        if _vocab_size is None:
+            raise ValueError(
+                "Either `output_layer` or `vocab_size` must be provided. "
+                "Set `output_layer=tf.identity` if no output layer is "
+                "wanted.")
+        with tf.variable_scope(variable_scope):
+            # pylint: disable=redefined-variable-type
+            _output_layer = tf.layers.Dense(
+                units=_vocab_size, use_bias=output_layer_bias)
+    else:
+        raise ValueError(
+            "output_layer should be a callable layer, a tensor, or None. "
+            "Unsupported type: ", type(output_layer)
+        )
+
+    return _output_layer, _vocab_size
+
 
 class RNNDecoderBase(ModuleBase, TFDecoder):
     """Base class inherited by all RNN decoder classes.
@@ -74,29 +129,9 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         self._beam_search_cell = None
 
         # Make the output layer
-        self._vocab_size = vocab_size
-
-        if is_callable(output_layer):
-            self._output_layer = output_layer
-        elif tf.contrib.framework.is_tensor(output_layer):
-            self._vocab_size = shape_list(output_layer)[1]
-            self._output_layer = self._make_output_layer_from_tensor(
-                output_layer)
-        elif output_layer is None:
-            if self._vocab_size is None:
-                raise ValueError(
-                    "Either `output_layer` or `vocab_size` must be provided. "
-                    " Set `output_layer=tf.identity` if no output layer is "
-                    "wanted.")
-            with tf.variable_scope(self.variable_scope):
-                self._output_layer = tf.layers.Dense(
-                    units=self._vocab_size,
-                    use_bias=self._hparams.output_layer_bias)
-        else:
-            raise ValueError(
-                "output_layer should be tensor or callable layer or None."
-                "Unsupported type:", type(output_layer)
-            )
+        self._output_layer, self._vocab_size = _make_output_layer(
+            output_layer, vocab_size, self._hparams.output_layer_bias,
+            self.variable_scope)
 
     @staticmethod
     def default_hparams():
@@ -462,26 +497,6 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 output_shape_with_unknown_batch)
             return nest.map_structure(lambda s: s[1:], layer_output_shape)
 
-    def _make_output_layer_from_tensor(self, output_layer_tensor):
-        """Creates an output layer from a Tensor.
-        """
-        affine_bias = None
-        vocab_size = self._vocab_size
-        if self._hparams.output_layer_bias:
-            with tf.variable_scope(self.variable_scope):
-                affine_bias = tf.get_variable('affine_bias', [vocab_size])
-
-        def _outputs_to_logits(outputs):
-            shape = shape_list(outputs)
-            dim = shape[-1]
-            outputs = tf.reshape(outputs, [-1, dim])
-            logits = tf.matmul(outputs, output_layer_tensor)
-            if affine_bias is not None:
-                logits += affine_bias
-            logits = tf.reshape(logits, shape[:-1] + [vocab_size])
-            return logits
-
-        return _outputs_to_logits
     @property
     def batch_size(self):
         return self._helper.batch_size
