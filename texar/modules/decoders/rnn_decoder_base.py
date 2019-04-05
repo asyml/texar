@@ -81,7 +81,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         elif tf.contrib.framework.is_tensor(output_layer):
             self._vocab_size = shape_list(output_layer)[1]
             self._output_layer = self._make_output_layer_from_tensor(
-                output_layer, self._vocab_size)
+                output_layer)
         elif output_layer is None:
             if self._vocab_size is None:
                 raise ValueError(

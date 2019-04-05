@@ -40,6 +40,7 @@ __all__ = [
     "AttentionRNNDecoder"
 ]
 
+
 class BasicRNNDecoderOutput(
         collections.namedtuple("BasicRNNDecoderOutput",
                                ("logits", "sample_id", "cell_output"))):
@@ -653,7 +654,6 @@ class AttentionRNNDecoder(RNNDecoderBase):
         Equivalent to :attr:`decoder.cell._cell.state_size`.
         """
         return self._cell._cell.state_size
-
 
     @property
     def wrapper_state_size(self):
