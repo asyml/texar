@@ -69,21 +69,23 @@ class TransformerDecoder(ModuleBase, TFDecoder):
     :class:`~texar.modules.FeedForwardNetwork` and residual connections.
 
     Args:
-        vocab_size:
-            Specify the size of the output vocabulary.
-            Ignored if output_layer is provided.
-        output_layer:
-            a callable function to transform the hidden states to logits.
-            Or a tensor which is used as the kernel weights to transform hidden
-                states into logits.
-            If it's not provided, use `vocab_size` and
-                `hparams.output_layer_bias` to create the output layer.
+        vocab_size (int, optional): Vocabulary size. Required if
+            :attr:`output_layer` is `None`.
+        output_layer (optional): An instance of callable layer to transform
+            output to logits. Or a tensor which is used as the kernel weights
+            to transform hidden states into logits. If None, use `vocab_size`
+            and `hparams.output_layer_bias` to create the output layer.
+            Set `output_layer=tf.identity` if you do not want to have an
+            output layer after the outputs.
 
     .. document private functions
     .. automethod:: _build
     """
 
-    def __init__(self, vocab_size, output_layer, hparams=None):
+    def __init__(self,
+                 vocab_size=None,
+                 output_layer=None,
+                 hparams=None):
         ModuleBase.__init__(self, hparams)
 
         self._vocab_size = vocab_size
@@ -93,11 +95,13 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
 
+            # Make the output layer
             if is_callable(output_layer):
                 self._output_layer = output_layer
             elif tf.contrib.framework.is_tensor(output_layer):
+                self._vocab_size = shape_list(output_layer)[1]
                 self._output_layer = self._make_output_layer_from_tensor(
-                    output_layer, self._vocab_size)
+                    output_layer)
             elif output_layer is None:
                 if self._vocab_size is None:
                     raise ValueError(
@@ -158,11 +162,12 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             self._helper = None
             self._cache = None
 
-    def _make_output_layer_from_tensor(self, output_layer_tensor, vocab_size):
+    def _make_output_layer_from_tensor(self, output_layer_tensor):
         """Creates an output layer from a Tensor. Used to tie word embedding
         with the output layer weight.
         """
         affine_bias = None
+        vocab_size = self._vocab_size
         if self._hparams.output_layer_bias:
             with tf.variable_scope(self.variable_scope):
                 affine_bias = tf.get_variable('affine_bias', [vocab_size])
@@ -174,7 +179,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             logits = tf.matmul(outputs, output_layer_tensor)
             if affine_bias is not None:
                 logits += affine_bias
-            logits = tf.reshape(logits, shape[:-1] + [self._vocab_size])
+            logits = tf.reshape(logits, shape[:-1] + [vocab_size])
             return logits
 
         return _outputs_to_logits
