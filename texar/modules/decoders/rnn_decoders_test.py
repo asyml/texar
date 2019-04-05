@@ -77,7 +77,7 @@ class BasicRNNDecoderTest(tf.test.TestCase):
         )
         decoder = BasicRNNDecoder(output_layer=tensor)
         self.assertIsInstance(decoder, BasicRNNDecoder)
-        self.assertEqual(decoder.vocab_size(), self._vocab_size)
+        self.assertEqual(decoder.vocab_size, self._vocab_size)
 
 
     def test_decode_train(self):

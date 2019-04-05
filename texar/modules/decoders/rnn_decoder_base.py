@@ -467,7 +467,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         """
         affine_bias = None
         vocab_size = self._vocab_size
-        if self._hparams.output_layer_xbias:
+        if self._hparams.output_layer_bias:
             with tf.variable_scope(self.variable_scope):
                 affine_bias = tf.get_variable('affine_bias', [vocab_size])
 

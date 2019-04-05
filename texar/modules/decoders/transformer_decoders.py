@@ -112,7 +112,11 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     self._output_layer = tf.layers.Dense(
                         units=self._vocab_size,
                         use_bias=self._hparams.output_layer_bias)
-
+            else:
+                raise ValueError(
+                    "output_layer should be tensor or callable layer or None."
+                    "Unsupported type:", type(output_layer)
+                )
             self.multihead_attentions = {
                 'self_att': [],
                 'encdec_att': []
@@ -778,9 +782,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
     def _beam_decode(self,
                      start_tokens,
                      end_token,
-                     decode_length=256,
-                     beam_width=5,
-                     length_penalty=0.6):
+                     decode_length,
+                     beam_width,
+                     length_penalty):
         def _symbols_to_logits_fn(ids, step, cache):
             return self._input_ids_to_outputs(
                 ids[:, -1], step, cache)
@@ -792,8 +796,8 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             decode_length,
             self._vocab_size,
             length_penalty,
-            states=self._cache,
-            eos_id=end_token)
+            eos_id=end_token,
+            states=self._cache)
 
         # Ignores <BOS>
         outputs = outputs[:, :, 1:]

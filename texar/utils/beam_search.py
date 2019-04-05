@@ -183,15 +183,16 @@ def compute_topk_scores_and_seq(sequences, scores, scores_to_gather, flags,
     return topk_seq, topk_gathered_scores, topk_flags, topk_gathered_states
 
 
-def beam_search(symbols_to_logits_fn,
-                                initial_ids,
-                                beam_size,
-                                decode_length,
-                                vocab_size,
-                                alpha,
-                                eos_id,
-                                states=None,
-                                stop_early=True):
+def beam_search(
+    symbols_to_logits_fn,
+    initial_ids,
+    beam_size,
+    decode_length,
+    vocab_size,
+    alpha,
+    eos_id,
+    states=None,
+    stop_early=True):
     """Beam search with length penalties.
 
     Requires a function that can take the currently decoded sybmols and

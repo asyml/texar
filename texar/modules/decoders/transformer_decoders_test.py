@@ -27,7 +27,7 @@ class TransformerDecoderTest(tf.test.TestCase):
         self._batch_size = 2
         self._max_time = 10
         self._emb_dim = 512
-        self._max_decode_len = 32
+        self._max_decode_len = 16
         self._inputs = tf.random_uniform(
             [self._batch_size, self._max_time, self._emb_dim],
             maxval=1, dtype=tf.float32)
@@ -75,7 +75,7 @@ class TransformerDecoderTest(tf.test.TestCase):
         )
         decoder = TransformerDecoder(output_layer=tensor)
         self.assertIsInstance(decoder, TransformerDecoder)
-        self.assertEqual(decoder.vocab_size(), self._vocab_size)
+        self.assertEqual(decoder.vocab_size, self._vocab_size)
 
     def test_decode_train(self):
         """Tests train_greedy
