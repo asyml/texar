@@ -62,6 +62,21 @@ class TransformerDecoderTest(tf.test.TestCase):
         self._context = tf.Variable(_context)
         self._context_length = tf.Variable(_context_length)
 
+    def test_output_layer(self):
+        decoder = TransformerDecoder(vocab_size=self._vocab_size,
+                                     output_layer=None)
+        self.assertIsInstance(decoder, TransformerDecoder)
+
+        decoder = TransformerDecoder(output_layer=tf.identity)
+        self.assertIsInstance(decoder, TransformerDecoder)
+
+        tensor = tf.random_uniform(
+            [self._emb_dim, self._vocab_size], maxval=1, dtype=tf.float32
+        )
+        decoder = TransformerDecoder(output_layer=tensor)
+        self.assertIsInstance(decoder, TransformerDecoder)
+        self.assertEqual(decoder.vocab_size(), self._vocab_size)
+
     def test_decode_train(self):
         """Tests train_greedy
         """
