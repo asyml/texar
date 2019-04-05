@@ -66,7 +66,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
     sequence decoding.
 
     It is a stack of :class:`~texar.modules.encoders.MultiheadAttentionEncoder`,
-    :class:`~texar.modules.FeedForwardNetwork`, and residual connections.
+    :class:`~texar.modules.FeedForwardNetwork` and residual connections.
 
     Args:
         vocab_size:
@@ -150,9 +150,10 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                             '"poswise_feedforward" should be equal '
                             'to the "dim" of TransformerDecoder.')
                     self.poswise_networks.append(pw_net)
+
+            # Built in _build()
             self.context = None
             self.context_sequence_length = None
-
             self.embedding = None
             self._helper = None
             self._cache = None
@@ -209,13 +210,14 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             }
 
         Here:
+
         "num_blocks" : int
             Number of stacked blocks.
 
         "dim" : int
             Hidden dimension of the encoder.
 
-        "embedding_dropout": float
+        "embedding_dropout" : float
             Dropout rate of the input word and position embeddings.
 
         "residual_dropout" :  float
