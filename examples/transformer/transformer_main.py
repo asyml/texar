@@ -26,7 +26,6 @@ from torchtext import data
 import tensorflow as tf
 import texar as tx
 from texar.modules import TransformerEncoder, TransformerDecoder
-from texar.utils.shapes import mask_sequences
 from texar.utils import transformer_utils
 
 from utils import data_utils, utils
@@ -90,8 +89,6 @@ def main():
         vocab_size=vocab_size, hparams=config_model.emb)
     src_word_embeds = src_word_embedder(encoder_input)
     src_word_embeds = src_word_embeds * config_model.hidden_dim ** 0.5
-    src_word_embeds = mask_sequences(src_word_embeds, encoder_input_length,
-                                     tensor_rank=3)
 
     # Position embedding (shared b/w source and target)
     pos_embedder = tx.modules.SinusoidsPositionEmbedder(
@@ -117,8 +114,6 @@ def main():
     tgt_embedder = tx.modules.WordEmbedder(tgt_embedding)
     tgt_word_embeds = tgt_embedder(decoder_input)
     tgt_word_embeds = tgt_word_embeds * config_model.hidden_dim ** 0.5
-    tgt_word_embeds = mask_sequences(tgt_word_embeds, decoder_input_length,
-                                     tensor_rank=3)
 
     tgt_seq_len = tf.ones([batch_size], tf.int32) * tf.shape(decoder_input)[1]
     tgt_pos_embeds = pos_embedder(sequence_length=tgt_seq_len)
