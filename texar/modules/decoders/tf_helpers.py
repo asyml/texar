@@ -583,7 +583,7 @@ class GreedyEmbeddingHelper(Helper):
 
     def initialize(self, name=None):
         finished = array_ops.tile([False], [self._batch_size])
-        return (finished, self._start_inputs)
+        return finished, self._start_inputs
 
     def sample(self, time, outputs, state, name=None):
         """sample for GreedyEmbeddingHelper."""
@@ -617,7 +617,7 @@ class GreedyEmbeddingHelper(Helper):
                 lambda: self._start_inputs,
                 lambda: self._embedding_fn(sample_ids, times))
 
-        return (finished, next_inputs, state)
+        return finished, next_inputs, state
 
 
 class SampleEmbeddingHelper(GreedyEmbeddingHelper):

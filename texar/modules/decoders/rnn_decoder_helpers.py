@@ -43,6 +43,7 @@ __all__ = [
     "GumbelSoftmaxEmbeddingHelper",
 ]
 
+
 def default_helper_train_hparams():
     """Returns default hyperparameters of an RNN decoder helper in the training
     phase.
@@ -69,6 +70,7 @@ def default_helper_train_hparams():
         "type": "TrainingHelper",
         "kwargs": {}
     }
+
 
 def default_helper_infer_hparams():
     """Returns default hyperparameters of an RNN decoder helper in the inference
@@ -210,6 +212,7 @@ def _top_k_logits(logits, k):
         lambda: logits,
         lambda: _top_k(),
     )
+
 
 class TopKSampleEmbeddingHelper(GreedyEmbeddingHelper):
     """A helper for use during inference.
