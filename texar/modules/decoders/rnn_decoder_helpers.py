@@ -397,7 +397,7 @@ class SoftmaxEmbeddingHelper(Helper):
             next_inputs = self._embedding_fn(soft_ids=sample_ids)
         elif self._embedding_args_cnt == 2:
             # Prepare the position embedding of the next step
-            times = tf.ones(self._batch_size, dtype=tf.int32) * time
+            times = tf.ones(self._batch_size, dtype=tf.int32) * (time+1)
             next_inputs = self._embedding_fn(soft_ids=sample_ids, times=times)
 
         return (finished, next_inputs, state)
