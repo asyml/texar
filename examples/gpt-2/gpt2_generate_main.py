@@ -116,8 +116,7 @@ def main(_):
     )
 
     def _embedding_fn(x, y):
-        with tf.control_dependencies([print_op]):
-            return word_embedder(x) + pos_embedder(y)
+        return word_embedder(x) + pos_embedder(y)
 
     helper = tx.modules.TopKSampleEmbeddingHelper(
         embedding=_embedding_fn,
