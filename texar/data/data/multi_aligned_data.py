@@ -29,10 +29,10 @@ from texar.utils import utils
 from texar.utils.dtypes import is_str, is_callable
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data.scalar_data import ScalarData
-from texar.data.data.tfrecords_data import TFRecordData
+from texar.data.data.tfrecord_data import TFRecordData
 from texar.data.data.mono_text_data import _default_mono_text_dataset_hparams
 from texar.data.data.scalar_data import _default_scalar_dataset_hparams
-from texar.data.data.tfrecords_data import _default_tfrecord_dataset_hparams
+from texar.data.data.tfrecord_data import _default_tfrecord_dataset_hparams
 from texar.data.data.mono_text_data import MonoTextData
 from texar.data.data_utils import count_file_lines
 from texar.data.data import dataset_utils as dsutils
@@ -132,7 +132,7 @@ class MultiAlignedData(TextDataBase):
                 'datasets': [
                     {'files': 'd.txt', 'vocab_file': 'v.d', 'data_name': 'm'},
                     {
-                        'files': 'd.tfrecords',
+                        'files': 'd.tfrecord',
                         'data_type': 'tf_record',
                         "feature_original_types": {
                             'image': ['tf.string', 'FixedLenFeature']

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Data class that supports reading TFRecords data and data type converting.
+Data class that supports reading TFRecord data and data type converting.
 """
 
 from __future__ import absolute_import
@@ -105,11 +105,11 @@ class TFRecordData(DataBase):
             #
             #        # 'image_raw' is a list of image data bytes in this
             #        # example.
-            #        'image_raw': ['...'],
+            #        'image_raw': [...],
             #    }
             # }
 
-            ...
+        .. code-block:: python
 
             # Read image data from TFRecord file and do resizing
             hparams={
@@ -138,8 +138,8 @@ class TFRecordData(DataBase):
             #        'label': [1],
             #
             #        # "image_raw" is a list of a "numpy.ndarray" image
-            #        # in this example. Its width equals to 512 and
-            #        # its height equals to 512.
+            #        # in this example. Each image has a width of 512 and
+            #        # height of 512.
             #        'image_raw': [...]
             #    }
             # }
@@ -211,13 +211,11 @@ class TFRecordData(DataBase):
 
                 .. code-block:: python
 
-                    ...
                     feature_original_types = {
                         "input_ids": ["tf.int64", "FixedLenFeature", 128],
                         "label_ids": ["tf.int64", "FixedLenFeature"],
                         "name_lists": ["tf.string", "VarLenFeature"],
                     }
-                    ...
 
             "feature_convert_types" : dict, optional
                 Specifies dtype converting after reading the data files. This
@@ -238,12 +236,10 @@ class TFRecordData(DataBase):
 
                 .. code-block:: python
 
-                    ...
                     feature_convert_types = {
                         "input_ids": "tf.int32",
                         "label_ids": "tf.int32",
                     }
-                    ...
 
             "image_options" : dict, optional
                 Specifies the image feature name and performs image resizing,
@@ -277,27 +273,21 @@ class TFRecordData(DataBase):
 
                 .. code-block:: python
 
-                    ...
                     dataset: {
                         ...
                         "num_shards": 2,
-                        "shard_id": 0,
-                        ...
+                        "shard_id": 0
                     }
-                    ...
 
                 For gpu 1:
 
                 .. code-block:: python
 
-                    ...
                     dataset: {
                         ...
                         "num_shards": 2,
-                        "shard_id": 1,
-                        ...
+                        "shard_id": 1
                     }
-                    ...
 
                 Also refer to `examples/bert` for a use case.
 

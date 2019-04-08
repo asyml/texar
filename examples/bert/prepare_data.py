@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Produces TFRecords files and modifies data configuration file
+"""Produces TFRecord files and modifies data configuration file
 """
 
 from __future__ import absolute_import
@@ -41,8 +41,10 @@ flags.DEFINE_integer(
     "max_seq_length", 128,
     "The maxium length of sequence, longer sequence will be trimmed.")
 flags.DEFINE_string(
-    "tfrecords_output_dir", 'data/MRPC',
-    "The output directory where the TFRecords files will be generated.")
+    "tfrecord_output_dir", None,
+    "The output directory where the TFRecord files will be generated. "
+    "By default it will be set to 'data/{task}'. E.g.: if "
+    "task is 'MRPC', it will be set as 'data/MRPC'")
 flags.DEFINE_bool(
     "do_lower_case", True,
     "Whether to lower case the input text. Should be True for uncased "
@@ -68,11 +70,11 @@ def prepare_data():
         data_dir = 'data/{}'.format(
             task_datasets_rename[FLAGS.task])
 
-    if FLAGS.tfrecords_output_dir is None:
-        tfrecords_output_dir = data_dir
+    if FLAGS.tfrecord_output_dir is None:
+        tfrecord_output_dir = data_dir
     else: 
-        tfrecords_output_dir = FLAGS.tfrecords_output_dir
-    tx.utils.maybe_create_dir(tfrecords_output_dir)
+        tfrecord_output_dir = FLAGS.tfrecord_output_dir
+    tx.utils.maybe_create_dir(tfrecord_output_dir)
 
     processors = {
         "COLA": data_utils.ColaProcessor,
@@ -91,13 +93,13 @@ def prepare_data():
         vocab_file=FLAGS.vocab_file,
         do_lower_case=FLAGS.do_lower_case)
 
-    # Produces TFRecords files
+    # Produces TFRecord files
     data_utils.prepare_TFRecord_data(
         processor=processor,
         tokenizer=tokenizer,
         data_dir=data_dir,
         max_seq_length=FLAGS.max_seq_length,
-        output_dir=tfrecords_output_dir)
+        output_dir=tfrecord_output_dir)
     modify_config_data(FLAGS.max_seq_length, num_train_data, num_classes)
 
 def modify_config_data(max_seq_length, num_train_data, num_classes):
