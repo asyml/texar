@@ -258,7 +258,7 @@ class TopKSampleEmbeddingHelper(GreedyEmbeddingHelper):
         self._seed = seed
 
     def sample(self, time, outputs, state, name=None):
-        """sample for SampleEmbeddingHelper."""
+        """Gets a sample for one step."""
         del time, state  # unused by sample_fn
         # Outputs are logits, we sample from the top_k candidates
         if not isinstance(outputs, tf.Tensor):

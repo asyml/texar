@@ -249,13 +249,14 @@ class TrainingHelper(Helper):
             return (finished, next_inputs)
 
     def sample(self, time, outputs, name=None, **unused_kwargs):
+        """Gets a sample for one step."""
         with ops.name_scope(name, "TrainingHelperSample", [time, outputs]):
             sample_ids = math_ops.cast(
                 math_ops.argmax(outputs, axis=-1), dtypes.int32)
             return sample_ids
 
     def next_inputs(self, time, outputs, state, name=None, **unused_kwargs):
-        """next_inputs_fn for TrainingHelper."""
+        """Gets the inputs for next step."""
         with ops.name_scope(name, "TrainingHelperNextInputs",
                             [time, outputs, state]):
             next_time = time + 1
@@ -335,6 +336,7 @@ class ScheduledEmbeddingTrainingHelper(TrainingHelper):
             name=name)
 
     def sample(self, time, outputs, state, name=None):
+        """Gets a sample for one step."""
         with ops.name_scope(name, "ScheduledEmbeddingTrainingHelperSample",
                             [time, outputs, state]):
             # Return -1s where we did not sample, and sample_ids elsewhere
@@ -349,6 +351,7 @@ class ScheduledEmbeddingTrainingHelper(TrainingHelper):
                 gen_array_ops.fill([self.batch_size], -1))
 
     def next_inputs(self, time, outputs, state, sample_ids, name=None):
+        """Gets the outputs for next step."""
         with ops.name_scope(name, "ScheduledEmbeddingTrainingHelperNextInputs",
                             [time, outputs, state, sample_ids]):
             (finished, base_next_inputs, state) = (
@@ -462,12 +465,14 @@ class ScheduledOutputTrainingHelper(TrainingHelper):
         return super(ScheduledOutputTrainingHelper, self).initialize(name=name)
 
     def sample(self, time, outputs, state, name=None):
+        """Gets a sample for one step."""
         with ops.name_scope(name, "ScheduledOutputTrainingHelperSample",
                             [time, outputs, state]):
             sampler = bernoulli.Bernoulli(probs=self._sampling_probability)
             return sampler.sample(sample_shape=self.batch_size, seed=self._seed)
 
     def next_inputs(self, time, outputs, state, sample_ids, name=None):
+        """Gets the next inputs for next step."""
         with ops.name_scope(name, "ScheduledOutputTrainingHelperNextInputs",
                             [time, outputs, state, sample_ids]):
             (finished, base_next_inputs, state) = (
@@ -602,7 +607,7 @@ class GreedyEmbeddingHelper(Helper):
         return finished, self._start_inputs
 
     def sample(self, time, outputs, state, name=None):
-        """sample for GreedyEmbeddingHelper."""
+        """Gets a sample for one step."""
         del time, state  # unused by sample_fn
         # Outputs are logits, use argmax to get the most probable id
         if not isinstance(outputs, ops.Tensor):
@@ -612,7 +617,7 @@ class GreedyEmbeddingHelper(Helper):
         return sample_ids
 
     def next_inputs(self, time, outputs, state, sample_ids, name=None, reach_max_time=None):
-        """next_inputs_fn for GreedyEmbeddingHelper."""
+        """Gets the inputs for next step."""
         finished = math_ops.equal(sample_ids, self._end_token)
         all_finished = math_ops.reduce_all(finished)
         if reach_max_time is not None:
@@ -683,7 +688,7 @@ class SampleEmbeddingHelper(GreedyEmbeddingHelper):
         self._seed = seed
 
     def sample(self, time, outputs, state, name=None):
-        """sample for SampleEmbeddingHelper."""
+        """Gets a sample for one step."""
         del time, state  # unused by sample_fn
         # Outputs are logits, we sample instead of argmax (greedy).
         if not isinstance(outputs, ops.Tensor):
@@ -745,10 +750,12 @@ class InferenceHelper(Helper):
         return (finished, self._start_inputs)
 
     def sample(self, time, outputs, state, name=None):
+        """Gets a sample for one step."""
         del time, state  # unused by sample
         return self._sample_fn(outputs)
 
     def next_inputs(self, time, outputs, state, sample_ids, name=None):
+        """Gets the outputs for next step."""
         del time, outputs  # unused by next_inputs
         if self._next_inputs_fn is None:
             next_inputs = sample_ids
