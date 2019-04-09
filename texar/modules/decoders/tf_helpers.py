@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""A library of helpers for use with SamplingDecoders.
+# Modifications copyright (C) 2019 Texar
+# ==============================================================================
+"""A library of helpers for use with Texar RNN/Transformer decoders.
 
 Adapted from the `tensorflow.contrib.seq2seq` package.
 """
@@ -67,9 +69,11 @@ def _unstack_ta(inp):
 
 @six.add_metaclass(abc.ABCMeta)
 class Helper(object):
-    """Interface for implementing sampling in seq2seq decoders.
+    """Interface for implementing different decoding strategies in
+    :class:`RNN decoders <texar.modules.RNNDecoderBase>` and
+    :class:`Transformer decoder <texar.modules.TransformerDecoder>`.
 
-    Helper instances are used by `BasicDecoder`.
+    Adapted from the `tensorflow.contrib.seq2seq` package.
     """
 
     @abc.abstractproperty
@@ -113,7 +117,7 @@ class Helper(object):
 
 
 class CustomHelper(Helper):
-    """Base abstract class that allows the user to customize sampling."""
+    """Base abstract class that allows the user to customize decoding."""
 
     def __init__(self, initialize_fn, sample_fn, next_inputs_fn,
                  sample_ids_shape=None, sample_ids_dtype=None):
@@ -172,9 +176,15 @@ class CustomHelper(Helper):
 
 
 class TrainingHelper(Helper):
-    """A helper for use during training.  Only reads inputs.
+    """A helper for use during training. Performs teacher-forcing decoding.
 
     Returned sample_ids are the argmax of the RNN output logits.
+
+    Note that for teacher-forcing decoding, Texar's decoders provide a simpler
+    interface by specifying `decoding_strategy='train_greedy'` when calling a
+    decoder (see, e.g.,,
+    :meth:`RNN decoder <texar.modules.RNNDecoderBase._build>`). In this case,
+    use of TrainingHelper is not necessary.
     """
 
     def __init__(self, inputs, sequence_length, time_major=False, name=None):
@@ -522,6 +532,12 @@ class GreedyEmbeddingHelper(Helper):
 
     Uses the argmax of the output (treated as logits) and passes the
     result through an embedding layer to get the next input.
+
+    Note that for greedy decoding, Texar's decoders provide a simpler
+    interface by specifying `decoding_strategy='infer_greedy'` when calling a
+    decoder (see, e.g.,,
+    :meth:`RNN decoder <texar.modules.RNNDecoderBase._build>`). In this case,
+    use of GreedyEmbeddingHelper is not necessary.
     """
 
     def __init__(self, embedding, start_tokens, end_token):
@@ -627,6 +643,12 @@ class SampleEmbeddingHelper(GreedyEmbeddingHelper):
 
     Uses sampling (from a distribution) instead of argmax and passes the
     result through an embedding layer to get the next input.
+
+    Note that for sample decoding, Texar's decoders provide a simpler
+    interface by specifying `decoding_strategy='infer_sample'` when calling a
+    decoder (see, e.g.,,
+    :meth:`RNN decoder <texar.modules.RNNDecoderBase._build>`). In this case,
+    use of SampleEmbeddingHelper is not necessary.
     """
 
     def __init__(self, embedding, start_tokens, end_token,

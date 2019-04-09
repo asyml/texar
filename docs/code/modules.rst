@@ -129,6 +129,11 @@ Decoders
 .. autoclass:: texar.modules.TransformerDecoderOutput
     :members:
 
+:hidden:`Helper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.Helper
+    :members:
+
 :hidden:`TopKSampleEmbeddingHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.TopKSampleEmbeddingHelper
@@ -142,6 +147,41 @@ Decoders
 :hidden:`GumbelSoftmaxEmbeddingHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.GumbelSoftmaxEmbeddingHelper
+    :members:
+
+:hidden:`TrainingHelper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.Helper
+    :members:
+
+:hidden:`ScheduledEmbeddingTrainingHelper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.SampleEmbeddingHelper
+    :members:
+
+:hidden:`ScheduledOutputTrainingHelper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.ScheduledOutputTrainingHelper
+    :members:
+
+:hidden:`GreedyEmbeddingHelper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.GreedyEmbeddingHelper
+    :members:
+
+:hidden:`SampleEmbeddingHelper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.SampleEmbeddingHelper
+    :members:
+
+:hidden:`InferenceHelper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.InferenceHelper
+    :members:
+
+:hidden:`CustomHelper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.CustomHelper
     :members:
 
 :hidden:`get_helper`

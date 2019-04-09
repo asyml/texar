@@ -5,6 +5,11 @@
 
 ### Feature improvements
 
+* Refactor `TransformerEncoder` and `TransformerDecoder` to separate position embeddings from the modules. ([#126](https://github.com/asyml/texar/pull/126))
+* Allow passing a Tensor to `output_layer` of decoders' constructors -- used for weight tie b/w the output layer and input embedding matrix.  ([#126](https://github.com/asyml/texar/pull/126))
+* `TransformerDecoder` constructor interface made exact the same with `RNN decoders` constructor interfaces. ([#126](https://github.com/asyml/texar/pull/126))
+* Refactor decoder `Helper`s to allow two-argument `embedding_fn` (for position embedding). ([#126](https://github.com/asyml/texar/pull/126))
+
 ### Fixes
 
 ## [v0.2.0](https://github.com/asyml/texar/releases/tag/v0.2.0) (2019-04-09)
