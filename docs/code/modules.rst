@@ -134,55 +134,65 @@ Decoders
 .. autoclass:: texar.modules.Helper
     :members:
 
-:hidden:`TopKSampleEmbeddingHelper`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.TopKSampleEmbeddingHelper
-    :members:
-
-:hidden:`SoftmaxEmbeddingHelper`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.SoftmaxEmbeddingHelper
-    :members:
-
-:hidden:`GumbelSoftmaxEmbeddingHelper`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.GumbelSoftmaxEmbeddingHelper
-    :members:
-
-:hidden:`TrainingHelper`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.Helper
-    :members:
-
-:hidden:`ScheduledEmbeddingTrainingHelper`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.SampleEmbeddingHelper
-    :members:
-
-:hidden:`ScheduledOutputTrainingHelper`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.ScheduledOutputTrainingHelper
-    :members:
-
 :hidden:`GreedyEmbeddingHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.GreedyEmbeddingHelper
     :members:
+    :inherited-members:
 
 :hidden:`SampleEmbeddingHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.SampleEmbeddingHelper
     :members:
+    :inherited-members:
+
+:hidden:`TopKSampleEmbeddingHelper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.TopKSampleEmbeddingHelper
+    :members:
+    :inherited-members:
+
+:hidden:`SoftmaxEmbeddingHelper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.SoftmaxEmbeddingHelper
+    :members:
+    :inherited-members:
+
+:hidden:`GumbelSoftmaxEmbeddingHelper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.GumbelSoftmaxEmbeddingHelper
+    :members:
+    :inherited-members:
+
+:hidden:`TrainingHelper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.Helper
+    :members:
+    :inherited-members:
+
+:hidden:`ScheduledEmbeddingTrainingHelper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.SampleEmbeddingHelper
+    :members:
+    :inherited-members:
+
+:hidden:`ScheduledOutputTrainingHelper`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.ScheduledOutputTrainingHelper
+    :members:
+    :inherited-members:
 
 :hidden:`InferenceHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.InferenceHelper
     :members:
+    :inherited-members:
 
 :hidden:`CustomHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.CustomHelper
     :members:
+    :inherited-members:
 
 :hidden:`get_helper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
