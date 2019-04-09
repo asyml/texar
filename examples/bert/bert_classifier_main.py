@@ -111,18 +111,27 @@ def main(_):
                                  axis=1)
     # Builds BERT
     with tf.variable_scope('bert'):
+        # Word embedding
         embedder = tx.modules.WordEmbedder(
             vocab_size=bert_config.vocab_size,
             hparams=bert_config.embed)
         word_embeds = embedder(input_ids)
 
-        # Creates segment embeddings for each type of tokens.
+        # Segment embedding for each type of tokens
         segment_embedder = tx.modules.WordEmbedder(
             vocab_size=bert_config.type_vocab_size,
             hparams=bert_config.segment_embed)
         segment_embeds = segment_embedder(segment_ids)
 
-        input_embeds = word_embeds + segment_embeds
+        # Position embedding
+        position_embedder = tx.modules.PositionEmbedder(
+            position_size=bert_config.position_size,
+            hparams=bert_config.position_embed)
+        seq_length = tf.ones([batch_size], tf.int32) * tf.shape(input_ids)[1]
+        pos_embeds = position_embedder(sequence_length=seq_length)
+
+        # Aggregates embeddings
+        input_embeds = word_embeds + segment_embeds + pos_embeds
 
         # The BERT model (a TransformerEncoder)
         encoder = tx.modules.TransformerEncoder(hparams=bert_config.encoder)

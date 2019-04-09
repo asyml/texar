@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,10 +36,68 @@ from texar.utils import utils
 from texar.utils.mode import is_train_mode, is_train_mode_py
 from texar.module_base import ModuleBase
 from texar.modules.decoders import rnn_decoder_helpers
+from texar.utils.dtypes import is_callable
+from texar.utils.shapes import shape_list
+from texar.modules.decoders import tf_helpers as tx_helper
 
 __all__ = [
-    "RNNDecoderBase"
+    "RNNDecoderBase",
+    "_make_output_layer"
 ]
+
+
+def _make_output_layer_from_tensor(output_layer_tensor, vocab_size,
+                                   output_layer_bias, variable_scope):
+    """Creates a dense layer from a Tensor. Used to tie word embedding
+    with the output layer weight.
+    """
+    affine_bias = None
+    if output_layer_bias:
+        with tf.variable_scope(variable_scope):
+            affine_bias = tf.get_variable('affine_bias', [vocab_size])
+
+    def _outputs_to_logits(outputs):
+        shape = shape_list(outputs)
+        dim = shape[-1]
+        outputs = tf.reshape(outputs, [-1, dim])
+        logits = tf.matmul(outputs, output_layer_tensor)
+        if affine_bias is not None:
+            logits += affine_bias
+        logits = tf.reshape(logits, shape[:-1] + [vocab_size])
+        return logits
+
+    return _outputs_to_logits
+
+
+def _make_output_layer(output_layer, vocab_size,
+                       output_layer_bias, variable_scope):
+    """Makes a decoder output layer.
+    """
+    _vocab_size = vocab_size
+    if is_callable(output_layer):
+        _output_layer = output_layer
+    elif tf.contrib.framework.is_tensor(output_layer):
+        _vocab_size = shape_list(output_layer)[1]
+        _output_layer = _make_output_layer_from_tensor(
+            output_layer, _vocab_size, output_layer_bias, variable_scope)
+    elif output_layer is None:
+        if _vocab_size is None:
+            raise ValueError(
+                "Either `output_layer` or `vocab_size` must be provided. "
+                "Set `output_layer=tf.identity` if no output layer is "
+                "wanted.")
+        with tf.variable_scope(variable_scope):
+            # pylint: disable=redefined-variable-type
+            _output_layer = tf.layers.Dense(
+                units=_vocab_size, use_bias=output_layer_bias)
+    else:
+        raise ValueError(
+            "output_layer should be a callable layer, a tensor, or None. "
+            "Unsupported type: ", type(output_layer)
+        )
+
+    return _output_layer, _vocab_size
+
 
 class RNNDecoderBase(ModuleBase, TFDecoder):
     """Base class inherited by all RNN decoder classes.
@@ -72,21 +130,11 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         self._beam_search_cell = None
 
         # Make the output layer
-        self._vocab_size = vocab_size
-        self._output_layer = output_layer
-        if output_layer is None:
-            if self._vocab_size is None:
-                raise ValueError(
-                    "Either `output_layer` or `vocab_size` must be provided. "
-                    "Set `output_layer=tf.identity` if no output layer is "
-                    "wanted.")
-            with tf.variable_scope(self.variable_scope):
-                self._output_layer = tf.layers.Dense(units=self._vocab_size)
-        elif output_layer is not tf.identity:
-            if not isinstance(output_layer, tf.layers.Layer):
-                raise ValueError(
-                    "`output_layer` must be either `tf.identity` or "
-                    "an instance of `tf.layers.Layer`.")
+        self._output_layer, self._vocab_size = _make_output_layer(
+            output_layer, vocab_size, self._hparams.output_layer_bias,
+            self.variable_scope)
+
+        self.max_decoding_length = None
 
     @staticmethod
     def default_hparams():
@@ -103,7 +151,8 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             "helper_infer": rnn_decoder_helpers.default_helper_infer_hparams(),
             "max_decoding_length_train": None,
             "max_decoding_length_infer": None,
-            "name": "rnn_decoder"
+            "name": "rnn_decoder",
+            "output_layer_bias": True,
         }
 
     def _build(self,
@@ -359,10 +408,10 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 helper = rnn_decoder_helpers._get_training_helper(
                     inputs, sequence_length, embedding, input_time_major)
             elif decoding_strategy == "infer_greedy":
-                helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(
+                helper = tx_helper.GreedyEmbeddingHelper(
                     embedding, start_tokens, end_token)
             elif decoding_strategy == "infer_sample":
-                helper = tf.contrib.seq2seq.SampleEmbeddingHelper(
+                helper = tx_helper.SampleEmbeddingHelper(
                     embedding, start_tokens, end_token, softmax_temperature)
             else:
                 raise ValueError(
@@ -404,7 +453,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 max_l_infer = utils.MAX_SEQ_LENGTH
             max_l = tf.cond(is_train_mode(mode),
                             lambda: max_l_train, lambda: max_l_infer)
-
+        self.max_decoding_length = max_l
         # Decode
         outputs, final_state, sequence_lengths = dynamic_decode(
             decoder=self, impute_finished=impute_finished,

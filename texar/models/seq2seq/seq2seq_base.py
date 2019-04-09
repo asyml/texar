@@ -36,6 +36,7 @@ __all__ = [
     "Seq2seqBase"
 ]
 
+
 class Seq2seqBase(ModelBase):
     """Base class inherited by all seq2seq model classes.
 

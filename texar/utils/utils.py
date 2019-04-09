@@ -93,7 +93,10 @@ def _inspect_getargspec(fn):
     try:
         return inspect.getfullargspec(fn)
     except AttributeError:
-        return inspect.getargspec(fn)
+        try:
+            return inspect.getargspec(fn)
+        except TypeError:
+            return inspect.getargspec(fn.__call__)
 
 def get_args(fn):
     """Gets the arguments of a function.

@@ -40,6 +40,7 @@ __all__ = [
     "AttentionRNNDecoder"
 ]
 
+
 class BasicRNNDecoderOutput(
         collections.namedtuple("BasicRNNDecoderOutput",
                                ("logits", "sample_id", "cell_output"))):
@@ -116,13 +117,20 @@ class BasicRNNDecoder(RNNDecoderBase):
             Ignored if :attr:`cell` is given.
         vocab_size (int, optional): Vocabulary size. Required if
             :attr:`output_layer` is `None`.
-        output_layer (optional): An instance of
-            :tf_main:`tf.layers.Layer <layers/Layer>`, or
-            :tf_main:`tf.identity <identity>`. Apply to the RNN cell
-            output to get logits. If `None`, a dense layer
-            is used with output dimension set to :attr:`vocab_size`.
-            Set `output_layer=tf.identity` if you do not want to have an
-            output layer after the RNN cell outputs.
+        output_layer (optional): An output layer that transforms cell output
+            to logits. This can be:
+
+            - A callable layer, e.g., an instance \
+            of :tf_main:`tf.layers.Layer <layers/Layer>`.
+            - A tensor. A dense layer will be created using the tensor \
+            as the kernel weights. The bias of the dense layer is determined by\
+            `hparams.output_layer_bias`. This can be used to tie the output \
+            layer with the input embedding matrix, as proposed in \
+            https://arxiv.org/pdf/1608.05859.pdf
+            - `None`. A dense layer will be created based on attr:`vocab_size`\
+            and `hparams.output_layer_bias`.
+            - If no output layer after the cell output is needed, set \
+            `(vocab_size=None, output_layer=tf.identity)`.
         hparams (dict, optional): Hyperparameters. Missing
             hyperparamerter will be set to default values. See
             :meth:`default_hparams` for the hyperparameter sturcture and
@@ -248,11 +256,15 @@ class BasicRNNDecoder(RNNDecoderBase):
         logits = self._output_layer(cell_outputs)
         sample_ids = self._helper.sample(
             time=time, outputs=logits, state=cell_state)
+        reach_max_time = tf.equal(time+1, self.max_decoding_length)
+
         (finished, next_inputs, next_state) = self._helper.next_inputs(
             time=time,
             outputs=logits,
             state=cell_state,
-            sample_ids=sample_ids)
+            sample_ids=sample_ids,
+            reach_max_time=reach_max_time)
+
         outputs = BasicRNNDecoderOutput(logits, sample_ids, cell_outputs)
         return (outputs, next_state, next_inputs, finished)
 
@@ -302,13 +314,20 @@ class AttentionRNNDecoder(RNNDecoderBase):
             Ignored if :attr:`cell` is given.
         vocab_size (int, optional): Vocabulary size. Required if
             :attr:`output_layer` is `None`.
-        output_layer (optional): An instance of
-            :tf_main:`tf.layers.Layer <layers/Layer>`, or
-            :tf_main:`tf.identity <identity>`. Apply to the RNN cell
-            output to get logits. If `None`, a dense layer
-            is used with output dimension set to :attr:`vocab_size`.
-            Set `output_layer=tf.identity` if you do not want to have an
-            output layer after the RNN cell outputs.
+        output_layer (optional): An output layer that transforms cell output
+            to logits. This can be:
+
+            - A callable layer, e.g., an instance \
+            of :tf_main:`tf.layers.Layer <layers/Layer>`.
+            - A tensor. A dense layer will be created using the tensor \
+            as the kernel weights. The bias of the dense layer is determined by\
+            `hparams.output_layer_bias`. This can be used to tie the output \
+            layer with the input embedding matrix, as proposed in \
+            https://arxiv.org/pdf/1608.05859.pdf
+            - `None`. A dense layer will be created based on attr:`vocab_size`\
+            and `hparams.output_layer_bias`.
+            - If no output layer after the cell output is needed, set \
+            `(vocab_size=None, output_layer=tf.identity)`.
         cell_input_fn (callable, optional): A callable that produces RNN cell
             inputs. If `None` (default), the default is used:
             `lambda inputs, attention: tf.concat([inputs, attention], -1)`,
@@ -576,11 +595,14 @@ class AttentionRNNDecoder(RNNDecoderBase):
         logits = self._output_layer(wrapper_outputs)
         sample_ids = self._helper.sample(
             time=time, outputs=logits, state=wrapper_state)
+        reach_max_time = tf.equal(time+1, self.max_decoding_length)
+
         (finished, next_inputs, next_state) = self._helper.next_inputs(
             time=time,
             outputs=logits,
             state=wrapper_state,
-            sample_ids=sample_ids)
+            sample_ids=sample_ids,
+            reach_max_time=reach_max_time)
 
         attention_scores = wrapper_state.alignments
         attention_context = wrapper_state.attention
@@ -654,7 +676,6 @@ class AttentionRNNDecoder(RNNDecoderBase):
         Equivalent to :attr:`decoder.cell._cell.state_size`.
         """
         return self._cell._cell.state_size
-
 
     @property
     def wrapper_state_size(self):

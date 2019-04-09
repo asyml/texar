@@ -269,4 +269,3 @@ class WordEmbedder(EmbedderBase):
         """The vocabulary size.
         """
         return self._vocab_size
-

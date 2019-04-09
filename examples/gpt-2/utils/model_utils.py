@@ -18,10 +18,13 @@ def transform_gpt2_to_texar_config(input_json_path):
     configs["embedding_size"] = config_gpt["n_embd"]
     hidden_dim = config_gpt["n_embd"]
     configs['embed'] = {
-        'dim': config_gpt["n_embd"],
+        'dim': hidden_dim,
+    }
+    configs['position_size'] = config_gpt['n_ctx'],
+    configs['pos_embed'] = {
+        'dim': hidden_dim
     }
     configs['decoder'] = {
-        'scale_embeds': False,
         'dim': hidden_dim,
         'num_blocks': config_gpt['n_layer'],
         'multihead_attention': {
@@ -29,11 +32,6 @@ def transform_gpt2_to_texar_config(input_json_path):
             'num_units': hidden_dim,
             'num_heads': config_gpt['n_head'],
             'output_dim': hidden_dim,
-        },
-        'position_embedder_type': 'variables',
-        'position_size': config_gpt['n_ctx'],
-        'position_embedder_hparams': {
-            'dim': hidden_dim,
         },
         'initializer': {
             'type': 'variance_scaling_initializer',
@@ -76,7 +74,7 @@ def _map_tensor_names(original_tensor_name):
     """
     global_tensor_map = {
         "model/wte": "word_embedder/w",
-        "model/wpe": "transformer_decoder/position_embedder/w",
+        "model/wpe": "position_embedder/w",
         "model/ln_f/b": "transformer_decoder/beta",
         "model/ln_f/g": "transformer_decoder/gamma",
     }
