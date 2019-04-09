@@ -530,7 +530,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         else:
             if max_decoding_length is None:
                 max_decoding_length = self._hparams.max_decoding_length
-
+            self.max_decoding_length = max_decoding_length
             if beam_width is None:  # Inference-like decoding
                 # Prepare helper
                 if helper is not None:
@@ -838,12 +838,13 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 self.context[:, time],
                 sample_ids
             )
-
+        reach_max_time = tf.equal(time+1, self.max_decoding_length)
         finished, next_inputs, next_state = self._helper.next_inputs(
             time=time,
             outputs=outputs,
             state=state,
-            sample_ids=sample_ids)
+            sample_ids=sample_ids,
+            reach_max_time=reach_max_time)
         outputs = TransformerDecoderOutput(
             logits=outputs,
             sample_id=sample_ids)

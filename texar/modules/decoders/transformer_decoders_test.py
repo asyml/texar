@@ -210,7 +210,7 @@ class TransformerDecoderTest(tf.test.TestCase):
             vocab_size=self._vocab_size,
             output_layer=self._output_layer
         )
-        helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(
+        helper = tx_helper.GreedyEmbeddingHelper(
             self._embedding, self._start_tokens, self._end_token)
         outputs, length = decoder(
             memory=self._memory,
