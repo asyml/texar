@@ -3,6 +3,14 @@
 
 ### New features
 
+### Feature improvements
+
+### Fixes
+
+## [v0.2.0](https://github.com/asyml/texar/releases/tag/v0.2.0) (2019-04-09)
+
+### New features
+
 * `TFRecordData`: A new data module for reading and processing TFRecord data, with support for, e.g., image data, feature data, etc. ([#107](https://github.com/asyml/texar/pull/107))
 * `GPT-2`: OpenAI pretrained language model. ([#91](https://github.com/asyml/texar/pull/91), [example](https://github.com/asyml/texar/tree/master/examples/gpt-2))
 * `TopKSampleEmbeddingHelper` to perform top_k random sample decoding. ([baa09ff](https://github.com/asyml/texar/commit/baa09ff0ec898996d7be2535e73bedd1e92c1fb2))
