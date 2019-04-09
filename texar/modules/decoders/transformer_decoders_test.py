@@ -43,12 +43,11 @@ class TransformerDecoderTest(tf.test.TestCase):
         self._pos_embedding = tf.random_uniform(
             [self._max_decode_len, self._emb_dim], maxval=1, dtype=tf.float32)
 
-        def my_embedding_fn(x, y):
-            return tf.nn.embedding_lookup(self._embedding,
-                                          x) * self._emb_dim ** 0.5 + \
-                   tf.nn.embedding_lookup(self._pos_embedding,
-                                          y)
-        self._embedding_fn = my_embedding_fn
+        def _embedding_fn(x, y):
+            x_emb = tf.nn.embedding_lookup(self._embedding, x)
+            y_emb = tf.nn.embedding_lookup(self._pos_embedding, y)
+            return x_emb * self._emb_dim ** 0.5 + y_emb
+        self._embedding_fn = _embedding_fn
 
         self._output_layer = tf.random_uniform(
             [self._emb_dim, self._vocab_size], maxval=1, dtype=tf.float32)

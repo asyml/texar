@@ -388,17 +388,26 @@ class SoftmaxEmbeddingHelper(Helper):
             finished = tf.equal(hard_ids, self._end_token)
         else:
             finished = tf.tile([False], [self._batch_size])
+        all_finished = tf.reduce_all(finished)
+
         if self._stop_gradient:
             sample_ids = tf.stop_gradient(sample_ids)
 
-        #next_inputs = tf.matmul(sample_ids, self._embedding)
         if self._embedding_args_cnt == 1:
             del time, outputs  # unused by next_inputs_fn
-            next_inputs = self._embedding_fn(soft_ids=sample_ids)
+            next_inputs = tf.cond(
+                all_finished,
+                # If we're finished, the next_inputs value doesn't matter
+                lambda: self._start_inputs,
+                lambda: self._embedding_fn(soft_ids=sample_ids))
         elif self._embedding_args_cnt == 2:
             # Prepare the position embedding of the next step
             times = tf.ones(self._batch_size, dtype=tf.int32) * (time+1)
-            next_inputs = self._embedding_fn(soft_ids=sample_ids, times=times)
+            next_inputs = tf.cond(
+                all_finished,
+                # If we're finished, the next_inputs value doesn't matter
+                lambda: self._start_inputs,
+                lambda: self._embedding_fn(soft_ids=sample_ids, times=times))
 
         return (finished, next_inputs, state)
 
