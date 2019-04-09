@@ -32,6 +32,7 @@ __all__ = [
     "BasicSeq2seq"
 ]
 
+
 class BasicSeq2seq(Seq2seqBase):
     """The basic seq2seq model (without attention).
 

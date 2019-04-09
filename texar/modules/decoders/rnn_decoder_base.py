@@ -38,6 +38,7 @@ from texar.module_base import ModuleBase
 from texar.modules.decoders import rnn_decoder_helpers
 from texar.utils.dtypes import is_callable
 from texar.utils.shapes import shape_list
+from texar.modules.decoders import tf_helpers as tx_helper
 
 __all__ = [
     "RNNDecoderBase",
@@ -132,6 +133,8 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         self._output_layer, self._vocab_size = _make_output_layer(
             output_layer, vocab_size, self._hparams.output_layer_bias,
             self.variable_scope)
+
+        self.max_decoding_length = None
 
     @staticmethod
     def default_hparams():
@@ -405,10 +408,10 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 helper = rnn_decoder_helpers._get_training_helper(
                     inputs, sequence_length, embedding, input_time_major)
             elif decoding_strategy == "infer_greedy":
-                helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(
+                helper = tx_helper.GreedyEmbeddingHelper(
                     embedding, start_tokens, end_token)
             elif decoding_strategy == "infer_sample":
-                helper = tf.contrib.seq2seq.SampleEmbeddingHelper(
+                helper = tx_helper.SampleEmbeddingHelper(
                     embedding, start_tokens, end_token, softmax_temperature)
             else:
                 raise ValueError(
@@ -450,7 +453,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 max_l_infer = utils.MAX_SEQ_LENGTH
             max_l = tf.cond(is_train_mode(mode),
                             lambda: max_l_train, lambda: max_l_infer)
-
+        self.max_decoding_length = max_l
         # Decode
         outputs, final_state, sequence_lengths = dynamic_decode(
             decoder=self, impute_finished=impute_finished,

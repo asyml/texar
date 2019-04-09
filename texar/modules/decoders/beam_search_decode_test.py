@@ -45,7 +45,7 @@ class BeamSearchDecodeTest(tf.test.TestCase):
     def _test_beam_search(
             self, decoder, initial_state=None, tiled_initial_state=None,
             tf_initial_state=None, beam_width_1=1, initiated=False):
-        ## Compare with tf built-in BeamSearchDecoder
+        # Compare with tf built-in BeamSearchDecoder
         outputs, final_state, _ = beam_search_decode(
             decoder_or_cell=decoder,
             embedding=self._embedding,
@@ -171,7 +171,6 @@ class BeamSearchDecodeTest(tf.test.TestCase):
         # (zhiting): The beam search decoder does not generate max-length
         # samples if only one cell_state is created. Perhaps due to
         # random seed or bugs?
-        cell_state = decoder.cell.zero_state(self._batch_size, tf.float32)
         cell_state = decoder.cell.zero_state(self._batch_size, tf.float32)
 
         self._test_beam_search(decoder, initial_state=cell_state)
