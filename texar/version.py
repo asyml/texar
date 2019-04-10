@@ -11,27 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Modules of texar library.
-"""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+_MAJOR = "0"
+_MINOR = "2"
+_REVISION = "1-unreleased"
 
-# pylint: disable=wildcard-import
-
-from texar.version import VERSION as __version__
-
-from texar.module_base import *
-from texar.hyperparams import *
-from texar.context import *
-from texar import modules
-from texar import core
-from texar import losses
-from texar import models
-from texar import data
-from texar import evals
-from texar import agents
-from texar import run
-from texar import utils
+VERSION_SHORT = "{0}.{1}".format(_MAJOR, _MINOR)
+VERSION = "{0}.{1}.{2}".format(_MAJOR, _MINOR, _REVISION)

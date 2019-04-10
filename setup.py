@@ -11,7 +11,7 @@ Texar is designed for both researchers and practitioners for fast prototyping an
 
 setuptools.setup(
     name="texar",
-    version="0.1",
+    version="0.2.1",
     url="https://github.com/asyml/texar",
 
     description="Toolkit for Text Generation and Beyond",
