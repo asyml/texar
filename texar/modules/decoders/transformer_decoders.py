@@ -533,12 +533,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             self.max_decoding_length = max_decoding_length
             if beam_width is None:  # Inference-like decoding
                 # Prepare helper
-                if helper is not None:
-                    # Ignore `decoding_strategy`
-                    # pylint: disable=protected-access
-                    self.embedding = helper._embedding_fn
-
-                else:
+                if helper is None:
                     if decoding_strategy == "infer_greedy":
                         helper = tx_helper.GreedyEmbeddingHelper(
                             embedding, start_tokens, end_token)
