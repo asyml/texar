@@ -309,7 +309,7 @@ class SinusoidsPositionEmbedder(EmbedderBase):
                 the respective sequence lengths will have zero-valued
                 embeddings.
         Returns:
-            A `Tensor` of shape `[1, position_size, dim]`.
+            A `Tensor` of shape `[batch_size, position_size, dim]`.
         """
         inputs = positions
         if positions is None:
