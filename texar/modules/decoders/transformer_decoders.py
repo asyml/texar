@@ -84,7 +84,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             https://arxiv.org/pdf/1608.05859.pdf
             - `None`. A dense layer will be created based on attr:`vocab_size`\
             and `hparams.output_layer_bias`.
-            - If no output layer after the cell output is needed, set \
+            - If no output layer in the end is needed, set \
             `(vocab_size=None, output_layer=tf.identity)`.
 
     .. document private functions
