@@ -287,9 +287,9 @@ class ScheduledEmbeddingTrainingHelper(TrainingHelper):
           inputs: A (structure of) input tensors.
           sequence_length: An int32 vector tensor.
           embedding: A callable or the `params` argument for `embedding_lookup`.
-            If a callable, it can take a vector tensor of `ids` (argmax ids),
+            If a callable, it can take a vector tensor of token `ids`,
             or take two arguments (`ids`, `times`), where `ids` is a vector
-            tensor of argmax ids, and `times` is a vector tensor of current
+            tensor of token ids, and `times` is a vector tensor of current
             time steps (i.e., position ids). The latter case can be used when
             attr:`embedding` is a combination of word embedding and position
             embedding.
@@ -616,7 +616,8 @@ class GreedyEmbeddingHelper(Helper):
         sample_ids = math_ops.argmax(outputs, axis=-1, output_type=dtypes.int32)
         return sample_ids
 
-    def next_inputs(self, time, outputs, state, sample_ids, name=None, reach_max_time=None):
+    def next_inputs(self, time, outputs, state, sample_ids, name=None,
+                    reach_max_time=None):
         """Gets the inputs for next step."""
         finished = math_ops.equal(sample_ids, self._end_token)
         all_finished = math_ops.reduce_all(finished)
@@ -662,9 +663,9 @@ class SampleEmbeddingHelper(GreedyEmbeddingHelper):
 
         Args:
           embedding: A callable or the `params` argument for `embedding_lookup`.
-            If a callable, it can take a vector tensor of `ids` (argmax ids),
+            If a callable, it can take a vector tensor of token `ids`,
             or take two arguments (`ids`, `times`), where `ids` is a vector
-            tensor of argmax ids, and `times` is a vector tensor of current
+            tensor of token ids, and `times` is a vector tensor of current
             time steps (i.e., position ids). The latter case can be used when
             attr:`embedding` is a combination of word embedding and position
             embedding.

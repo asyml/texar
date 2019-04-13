@@ -157,6 +157,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             self.embedding = None
             self._helper = None
             self._cache = None
+            self.max_decoding_length = None
 
     @staticmethod
     def default_hparams():
@@ -286,7 +287,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         return outputs, cache
 
     def _input_ids_to_outputs(self, input_ids, step, cache):
-        """The function is called in dynamic decoding.
+        """The function is called in beam-search decoding.
 
         `inputs` should be of shape `[batch_size, dim]`.
 
@@ -335,9 +336,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         """Performs decoding.
 
         The interface is mostly the same with that of RNN decoders
-        (see :meth:`~texar.modules.RNNDecoderBase._build`), except that
-        here `sequence_length` is not needed, and continuation generation is
-        additionally supported.
+        (see :meth:`~texar.modules.RNNDecoderBase._build`). The main difference
+        is that, here, `sequence_length` is not needed, and continuation
+        generation is additionally supported.
 
         The function provides **3 ways** to specify the decoding method, with
         varying flexibility:
@@ -363,17 +364,17 @@ class TransformerDecoder(ModuleBase, TFDecoder):
           :attr:`beam_width` are both `None`.
 
         2. The :attr:`helper` argument: An instance of subclass of
-           :tf_main:`tf.contrib.seq2seq.Helper <contrib/seq2seq/Helper>`.
+           :class:`texar.modules.Helper`.
            This provides a superset of decoding strategies than above.
            The interface is the same as in RNN decoders.
            Please refer to :meth:`texar.modules.RNNDecoderBase._build` for
            detailed usage and examples.
 
-           Note that, here, though using a :tf_main:`TrainingHelper
-           <contrib/seq2seq/TrainingHelper>` corresponding to the
-           "train_greedy" strategy above, the implementation is *slower* than
-           directly setting `decoding_strategy="train_greedy"` (though the
-           output results are the same).
+           Note that, here, though using a
+           :class:`~texar.modules.TrainingHelper` corresponds to the
+           "train_greedy" strategy above and will get the same output results,
+           the implementation is *slower* than
+           directly setting `decoding_strategy="train_greedy"`.
 
            Argument :attr:`max_decoding_length` is optional.
 
@@ -440,13 +441,17 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 and outputs have the correct values and that backprop ignores
                 time steps that were marked as finished. Ignored in
                 "train_greedy" decoding.
-            embedding: A callable that takes a vector tensor of `ids`
-                (argmax ids), or the `params` argument for `embedding_lookup`.
-                It can also accept two arguments for token indexes, transform
-                two kinds of token indexes into embedding and return the sum of
-                these two embeddings. This can be used when you want to add the
-                word embeddings and position embeddings.
-            The returned tensor will be passed to the decoder input.
+            embedding (optional): Embedding used when
+                "infer_greedy" or "infer_sample" `decoding_strategy`, or
+                beam search, is used. This can be
+                a callable or the `params` argument for
+                :tf_main:`embedding_lookup <nn/embedding_lookup>`.
+                If a callable, it can take a vector tensor of token `ids`,
+                or take two arguments (`ids`, `times`), where `ids`
+                is a vector tensor of token ids, and `times` is a vector tensor
+                of time steps (i.e., position ids). The latter case can be used
+                when attr:`embedding` is a combination of word embedding and
+                position embedding.
             helper (optional): An instance of
                 :tf_main:`Helper <contrib/seq2seq/Helper>` that defines the
                 decoding strategy. If given, :attr:`decoding_strategy` is

@@ -228,9 +228,9 @@ class TopKSampleEmbeddingHelper(GreedyEmbeddingHelper):
         Args:
             embedding: A callable or the `params` argument for
                 `embedding_lookup`. If a callable, it can take a vector tensor
-                of `ids` (argmax ids),
-                or take two arguments (`ids`, `times`), where `ids` is a vector
-                tensor of argmax ids, and `times` is a vector tensor of current
+                of token `ids`, or take two arguments (`ids`, `times`),
+                where `ids` is a vector
+                tensor of token ids, and `times` is a vector tensor of current
                 time steps (i.e., position ids). The latter case can be used
                 when attr:`embedding` is a combination of word embedding and
                 position embedding.
@@ -383,7 +383,8 @@ class SoftmaxEmbeddingHelper(Helper):
         sample_ids = tf.nn.softmax(outputs / self._tau)
         return sample_ids
 
-    def next_inputs(self, time, outputs, state, sample_ids, name=None, reach_max_time=None):
+    def next_inputs(self, time, outputs, state, sample_ids, name=None,
+                    reach_max_time=None):
         if self._use_finish:
             hard_ids = tf.argmax(sample_ids, axis=-1, output_type=tf.int32)
             finished = tf.equal(hard_ids, self._end_token)

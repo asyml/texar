@@ -224,22 +224,24 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                     max_decoding_length=60)
 
         2. The :attr:`helper` argument: An instance of subclass of \
-           :tf_main:`tf.contrib.seq2seq.Helper <contrib/seq2seq/Helper>`. This \
+           :class:`texar.modules.Helper`. This
            provides a superset of decoding strategies than above, for example:
 
-            - :tf_main:`TrainingHelper
-              <contrib/seq2seq/TrainingHelper>` corresponding to the \
+            - :class:`~texar.modules.TrainingHelper` corresponding to the \
               "train_greedy" strategy.
-            - :tf_main:`ScheduledEmbeddingTrainingHelper
-              <contrib/seq2seq/ScheduledEmbeddingTrainingHelper>` and \
-              :tf_main:`ScheduledOutputTrainingHelper
-              <contrib/seq2seq/ScheduledOutputTrainingHelper>` for scheduled \
+            - :class:`~texar.modules.GreedyEmbeddingHelper` and \
+              :class:`~texar.modules.SampleEmbeddingHelper` corresponding to \
+              the "infer_greedy" and "infer_sample", respectively.
+            - :class:`~texar.modules.TopKSampleEmbeddingHelper` for Top-K \
+              sample decoding.
+            - :class:`ScheduledEmbeddingTrainingHelper` and \
+              :class:`ScheduledOutputTrainingHelper` for scheduled \
               sampling.
             - :class:`~texar.modules.SoftmaxEmbeddingHelper` and \
               :class:`~texar.modules.GumbelSoftmaxEmbeddingHelper` for \
               soft decoding and gradient backpropagation.
 
-          This means gives the maximal flexibility of configuring the decoding\
+          Helpers give the maximal flexibility of configuring the decoding\
           strategy.
 
           Example:
@@ -251,7 +253,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
 
                 # Teacher-forcing decoding, same as above with
                 # `decoding_strategy='train_greedy'`
-                helper_1 = tf.contrib.seq2seq.TrainingHelper(
+                helper_1 = texar.modules.TrainingHelper(
                     inputs=embedders(data_batch['text_ids']),
                     sequence_length=data_batch['length']-1)
                 outputs_1, _, _ = decoder(helper=helper_1)
@@ -328,30 +330,43 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 sequence length of :attr:`inputs`.
                 Used when `decoding_strategy="train_greedy"` or
                 `hparams`-configured helper is used.
-            embedding (optional): A callable that returns embedding vectors
-                of `inputs` (e.g., an instance of subclass of
-                :class:`~texar.modules.EmbedderBase`), or the `params`
-                argument of
-                :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`.
-                If provided, `inputs` (if used) will be passed to
-                `embedding` to fetch the embedding vectors of the inputs.
-                Required when `decoding_strategy="infer_greedy"`
-                or `"infer_sample"`; optional when
-                `decoding_strategy="train_greedy"`.
+            embedding (optional): Embedding used when:
+
+                - "infer_greedy" or "infer_sample" `decoding_strategy` is \
+                used. This can be a callable or the `params` argument for \
+                :tf_main:`embedding_lookup <nn/embedding_lookup>`. \
+                If a callable, it can take a vector tensor of token `ids`, \
+                or take two arguments (`ids`, `times`), where `ids` \
+                is a vector tensor of token ids, and `times` is a vector tensor\
+                of time steps (i.e., position ids). The latter case can be used\
+                when attr:`embedding` is a combination of word embedding and\
+                position embedding. `embedding` is required in this case.
+                - "train_greedy" `decoding_strategy` is used.\
+                This can be a callable or the `params` argument for \
+                :tf_main:`embedding_lookup <nn/embedding_lookup>`. \
+                If a callable, it can take :attr:`inputs` and returns \
+                the input embedding. `embedding` is optional in this case.
             start_tokens (optional): A int Tensor of shape `[batch_size]`,
-                the start tokens.
-                Used when `decoding_strategy="infer_greedy"` or
-                `"infer_sample"`, or when `hparams`-configured
-                helper is used.
-                Companying with Texar data module, to get `batch_size` samples
-                where batch_size is changing according to the data module,
-                this can be set as
-                `start_tokens=tf.ones_like(batch['length'])*bos_token_id`.
+                the start tokens. Used when `decoding_strategy="infer_greedy"`
+                or `"infer_sample"`, or when the helper specified in `hparams`
+                is used.
+
+                Example:
+
+                    .. code-block:: python
+
+                        data = tx.data.MonoTextData(hparams)
+                        iterator = DataIterator(data)
+                        batch = iterator.get_next()
+
+                        bos_token_id = data.vocab.bos_token_id
+                        start_tokens=tf.ones_like(batch['length'])*bos_token_id
+
             end_token (optional): A int 0D Tensor, the token that marks end
                 of decoding.
                 Used when `decoding_strategy="infer_greedy"` or
-                `"infer_sample"`, or when `hparams`-configured
-                helper is used.
+                `"infer_sample"`, or when the helper specified in `hparams`
+                is used.
             softmax_temperature (optional): A float 0D Tensor, value to divide
                 the logits by before computing the softmax. Larger values
                 (above 1.0) result in more random samples. Must > 0. If `None`,
@@ -376,7 +391,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 Used when `decoding_strategy="train_greedy"` or
                 `hparams`-configured helper is used.
             helper (optional): An instance of
-                :tf_main:`Helper <contrib/seq2seq/Helper>`
+                :class:`texar.modules.Helper`
                 that defines the decoding strategy. If given,
                 `decoding_strategy`
                 and helper configs in :attr:`hparams` are ignored.
