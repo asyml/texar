@@ -159,6 +159,11 @@ class MultiheadAttentionEncoder(EncoderBase):
                         res = cache[key]
                         if isinstance(res, tf.TensorArray):
                             # inference-like decoding
+                            # TODO(zhiting): This writing op may cause a bug
+                            # on CPU--it looks the two TensorArray
+                            # cache['self_keys'] and cache['self_values']
+                            # will mix up starting from certain step, causing
+                            # shape mismatch. This op looks fine on GPU.
                             res = res.write(
                                 res.size(), tf.squeeze(out, axis=[1]))
                             out = transpose_batch_time(res.stack())
