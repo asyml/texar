@@ -139,8 +139,8 @@ output, output_length = decoder(
 output = decoder(
     memory=source_hidden_states, 
     memory_sequence_length=src_len,
-    inputs=truth_target[:, :-1],
-    decoding_strategy='train_greedy')
+    inputs=embedder(truth_target[:, :-1]),
+    decoding_strategy='train_greedy') # teacher-forcing decoding
     
 loss = tx.losses.sequence_sparse_softmax_cross_entropy(
     lables=truth_target[:, 1:],
