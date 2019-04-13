@@ -166,13 +166,13 @@ Decoders
 
 :hidden:`TrainingHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.Helper
+.. autoclass:: texar.modules.TrainingHelper
     :members:
     :inherited-members:
 
 :hidden:`ScheduledEmbeddingTrainingHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.SampleEmbeddingHelper
+.. autoclass:: texar.modules.ScheduledEmbeddingTrainingHelper
     :members:
     :inherited-members:
 
