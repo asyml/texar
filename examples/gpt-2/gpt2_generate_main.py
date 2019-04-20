@@ -112,10 +112,10 @@ def main(_):
 
     pos_embedder = tx.modules.PositionEmbedder(
         position_size=gpt2_config.position_size,
-        hparams=gpt2_config.pos_embed
-    )
+        hparams=gpt2_config.pos_embed)
 
     def _embedding_fn(x, y):
+        # `x` is token ids, `y` is time steps
         return word_embedder(x) + pos_embedder(y)
 
     helper = tx.modules.TopKSampleEmbeddingHelper(
