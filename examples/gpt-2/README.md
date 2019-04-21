@@ -157,7 +157,6 @@ Please refer to [distributed_gpu](https://github.com/asyml/texar/tree/master/exa
 
 Make sure to specifiy the `--distributed` flag as above for multi-gpu training.
 
-&nbsp;
 
 ### Restore and Test
 
