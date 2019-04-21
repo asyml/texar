@@ -18,15 +18,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import os
 import importlib
 import numpy as np
 import tensorflow as tf
 import texar as tx
-from texar.modules.decoders.transformer_decoders import TransformerDecoder
 
 from utils import model_utils, processor
-import configs
 
 # pylint: disable=invalid-name, too-many-locals, too-many-statements, no-member
 # pylint: disable=too-many-branches
@@ -35,8 +32,8 @@ flags = tf.flags
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("checkpoint", "gpt2_pretrained_models/"
-                                  "model_117M/model.ckpt",
+flags.DEFINE_string("checkpoint",
+                    "gpt2_pretrained_models/model_117M/model.ckpt",
                     "Model checkpoint to load model weights from.")
 flags.DEFINE_integer("seed", None, "Random seed.")
 flags.DEFINE_integer("nsamples", 1, "The number of samples per input.")
@@ -105,7 +102,7 @@ def main(_):
     else:
         start_tokens = tf.fill([batch_size], end_token)
 
-    # Build the GPT-2 modle
+    # Build the GPT-2 model
     word_embedder = tx.modules.WordEmbedder(
         vocab_size=gpt2_config.vocab_size,
         hparams=gpt2_config.embed)
@@ -126,7 +123,7 @@ def main(_):
         softmax_temperature=FLAGS.temperature)
     output_layer = tf.transpose(word_embedder.embedding, (1, 0))
 
-    decoder = TransformerDecoder(
+    decoder = tx.modules.TransformerDecoder(
         vocab_size=gpt2_config.vocab_size,
         output_layer=output_layer,
         hparams=gpt2_config.decoder)

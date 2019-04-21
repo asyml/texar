@@ -54,8 +54,7 @@ tf.logging.set_verbosity(tf.logging.INFO)
 
 
 def prepare_data():
-    """
-    Builds the model and runs.
+    """Prepares data.
     """
     # Loads data
     tf.logging.info("Loading data")
@@ -64,7 +63,7 @@ def prepare_data():
         "COLA": "CoLA",
         "SST": "SST-2",
     }
-    
+
     data_dir = 'data/{}'.format(FLAGS.task)
     if FLAGS.task.upper() in task_datasets_rename:
         data_dir = 'data/{}'.format(
@@ -72,7 +71,7 @@ def prepare_data():
 
     if FLAGS.tfrecord_output_dir is None:
         tfrecord_output_dir = data_dir
-    else: 
+    else:
         tfrecord_output_dir = FLAGS.tfrecord_output_dir
     tx.utils.maybe_create_dir(tfrecord_output_dir)
 

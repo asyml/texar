@@ -1,7 +1,3 @@
-"""
-This is the Data Loading Pipeline for Sentence Classifier Task from
-https://github.com/google-research/bert/blob/master/run_classifier.py
-"""
 # coding=utf-8
 # Copyright 2018 The Google AI Language Team Authors.
 #
@@ -16,6 +12,10 @@ https://github.com/google-research/bert/blob/master/run_classifier.py
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+This is the Data Loading Pipeline for Sentence Classifier Task from
+https://github.com/google-research/bert/blob/master/run_classifier.py
+"""
 
 import os
 import csv
@@ -457,8 +457,6 @@ def prepare_TFRecord_data(processor, tokenizer,
             SentencePiece Model.
         data_dir: The input data directory.
         max_seq_length: Max sequence length.
-        batch_size: mini-batch size.
-        model: `train`, `eval` or `test`.
         output_dir: The directory to save the TFRecord in.
     """
     label_list = processor.get_labels()

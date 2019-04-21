@@ -368,10 +368,11 @@ def _get_static_lr(learning_rate=None, optimizer_class=None, hparams=None):
 def get_optimizer(learning_rate=None, global_step=None, hparams=None):
 
     """Creates a optimizer instance.
+
     Args:
         learning_rate (float or Tensor, optional): If `None`, learning rate
             specified in :attr:`hparams`, or the default learning rate
-            of the optimizer will be used (if exists).
+            of the optimizer (if exists) is used.
         global_step (optional): A scalar int Tensor. Step counter to update on
             each step unless :attr:`increment_global_step` is `False`.
             Learning rate decay uses :attr:`global_step`.
@@ -509,7 +510,6 @@ class AdamWeightDecayOptimizer(tf.train.Optimizer):
     # pylint: disable=too-many-locals
     def apply_gradients(self, grads_and_vars, global_step=None, name=None):
         """See base class."""
-        # pylint: disable=redefined-argument-from-local
         with tf.name_scope(name, self._name) as name:
             assignments = []
             for (grad, param) in grads_and_vars:
