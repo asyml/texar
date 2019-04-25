@@ -25,7 +25,6 @@ from tensorflow.contrib.seq2seq import \
     BeamSearchDecoder, tile_batch
 
 from texar.modules.decoders.rnn_decoder_base import RNNDecoderBase
-
 # pylint: disable=too-many-arguments, protected-access, too-many-locals
 # pylint: disable=invalid-name
 
@@ -58,6 +57,7 @@ def _get_initial_state(initial_state,
         tiled_initial_state = zero_state.clone(cell_state=tiled_initial_state)
 
     return tiled_initial_state
+
 
 def beam_search_decode(decoder_or_cell,
                        embedding,
@@ -218,7 +218,7 @@ def beam_search_decode(decoder_or_cell,
             end_token=end_token,
             initial_state=initial_state,
             beam_width=beam_width,
-            output_layer=output_layer,
+            output_layer=None if output_layer is tf.identity else output_layer,
             length_penalty_weight=length_penalty_weight)
 
         if 'maximum_iterations' in kwargs:

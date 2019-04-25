@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,10 +36,68 @@ from texar.utils import utils
 from texar.utils.mode import is_train_mode, is_train_mode_py
 from texar.module_base import ModuleBase
 from texar.modules.decoders import rnn_decoder_helpers
+from texar.utils.dtypes import is_callable
+from texar.utils.shapes import shape_list
+from texar.modules.decoders import tf_helpers as tx_helper
 
 __all__ = [
-    "RNNDecoderBase"
+    "RNNDecoderBase",
+    "_make_output_layer"
 ]
+
+
+def _make_output_layer_from_tensor(output_layer_tensor, vocab_size,
+                                   output_layer_bias, variable_scope):
+    """Creates a dense layer from a Tensor. Used to tie word embedding
+    with the output layer weight.
+    """
+    affine_bias = None
+    if output_layer_bias:
+        with tf.variable_scope(variable_scope):
+            affine_bias = tf.get_variable('affine_bias', [vocab_size])
+
+    def _outputs_to_logits(outputs):
+        shape = shape_list(outputs)
+        dim = shape[-1]
+        outputs = tf.reshape(outputs, [-1, dim])
+        logits = tf.matmul(outputs, output_layer_tensor)
+        if affine_bias is not None:
+            logits += affine_bias
+        logits = tf.reshape(logits, shape[:-1] + [vocab_size])
+        return logits
+
+    return _outputs_to_logits
+
+
+def _make_output_layer(output_layer, vocab_size,
+                       output_layer_bias, variable_scope):
+    """Makes a decoder output layer.
+    """
+    _vocab_size = vocab_size
+    if is_callable(output_layer):
+        _output_layer = output_layer
+    elif tf.contrib.framework.is_tensor(output_layer):
+        _vocab_size = shape_list(output_layer)[1]
+        _output_layer = _make_output_layer_from_tensor(
+            output_layer, _vocab_size, output_layer_bias, variable_scope)
+    elif output_layer is None:
+        if _vocab_size is None:
+            raise ValueError(
+                "Either `output_layer` or `vocab_size` must be provided. "
+                "Set `output_layer=tf.identity` if no output layer is "
+                "wanted.")
+        with tf.variable_scope(variable_scope):
+            # pylint: disable=redefined-variable-type
+            _output_layer = tf.layers.Dense(
+                units=_vocab_size, use_bias=output_layer_bias)
+    else:
+        raise ValueError(
+            "output_layer should be a callable layer, a tensor, or None. "
+            "Unsupported type: ", type(output_layer)
+        )
+
+    return _output_layer, _vocab_size
+
 
 class RNNDecoderBase(ModuleBase, TFDecoder):
     """Base class inherited by all RNN decoder classes.
@@ -72,21 +130,11 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         self._beam_search_cell = None
 
         # Make the output layer
-        self._vocab_size = vocab_size
-        self._output_layer = output_layer
-        if output_layer is None:
-            if self._vocab_size is None:
-                raise ValueError(
-                    "Either `output_layer` or `vocab_size` must be provided. "
-                    "Set `output_layer=tf.identity` if no output layer is "
-                    "wanted.")
-            with tf.variable_scope(self.variable_scope):
-                self._output_layer = tf.layers.Dense(units=self._vocab_size)
-        elif output_layer is not tf.identity:
-            if not isinstance(output_layer, tf.layers.Layer):
-                raise ValueError(
-                    "`output_layer` must be either `tf.identity` or "
-                    "an instance of `tf.layers.Layer`.")
+        self._output_layer, self._vocab_size = _make_output_layer(
+            output_layer, vocab_size, self._hparams.output_layer_bias,
+            self.variable_scope)
+
+        self.max_decoding_length = None
 
     @staticmethod
     def default_hparams():
@@ -103,7 +151,8 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             "helper_infer": rnn_decoder_helpers.default_helper_infer_hparams(),
             "max_decoding_length_train": None,
             "max_decoding_length_infer": None,
-            "name": "rnn_decoder"
+            "name": "rnn_decoder",
+            "output_layer_bias": True,
         }
 
     def _build(self,
@@ -175,22 +224,24 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                     max_decoding_length=60)
 
         2. The :attr:`helper` argument: An instance of subclass of \
-           :tf_main:`tf.contrib.seq2seq.Helper <contrib/seq2seq/Helper>`. This \
+           :class:`texar.modules.Helper`. This
            provides a superset of decoding strategies than above, for example:
 
-            - :tf_main:`TrainingHelper
-              <contrib/seq2seq/TrainingHelper>` corresponding to the \
+            - :class:`~texar.modules.TrainingHelper` corresponding to the \
               "train_greedy" strategy.
-            - :tf_main:`ScheduledEmbeddingTrainingHelper
-              <contrib/seq2seq/ScheduledEmbeddingTrainingHelper>` and \
-              :tf_main:`ScheduledOutputTrainingHelper
-              <contrib/seq2seq/ScheduledOutputTrainingHelper>` for scheduled \
+            - :class:`~texar.modules.GreedyEmbeddingHelper` and \
+              :class:`~texar.modules.SampleEmbeddingHelper` corresponding to \
+              the "infer_greedy" and "infer_sample", respectively.
+            - :class:`~texar.modules.TopKSampleEmbeddingHelper` for Top-K \
+              sample decoding.
+            - :class:`ScheduledEmbeddingTrainingHelper` and \
+              :class:`ScheduledOutputTrainingHelper` for scheduled \
               sampling.
             - :class:`~texar.modules.SoftmaxEmbeddingHelper` and \
               :class:`~texar.modules.GumbelSoftmaxEmbeddingHelper` for \
               soft decoding and gradient backpropagation.
 
-          This means gives the maximal flexibility of configuring the decoding\
+          Helpers give the maximal flexibility of configuring the decoding\
           strategy.
 
           Example:
@@ -202,7 +253,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
 
                 # Teacher-forcing decoding, same as above with
                 # `decoding_strategy='train_greedy'`
-                helper_1 = tf.contrib.seq2seq.TrainingHelper(
+                helper_1 = texar.modules.TrainingHelper(
                     inputs=embedders(data_batch['text_ids']),
                     sequence_length=data_batch['length']-1)
                 outputs_1, _, _ = decoder(helper=helper_1)
@@ -279,30 +330,43 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 sequence length of :attr:`inputs`.
                 Used when `decoding_strategy="train_greedy"` or
                 `hparams`-configured helper is used.
-            embedding (optional): A callable that returns embedding vectors
-                of `inputs` (e.g., an instance of subclass of
-                :class:`~texar.modules.EmbedderBase`), or the `params`
-                argument of
-                :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`.
-                If provided, `inputs` (if used) will be passed to
-                `embedding` to fetch the embedding vectors of the inputs.
-                Required when `decoding_strategy="infer_greedy"`
-                or `"infer_sample"`; optional when
-                `decoding_strategy="train_greedy"`.
+            embedding (optional): Embedding used when:
+
+                - "infer_greedy" or "infer_sample" `decoding_strategy` is \
+                used. This can be a callable or the `params` argument for \
+                :tf_main:`embedding_lookup <nn/embedding_lookup>`. \
+                If a callable, it can take a vector tensor of token `ids`, \
+                or take two arguments (`ids`, `times`), where `ids` \
+                is a vector tensor of token ids, and `times` is a vector tensor\
+                of time steps (i.e., position ids). The latter case can be used\
+                when attr:`embedding` is a combination of word embedding and\
+                position embedding. `embedding` is required in this case.
+                - "train_greedy" `decoding_strategy` is used.\
+                This can be a callable or the `params` argument for \
+                :tf_main:`embedding_lookup <nn/embedding_lookup>`. \
+                If a callable, it can take :attr:`inputs` and returns \
+                the input embedding. `embedding` is optional in this case.
             start_tokens (optional): A int Tensor of shape `[batch_size]`,
-                the start tokens.
-                Used when `decoding_strategy="infer_greedy"` or
-                `"infer_sample"`, or when `hparams`-configured
-                helper is used.
-                Companying with Texar data module, to get `batch_size` samples
-                where batch_size is changing according to the data module,
-                this can be set as
-                `start_tokens=tf.ones_like(batch['length'])*bos_token_id`.
+                the start tokens. Used when `decoding_strategy="infer_greedy"`
+                or `"infer_sample"`, or when the helper specified in `hparams`
+                is used.
+
+                Example:
+
+                    .. code-block:: python
+
+                        data = tx.data.MonoTextData(hparams)
+                        iterator = DataIterator(data)
+                        batch = iterator.get_next()
+
+                        bos_token_id = data.vocab.bos_token_id
+                        start_tokens=tf.ones_like(batch['length'])*bos_token_id
+
             end_token (optional): A int 0D Tensor, the token that marks end
                 of decoding.
                 Used when `decoding_strategy="infer_greedy"` or
-                `"infer_sample"`, or when `hparams`-configured
-                helper is used.
+                `"infer_sample"`, or when the helper specified in `hparams`
+                is used.
             softmax_temperature (optional): A float 0D Tensor, value to divide
                 the logits by before computing the softmax. Larger values
                 (above 1.0) result in more random samples. Must > 0. If `None`,
@@ -327,7 +391,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 Used when `decoding_strategy="train_greedy"` or
                 `hparams`-configured helper is used.
             helper (optional): An instance of
-                :tf_main:`Helper <contrib/seq2seq/Helper>`
+                :class:`texar.modules.Helper`
                 that defines the decoding strategy. If given,
                 `decoding_strategy`
                 and helper configs in :attr:`hparams` are ignored.
@@ -359,10 +423,10 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 helper = rnn_decoder_helpers._get_training_helper(
                     inputs, sequence_length, embedding, input_time_major)
             elif decoding_strategy == "infer_greedy":
-                helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(
+                helper = tx_helper.GreedyEmbeddingHelper(
                     embedding, start_tokens, end_token)
             elif decoding_strategy == "infer_sample":
-                helper = tf.contrib.seq2seq.SampleEmbeddingHelper(
+                helper = tx_helper.SampleEmbeddingHelper(
                     embedding, start_tokens, end_token, softmax_temperature)
             else:
                 raise ValueError(
@@ -404,7 +468,7 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 max_l_infer = utils.MAX_SEQ_LENGTH
             max_l = tf.cond(is_train_mode(mode),
                             lambda: max_l_train, lambda: max_l_infer)
-
+        self.max_decoding_length = max_l
         # Decode
         outputs, final_state, sequence_lengths = dynamic_decode(
             decoder=self, impute_finished=impute_finished,

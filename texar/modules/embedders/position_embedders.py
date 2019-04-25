@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -121,7 +121,7 @@ class PositionEmbedder(EmbedderBase):
     def _build(self, positions=None, sequence_length=None, mode=None, **kwargs):
         """Embeds the positions.
 
-        Either :attr:`position` or :attr:`sequence_length` is required:
+        Either :attr:`positions` or :attr:`sequence_length` is required:
 
             - If both are given, :attr:`sequence_length` is used to mask out \
             embeddings of those time steps beyond the respective sequence \
@@ -223,7 +223,8 @@ class PositionEmbedder(EmbedderBase):
 class SinusoidsPositionEmbedder(EmbedderBase):
     """Sinusoid position embedder that maps position indexes into embeddings
     via sinusoid calculation. This module does not have trainable parameters.
-    Used in, e.g., :class:`~texar.modules.TransformerEncoder`.
+    Used in, e.g., Transformer models
+    `(Vaswani et al.) "Attention Is All You Need"`.
 
     Each channel of the input Tensor is incremented by a sinusoid of a
     different frequency and phase.
@@ -240,11 +241,32 @@ class SinusoidsPositionEmbedder(EmbedderBase):
     cos(timestep/timescale).  All of these sinusoids are concatenated in
     the dim dimension.
 
+    Args:
+        position_size (int): The number of possible positions, e.g., the maximum
+            sequence length.
+
     .. document private functions
     .. automethod:: _build
     """
-    def __init__(self, hparams=None):
+    def __init__(self, position_size, hparams=None):
         EmbedderBase.__init__(self, hparams=hparams)
+
+        dim = self._hparams.dim
+        num_timescales = dim // 2
+        min_timescale = self._hparams.min_timescale
+        max_timescale = self._hparams.max_timescale
+
+        positions = tf.to_float(tf.range(position_size, dtype=tf.int32))
+        log_timescale_increment = (
+            math.log(float(max_timescale) / float(min_timescale)) /
+            (tf.to_float(num_timescales) - 1))
+        inv_timescales = min_timescale * tf.exp(
+            tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
+        scaled_time = tf.expand_dims(positions, 1) \
+            * tf.expand_dims(inv_timescales, 0)
+        signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=1)
+        signal = tf.pad(signal, [[0, 0], [0, tf.mod(dim, 2)]])
+        self.signal = signal
 
     def default_hparams(self):
         """Returns a dictionary of hyperparameters with default values
@@ -269,31 +291,38 @@ class SinusoidsPositionEmbedder(EmbedderBase):
         }
         return hparams
 
-    def _build(self, positions):
+    def _build(self, positions=None, sequence_length=None):
         """Embeds.
+        Either :attr:`positions` or :attr:`sequence_length` is required:
+
+            - If both are given, :attr:`sequence_length` is used to mask out \
+            embeddings of those time steps beyond the respective sequence \
+            lengths.
+            - If only :attr:`sequence_length` is given, then positions \
+            from `0` to `sequence_length-1` are embedded.
 
         Args:
             positions (optional): An integer tensor containing the position
                 ids to embed.
+            sequence_length (optional): An integer tensor of shape
+                `[batch_size]`. Time steps beyond
+                the respective sequence lengths will have zero-valued
+                embeddings.
         Returns:
-            A `Tensor` of shape `[1, position_size, dim]`.
+            A `Tensor` of shape `[batch_size, position_size, dim]`.
         """
-        dim = self._hparams.dim
-        position = tf.to_float(tf.squeeze(positions, axis=0))
-        position_size = tf.shape(position)[0]
-        num_timescales = dim // 2
-        min_timescale = self._hparams.min_timescale
-        max_timescale = self._hparams.max_timescale
-        log_timescale_increment = (
-            math.log(float(max_timescale) / float(min_timescale)) /
-            (tf.to_float(num_timescales) - 1))
-        inv_timescales = min_timescale * tf.exp(
-            tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
-        scaled_time = tf.expand_dims(position, 1) \
-            * tf.expand_dims(inv_timescales, 0)
-        signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=1)
-        signal = tf.pad(signal, [[0, 0], [0, tf.mod(dim, 2)]])
-        signal = tf.reshape(signal, [1, position_size, dim])
+        inputs = positions
+        if positions is None:
+            if sequence_length is None:
+                raise ValueError(
+                    'Either `positions` or `sequence_length` is required.')
+            max_length = tf.reduce_max(sequence_length)
+            single_inputs = tf.range(start=0, limit=max_length, dtype=tf.int32)
+            # Expands `single_inputs` to have shape [batch_size, max_length]
+            expander = tf.expand_dims(tf.ones_like(sequence_length), -1)
+            inputs = expander * tf.expand_dims(single_inputs, 0)
 
-        return signal
+        embedding = self.signal
+        outputs = tf.nn.embedding_lookup(embedding, inputs)
+        return outputs
 

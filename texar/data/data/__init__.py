@@ -29,3 +29,4 @@ from texar.data.data.paired_text_data import *
 from texar.data.data.multi_aligned_data import *
 from texar.data.data.data_iterators import *
 from texar.data.data.dataset_utils import *
+from texar.data.data.tfrecord_data import *

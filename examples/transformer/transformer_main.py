@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ from texar.utils import transformer_utils
 from utils import data_utils, utils
 from utils.preprocess import bos_token_id, eos_token_id
 from bleu_tool import bleu_wrapper
+
 # pylint: disable=invalid-name, too-many-locals
 
 flags = tf.flags
@@ -70,6 +71,7 @@ def main():
     # Build model graph
     encoder_input = tf.placeholder(tf.int64, shape=(None, None))
     decoder_input = tf.placeholder(tf.int64, shape=(None, None))
+    batch_size = tf.shape(encoder_input)[0]
     # (text sequence length excluding padding)
     encoder_input_length = tf.reduce_sum(
         1 - tf.to_int32(tf.equal(encoder_input, 0)), axis=1)
@@ -82,11 +84,23 @@ def main():
     global_step = tf.Variable(0, dtype=tf.int64, trainable=False)
     learning_rate = tf.placeholder(tf.float64, shape=(), name='lr')
 
-    embedder = tx.modules.WordEmbedder(
+    # Source word embedding
+    src_word_embedder = tx.modules.WordEmbedder(
         vocab_size=vocab_size, hparams=config_model.emb)
-    encoder = TransformerEncoder(hparams=config_model.encoder)
+    src_word_embeds = src_word_embedder(encoder_input)
+    src_word_embeds = src_word_embeds * config_model.hidden_dim ** 0.5
 
-    encoder_output = encoder(inputs=embedder(encoder_input),
+    # Position embedding (shared b/w source and target)
+    pos_embedder = tx.modules.SinusoidsPositionEmbedder(
+        position_size=config_data.max_decoding_length,
+        hparams=config_model.position_embedder_hparams)
+    src_seq_len = tf.ones([batch_size], tf.int32) * tf.shape(encoder_input)[1]
+    src_pos_embeds = pos_embedder(sequence_length=src_seq_len)
+
+    src_input_embedding = src_word_embeds + src_pos_embeds
+
+    encoder = TransformerEncoder(hparams=config_model.encoder)
+    encoder_output = encoder(inputs=src_input_embedding,
                              sequence_length=encoder_input_length)
 
     # The decoder ties the input word embedding with the output logit layer.
@@ -94,15 +108,28 @@ def main():
     # <PAD> has all-zero embedding, so here we explicitly set <PAD>'s embedding
     # to all-zero.
     tgt_embedding = tf.concat(
-        [tf.zeros(shape=[1, embedder.dim]), embedder.embedding[1:, :]], axis=0)
-    decoder = TransformerDecoder(embedding=tgt_embedding,
+        [tf.zeros(shape=[1, src_word_embedder.dim]),
+         src_word_embedder.embedding[1:, :]],
+        axis=0)
+    tgt_embedder = tx.modules.WordEmbedder(tgt_embedding)
+    tgt_word_embeds = tgt_embedder(decoder_input)
+    tgt_word_embeds = tgt_word_embeds * config_model.hidden_dim ** 0.5
+
+    tgt_seq_len = tf.ones([batch_size], tf.int32) * tf.shape(decoder_input)[1]
+    tgt_pos_embeds = pos_embedder(sequence_length=tgt_seq_len)
+
+    tgt_input_embedding = tgt_word_embeds + tgt_pos_embeds
+
+    _output_w = tf.transpose(tgt_embedder.embedding, (1, 0))
+
+    decoder = TransformerDecoder(vocab_size=vocab_size,
+                                 output_layer=_output_w,
                                  hparams=config_model.decoder)
     # For training
     outputs = decoder(
         memory=encoder_output,
         memory_sequence_length=encoder_input_length,
-        inputs=embedder(decoder_input),
-        sequence_length=decoder_input_length,
+        inputs=tgt_input_embedding,
         decoding_strategy='train_greedy',
         mode=tf.estimator.ModeKeys.TRAIN
     )
@@ -121,26 +148,25 @@ def main():
     tf.summary.scalar('mle_loss', mle_loss)
     summary_merged = tf.summary.merge_all()
 
-    # For inference
-    start_tokens = tf.fill([tx.utils.get_batch_size(encoder_input)],
-                           bos_token_id)
+    # For inference (beam-search)
+    start_tokens = tf.fill([batch_size], bos_token_id)
+
+    def _embedding_fn(x, y):
+        return tgt_embedder(x) * config_model.hidden_dim ** 0.5 + pos_embedder(
+            y)
+
     predictions = decoder(
         memory=encoder_output,
         memory_sequence_length=encoder_input_length,
-        decoding_strategy='infer_greedy',
         beam_width=beam_width,
-        alpha=config_model.alpha,
+        length_penalty=config_model.length_penalty,
         start_tokens=start_tokens,
         end_token=eos_token_id,
+        embedding=_embedding_fn,
         max_decoding_length=config_data.max_decoding_length,
-        mode=tf.estimator.ModeKeys.PREDICT
-    )
-    if beam_width <= 1:
-        inferred_ids = predictions[0].sample_id
-    else:
-        # Uses the best sample by beam search
-        inferred_ids = predictions['sample_id'][:, :, 0]
-
+        mode=tf.estimator.ModeKeys.PREDICT)
+    # Uses the best sample by beam search
+    beam_search_ids = predictions['sample_id'][:, :, 0]
 
     saver = tf.train.Saver(max_to_keep=5)
     best_results = {'score': 0, 'epoch': -1}
@@ -156,18 +182,18 @@ def main():
         references, hypotheses = [], []
         bsize = config_data.test_batch_size
         for i in range(0, len(eval_data), bsize):
-            sources, targets = zip(*eval_data[i:i+bsize])
+            sources, targets = zip(*eval_data[i:i + bsize])
             x_block = data_utils.source_pad_concat_convert(sources)
             feed_dict = {
                 encoder_input: x_block,
                 tx.global_mode(): tf.estimator.ModeKeys.EVAL,
             }
             fetches = {
-                'inferred_ids': inferred_ids,
+                'beam_search_ids': beam_search_ids,
             }
             fetches_ = sess.run(fetches, feed_dict=feed_dict)
 
-            hypotheses.extend(h.tolist() for h in fetches_['inferred_ids'])
+            hypotheses.extend(h.tolist() for h in fetches_['beam_search_ids'])
             references.extend(r.tolist() for r in targets)
             hypotheses = utils.list_strip_eos(hypotheses, eos_token_id)
             references = utils.list_strip_eos(references, eos_token_id)

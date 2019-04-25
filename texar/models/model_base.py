@@ -27,6 +27,7 @@ __all__ = [
     "ModelBase"
 ]
 
+
 class ModelBase(object):
     """Base class inherited by all model classes.
 

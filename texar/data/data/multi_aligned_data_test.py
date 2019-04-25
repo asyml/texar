@@ -9,6 +9,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import sys
 import tempfile
 import copy
 import numpy as np
@@ -60,6 +61,35 @@ class MultiAlignedDataTest(tf.test.TestCase):
         int_3_file.flush()
         self._int_3_file = int_3_file
 
+        def _bytes_feature(value):
+            """Returns a bytes_list from a string / byte.
+            """
+            value = tf.compat.as_bytes(
+                value,
+                encoding='utf-8'
+            )
+            return tf.train.Feature(
+                bytes_list=tf.train.BytesList(value=[value]))
+
+        def _int64_feature(value):
+            """Returns an int64_list from a bool / enum / int / uint.
+            """
+            return tf.train.Feature(
+                int64_list=tf.train.Int64List(value=[value]))
+
+        feature = {
+            "number1": _int64_feature(128),
+            "number2": _int64_feature(512),
+            "text": _bytes_feature("This is a sentence for TFRecord 词 词 。")
+        }
+        data_example = tf.train.Example(
+            features=tf.train.Features(feature=feature))
+        tfrecord_file = tempfile.NamedTemporaryFile(suffix=".tfrecord")
+        with tf.python_io.TFRecordWriter(tfrecord_file.name) as writer:
+            writer.write(data_example.SerializeToString())
+        tfrecord_file.flush()
+        self._tfrecord_file = tfrecord_file
+
         # Construct database
         self._hparams = {
             "num_epochs": 123,
@@ -89,6 +119,21 @@ class MultiAlignedDataTest(tf.test.TestCase):
                     "data_type": "int",
                     "data_name": "label"
                 },
+                { # dataset 4
+                    "files": self._tfrecord_file.name,
+                    "feature_original_types": {
+                        'number1': ['tf.int64', 'FixedLenFeature'],
+                        'number2': ['tf.int64', 'FixedLenFeature'],
+                        'text': ['tf.string', 'FixedLenFeature'],
+                    },
+                    "feature_convert_types": {
+                        'number2': 'tf.float32',
+                    },
+                    "num_shards": 2,
+                    "shard_id": 1,
+                    "data_type": "tf_record",
+                    "data_name": "4"
+                }
             ]
         }
 
@@ -121,8 +166,15 @@ class MultiAlignedDataTest(tf.test.TestCase):
                     text_1 = data_batch_['1_text']
                     text_2 = data_batch_['2_text']
                     int_3 = data_batch_['label']
+                    number_1 = data_batch_['4_number1']
+                    number_2 = data_batch_['4_number2']
+                    text_3 = data_batch_['4_text']
+
                     # pylint: disable=invalid-name
-                    for t0, t1, t2, i3 in zip(text_0, text_1, text_2, int_3):
+                    for t0, t1, t2, i3, n1, n2, t4 in zip(
+                        text_0, text_1, text_2, int_3, 
+                        number_1, number_2, text_3):
+
                         np.testing.assert_array_equal(
                             t0[:2], t1[1:3])
                         np.testing.assert_array_equal(
@@ -131,6 +183,11 @@ class MultiAlignedDataTest(tf.test.TestCase):
                             self.assertEqual(i3, 0)
                         else:
                             self.assertEqual(i3, 1)
+                        self.assertEqual(n1, 128)
+                        self.assertEqual(n2, 512)
+                        self.assertTrue(isinstance(n1, np.int64))
+                        self.assertTrue(isinstance(n2, np.float32))
+                        self.assertTrue(isinstance(t4, bytes))
 
                     if discard_did is not None:
                         hpms = text_data._hparams.datasets[discard_did]

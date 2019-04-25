@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,16 +23,15 @@ import tensorflow as tf
 
 from texar.core import layers
 from texar.utils import transformer_attentions as attn
-from texar.modules.embedders.position_embedders import\
-    SinusoidsPositionEmbedder, PositionEmbedder
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.encoders.multihead_attention import MultiheadAttentionEncoder
 from texar.modules.networks.networks import FeedForwardNetwork
 from texar import utils
-from texar.utils.shapes import shape_list, mask_sequences
+from texar.utils.shapes import shape_list
 from texar.utils.mode import is_train_mode
 
 # pylint: disable=too-many-locals, invalid-name
+# pylint: disable=arguments-differ, too-many-branches, too-many-statements
 
 __all__ = [
     "default_transformer_poswise_net_hparams",
@@ -114,11 +113,21 @@ def default_transformer_poswise_net_hparams(output_dim=512):
 class TransformerEncoder(EncoderBase):
     """Transformer encoder that applies multi-head self attention for encoding
     sequences.
-    Stacked `~texar.modules.encoders.MultiheadAttentionEncoder`,
-    `~texar.modules.FeedForwardNetwork` and residual connections.
+
+    This module basically stacks
+    :class:`~texar.modules.encoders.MultiheadAttentionEncoder`,
+    :class:`~texar.modules.FeedForwardNetwork` and residual connections.
+
+    This module supports two types of architectures, namely, the standard
+    Transformer Encoder architecture first proposed in
+    `(Vaswani et al.) "Attention is All You Need"`, and
+    the variant first used in `(Devlin et al.)` BERT. See
+    :meth:`default_hparams` for the nuance between the two types of
+    architectures.
+
     Args:
         hparams (dict or HParams, optional): Hyperparameters. Missing
-            hyperparamerter will be set to default values. See
+            hyperparameter will be set to default values. See
             :meth:`default_hparams` for the hyperparameter sturcture and
             default values.
 
@@ -132,46 +141,33 @@ class TransformerEncoder(EncoderBase):
             if self._hparams.initializer:
                 tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
-            if self._hparams.position_embedder_type == 'sinusoids':
-                self.position_embedder = SinusoidsPositionEmbedder(
-                    self._hparams.position_embedder_hparams)
-            else:
-                self.position_embedder = PositionEmbedder(
-                    position_size=self._hparams.position_size,
-                    hparams=self._hparams.position_embedder_hparams)
-            # pylint: disable=protected-access
-            if self._hparams.dim != \
-                self.position_embedder._hparams.dim:
-                raise ValueError('"dim" in '
-                                 'TransformerEncoder hparams must be equal '
-                                 'to "dim" in its '
-                                 'position_embedder_hparams.')
 
             self.multihead_attention_list = []
             self.poswise_networks = []
             for i in range(self._hparams.num_blocks):
                 with tf.variable_scope("layer_{}".format(i)):
+
                     with tf.variable_scope('attention'):
-                        multihead_attention = MultiheadAttentionEncoder(
+                        mh_attn = MultiheadAttentionEncoder(
                             self._hparams.multihead_attention)
-                        self.multihead_attention_list.append(
-                            multihead_attention)
-                    # pylint: disable=protected-access
-                    if self._hparams.dim != \
-                        multihead_attention._hparams.output_dim:
-                        raise ValueError('The "dim" in the hparams of'
-                                         'multihead_attention should be equal'
-                                         'to the "dim" of TransformerEncoder')
-                    poswise_network = FeedForwardNetwork(
+                        self.multihead_attention_list.append(mh_attn)
+
+                        if self._hparams.dim != mh_attn.hparams.output_dim:
+                            raise ValueError(
+                                'The "dim" in the hparams of '
+                                '"multihead_attention" should be equal to the '
+                                '"dim" of TransformerEncoder')
+
+                    pw_net = FeedForwardNetwork(
                         hparams=self._hparams['poswise_feedforward'])
-                    # pylint: disable=protected-access
-                    if self._hparams.dim != \
-                        poswise_network._hparams.layers[-1]['kwargs']['units']:
-                        # poswise_network._hparams.layers[-1]['units']:
-                        raise ValueError('The "units" in the "kwargs" of'
-                                         'FeedForwardNetwork should be equal'
-                                         'to the "dim" of TransformerEncoder')
-                    self.poswise_networks.append(poswise_network)
+                    final_dim = pw_net.hparams.layers[-1]['kwargs']['units']
+                    if self._hparams.dim != final_dim:
+                        raise ValueError(
+                            'The output dimenstion of '
+                            '"poswise_feedforward" should be equal '
+                            'to the "dim" of TransformerEncoder.')
+                    self.poswise_networks.append(pw_net)
+
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
@@ -181,9 +177,7 @@ class TransformerEncoder(EncoderBase):
             {
                 "num_blocks": 6,
                 "dim": 512,
-                'position_embedder_type': 'sinusoids',
-                'position_size': None,
-                'position_embedder_hparams': None,
+                'use_bert_config': False,
                 "embedding_dropout": 0.1,
                 "residual_dropout": 0.1,
                 "poswise_feedforward": default_transformer_poswise_net_hparams,
@@ -198,7 +192,6 @@ class TransformerEncoder(EncoderBase):
                 },
                 "initializer": None,
                 "name": "transformer_encoder"
-                'use_bert_config': False,
             }
 
         Here:
@@ -209,41 +202,33 @@ class TransformerEncoder(EncoderBase):
         "dim" : int
             Hidden dimension of the encoders.
 
-        "use_bert_config": bool
-            If False, apply the default Transformer Encoder architecture.
-            If True, apply the Transformer Encoder architecture used in BERT.
+        "use_bert_config" : bool
+            If `False`, apply the standard Transformer Encoder architecture from
+            the original paper `(Vaswani et al.) "Attention is All You Need"`.
+            If `True`, apply the Transformer Encoder architecture used in BERT
+            `(Devlin et al.)`.
+
             The differences lie in:
-                1. The Normalization of the input embedding with dimension
-                2. The attention bias for padding tokens.
-                3. The residual connections between the internal tensors.
 
-        "position_embedder_type":
-            Choose from "sinusoids" or "variables".
+                1. The standard arch restricts the word embedding of PAD token \
+                   to all zero. The BERT arch does not.
 
-            "sinusoids":
-                create the position embedding as sinusoids, which is fixed.
-            "variables":
-                create the position embedding as trainable variables.
+                2. The attention bias for padding tokens: \
+                   The standard arch uses `-1e8` for nagative attention mask. \
+                   BERT uses `-1e4` instead.
 
-        "position_size": int
-            The size of position embeddings.
-            Only be used when "position_embedder_type"is "variables".
-
-        "position_embedder_hparams" : dict, optional
-            Hyperparameters of a
-            :class:`~texar.modules.PositionEmbedder` as position
-            embedder if "position_embedder_type" is "variables",
-            or Hyperparameters of a
-            :class:`~texar.modules.SinusoidsPositionEmbedder` as position
-            embedder if "position_embedder_type" is "sinusoids".
+                3. The residual connections between internal tensors: \
+                   In BERT, a residual layer connects the tensors *after* \
+                   layer normalization. In the standard arch, the tensors are \
+                   connected *before* layer normalization.
 
         "embedding_dropout" : float
-            Dropout rate of the input word and position embeddings.
+            Dropout rate of the input embedding.
 
         "residual_dropout" :  float
             Dropout rate of the residual connections.
 
-        "poswise_feedforward" : dict,
+        "poswise_feedforward" : dict
             Hyperparameters for a feed-forward network used in residual
             connections.
             Make sure the dimension of the output tensor is equal to `dim`.
@@ -251,12 +236,11 @@ class TransformerEncoder(EncoderBase):
             See :func:`~texar.modules.default_transformer_poswise_net_hparams`
             for details.
 
-        "multihead_attention": dict,
+        "multihead_attention" : dict
             Hyperparameters for the multihead attention strategy.
             Make sure the "output_dim" in this module is equal to "dim".
-            See :func:
-                `~texar.modules.encoder.MultiheadAttentionEncoder.
-                default_harams` for details.
+            See :func:`~texar.modules.MultiheadAttentionEncoder.default_harams`
+            for details.
 
         "initializer" : dict, optional
             Hyperparameters of the default initializer that initializes
@@ -270,9 +254,6 @@ class TransformerEncoder(EncoderBase):
             'num_blocks': 6,
             'dim': 512,
             'use_bert_config': False,
-            'position_embedder_type': 'sinusoids',
-            'position_size': None,
-            'position_embedder_hparams': None,
             'embedding_dropout': 0.1,
             'residual_dropout': 0.1,
             'poswise_feedforward': default_transformer_poswise_net_hparams(),
@@ -288,15 +269,15 @@ class TransformerEncoder(EncoderBase):
             'name': 'transformer_encoder',
         }
 
-    # pylint: disable=arguments-differ, too-many-branches, too-many-statements
     def _build(self, inputs, sequence_length, mode=None):
         """Encodes the inputs.
 
         Args:
             inputs: A 3D Tensor of shape `[batch_size, max_time, dim]`,
-                containing the word embeddings of input sequences. Note that
+                containing the embedding of input sequences. Note that
                 the embedding dimension `dim` must equal "dim" in
-                :attr:`hparams`.
+                :attr:`hparams`. The input embedding is typically an aggregation
+                of word embedding and position embedding.
             sequence_length: A 1D Tensor of shape `[batch_size]`. Input tokens
                 beyond respective sequence lengths are masked out
                 automatically.
@@ -312,10 +293,6 @@ class TransformerEncoder(EncoderBase):
         """
         # Multiply input embedding with the sqrt of its dimension for
         # normalization
-        if not self._hparams.use_bert_config:
-            inputs = inputs * self._hparams.dim**0.5
-            inputs = mask_sequences(inputs, sequence_length, tensor_rank=3)
-        _, lengths, _ = shape_list(inputs)
 
         inputs_padding = 1 - tf.sequence_mask(
             sequence_length, tf.shape(inputs)[1], dtype=tf.float32)
@@ -325,13 +302,9 @@ class TransformerEncoder(EncoderBase):
         else:
             ignore_padding = attn.attention_bias_ignore_padding(
                 inputs_padding)
-
         encoder_self_attention_bias = ignore_padding
 
-        positions = tf.expand_dims(tf.range(lengths, dtype=tf.int32), 0)
-        pos_embeds = self.position_embedder(positions)
-
-        input_embedding = inputs + pos_embeds
+        input_embedding = inputs
 
         if self._hparams.use_bert_config:
             x = layers.layer_normalize(input_embedding)
@@ -352,6 +325,7 @@ class TransformerEncoder(EncoderBase):
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("layer_{}".format(i)):
                 multihead_attention = self.multihead_attention_list[i]
+
                 # trivial difference between BERT and original Transformer
                 if self._hparams.use_bert_config:
                     _queries_input = x
@@ -376,6 +350,7 @@ class TransformerEncoder(EncoderBase):
                         y = x
                     else:
                         y = layers.layer_normalize(x)
+
                 poswise_network = self.poswise_networks[i]
                 with tf.variable_scope(poswise_network.variable_scope):
                     original_shape = shape_list(y)

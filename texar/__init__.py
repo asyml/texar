@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ from __future__ import division
 from __future__ import print_function
 
 # pylint: disable=wildcard-import
+
+from texar.version import VERSION as __version__
 
 from texar.module_base import *
 from texar.hyperparams import *

@@ -61,13 +61,17 @@ Here:
   * The key configurations for ordinary users:
   
       - `-np`: total number of processes
-      - `-H`: IP addresses of different servers and the number of processes used in each server. For example, `-H 192.168.11.22:1,192.168.33.44:1`
+      - `-H`: IP addresses of different servers and the number of processes used in each server. For example, `-H 192.168.11.22:1,192.168.33.44:1`. To run on local machines, set, e.g., `-H localhost:2`.
+      
   * Other advanced configurations:
   
       - `--bind-to none`: specifies OpenMPI to not bind a training process to a single CPU core (which would hurt performance).
       - `-map-by slot`: allows you to have a mixture of different NUMA configurations because the default behavior is to bind to the socket.
       - `-x`: specifies (`-x NCCL_DEBUG=INFO`) or copies (`-x LD_LIBRARY_PATH`) an environment variable to all the workers.
       - `-mca`: sets the MPI communication interface. Use the setting specified above to avoid possible multiprocessing and network communication issues.
+      
+          * The above configuration uses the `ens3` network interface. If this interface does not work in your environment (e.g., yielding error message `Unknown interfance name`), you may want to use a different interface (Run cmd `ifconfig` to see alternative interfaces in your environment.)
+          
   * Language model configurations:
       - `--config`: specifies the config file to use. E.g., the above use the configuration defined in config_small.py
       - `--data_path`: specifies the directory containing PTB raw data (e.g., ptb.train.txt). If the data files do not exist, the program will automatically download, extract, and pre-process the data.

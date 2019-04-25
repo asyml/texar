@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Paired text data that consists of source text and target text.
+Data consisting of multiple aligned parts.
 """
 
 from __future__ import absolute_import
@@ -29,8 +29,10 @@ from texar.utils import utils
 from texar.utils.dtypes import is_str, is_callable
 from texar.data.data.text_data_base import TextDataBase
 from texar.data.data.scalar_data import ScalarData
+from texar.data.data.tfrecord_data import TFRecordData
 from texar.data.data.mono_text_data import _default_mono_text_dataset_hparams
 from texar.data.data.scalar_data import _default_scalar_dataset_hparams
+from texar.data.data.tfrecord_data import _default_tfrecord_dataset_hparams
 from texar.data.data.mono_text_data import MonoTextData
 from texar.data.data_utils import count_file_lines
 from texar.data.data import dataset_utils as dsutils
@@ -51,11 +53,14 @@ class _DataTypes(object): # pylint: disable=no-init, too-few-public-methods
     TEXT = "text"
     INT = "int"
     FLOAT = "float"
+    TF_RECORD = "tf_record"
 
 def _is_text_data(data_type):
     return data_type == _DataTypes.TEXT
 def _is_scalar_data(data_type):
     return data_type == _DataTypes.INT or data_type == _DataTypes.FLOAT
+def _is_tfrecord_data(data_type):
+    return data_type == _DataTypes.TF_RECORD
 
 def _default_dataset_hparams(data_type=None):
     """Returns hyperparameters of a dataset with default values.
@@ -72,6 +77,11 @@ def _default_dataset_hparams(data_type=None):
         })
     elif _is_scalar_data(data_type):
         hparams = _default_scalar_dataset_hparams()
+    elif _is_tfrecord_data(data_type):
+        hparams = _default_tfrecord_dataset_hparams()
+        hparams.update({
+            "data_type": _DataTypes.TF_RECORD,
+        })
     return hparams
 
 class MultiAlignedData(TextDataBase):
@@ -84,9 +94,9 @@ class MultiAlignedData(TextDataBase):
     The processor can read any number of parallel fields as specified in
     the "datasets" list of :attr:`hparams`, and result in a TF Dataset whose
     element is a python `dict` containing data fields from each of the
-    specified datasets. Fields from a text dataset have names prefixed by
-    its "data_name". Fields from a scalar dataset are specified by its
-    "data_name".
+    specified datasets. Fields from a text dataset or TFRecord dataset have
+    names prefixed by its "data_name". Fields from a scalar dataset are
+    specified by its "data_name".
 
     Example:
 
@@ -113,7 +123,45 @@ class MultiAlignedData(TextDataBase):
             #    'y_text': [['<BOS>', 'y', 'sequence', '1', '<EOS>']],
             #    'y_text_ids': [['1', '6', '10', '20', '2']],
             #    'y_length': [5],
-            #    'z': [1000]
+            #    'z': [1000],
+            # }
+            
+            ...
+
+            hparams={
+                'datasets': [
+                    {'files': 'd.txt', 'vocab_file': 'v.d', 'data_name': 'm'},
+                    {
+                        'files': 'd.tfrecord',
+                        'data_type': 'tf_record',
+                        "feature_original_types": {
+                            'image': ['tf.string', 'FixedLenFeature']
+                        },
+                        'image_options': {
+                            'image_feature_name': 'image',
+                            'resize_height': 512,
+                            'resize_width': 512,
+                        },
+                        'data_name': 't',
+                    }
+                ]
+                'batch_size': 1
+            }
+            data = MultiAlignedData(hparams)
+            iterator = DataIterator(data)
+            batch = iterator.get_next()
+
+            iterator.switch_to_dataset(sess) # initializes the dataset
+            batch_ = sess.run(batch)
+            # batch_ == {
+            #    'x_text': [['<BOS>', 'NewYork', 'City', 'Map', '<EOS>']],
+            #    'x_text_ids': [['1', '100', '80', '65', '2']],
+            #    'x_length': [5],
+            #
+            #    # "t_image" is a list of a "numpy.ndarray" image
+            #    # in this example. Its width equals to 512 and
+            #    # its height equals to 512.
+            #    't_image': [...]
             # }
 
     """
@@ -158,10 +206,10 @@ class MultiAlignedData(TextDataBase):
         Here:
 
         1. "datasets" is a list of `dict` each of which specifies a
-        text or scalar dataset. The :attr:`"data_name"` field of each dataset
-        is used as the name prefix of the data fields from the respective
-        dataset. The :attr:`"data_name"` field of each dataset should not
-        be the same.
+        dataset which can be text, scalar or TFRecord. The
+        :attr:`"data_name"` field of each dataset is used as the name
+        prefix of the data fields from the respective dataset. The
+        :attr:`"data_name"` field of each dataset should not be the same.
 
             - For scalar dataset, the allowed hyperparameters and default \
             values are the same as the "dataset" field of \
@@ -169,16 +217,24 @@ class MultiAlignedData(TextDataBase):
             :attr:`"data_type"` must be explicily specified \
             (either "int" or "float"). \
 
+            - For TFRecord dataset, the allowed hyperparameters and default \
+            values are the same as the "dataset" field of \
+            :meth:`texar.data.TFRecordData.default_hparams`. Note that \
+            :attr:`"data_type"` must be explicily specified \
+            (tf_record"). \
+
             - For text dataset, the allowed hyperparameters and default values\
             are the same as the "dataset" filed of \
             :meth:`texar.data.MonoTextData.default_hparams`, with several \
             extra hyperparameters:
 
                 "data_type" : str
-                    The type of the dataset, one of {"text", "int", "float"}.
-                    If set to "int" or "float", the dataset is considered to be
-                    a scalar dataset. If not specified or set to "text", the
-                    dataset is considered to be a text dataset.
+                    The type of the dataset, one of {"text", "int", "float",
+                    "tf_record"}. If set to "int" or "float", the dataset is
+                    considered to be a scalar dataset. If set to "tf_record",
+                    the dataset is considered to be a TFRecord dataset.
+                    If not specified or set to "text", the dataset is
+                    considered to be a text dataset.
 
                 "vocab_share_with" : int, optional
                     Share the vocabulary of a preceding text dataset with the
@@ -329,6 +385,13 @@ class MultiAlignedData(TextDataBase):
                     hparams_i.files,
                     compression_type=hparams_i.compression_type)
                 datasets.append(dataset)
+            elif _is_tfrecord_data(dtype):
+                dataset = tf.data.TFRecordDataset(filenames=hparams_i.files)
+                num_shards = hparams_i.num_shards
+                shard_id = hparams_i.shard_id
+                if num_shards is not None and shard_id is not None:
+                    dataset = dataset.shard(num_shards, shard_id)
+                datasets.append(dataset)
             else:
                 raise ValueError("Unknown data type: %s" % hparams_i.data_type)
         return tf.data.Dataset.zip(tuple(datasets))
@@ -388,6 +451,9 @@ class MultiAlignedData(TextDataBase):
                     tgt_proc_hparams, data_spec_i)
             elif _is_scalar_data(data_type):
                 processor, data_spec_i = ScalarData._make_processor(
+                    hparams_i, data_spec_i, name_prefix='')
+            elif _is_tfrecord_data(data_type):
+                processor, data_spec_i = TFRecordData._make_processor(
                     hparams_i, data_spec_i, name_prefix='')
             else:
                 raise ValueError("Unsupported data type: %s" % data_type)
@@ -624,4 +690,3 @@ class MultiAlignedData(TextDataBase):
             self._data_spec.name_prefix[i],
             self._data_spec.decoder[i].data_tensor_name)
         return name
-

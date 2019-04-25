@@ -21,6 +21,7 @@ from texar import context
 # pylint: disable=no-member, too-many-locals, too-many-instance-attributes
 # pylint: disable=too-many-arguments, protected-access
 
+
 class BasicRNNDecoderTest(tf.test.TestCase):
     """Tests :class:`~texar.modules.decoders.rnn_decoders.BasicRNNDecoder`.
     """
@@ -62,6 +63,22 @@ class BasicRNNDecoderTest(tf.test.TestCase):
                     sequence_lengths_, [self._max_time]*self._batch_size)
             self.assertEqual(final_state_[0].shape,
                              (self._batch_size, cell_dim))
+
+    def test_output_layer(self):
+        decoder = BasicRNNDecoder(vocab_size=self._vocab_size,
+                                  output_layer=None)
+        self.assertIsInstance(decoder, BasicRNNDecoder)
+
+        decoder = BasicRNNDecoder(output_layer=tf.identity)
+        self.assertIsInstance(decoder, BasicRNNDecoder)
+
+        tensor = tf.random_uniform(
+            [self._emb_dim, self._vocab_size], maxval=1, dtype=tf.float32
+        )
+        decoder = BasicRNNDecoder(output_layer=tensor)
+        self.assertIsInstance(decoder, BasicRNNDecoder)
+        self.assertEqual(decoder.vocab_size, self._vocab_size)
+
 
     def test_decode_train(self):
         """Tests decoding in training mode.
@@ -365,7 +382,8 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
                                           tf.float32)
         _ = beam_cell(cell_input, cell_state)
         # Test if beam_cell is sharing variables with decoder cell.
-        self.assertEqual(len(beam_cell.trainable_variables), 0)
+        for tvar in beam_cell.trainable_variables:
+            self.assertTrue(tvar in decoder.trainable_variables)
 
 if __name__ == "__main__":
     tf.test.main()

@@ -75,7 +75,7 @@ Here:
 python interpolation_main.py \
     --config_model configs.config_model \
     --config_data configs.config_iwslt14 \
-    --lambdas_init [0.04,0.06,0.0] \
+    --lambdas_init [0.04,0.96,0.0] \
     --delta_lambda_self 0.06 \
     --delta_lambda_reward 0.06 \
     --lambda_reward_steps 4
