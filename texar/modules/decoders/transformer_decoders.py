@@ -269,19 +269,11 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         Returns outputs (i.e. logits) of shape `[batch_size, vocab_size]`
         and updated cache.
         """
-        # Multiply embedding by sqrt of its dimention
-        if cache.get('memory') is not None:
-            outputs = self._self_attention_stack(
-                tf.expand_dims(inputs, axis=1),
-                memory=cache['memory'],
-                cache=cache,
-            )
-        else:
-            outputs = self._self_attention_stack(
-                tf.expand_dims(inputs, axis=1),
-                memory=None,
-                cache=cache,
-            )
+        outputs = self._self_attention_stack(
+            tf.expand_dims(inputs, axis=1),
+            memory=cache.get('memory'),
+            cache=cache,
+        )
         outputs = self._output_layer(outputs)
         outputs = tf.squeeze(outputs, axis=[1])
         return outputs, cache
@@ -289,7 +281,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
     def _input_ids_to_outputs(self, input_ids, step, cache):
         """The function is called in beam-search decoding.
 
-        `inputs` should be of shape `[batch_size, dim]`.
+        `inputs` should be of shape `[batch_size]`.
 
         Returns outputs (i.e. logits) of shape `[batch_size, vocab_size]`
         and updated cache.
@@ -298,19 +290,11 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         times = tf.ones([_batch_size], dtype=tf.int32) * step
         inputs = self.embedding(input_ids, times)
 
-        # Multiply embedding by sqrt of its dimention
-        if cache.get('memory') is not None:
-            outputs = self._self_attention_stack(
-                tf.expand_dims(inputs, axis=1),
-                memory=cache['memory'],
-                cache=cache,
-            )
-        else:
-            outputs = self._self_attention_stack(
-                tf.expand_dims(inputs, axis=1),
-                memory=None,
-                cache=cache,
-            )
+        outputs = self._self_attention_stack(
+            tf.expand_dims(inputs, axis=1),
+            memory=cache.get('memory'),
+            cache=cache,
+        )
         outputs = self._output_layer(outputs)
         outputs = tf.squeeze(outputs, axis=[1])
         return outputs, cache
