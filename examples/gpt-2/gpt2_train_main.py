@@ -106,7 +106,7 @@ def main(_):
 
     ## Loads data
 
-    # Configures training data shard in distribued mode
+    # Configures training data shard in distributed mode
     if FLAGS.distributed:
         config_train.train_hparam["dataset"]["num_shards"] = hvd.size()
         config_train.train_hparam["dataset"]["shard_id"] = hvd.rank()
@@ -147,9 +147,9 @@ def main(_):
     # For training
     seq_len = tf.fill([batch_size], tf.shape(batch['text_ids'])[1])
     pos_embeds = pos_embedder(sequence_length=seq_len)
-    input_embedding = word_embedder(batch['text_ids']) + pos_embeds
+    input_embeds = word_embedder(batch['text_ids']) + pos_embeds
 
-    outputs = decoder(inputs=input_embedding, decoding_strategy='train_greedy')
+    outputs = decoder(inputs=input_embeds, decoding_strategy='train_greedy')
 
     loss = tx.losses.sequence_sparse_softmax_cross_entropy(
         labels=batch['text_ids'][:, 1:],
