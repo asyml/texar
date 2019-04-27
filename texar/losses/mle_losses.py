@@ -35,6 +35,7 @@ __all__ = [
     "binary_sigmoid_cross_entropy_with_clas"
 ]
 
+
 def sequence_softmax_cross_entropy(labels,
                                    logits,
                                    sequence_length,
@@ -115,6 +116,7 @@ def sequence_softmax_cross_entropy(labels,
             time_major=time_major)
 
         return losses
+
 
 def sequence_sparse_softmax_cross_entropy(labels,
                                           logits,
@@ -204,6 +206,7 @@ def sequence_sparse_softmax_cross_entropy(labels,
             time_major=time_major)
 
         return losses
+
 
 def sequence_sigmoid_cross_entropy(labels,
                                    logits,
@@ -303,6 +306,7 @@ def sequence_sigmoid_cross_entropy(labels,
 
         return losses
 
+
 def binary_sigmoid_cross_entropy(pos_logits=None,
                                  neg_logits=None,
                                  average_across_batch=True,
@@ -380,6 +384,7 @@ def binary_sigmoid_cross_entropy(pos_logits=None,
         return loss, pos_loss, neg_loss
     else:
         return loss
+
 
 def binary_sigmoid_cross_entropy_with_clas(clas_fn,
                                            pos_inputs=None,
