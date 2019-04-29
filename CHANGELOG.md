@@ -12,6 +12,8 @@
 
 ### Fixes
 
+* Fix `texar.losses.reduce_dimensions` when `average_axes` or `sum_axes` is `int`. ([#141](https://github.com/asyml/texar/pull/141))
+
 ## [v0.2.0](https://github.com/asyml/texar/releases/tag/v0.2.0) (2019-04-09)
 
 ### New features
