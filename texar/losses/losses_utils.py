@@ -179,28 +179,26 @@ def reduce_dimensions(tensor, average_axes=None, sum_axes=None, keepdims=None):
         keepdims (optional): If `True`, retains reduced dimensions with
             length 1.
     """
-    reduced_axes = []
-    if average_axes is not None and len(average_axes) > 0:
-        tensor = tf.reduce_mean(tensor, axis=average_axes, keepdims=True)
-
+    reduced_axes = set()
+    if average_axes is not None:
         if not isinstance(average_axes, (list, tuple)):
             average_axes = [average_axes]
-        reduced_axes += average_axes
+        if len(average_axes) > 0:
+            tensor = tf.reduce_mean(tensor, axis=average_axes, keepdims=True)
+            reduced_axes.update(average_axes)
 
-    if sum_axes is not None and len(sum_axes) > 0:
-        tensor = tf.reduce_sum(tensor, axis=sum_axes, keepdims=True)
-
+    if sum_axes is not None:
         if not isinstance(sum_axes, (list, tuple)):
             sum_axes = [sum_axes]
-        reduced_axes += sum_axes
+        if len(sum_axes) > 0:
+            tensor = tf.reduce_sum(tensor, axis=sum_axes, keepdims=True)
+            reduced_axes.update(sum_axes)
 
-        if average_axes is not None:
-            if len(reduced_axes) != len(average_axes) + len(sum_axes):
-                raise ValueError('`average_axes` and `sum_axes` must not have '
-                                 'overlapped elements.')
-
+            if average_axes is not None:
+                if len(reduced_axes) != len(average_axes)+len(sum_axes):
+                    raise ValueError('`average_axes` and `sum_axes` must not '
+                                     'have overlapped elements.')
     if not keepdims:
-        tensor = tf.squeeze(tensor, axis=reduced_axes)
+        tensor = tf.squeeze(tensor, axis=list(reduced_axes))
 
     return tensor
-
