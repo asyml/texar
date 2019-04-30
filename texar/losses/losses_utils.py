@@ -152,7 +152,7 @@ def reduce_batch_time(sequence,
             sequence = tf.reduce_mean(sequence, axis=[1])
         else:
             sequence = tf.reduce_sum(sequence, axis=[1]) / \
-                       tf.to_float(sequence_length)
+                       tf.cast(sequence_length, sequence.dtype)
 
     if sum_over_batch:
         sequence = tf.reduce_sum(sequence, axis=[0])
