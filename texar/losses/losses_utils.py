@@ -151,9 +151,8 @@ def reduce_batch_time(sequence,
         if sequence_length is None:
             sequence = tf.reduce_mean(sequence, axis=[1])
         else:
-            sequence = tf.reduce_sum(sequence, axis=[1])
-            if average_across_timesteps:
-                sequence = sequence / tf.to_float(sequence_length)
+            sequence = tf.reduce_sum(sequence, axis=[1]) / \
+                       tf.cast(sequence_length, sequence.dtype)
 
     if sum_over_batch:
         sequence = tf.reduce_sum(sequence, axis=[0])
