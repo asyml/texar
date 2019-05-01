@@ -35,6 +35,7 @@ __all__ = [
     "reduce_dimensions"
 ]
 
+
 def mask_and_reduce(sequence,
                     sequence_length,
                     rank=2,
