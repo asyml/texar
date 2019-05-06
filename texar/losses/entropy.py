@@ -91,7 +91,7 @@ def entropy_with_logits(logits,
         rank = get_rank(logits)
     if rank is None:
         rank = 2
-    rank -= 1 # reduced last dimension
+    rank -= 1  # reduced last dimension
 
     # Reduces
     if average_across_batch and sum_over_batch:
@@ -188,7 +188,7 @@ def sequence_entropy_with_logits(logits,
         rank = get_rank(logits)
     if rank is None:
         rank = 3
-    rank -= 1 # reduced last dimension
+    rank -= 1  # reduced last dimension
 
     entropy = mask_and_reduce(
         entropy,
