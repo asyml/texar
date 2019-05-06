@@ -31,11 +31,13 @@ __all__ = [
     "sequence_entropy_with_logits"
 ]
 
+
 def _get_entropy(logits):
     probs = tf.nn.softmax(logits) + 1e-8
     entropy = - probs * tf.log(probs)
     entropy = tf.reduce_sum(entropy, -1)
     return entropy
+
 
 def entropy_with_logits(logits,
                         rank=None,
@@ -112,6 +114,7 @@ def entropy_with_logits(logits,
         entropy, average_axes=average_axes, sum_axes=sum_axes)
 
     return entropy
+
 
 def sequence_entropy_with_logits(logits,
                                  rank=None,
