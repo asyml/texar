@@ -34,7 +34,7 @@ class EntropyTest(tf.test.TestCase):
         self._sequence_length = tf.random_uniform(
             [self._batch_size], maxval=self._max_time, dtype=tf.int32)
 
-    def _test_entropy(self, entropy_fn, logits, sequence_length):
+    def _test_entropy(self, entropy_fn, logits, sequence_length=None):
         with self.test_session() as sess:
             if sequence_length is None:
                 entropy = entropy_fn(logits)
