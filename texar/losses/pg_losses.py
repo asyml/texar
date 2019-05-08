@@ -247,8 +247,8 @@ def pg_loss_with_log_probs(log_probs,
             raise ValueError("Only one of `average_across_timesteps` and "
                              "`sum_over_timesteps` can be set.")
         if average_across_timesteps:
-            losses = tf.reduce_mean(losses)
+            losses = tf.reduce_mean(losses, axis=0)
         elif sum_over_timesteps:
-            losses = tf.reduce_mean(losses)
+            losses = tf.reduce_sum(losses, axis=0)
 
     return losses
