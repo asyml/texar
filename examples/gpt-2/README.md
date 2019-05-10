@@ -15,12 +15,16 @@ In sum, this example showcases:
 
 ### Download GPT-2 Pre-trained Model
 
-Download the GPT-2 model checkpoint with the following command:
+Download the GPT-2 117M model checkpoint with the following command:
 ```
 sh gpt2_pretrained_models/download_model.sh model_117M
 ```
 By default, it will download a pretrained model named `model_117M` to `gpt2_pretrained_models/`.
 
+Alternatively, we can download the GPT-2 345M model checkpoint with the following command:
+```
+sh gpt2_pretrained_models/download_model.sh model_345M
+```
 ### Usage
 | WARNING: Samples are unfiltered and may contain offensive content. |
 | --- |
@@ -43,6 +47,22 @@ Here:
 - `temperature`: Softmax temperature of top-k sample decoding. Larger values (above 1.0) result in more random samples, while smaller values push the sampling distribution towards the argmax. Must be strictly greater than 0. Defaults to `0.7`.
 - `top_k`: Number of top most likely candidates from a vocab distribution in each decoding step. Defaults to `40`.
 - `nsamples`: Number of samples to generate for each input. 
+
+For using GPT-2 345M model instead of default model(117M), we can specify the `checkpoint` and `config_model`:
+
+```
+python gpt2_generate_main.py --is_interactive \
+--checkpoint=gpt2_pretrained_models/model_345M/model.ckpt \
+--max_decoding_length=100 \
+--temperature=0.7 \
+--top_k=1 \
+--config_model=configs.config_model_345M
+```
+
+Here:
+
+- `checkpoint`: Path to the model checkpoints.
+- `config_model`: Model configuration file.
 
 **Example input:**
 ```
@@ -79,6 +99,19 @@ Here:
 
 - `nsamples`: Total number of samples to generate, must be dividable by the `batch_size`.
 - `batch_size`: Each iteration generates `batch_size` number of samples.
+
+For using GPT-2 345M model, similarly:
+
+```
+python gpt2_generate_main.py --is_interactive \
+--checkpoint=gpt2_pretrained_models/model_345M/model.ckpt \
+--nsamples=1 \
+--batch_size=1 \
+--max_decoding_len=100 \
+--temperature=0.7 \
+--top_k=1 \
+--config_model=configs.config_model_345M
+```
 
 **Example output:**
 
