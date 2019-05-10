@@ -103,7 +103,7 @@ Here:
 For using GPT-2 345M model, similarly:
 
 ```
-python gpt2_generate_main.py --is_interactive \
+python gpt2_generate_main.py
 --checkpoint=gpt2_pretrained_models/model_345M/model.ckpt \
 --nsamples=1 \
 --batch_size=1 \
