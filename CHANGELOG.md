@@ -3,6 +3,8 @@
 
 ### New features
 
+* Add support for GPT-2 345M model in [examples/gpt-2](https://github.com/asyml/texar/tree/master/examples/gpt-2). ([#156](https://github.com/asyml/texar/pull/156)) 
+
 ### Feature improvements
 
 * Refactor `TransformerEncoder` and `TransformerDecoder` to separate position embeddings from the modules. ([#126](https://github.com/asyml/texar/pull/126))

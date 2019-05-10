@@ -55,7 +55,7 @@ flags.DEFINE_string("config_type", "texar",
                     "config file is in the same type of the official GPT-2 "
                     "config file. Set to 'texar' if GPT-2 config file is in "
                     "Texar type.")
-flags.DEFINE_string("config_model", "configs.config_model",
+flags.DEFINE_string("config_model", "configs.config_model_117M",
                     "The model configuration file to configure the model. "
                     "The config file type is define by the 'config_type',"
                     "it be of texar type or json type."
@@ -63,7 +63,7 @@ flags.DEFINE_string("config_model", "configs.config_model",
                     "like: '--config_model gpt2_pretrained_models/model_117M/"
                     "hparams.json';"
                     "For '--config_type=texar', set the texar config file "
-                    "like: '--config_model configs.config_model'.")
+                    "like: '--config_model configs.config_model_117M'.")
 flags.DEFINE_string("output_dir", "output/",
                     "The output directory where the model checkpoints will be "
                     "written.")

@@ -20,7 +20,7 @@ def transform_gpt2_to_texar_config(input_json_path):
     configs['embed'] = {
         'dim': hidden_dim,
     }
-    configs['position_size'] = config_gpt['n_ctx'],
+    configs['position_size'] = config_gpt['n_ctx']
     configs['pos_embed'] = {
         'dim': hidden_dim
     }
@@ -95,6 +95,7 @@ def _map_tensor_names(original_tensor_name):
     }
     layer_num = int(original_tensor_name_split[1][1:])
     layer_feature = '/'.join(original_tensor_name.split('/')[2:])
+    # pylint: disable=no-else-return
     if layer_feature in layer_tensor_map:
         layer_feature_ = layer_tensor_map[layer_feature]
         tensor_name_ = '/'.join(
@@ -109,11 +110,13 @@ def _map_tensor_names(original_tensor_name):
 
 
 
-
+# pylint: disable=too-many-locals
 def _get_assignment_map_from_checkpoint(sess, all_variables, init_checkpoint):
     """
     Load pretrained parameters to texar model
     """
+
+    assignment_map = {}
 
     reader = tf.train.NewCheckpointReader(init_checkpoint)
     var_names_list = reader.get_variable_to_shape_map().keys()
@@ -125,6 +128,11 @@ def _get_assignment_map_from_checkpoint(sess, all_variables, init_checkpoint):
         local_tensor = [var for var in all_variables
                         if tensor_name in var.name][0]
         sess.run(tf.assign(local_tensor, data))
+
+    def _get_tensor_by_name(tensor_name):
+        local_tensor = [var for var in all_variables
+                        if tensor_name in var.name][0]
+        return local_tensor
 
     for idx, ckpt_tensor_name in enumerate(ckpt_names_vs_vals):
         processing = (idx + 1.0) / len(ckpt_names_vs_vals.keys())
@@ -142,6 +150,7 @@ def _get_assignment_map_from_checkpoint(sess, all_variables, init_checkpoint):
             local_tensor_name_q_w = template.format(layer_num, "query")
             local_tensor_name_k_w = template.format(layer_num, "key")
             local_tensor_name_v_w = template.format(layer_num, "value")
+
             data = ckpt_names_vs_vals[ckpt_tensor_name]
             assert data.shape[2] % 3 == 0, ("tensor 'attn/c_attn/w' "
                                             "shape is not dividable")
@@ -152,6 +161,7 @@ def _get_assignment_map_from_checkpoint(sess, all_variables, init_checkpoint):
             _assign_by_name(sess, local_tensor_name_q_w, np.squeeze(q_w))
             _assign_by_name(sess, local_tensor_name_k_w, np.squeeze(k_w))
             _assign_by_name(sess, local_tensor_name_v_w, np.squeeze(v_w))
+
         elif ckpt_tensor_name_feature == 'attn/c_attn/b':
             layer_num = int(ckpt_tensor_name.split('/')[1][1:])
             template = ("transformer_decoder/layer_{}/self_attention/"
@@ -159,6 +169,7 @@ def _get_assignment_map_from_checkpoint(sess, all_variables, init_checkpoint):
             local_tensor_name_q_b = template.format(layer_num, "query")
             local_tensor_name_k_b = template.format(layer_num, "key")
             local_tensor_name_v_b = template.format(layer_num, "value")
+
             data = ckpt_names_vs_vals[ckpt_tensor_name]
             assert data.shape[0] % 3 == 0, ("tensor 'attn/c_attn/b'"
                                             " shape is not dividable")
@@ -169,10 +180,13 @@ def _get_assignment_map_from_checkpoint(sess, all_variables, init_checkpoint):
             _assign_by_name(sess, local_tensor_name_q_b, q_b)
             _assign_by_name(sess, local_tensor_name_k_b, k_b)
             _assign_by_name(sess, local_tensor_name_v_b, v_b)
+
         else:
             local_tensor_name = _map_tensor_names(ckpt_tensor_name)
-            data = ckpt_names_vs_vals[ckpt_tensor_name]
-            _assign_by_name(sess, local_tensor_name, np.squeeze(data))
+            local_tensor = _get_tensor_by_name(local_tensor_name)
+            assignment_map[ckpt_tensor_name] = local_tensor
+
+    return assignment_map
 
 def init_gpt2_checkpoint(sess, init_checkpoint):
     """
@@ -183,7 +197,10 @@ def init_gpt2_checkpoint(sess, init_checkpoint):
     """
     tvars = tf.trainable_variables()
     if init_checkpoint:
-        _get_assignment_map_from_checkpoint(
+        assignment_map = _get_assignment_map_from_checkpoint(
             sess,
             tvars,
             init_checkpoint)
+        init_fn = tf.contrib.framework.assign_from_checkpoint_fn(
+            init_checkpoint, assignment_map, reshape_variables=True)
+        init_fn(sess)
