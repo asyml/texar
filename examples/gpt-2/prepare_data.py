@@ -40,7 +40,7 @@ flags.DEFINE_string(
     "The output directory where the TFRecord files will be generated. "
     "By default it is set to be the same as `--data_dir`.")
 flags.DEFINE_string(
-    "pretrained_model_dir", "gpt2_pretrained_models/model_117M",
+    "pretrain_model_dir", "gpt2_pretrained_models/model_117M",
     "The directory of pretrained model.")
 
 
@@ -59,7 +59,7 @@ def prepare_data():
     tx.utils.maybe_create_dir(tfrecord_output_dir)
 
     # Creates a data pre-processor for, e.g., BPE encoding
-    proc = processor.get_encoder(FLAGS.pretrained_model_dir)
+    proc = processor.get_encoder(FLAGS.pretrain_model_dir)
 
     # Produces TFRecord files
     data_utils.prepare_TFRecord_data(

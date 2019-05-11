@@ -132,10 +132,12 @@ Run the following cmd to transform the data into [TFRecord](https://www.tensorfl
     python prepare_data.py --data_dir data/toy 
     [--max_seq_length=128]
     [--tfrecord_output_dir=data/toy] 
+    [--pretrain_model_dir=gpt2_pretrained_models/model_117M]
 ```
 - `data_dir`: The directory of raw data, wherein data files must be named as 'train.txt', 'dev.txt', or 'test.txt'. It is *not* necessary to provide all three files.
 - `max_seq_length`: The maxium length of sequence after BPE encoding. This includes GPT-2 special tokens that will be automatically added. Longer sequence will be trimmed. 
 - `tfrecord_output_dir`: The output path where the resulting TFRecord files will be put in. Be default, it is set to be the same as `data_dir`. 
+- `pretrain_model_dir`: The downloaded pretrained model directory, wherein the vocabulary files are used for data processing. 
 
 The above cmd will output TFRecord files in the specified output directory. E.g., if `train.txt` is provided under `data_dir`, the output file `train.tf_record` will be produced under `tfrecord_output_dir`. 
 
@@ -151,6 +153,17 @@ Here:
 
 - `config_train`: Configurations of GPT-2 training, including data and optimization hyperparameters. By default, the config file [`configs/config_train.py`](configs/config_train.py) is used. Remember to specify correct data path if you are using your own data.
 - `output_dir`: The output path where checkpoints are saved.
+
+By default, the GPT-2 `117M` model is used. To use the GPT-2 `345M` model instead, specify relevant FLAGS as below:
+```
+    python gpt2_train_main.py --do_train --do_eval \
+    --config_model=configs.config_model_345M \
+    --pretrain_model_dir=gpt2_pretrained_models/model_345M \
+    --pretrain_checkpoint=gpt2_pretrained_models/model_345M/model.ckpt
+    [--config_train=configs.config_train]
+    [--output_dir=output]
+```
+where `--pretrain_checkpoint` is necessary only when you want to load the pretrained checkpoint, and is ignored if `--checkpoint` is specified. 
 
 Please see the FLAGS in the code for more options.
 

@@ -38,7 +38,7 @@ flags.DEFINE_string("pretrain_checkpoint",
                     "gpt2_pretrained_models/model_117M/model.ckpt",
                     "OpenAI pretrained model checkpoint. Ignored if "
                     "'--checkpoint' is specified.")
-flags.DEFINE_string("pretrained_model_dir", "gpt2_pretrained_models/model_117M",
+flags.DEFINE_string("pretrain_model_dir", "gpt2_pretrained_models/model_117M",
                     "The directory of pretrained model, for loading vocabuary, "
                     "etc.")
 flags.DEFINE_float("temperature", 0.7,
@@ -97,7 +97,7 @@ def main(_):
         raise ValueError('Unknown config_type.')
 
     # Creates a data pre-processor for, e.g., BPE encoding
-    proc = processor.get_encoder(FLAGS.pretrained_model_dir)
+    proc = processor.get_encoder(FLAGS.pretrain_model_dir)
 
     max_decoding_length = config_train.max_decoding_length
     assert max_decoding_length <= gpt2_config.position_size, (

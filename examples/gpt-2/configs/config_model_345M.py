@@ -1,4 +1,4 @@
-"""Texar config file of the GPT-2 model_117M model.
+"""Texar config file of the GPT-2 model_345M model.
 """
 
 vocab_size = 50257
