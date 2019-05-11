@@ -32,9 +32,14 @@ flags = tf.flags
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("checkpoint",
+flags.DEFINE_string("checkpoint", None,
+                    "Model checkpoint to load model weights from. Use "
+                    "`--pretrain_checkpoint` instead if loading OpenAI "
+                    "pretrained checkpoint.")
+flags.DEFINE_string("pretrain_checkpoint",
                     "gpt2_pretrained_models/model_117M/model.ckpt",
-                    "Model checkpoint to load model weights from.")
+                    "OpenAI pretrained model checkpoint. Ignored if "
+                    "'--checkpoint' is specified.")
 flags.DEFINE_integer("seed", None, "Random seed.")
 flags.DEFINE_integer("nsamples", 1, "The number of samples per input.")
 flags.DEFINE_integer("batch_size", 1, "The batch size of input.")
@@ -73,7 +78,6 @@ def main(_):
     batch_size = FLAGS.batch_size
     max_decoding_length = FLAGS.max_decoding_length
 
-    ckpt_path = FLAGS.checkpoint
     # Load GPT-2 model configuration
     if FLAGS.config_type == "json":
         gpt2_config = model_utils.transform_gpt2_to_texar_config(
@@ -140,8 +144,12 @@ def main(_):
                 mode=tf.estimator.ModeKeys.PREDICT)
 
             # Load model checkpoint
-            model_utils.init_gpt2_checkpoint(sess, ckpt_path)
-            print("\nFinished loading\n")
+            if FLAGS.checkpoint:
+                tf.logging.info('Restore from {}'.format(FLAGS.checkpoint))
+                saver.restore(sess, FLAGS.checkpoint)
+            elif FLAGS.pretrain_checkpoint:
+                model_utils.init_gpt2_checkpoint(sess, FLAGS.pretrain_checkpoint)
+                print("\nFinished loading\n")
 
             # Enter interactive mode
             while True:
@@ -182,8 +190,12 @@ def main(_):
                 mode=tf.estimator.ModeKeys.PREDICT)
 
             # Load model checkpoint
-            model_utils.init_gpt2_checkpoint(sess, ckpt_path)
-            print("\nFinished loading\n")
+            if FLAGS.checkpoint:
+                tf.logging.info('Restore from {}'.format(FLAGS.checkpoint))
+                saver.restore(sess, FLAGS.checkpoint)
+            elif FLAGS.pretrain_checkpoint:
+                model_utils.init_gpt2_checkpoint(sess, FLAGS.pretrain_checkpoint)
+                print("\nFinished loading\n")
 
             feed_dict = {
                 tx.context.global_mode(): tf.estimator.ModeKeys.PREDICT
