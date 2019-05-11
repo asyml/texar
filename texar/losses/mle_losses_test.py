@@ -65,7 +65,7 @@ class MLELossesTest(tf.test.TestCase):
                              tf.TensorShape([self._batch_size, self._max_time]))
 
             sequence_length_time = tf.random_uniform(
-                [self._max_time], maxval=self._max_time, dtype=tf.int32)
+                [self._max_time], maxval=self._batch_size, dtype=tf.int32)
             loss = loss_fn(
                 labels, logits, sequence_length_time, sum_over_timesteps=False,
                 average_across_batch=False, time_major=True)
