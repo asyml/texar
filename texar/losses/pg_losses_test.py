@@ -38,15 +38,13 @@ class PGLossesTest(tf.test.TestCase):
                                                     self._max_time,
                                                     self._d1, self._d2,
                                                     self._d3])
-        self._actions_no_batch = tf.ones([self._batch_size, self._max_time,
+        self._actions_no_batch = tf.ones([self._max_time,
                                           self._d1, self._d2, self._d3],
                                          dtype=tf.int32)
-        self._logits_no_batch = tf.random_uniform([self._batch_size,
-                                                   self._max_time,
+        self._logits_no_batch = tf.random_uniform([self._max_time,
                                                    self._d1, self._d2, self._d3,
                                                    self._num_classes])
-        self._advantages_no_batch = tf.random_uniform([self._batch_size,
-                                                       self._max_time,
+        self._advantages_no_batch = tf.random_uniform([self._max_time,
                                                        self._d1, self._d2,
                                                        self._d3])
         self._sequence_length = tf.random_uniform(
@@ -73,17 +71,26 @@ class PGLossesTest(tf.test.TestCase):
                            average_across_timesteps=True,
                            average_across_batch=False)
             rank = sess.run(tf.rank(loss))
-            self.assertEqual(rank, 1)
-            self.assertEqual(loss.shape, tf.TensorShape([self._batch_size]))
+            if batched:
+                self.assertEqual(rank, 1)
+                self.assertEqual(loss.shape, tf.TensorShape([self._batch_size]))
+            else:
+                self.assertEqual(rank, 0)
 
             loss = loss_fn(actions, logits, advantages, batched=batched,
                            sequence_length=sequence_length,
                            sum_over_timesteps=False,
                            average_across_batch=False)
             rank = sess.run(tf.rank(loss))
-            self.assertEqual(rank, 2)
-            self.assertEqual(loss.shape,
-                             tf.TensorShape([self._batch_size, self._max_time]))
+            if batched:
+                self.assertEqual(rank, 2)
+                self.assertEqual(loss.shape,
+                                 tf.TensorShape([self._batch_size,
+                                                 self._max_time]))
+            else:
+                self.assertEqual(rank, 1)
+                self.assertEqual(loss.shape,
+                                 tf.TensorShape([self._max_time]))
 
             sequence_length_time = tf.random_uniform(
                 [self._max_time], maxval=self._max_time, dtype=tf.int32)
@@ -92,8 +99,13 @@ class PGLossesTest(tf.test.TestCase):
                            sum_over_timesteps=False,
                            average_across_batch=False,
                            time_major=True)
-            self.assertEqual(loss.shape,
-                             tf.TensorShape([self._batch_size, self._max_time]))
+            if batched:
+                self.assertEqual(loss.shape,
+                                 tf.TensorShape([self._batch_size,
+                                                 self._max_time]))
+            else:
+                self.assertEqual(loss.shape,
+                                 tf.TensorShape([self._max_time]))
 
     def test_pg_losses_with_logits(self):
         """Tests `texar.losses.pg_losses_with_logits`.
@@ -105,7 +117,6 @@ class PGLossesTest(tf.test.TestCase):
                                  True,
                                  self._sequence_length)
 
-    def test_1(self):
         self._test_sequence_loss(tx.losses.pg_loss_with_logits,
                                  self._actions_no_batch,
                                  self._logits_no_batch,
