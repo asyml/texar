@@ -238,9 +238,9 @@ def pg_loss_with_log_probs(log_probs,
             raise ValueError("Only one of `average_across_remaining` and "
                              "`sum_over_remaining` can be set.")
         if average_across_remaining:
-            losses = tf.reduce_mean(losses, axis=range(1, rank))
+            losses = tf.reduce_mean(losses, axis=list(range(1, rank)))
         elif sum_over_remaining:
-            losses = tf.reduce_sum(losses, axis=range(1, rank))
+            losses = tf.reduce_sum(losses, axis=list(range(1, rank)))
 
     if not batched:
         if average_across_timesteps and sum_over_timesteps:
