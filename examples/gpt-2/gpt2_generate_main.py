@@ -41,8 +41,8 @@ flags.DEFINE_string("pretrain_checkpoint",
                     "OpenAI pretrained model checkpoint. Ignored if "
                     "'--checkpoint' is specified.")
 flags.DEFINE_string("pretrain_model_dir", "gpt2_pretrained_models/model_117M",
-                     "The directory of pretrained model, for loading vocabuary, "
-                     "etc.")
+                     "The directory of pretrained model, for loading "
+                     "vocabuary, etc.")
 flags.DEFINE_integer("seed", None, "Random seed.")
 flags.DEFINE_integer("nsamples", 1, "The number of samples per input.")
 flags.DEFINE_integer("batch_size", 1, "The batch size of input.")

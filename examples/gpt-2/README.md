@@ -65,7 +65,7 @@ Here:
 
 - `pretrain_checkpoint`: Path to the model checkpoints. Default to `gpt2_pretrained_models/model_117M/model.ckpt`.
 - `config_model`: Model configuration file. Default to `configs.config_model_117M`.
-- `pretrain_model_dir`:  The directory of pretrained model, for loading vocabuary Byte-Pair-Encoding (BPE) data, etc. Default to `gpt2_pretrained_models/model_117M`. 
+- `pretrain_model_dir`:  The directory of pretrained model, for loading vocabuary, etc. Default to `gpt2_pretrained_models/model_117M`. 
 
 **Example input:**
 ```
