@@ -58,12 +58,14 @@ python gpt2_generate_main.py --is_interactive \
 --top_k=40 \
 --config_model=configs.config_model_345M \
 --pretrain_checkpoint=gpt2_pretrained_models/model_345M/model.ckpt
+--tokenization_dir=gpt2_pretrained_models/model_345M
 ```
 
 Here:
 
 - `pretrain_checkpoint`: Path to the model checkpoints. Default to `gpt2_pretrained_models/model_117M/model.ckpt`.
-- `config_model`: Model configuration file. Default to `configs.config_model_117M`. 
+- `config_model`: Model configuration file. Default to `configs.config_model_117M`.
+- `tokenization_dir`:  Directory containing the Byte-Pair-Encoding (BPE) data and encoder mapping data. Default to `gpt2_pretrained_models/model_117M`. 
 
 **Example input:**
 ```
@@ -101,7 +103,7 @@ Here:
 - `nsamples`: Total number of samples to generate, must be dividable by the `batch_size`.
 - `batch_size`: Each iteration generates `batch_size` number of samples.
 
-To use GPT-2 `345M` model, specify `--pretrain_checkpoint` and `--config_model` as above.
+To use GPT-2 `345M` model, specify `--pretrain_checkpoint`, `--config_model` and `tokenization_dir` as above.
 
 **Example output:**
 
@@ -159,7 +161,8 @@ By default, the GPT-2 `117M` model is used. To use the GPT-2 `345M` model instea
     python gpt2_train_main.py --do_train --do_eval \
     --config_model=configs.config_model_345M \
     --pretrain_model_dir=gpt2_pretrained_models/model_345M \
-    --pretrain_checkpoint=gpt2_pretrained_models/model_345M/model.ckpt
+    --pretrain_checkpoint=gpt2_pretrained_models/model_345M/model.ckpt \
+    --tokenization_dir=gpt2_pretrained_models/model_345M
     [--config_train=configs.config_train]
     [--output_dir=output]
 ```

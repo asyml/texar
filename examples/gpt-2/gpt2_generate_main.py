@@ -40,6 +40,9 @@ flags.DEFINE_string("pretrain_checkpoint",
                     "gpt2_pretrained_models/model_117M/model.ckpt",
                     "OpenAI pretrained model checkpoint. Ignored if "
                     "'--checkpoint' is specified.")
+flags.DEFINE_string("tokenization_dir", "gpt2_pretrained_models/model_117M",
+                     "Directory containing the Byte-Pair-Encoding (BPE)"
+                     "data and encoder mapping data.")
 flags.DEFINE_integer("seed", None, "Random seed.")
 flags.DEFINE_integer("nsamples", 1, "The number of samples per input.")
 flags.DEFINE_integer("batch_size", 1, "The batch size of input.")
@@ -95,7 +98,7 @@ def main(_):
 
     # Create a data pre-processor for, e.g., BPE encoding
     proc = processor.get_encoder(
-        "gpt2_pretrained_models/model_117M")
+        FLAGS.tokenization_dir)
 
     context = tf.placeholder(tf.int32, [batch_size, None])
     context_length = tf.placeholder(tf.int32, [batch_size])
