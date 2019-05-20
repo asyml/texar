@@ -17,31 +17,31 @@ def transform_gpt2_to_texar_config(input_json_path):
     configs["context_size"] = config_gpt["n_ctx"]
     configs["embedding_size"] = config_gpt["n_embd"]
     hidden_dim = config_gpt["n_embd"]
-    configs['embed'] = {
-        'dim': hidden_dim,
+    configs["embed"] = {
+        "dim": hidden_dim,
     }
-    configs['position_size'] = config_gpt['n_ctx']
-    configs['pos_embed'] = {
-        'dim': hidden_dim
+    configs["position_size"] = config_gpt["n_ctx"]
+    configs["pos_embed"] = {
+        "dim": hidden_dim
     }
-    configs['decoder'] = {
-        'dim': hidden_dim,
-        'num_blocks': config_gpt['n_layer'],
-        'multihead_attention': {
-            'use_bias': True,
-            'num_units': hidden_dim,
-            'num_heads': config_gpt['n_head'],
-            'output_dim': hidden_dim,
+    configs["decoder"] = {
+        "dim": hidden_dim,
+        "num_blocks": config_gpt["n_layer"],
+        "multihead_attention": {
+            "use_bias": True,
+            "num_units": hidden_dim,
+            "num_heads": config_gpt["n_head"],
+            "output_dim": hidden_dim,
         },
-        'initializer': {
-            'type': 'variance_scaling_initializer',
-            'kwargs': {
-                'scale': 1.0,
-                'mode': 'fan_avg',
-                'distribution': 'uniform',
+        "initializer": {
+            "type": "variance_scaling_initializer",
+            "kwargs": {
+                "scale": 1.0,
+                "mode": "fan_avg",
+                "distribution": "uniform",
             },
         },
-        'poswise_feedforward': {
+        "poswise_feedforward": {
             "layers": [
                 {
                     "type": "Dense",
@@ -80,7 +80,7 @@ def _map_tensor_names(original_tensor_name):
     }
     if original_tensor_name in global_tensor_map:
         return global_tensor_map[original_tensor_name]
-    original_tensor_name_split = original_tensor_name.split('/')
+    original_tensor_name_split = original_tensor_name.split("/")
     layer_tensor_map = {
         "ln_1/b": "beta",
         "ln_1/g": "gamma",
@@ -94,14 +94,14 @@ def _map_tensor_names(original_tensor_name):
         "attn/c_proj/w": "self_attention/multihead_attention/output/kernel",
     }
     layer_num = int(original_tensor_name_split[1][1:])
-    layer_feature = '/'.join(original_tensor_name.split('/')[2:])
+    layer_feature = "/".join(original_tensor_name.split("/")[2:])
     # pylint: disable=no-else-return
     if layer_feature in layer_tensor_map:
         layer_feature_ = layer_tensor_map[layer_feature]
-        tensor_name_ = '/'.join(
+        tensor_name_ = "/".join(
             [
-                'transformer_decoder',
-                'layer_{}'.format(layer_num),
+                "transformer_decoder",
+                "layer_{}".format(layer_num),
                 layer_feature_
             ])
         return tensor_name_
@@ -140,11 +140,11 @@ def _get_assignment_map_from_checkpoint(sess, all_variables, init_checkpoint):
         sys.stdout.flush()
 
         ckpt_tensor_name_feature = ""
-        if len(ckpt_tensor_name.split('/')) > 2:
-            ckpt_tensor_name_feature = '/'.join(
-                ckpt_tensor_name.split('/')[2:])
-        if ckpt_tensor_name_feature == 'attn/c_attn/w':
-            layer_num = int(ckpt_tensor_name.split('/')[1][1:])
+        if len(ckpt_tensor_name.split("/")) > 2:
+            ckpt_tensor_name_feature = "/".join(
+                ckpt_tensor_name.split("/")[2:])
+        if ckpt_tensor_name_feature == "attn/c_attn/w":
+            layer_num = int(ckpt_tensor_name.split("/")[1][1:])
             template = ("transformer_decoder/layer_{}/self_attention/"
                         "multihead_attention/{}/kernel")
             local_tensor_name_q_w = template.format(layer_num, "query")
@@ -162,8 +162,8 @@ def _get_assignment_map_from_checkpoint(sess, all_variables, init_checkpoint):
             _assign_by_name(sess, local_tensor_name_k_w, np.squeeze(k_w))
             _assign_by_name(sess, local_tensor_name_v_w, np.squeeze(v_w))
 
-        elif ckpt_tensor_name_feature == 'attn/c_attn/b':
-            layer_num = int(ckpt_tensor_name.split('/')[1][1:])
+        elif ckpt_tensor_name_feature == "attn/c_attn/b":
+            layer_num = int(ckpt_tensor_name.split("/")[1][1:])
             template = ("transformer_decoder/layer_{}/self_attention/"
                         "multihead_attention/{}/bias")
             local_tensor_name_q_b = template.format(layer_num, "query")

@@ -85,11 +85,11 @@ def main(_):
     if FLAGS.config_type == "json":
         gpt2_config = model_utils.transform_gpt2_to_texar_config(
             FLAGS.config_model)
-    elif FLAGS.config_type == 'texar':
+    elif FLAGS.config_type == "texar":
         gpt2_config = importlib.import_module(
             FLAGS.config_model)
     else:
-        raise ValueError('Unknown config_type.')
+        raise ValueError("Unknown config_type.")
 
     assert max_decoding_length <= gpt2_config.position_size, (
         "max_decoding_length should not be greater than position size")
@@ -103,7 +103,7 @@ def main(_):
     context = tf.placeholder(tf.int32, [batch_size, None])
     context_length = tf.placeholder(tf.int32, [batch_size])
 
-    end_token = proc.encoder['<|endoftext|>']
+    end_token = proc.encoder["<|endoftext|>"]
     if FLAGS.is_interactive:
         start_tokens = context[:, 0]
     else:
@@ -148,7 +148,7 @@ def main(_):
 
             # Load model checkpoint
             if FLAGS.checkpoint:
-                tf.logging.info('Restore from {}'.format(FLAGS.checkpoint))
+                tf.logging.info("Restore from {}".format(FLAGS.checkpoint))
                 saver.restore(sess, FLAGS.checkpoint)
             elif FLAGS.pretrain_checkpoint:
                 model_utils.init_gpt2_checkpoint(sess, FLAGS.pretrain_checkpoint)
@@ -160,7 +160,7 @@ def main(_):
                 raw_text = input("Model input >>> ")
 
                 while not raw_text:
-                    print('Input should not be empty!')
+                    print("Input should not be empty!")
                     raw_text = input("Model input >>> ")
 
                 context_tokens = proc.encode(raw_text)
@@ -194,7 +194,7 @@ def main(_):
 
             # Load model checkpoint
             if FLAGS.checkpoint:
-                tf.logging.info('Restore from {}'.format(FLAGS.checkpoint))
+                tf.logging.info("Restore from {}".format(FLAGS.checkpoint))
                 saver.restore(sess, FLAGS.checkpoint)
             elif FLAGS.pretrain_checkpoint:
                 model_utils.init_gpt2_checkpoint(sess, FLAGS.pretrain_checkpoint)
@@ -217,5 +217,5 @@ def main(_):
                           " SAMPLE " + str(generated) + " " + "=" * 40)
                     print(text)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     tf.app.run()

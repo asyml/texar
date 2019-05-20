@@ -46,7 +46,7 @@ def get_pairs(word):
     return pairs
 
 class Encoder:
-    def __init__(self, encoder, bpe_merges, errors='replace'):
+    def __init__(self, encoder, bpe_merges, errors="replace"):
         self.encoder = encoder
         self.decoder = {v:k for k,v in self.encoder.items()}
         self.errors = errors # how to handle errors in decoding
@@ -68,7 +68,7 @@ class Encoder:
             return token
 
         while True:
-            bigram = min(pairs, key = lambda pair: self.bpe_ranks.get(pair, float('inf')))
+            bigram = min(pairs, key = lambda pair: self.bpe_ranks.get(pair, float("inf")))
             if bigram not in self.bpe_ranks:
                 break
             first, second = bigram
@@ -95,28 +95,28 @@ class Encoder:
                 break
             else:
                 pairs = get_pairs(word)
-        word = ' '.join(word)
+        word = " ".join(word)
         self.cache[token] = word
         return word
 
     def encode(self, text):
         bpe_tokens = []
         for token in re.findall(self.pat, text):
-            token = ''.join(self.byte_encoder[b] for b in token.encode('utf-8'))
-            bpe_tokens.extend(self.encoder[bpe_token] for bpe_token in self.bpe(token).split(' '))
+            token = "".join(self.byte_encoder[b] for b in token.encode("utf-8"))
+            bpe_tokens.extend(self.encoder[bpe_token] for bpe_token in self.bpe(token).split(" "))
         return bpe_tokens
 
     def decode(self, tokens):
-        text = ''.join([self.decoder[token] for token in tokens])
-        text = bytearray([self.byte_decoder[c] for c in text]).decode('utf-8', errors=self.errors)
+        text = "".join([self.decoder[token] for token in tokens])
+        text = bytearray([self.byte_decoder[c] for c in text]).decode("utf-8", errors=self.errors)
         return text
 
 def get_encoder(gpt2_pretrained_path):
-    with open(os.path.join(gpt2_pretrained_path, 'encoder.json'), 'r') as f:
+    with open(os.path.join(gpt2_pretrained_path, "encoder.json"), "r") as f:
         encoder = json.load(f)
-    with open(os.path.join(gpt2_pretrained_path, 'vocab.bpe'), 'r', encoding="utf-8") as f:
+    with open(os.path.join(gpt2_pretrained_path, "vocab.bpe"), "r", encoding="utf-8") as f:
         bpe_data = f.read()
-    bpe_merges = [tuple(merge_str.split()) for merge_str in bpe_data.split('\n')[1:-1]]
+    bpe_merges = [tuple(merge_str.split()) for merge_str in bpe_data.split("\n")[1:-1]]
     return Encoder(
         encoder=encoder,
         bpe_merges=bpe_merges,
