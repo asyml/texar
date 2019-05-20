@@ -103,7 +103,7 @@ Here:
 - `nsamples`: Total number of samples to generate, must be dividable by the `batch_size`.
 - `batch_size`: Each iteration generates `batch_size` number of samples.
 
-To use GPT-2 `345M` model, specify `--pretrain_checkpoint`, `--config_model` and `pretrain_model_dir` as above.
+To use GPT-2 `345M` model, specify `--pretrain_checkpoint`, `--config_model` and `--pretrain_model_dir` as above.
 
 **Example output:**
 
@@ -139,7 +139,7 @@ Run the following cmd to transform the data into [TFRecord](https://www.tensorfl
 - `data_dir`: The directory of raw data, wherein data files must be named as 'train.txt', 'dev.txt', or 'test.txt'. It is *not* necessary to provide all three files.
 - `max_seq_length`: The maxium length of sequence after BPE encoding. This includes GPT-2 special tokens that will be automatically added. Longer sequence will be trimmed. 
 - `tfrecord_output_dir`: The output path where the resulting TFRecord files will be put in. Be default, it is set to be the same as `data_dir`. 
-- `pretrain_model_dir`: The downloaded pretrained model directory, wherein the vocabulary files are used for data processing. 
+- `pretrain_model_dir`: The downloaded pretrained model directory, wherein the vocabulary files are used for data processing.
 
 The above cmd will output TFRecord files in the specified output directory. E.g., if `train.txt` is provided under `data_dir`, the output file `train.tf_record` will be produced under `tfrecord_output_dir`. 
 
