@@ -61,7 +61,7 @@ def read_raw_data(data_fn):
     Reads raw data from a file. Each line contains one example.
     """
     examples = []
-    with open(data_fn, 'r') as fin:
+    with open(data_fn, "r") as fin:
         for line in fin:
             examples.append(line.strip())
     return examples
@@ -69,8 +69,8 @@ def read_raw_data(data_fn):
 
 def file_based_convert_examples_to_features(
         examples, max_seq_length, encoder, output_file,
-        BOS_token='<|endoftext|>', EOS_token='<|endoftext|>',
-        PAD_token='<|endoftext|>'):
+        BOS_token="<|endoftext|>", EOS_token="<|endoftext|>",
+        PAD_token="<|endoftext|>"):
     """Converts a set of examples to a TFRecord file."""
 
     writer = tf.python_io.TFRecordWriter(output_file)
@@ -100,25 +100,25 @@ def prepare_TFRecord_data(data_dir, max_seq_length, encoder, output_dir):
         max_seq_length: Max sequence length.
         output_dir: The directory to save the TFRecord files in.
     """
-    train_fn = os.path.join(data_dir, 'train.txt')
+    train_fn = os.path.join(data_dir, "train.txt")
     if os.path.isfile(train_fn):
-        tf.logging.info('Processing %s' % train_fn)
+        tf.logging.info("Processing %s" % train_fn)
         train_examples = read_raw_data(train_fn)
         train_file = os.path.join(output_dir, "train.tf_record")
         file_based_convert_examples_to_features(
             train_examples, max_seq_length, encoder, train_file)
 
-    dev_fn = os.path.join(data_dir, 'dev.txt')
+    dev_fn = os.path.join(data_dir, "dev.txt")
     if os.path.isfile(dev_fn):
-        tf.logging.info('Processing %s' % dev_fn)
+        tf.logging.info("Processing %s" % dev_fn)
         eval_examples = read_raw_data(dev_fn)
         eval_file = os.path.join(output_dir, "dev.tf_record")
         file_based_convert_examples_to_features(
             eval_examples, max_seq_length, encoder, eval_file)
 
-    test_fn = os.path.join(data_dir, 'test.txt')
+    test_fn = os.path.join(data_dir, "test.txt")
     if os.path.isfile(test_fn):
-        tf.logging.info('Processing %s' % test_fn)
+        tf.logging.info("Processing %s" % test_fn)
         test_examples = read_raw_data(test_fn)
         test_file = os.path.join(output_dir, "test.tf_record")
         file_based_convert_examples_to_features(

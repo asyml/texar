@@ -40,6 +40,9 @@ flags.DEFINE_string("pretrain_checkpoint",
                     "gpt2_pretrained_models/model_117M/model.ckpt",
                     "OpenAI pretrained model checkpoint. Ignored if "
                     "'--checkpoint' is specified.")
+flags.DEFINE_string("pretrain_model_dir", "gpt2_pretrained_models/model_117M",
+                     "The directory of pretrained model, for loading "
+                     "vocabuary, etc.")
 flags.DEFINE_integer("seed", None, "Random seed.")
 flags.DEFINE_integer("nsamples", 1, "The number of samples per input.")
 flags.DEFINE_integer("batch_size", 1, "The batch size of input.")
@@ -82,11 +85,11 @@ def main(_):
     if FLAGS.config_type == "json":
         gpt2_config = model_utils.transform_gpt2_to_texar_config(
             FLAGS.config_model)
-    elif FLAGS.config_type == 'texar':
+    elif FLAGS.config_type == "texar":
         gpt2_config = importlib.import_module(
             FLAGS.config_model)
     else:
-        raise ValueError('Unknown config_type.')
+        raise ValueError("Unknown config_type.")
 
     assert max_decoding_length <= gpt2_config.position_size, (
         "max_decoding_length should not be greater than position size")
@@ -95,12 +98,12 @@ def main(_):
 
     # Create a data pre-processor for, e.g., BPE encoding
     proc = processor.get_encoder(
-        "gpt2_pretrained_models/model_117M")
+        FLAGS.pretrain_model_dir)
 
     context = tf.placeholder(tf.int32, [batch_size, None])
     context_length = tf.placeholder(tf.int32, [batch_size])
 
-    end_token = proc.encoder['<|endoftext|>']
+    end_token = proc.encoder["<|endoftext|>"]
     if FLAGS.is_interactive:
         start_tokens = context[:, 0]
     else:
@@ -145,7 +148,7 @@ def main(_):
 
             # Load model checkpoint
             if FLAGS.checkpoint:
-                tf.logging.info('Restore from {}'.format(FLAGS.checkpoint))
+                tf.logging.info("Restore from {}".format(FLAGS.checkpoint))
                 saver.restore(sess, FLAGS.checkpoint)
             elif FLAGS.pretrain_checkpoint:
                 model_utils.init_gpt2_checkpoint(sess, FLAGS.pretrain_checkpoint)
@@ -157,7 +160,7 @@ def main(_):
                 raw_text = input("Model input >>> ")
 
                 while not raw_text:
-                    print('Input should not be empty!')
+                    print("Input should not be empty!")
                     raw_text = input("Model input >>> ")
 
                 context_tokens = proc.encode(raw_text)
@@ -191,7 +194,7 @@ def main(_):
 
             # Load model checkpoint
             if FLAGS.checkpoint:
-                tf.logging.info('Restore from {}'.format(FLAGS.checkpoint))
+                tf.logging.info("Restore from {}".format(FLAGS.checkpoint))
                 saver.restore(sess, FLAGS.checkpoint)
             elif FLAGS.pretrain_checkpoint:
                 model_utils.init_gpt2_checkpoint(sess, FLAGS.pretrain_checkpoint)
@@ -214,5 +217,5 @@ def main(_):
                           " SAMPLE " + str(generated) + " " + "=" * 40)
                     print(text)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     tf.app.run()
