@@ -149,9 +149,11 @@ def main(_):
             # Load model checkpoint
             if FLAGS.checkpoint:
                 tf.logging.info("Restore from {}".format(FLAGS.checkpoint))
+                saver = tf.train.Saver()
                 saver.restore(sess, FLAGS.checkpoint)
             elif FLAGS.pretrain_checkpoint:
-                model_utils.init_gpt2_checkpoint(sess, FLAGS.pretrain_checkpoint)
+                model_utils.init_gpt2_checkpoint(
+                    sess, FLAGS.pretrain_checkpoint)
                 print("\nFinished loading\n")
 
             # Enter interactive mode
@@ -195,9 +197,11 @@ def main(_):
             # Load model checkpoint
             if FLAGS.checkpoint:
                 tf.logging.info("Restore from {}".format(FLAGS.checkpoint))
+                saver = tf.train.Saver()
                 saver.restore(sess, FLAGS.checkpoint)
             elif FLAGS.pretrain_checkpoint:
-                model_utils.init_gpt2_checkpoint(sess, FLAGS.pretrain_checkpoint)
+                model_utils.init_gpt2_checkpoint(
+                    sess, FLAGS.pretrain_checkpoint)
                 print("\nFinished loading\n")
 
             feed_dict = {
