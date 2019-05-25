@@ -59,6 +59,7 @@ def transpose_batch_time(inputs):
     flat_input = [rnn._transpose_batch_time(input_) for input_ in flat_input]
     return nest.pack_sequence_as(structure=inputs, flat_sequence=flat_input)
 
+
 def get_batch_size(tensor):
     """Returns a unit `Tensor` representing the batch size, i.e.,
     the size of the 1st dimension of :attr:`tensor`.
@@ -87,6 +88,7 @@ def get_rank(tensor):
         array = np.asarray(tensor)
         rank = array.ndim
     return rank
+
 
 def mask_sequences(sequence,
                    sequence_length,
@@ -135,6 +137,7 @@ def mask_sequences(sequence,
         return _mask_sequences_py(
             sequence, sequence_length, dtype, time_major)
 
+
 def _mask_sequences_tensor(sequence,
                            sequence_length,
                            dtype=None,
@@ -176,17 +179,18 @@ def _mask_sequences_tensor(sequence,
             "tensor_rank must be > 2. Got tensor_rank = {}".format(tensor_rank))
     if time_major:
         sequence = rnn._transpose_batch_time(sequence)
-    max_time = tf.to_int32(tf.shape(sequence)[1])
+    max_time = tf.cast(tf.shape(sequence)[1], tf.int32)
     if dtype is None:
         dtype = sequence.dtype
     mask = tf.sequence_mask(
-        tf.to_int32(sequence_length), max_time, dtype=dtype)
+        tf.cast(sequence_length, tf.int32), max_time, dtype=dtype)
     for _ in range(2, tensor_rank):
         mask = tf.expand_dims(mask, axis=-1)
     sequence = sequence * mask
     if time_major:
         sequence = rnn._transpose_batch_time(sequence)
     return sequence
+
 
 def _mask_sequences_py(sequence,
                        sequence_length,
@@ -273,6 +277,7 @@ def flatten(tensor, preserve_dims, flattened_dim=None):
     tensor_ = tf.reshape(tensor, shape)
     return tensor_
 
+
 def shape_list(x):
     """Returns **static** shape of the input Tensor whenever possible.
 
@@ -297,6 +302,7 @@ def shape_list(x):
             dim = shape[i]
         ret.append(dim)
     return ret
+
 
 def pad_and_concat(values, axis, rank=None, pad_axis=None,
                    pad_constant_values=0):
