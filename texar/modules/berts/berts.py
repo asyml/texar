@@ -26,9 +26,6 @@ from texar.modules.embedders import WordEmbedder, PositionEmbedder
 from texar import HParams, ModuleBase
 from texar.utils import bert_utils
 
-# pylint: disable=too-many-locals, invalid-name
-# pylint: disable=arguments-differ, too-many-branches, too-many-statements
-
 __all__ = [
     "BertBase",
     "BertEncoder",
