@@ -92,8 +92,7 @@ class BertEncoder(BertBase):
 
     Args:
         pretrained_model_name (optional): a str with the name
-            of a pre-trained model
-        to load selected in the list of:
+            of a pre-trained model to load selected in the list of:
                     . `bert-base-uncased`
                     . `bert-large-uncased`
                     . `bert-base-cased`
@@ -101,12 +100,15 @@ class BertEncoder(BertBase):
                     . `bert-base-multilingual-uncased`
                     . `bert-base-multilingual-cased`
                     . `bert-base-chinese`
+            If `None` (default), model parameters will be initialized
+            randomly.
         cache_dir (optional): the path to a folder in which the
-            pre-trained models will be cached.
+            pre-trained models will be cached. If `None` (default),
+            a default directory will be used.
         hparams (dict or HParams, optional): Hyperparameters. Missing
             hyperparameter will be set to default values. See
-            :meth:`default_hparams` for the hyperparameter sturcture and
-            default values.
+            :meth:`default_hparams` for the hyperparameter sturcture
+            and default values.
 
     .. document private functions
     .. automethod:: _build
@@ -117,13 +119,13 @@ class BertEncoder(BertBase):
                  hparams=None):
 
         if pretrained_model_name is None:
-            BertBase.__init__(self, hparams)
             self.pretrained_model = None
+            BertBase.__init__(self, hparams)
         else:
             self.pretrained_model = bert_utils.load_pretrained_model(pretrained_model_name, cache_dir)
+            pretrained_model_hparams = bert_utils.transform_bert_to_texar_config(self.pretrained_model)
 
-            pretrained_model_params = bert_utils.transform_bert_to_texar_config(self.pretrained_model)
-            BertBase.__init__(self, HParams(hparams, default_hparams=pretrained_model_params))
+            BertBase.__init__(self, HParams(hparams, default_hparams=pretrained_model_hparams))
 
         with tf.variable_scope(self.variable_scope):
             if self._hparams.initializer:
@@ -145,7 +147,7 @@ class BertEncoder(BertBase):
                 position_size=self._hparams.position_size,
                 hparams=self._hparams.position_embed)
 
-            # The BERT model (a TransformerEncoder)
+            # The BERT encoder (a TransformerEncoder)
             self.encoder = TransformerEncoder(hparams=self._hparams.encoder)
 
             with tf.variable_scope("pooler"):
@@ -322,14 +324,15 @@ class BertEncoder(BertBase):
                inputs,
                sequence_length,
                segment_ids=None,
-               mode=None, **kwargs):
+               mode=None,
+               **kwargs):
         """Encodes the inputs.
 
         Args:
             inputs: A 2D Tensor of shape `[batch_size, max_time]`,
-                containing the token ids of tokens in input sequences.
+                containing the token ids of tokens in the input sequences.
             segment_ids (optional): A 2D Tensor of shape
-                `[batch_size, max_time], containing the segment ids
+                `[batch_size, max_time]`, containing the segment ids
                 of tokens in input sequences. If `None` (default), a
                 tensor with all elements set to zero is used.
             sequence_length: A 1D Tensor of shape `[batch_size]`. Input
@@ -398,9 +401,8 @@ class BertForSequenceClassification(BertBase):
     `(Devlin et al.)` BERT.
 
     Args:
-        pretrained_model_name (optional): a str with the name of a
-        pre-trained model
-        to load selected in the list of:
+        pretrained_model_name (optional): a str with the name
+            of a pre-trained model to load selected in the list of:
                     . `bert-base-uncased`
                     . `bert-large-uncased`
                     . `bert-base-cased`
@@ -408,12 +410,15 @@ class BertForSequenceClassification(BertBase):
                     . `bert-base-multilingual-uncased`
                     . `bert-base-multilingual-cased`
                     . `bert-base-chinese`
+            If `None` (default), model parameters will be initialized
+            randomly.
         cache_dir (optional): the path to a folder in which the
-            pre-trained models will be cached.
+            pre-trained models will be cached. If `None` (default),
+            a default directory will be used.
         hparams (dict or HParams, optional): Hyperparameters. Missing
             hyperparameter will be set to default values. See
-            :meth:`default_hparams` for the hyperparameter sturcture and
-            default values.
+            :meth:`default_hparams` for the hyperparameter sturcture
+            and default values.
 
     .. document private functions
     .. automethod:: _build
@@ -466,7 +471,7 @@ class BertForSequenceClassification(BertBase):
             for details.
 
         "dropout" : float
-            The dropout rate for the pooled output.
+            The dropout rate of the pooled output.
 
         "class_num" : int
             The number of classes for the classifier.
@@ -517,8 +522,7 @@ class BertForSequenceClassification(BertBase):
              `[batch_size, num_labels]`.
         """
 
-        _, pooled_output = self.bert(inputs,
-                                     sequence_length, segment_ids, mode)
+        _, pooled_output = self.bert(inputs, sequence_length, segment_ids, mode)
 
         with tf.variable_scope("sequence_classification"):
             pooled_output = self.dropout(pooled_output, training=mode)

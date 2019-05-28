@@ -1,4 +1,4 @@
-# Copyright 2018 The Tensor2Tensor Authors.
+# Copyright 2018 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,11 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# Modifications copyright (C) 2018 Texar
-# ==============================================================================
 """
-Utility functions related to BERT encoder.
+Utility functions related to BERT encoders.
 """
 
 from __future__ import absolute_import
@@ -45,6 +42,7 @@ _MODEL2URL = {
 
 def _get_assignment_map_from_checkpoint(tvars, init_checkpoint, scope_name):
     """
+    Provided by Google AI Language Team.
     Compute the union of the current variables and checkpoint variables.
     Because the variable scope of the original BERT and Texar implementation,
     we need to build a assignment map to match the variables.
@@ -61,7 +59,7 @@ def _get_assignment_map_from_checkpoint(tvars, init_checkpoint, scope_name):
 
     init_vars = tf.train.list_variables(init_checkpoint)
 
-    assignment_map = { # change by vv
+    assignment_map = {
         'bert/embeddings/word_embeddings': scope_name + '/word_embeddings/w',
         'bert/embeddings/token_type_embeddings': scope_name + '/token_type_embeddings/w',
         'bert/embeddings/position_embeddings': scope_name + '/position_embeddings/w',
@@ -111,8 +109,9 @@ def _get_assignment_map_from_checkpoint(tvars, init_checkpoint, scope_name):
 
 
 def init_bert_checkpoint(init_checkpoint_dir, scope_name):
-    """Initializes BERT model parameters from a checkpoint provided by
-    Google.
+    """
+    Initializes BERT model parameters from a checkpoint.
+    Provided by Google AI Language Team.
 
     Args:
         init_checkpoint_dir (str): path to the checkpoint.
@@ -246,7 +245,7 @@ def transform_bert_to_texar_config(config_dir):
         'dim': hidden_dim}
     configs['position_size'] = config_ckpt['max_position_embeddings']
 
-    configs['encoder'] = { #change by vv
+    configs['encoder'] = {
         'name': 'encoder',
         'embedding_dropout': config_ckpt['hidden_dropout_prob'],
         'num_blocks': config_ckpt['num_hidden_layers'],
