@@ -87,10 +87,12 @@ class BertEncoder(BertBase):
     :class:`~texar.modules.embedders.PositionEmbedder`,
     :class:`~texar.modules.encoders.TransformerEncoder` and a dense pooler.
 
-    This module supports the architecture first proposed in `(Devlin et al.)` BERT.
+    This module supports the architecture first proposed
+    in `(Devlin et al.)` BERT.
 
     Args:
-        pretrained_model_name (optional): a str with the name of a pre-trained model
+        pretrained_model_name (optional): a str with the name
+            of a pre-trained model
         to load selected in the list of:
                     . `bert-base-uncased`
                     . `bert-large-uncased`
@@ -99,7 +101,8 @@ class BertEncoder(BertBase):
                     . `bert-base-multilingual-uncased`
                     . `bert-base-multilingual-cased`
                     . `bert-base-chinese`
-        cache_dir (optional): the path to a folder in which the pre-trained models will be cached.
+        cache_dir (optional): the path to a folder in which the
+            pre-trained models will be cached.
         hparams (dict or HParams, optional): Hyperparameters. Missing
             hyperparameter will be set to default values. See
             :meth:`default_hparams` for the hyperparameter sturcture and
@@ -110,17 +113,17 @@ class BertEncoder(BertBase):
     """
     def __init__(self,
                  pretrained_model_name=None,
-                 cache_dir = None,
+                 cache_dir=None,
                  hparams=None):
 
         if pretrained_model_name is None:
-            ModuleBase.__init__(self, hparams)
+            BertBase.__init__(self, hparams)
             self.pretrained_model = None
         else:
             self.pretrained_model = bert_utils.load_pretrained_model(pretrained_model_name, cache_dir)
 
             pretrained_model_params = bert_utils.transform_bert_to_texar_config(self.pretrained_model)
-            ModuleBase.__init__(self, HParams(hparams, default_hparams=pretrained_model_params))
+            BertBase.__init__(self, HParams(hparams, default_hparams=pretrained_model_params))
 
         with tf.variable_scope(self.variable_scope):
             if self._hparams.initializer:
@@ -287,7 +290,8 @@ class BertEncoder(BertBase):
                 'num_blocks': 12,
                 'poswise_feedforward': {
                     'layers': [
-                        {   'kwargs': {
+                        {
+                            'kwargs': {
                                 'activation': 'gelu',
                                 'name': 'intermediate',
                                 'units': 3072,
@@ -295,10 +299,12 @@ class BertEncoder(BertBase):
                             },
                             'type': 'Dense'
                         },
-                        {   'kwargs': {'activation': None,
-                            'name': 'output',
-                            'units': 768,
-                            'use_bias': True
+                        {
+                            'kwargs': {
+                                'activation': None,
+                                'name': 'output',
+                                'units': 768,
+                                'use_bias': True
                             },
                             'type': 'Dense'
                         }
@@ -312,17 +318,23 @@ class BertEncoder(BertBase):
             'name': 'bert_encoder'
         }
 
-    def _build(self, inputs, sequence_length, segment_ids=None, mode=None, **kwargs):
+    def _build(self,
+               inputs,
+               sequence_length,
+               segment_ids=None,
+               mode=None, **kwargs):
         """Encodes the inputs.
 
         Args:
             inputs: A 2D Tensor of shape `[batch_size, max_time]`,
                 containing the token ids of tokens in input sequences.
-            segment_ids (optional): A 2D Tensor of shape `[batch_size, max_time],
-                containing the segment ids of tokens in input sequences.
-                If `None` (default), a tensor with all elements set to zero is used.
-            sequence_length: A 1D Tensor of shape `[batch_size]`. Input tokens
-                beyond respective sequence lengths are masked out automatically.
+            segment_ids (optional): A 2D Tensor of shape
+                `[batch_size, max_time], containing the segment ids
+                of tokens in input sequences. If `None` (default), a
+                tensor with all elements set to zero is used.
+            sequence_length: A 1D Tensor of shape `[batch_size]`. Input
+                tokens beyond respective sequence lengths are masked
+                out automatically.
             mode (optional): A tensor taking value in
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`,
                 including `TRAIN`, `EVAL`, and `PREDICT`. Used to toggle
@@ -333,12 +345,15 @@ class BertEncoder(BertBase):
         Returns:
             A pair :attr:`(outputs, pooled_output)`
 
-                - :attr:`outputs`:  A Tensor of shape `[batch_size, max_time, hidden_size]` \
-                containing the encoded vectors.
+                - :attr:`outputs`:  A Tensor of shape \
+                `[batch_size, max_time, hidden_size]` containing the \
+                 encoded vectors.
 
-                - :attr:`pooled_output`: A Tensor of size [batch_size, hidden_size] which is \
-                the output of a pooler pretrained on top of the hidden state associated \
-                to the first character of the input (`CLS`), see BERT's paper.
+                - :attr:`pooled_output`: A Tensor of size \
+                `[batch_size, hidden_size]` which is the output of a \
+                pooler pretrained on top of the hidden state associated \
+                to the first character of the input (`CLS`), see BERT's \
+                paper.
         """
 
         if segment_ids is None:
@@ -357,7 +372,7 @@ class BertEncoder(BertBase):
         output = self.encoder(input_embeds, sequence_length, mode)
 
         with tf.variable_scope("pooler"):
-            # pool the model by taking the hidden state corresponding to the first token.
+            # taking the hidden state corresponding to the first token.
             first_token_tensor = tf.squeeze(output[:, 0:1, :], axis=1)
             pooled_output = self.pooler(first_token_tensor)
 
@@ -366,7 +381,8 @@ class BertEncoder(BertBase):
             self._built = True
 
             if self.pretrained_model:
-                bert_utils.init_bert_checkpoint(self.pretrained_model, self.variable_scope.name)
+                bert_utils.init_bert_checkpoint(self.pretrained_model,
+                                                self.variable_scope.name)
 
         return output, pooled_output
 
@@ -378,10 +394,12 @@ class BertForSequenceClassification(BertBase):
     :class:`~texar.modules.BertEncoder` with a linear layer on top of
     the pooled output.
 
-    This module supports the architecture first proposed in `(Devlin et al.)` BERT.
+    This module supports the architecture first proposed in
+    `(Devlin et al.)` BERT.
 
     Args:
-        pretrained_model_name (optional): a str with the name of a pre-trained model
+        pretrained_model_name (optional): a str with the name of a
+        pre-trained model
         to load selected in the list of:
                     . `bert-base-uncased`
                     . `bert-large-uncased`
@@ -390,7 +408,8 @@ class BertForSequenceClassification(BertBase):
                     . `bert-base-multilingual-uncased`
                     . `bert-base-multilingual-cased`
                     . `bert-base-chinese`
-        cache_dir (optional): the path to a folder in which the pre-trained models will be cached.
+        cache_dir (optional): the path to a folder in which the
+            pre-trained models will be cached.
         hparams (dict or HParams, optional): Hyperparameters. Missing
             hyperparameter will be set to default values. See
             :meth:`default_hparams` for the hyperparameter sturcture and
@@ -405,14 +424,15 @@ class BertForSequenceClassification(BertBase):
                  cache_dir=None,
                  hparams=None):
 
-        ModuleBase.__init__(self, hparams)
+        BertBase.__init__(self, hparams)
 
         with tf.variable_scope(self.variable_scope):
             if self._hparams.initializer:
                 tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
 
-            self.bert = BertEncoder(pretrained_model_name, cache_dir, self._hparams.bert_hparam)
+            self.bert = BertEncoder(pretrained_model_name,
+                                    cache_dir, self._hparams.bert_hparam)
 
             with tf.variable_scope("sequence_classification"):
                 kwargs_i = {"rate": self._hparams.dropout}
@@ -468,7 +488,12 @@ class BertForSequenceClassification(BertBase):
             "name": "bert_for_sequence_classification"
         }
 
-    def _build(self, inputs, sequence_length, segment_ids=None, mode=None, **kwargs):
+    def _build(self,
+               inputs,
+               sequence_length,
+               segment_ids=None,
+               mode=None,
+               **kwargs):
         """Compute the classification logits.
 
         Args:
@@ -476,9 +501,10 @@ class BertForSequenceClassification(BertBase):
                 containing the token ids of tokens in input sequences.
             sequence_length: A 1D Tensor of shape `[batch_size]`. Input tokens
                 beyond respective sequence lengths are masked out automatically.
-            segment_ids (optional): A 2D Tensor of shape `[batch_size, max_time],
-                containing the segment ids of tokens in input sequences.
-                If `None` (default), a tensor with all elements set to zero is used.
+            segment_ids (optional): A 2D Tensor of shape
+                `[batch_size, max_time]`, containing the segment ids
+                of tokens in input sequences. If `None` (default), a tensor
+                 with all elements set to zero is used.
             mode (optional): A tensor taking value in
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`,
                 including `TRAIN`, `EVAL`, and `PREDICT`. Used to toggle
@@ -487,10 +513,12 @@ class BertForSequenceClassification(BertBase):
             **kwargs: Keyword arguments.
 
         Returns:
-            Outputs the classification logits of shape `[batch_size, num_labels]`.
+            Outputs the classification logits of shape
+             `[batch_size, num_labels]`.
         """
 
-        output, pooled_output = self.bert(inputs, sequence_length, segment_ids, mode)
+        _, pooled_output = self.bert(inputs,
+                                     sequence_length, segment_ids, mode)
 
         with tf.variable_scope("sequence_classification"):
             pooled_output = self.dropout(pooled_output, training=mode)

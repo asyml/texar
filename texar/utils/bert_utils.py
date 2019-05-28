@@ -23,13 +23,13 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
-import tensorflow as tf
 import json
 import collections
 import re
 import sys
 import os
 import zipfile
+import tensorflow as tf
 
 # pylint: disable=invalid-name, too-many-arguments, too-many-locals
 
@@ -72,24 +72,24 @@ def _get_assignment_map_from_checkpoint(tvars, init_checkpoint, scope_name):
         initialized_variable_names[model_name] = 1
         initialized_variable_names[model_name + ":0"] = 1
 
-    for check_name, shape in init_vars:
+    for check_name, _ in init_vars:
         if check_name.startswith('bert'):
             if check_name.startswith('bert/embeddings'):
                 continue
             check_name_scope = check_name.replace("bert/", scope_name+'/')
             model_name = re.sub(
-                'layer_\d+/output/dense',
+                'layer_\\d+/output/dense',
                 lambda x: x.group(0).replace('output/dense', 'ffn/output'),
                 check_name_scope)
             if model_name == check_name_scope:
                 model_name = re.sub(
-                    'layer_\d+/output/LayerNorm',
+                    'layer_\\d+/output/LayerNorm',
                     lambda x: x.group(0).replace('output/LayerNorm',
                                                  'ffn/LayerNorm'),
                     check_name_scope)
             if model_name == check_name_scope:
                 model_name = re.sub(
-                    'layer_\d+/intermediate/dense',
+                    'layer_\\d+/intermediate/dense',
                     lambda x: x.group(0).replace('intermediate/dense',
                                                  'ffn/intermediate'),
                     check_name_scope)
@@ -97,8 +97,8 @@ def _get_assignment_map_from_checkpoint(tvars, init_checkpoint, scope_name):
                 model_name = re.sub('attention/output/dense',
                                     'attention/self/output', check_name_scope)
             if model_name == check_name_scope:
-                model_name = check_name_scope.replace('attention/output/LayerNorm',
-                                                'output/LayerNorm')
+                model_name = check_name_scope.replace(
+                    'attention/output/LayerNorm', 'output/LayerNorm')
 
             if model_name in name_to_variable.keys():
                 assignment_map[check_name] = model_name
@@ -107,7 +107,7 @@ def _get_assignment_map_from_checkpoint(tvars, init_checkpoint, scope_name):
             else:
                 tf.logging.info('model name:{} not exist'.format(model_name))
 
-    return (assignment_map, initialized_variable_names)
+    return assignment_map, initialized_variable_names
 
 
 def init_bert_checkpoint(init_checkpoint_dir, scope_name):
@@ -115,15 +115,15 @@ def init_bert_checkpoint(init_checkpoint_dir, scope_name):
     Google.
 
     Args:
-        init_checkpoint (str): path to the checkpoint.
+        init_checkpoint_dir (str): path to the checkpoint.
         scope_name: variable scope of bert encoder.
     """
     tvars = tf.trainable_variables()
-    initialized_variable_names = []
     init_checkpoint = os.path.join(init_checkpoint_dir, 'bert_model.ckpt')
     if init_checkpoint:
         (assignment_map, initialized_variable_names
-        ) = _get_assignment_map_from_checkpoint(tvars, init_checkpoint, scope_name)
+        ) = _get_assignment_map_from_checkpoint(
+            tvars, init_checkpoint, scope_name)
         tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
 
@@ -153,9 +153,9 @@ def _default_download_dir():
     return os.path.join(texar_download_dir, 'bert')
 
 
-def _http_get(url, dir):
+def _http_get(url, cache_dir):
     """
-    Download files from http `url` and save in `dir`.
+    Download files from http `url` and save in `cache_dir`.
     """
     if sys.version_info[0] < 3:
         from urllib2 import urlopen
@@ -168,7 +168,7 @@ def _http_get(url, dir):
         file_size = int(u.getheader("Content-Length"))
 
     file_name = url.split('/')[-1]
-    f = open(os.path.join(dir,file_name), 'wb')
+    f = open(os.path.join(cache_dir, file_name), 'wb')
 
     file_size_dl = 0
     block_sz = 8192
@@ -181,7 +181,8 @@ def _http_get(url, dir):
         f.write(buffer_)
 
         done = int(50 * file_size_dl / file_size)
-        sys.stdout.write("\r[%s%s] %3.2f%%" % ('=' * done, ' ' * (50 - done), file_size_dl * 100. / file_size))
+        sys.stdout.write("\r[%s%s] %3.2f%%" % (
+            '=' * done, ' ' * (50 - done), file_size_dl * 100. / file_size))
         sys.stdout.flush()
     sys.stdout.write('\n')
 
@@ -210,7 +211,7 @@ def load_pretrained_model(pretrained_model_name, cache_dir):
     if not os.path.exists(cache_path):
         print("Downloading pre-trained BERT model to: %s." % cache_path)
         _http_get(download_path, cache_dir)
-        zipfile_path = os.path.join(cache_dir,file_name)
+        zipfile_path = os.path.join(cache_dir, file_name)
         zip_ref = zipfile.ZipFile(zipfile_path, 'r')
         zip_ref.extractall(cache_dir)
         zip_ref.close()
