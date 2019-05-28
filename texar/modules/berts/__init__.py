@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Modules of texar library module.
+Modules of texar library qnets.
 """
 
 from __future__ import absolute_import
@@ -21,13 +21,4 @@ from __future__ import print_function
 
 # pylint: disable=wildcard-import
 
-from texar.modules.networks import *
-from texar.modules.embedders import *
-from texar.modules.encoders import *
-from texar.modules.decoders import *
-from texar.modules.connectors import *
-from texar.modules.classifiers import *
-from texar.modules.policies import *
-from texar.modules.qnets import *
-from texar.modules.memory import *
 from texar.modules.berts.berts import *
