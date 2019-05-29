@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -128,7 +128,8 @@ def _default_download_dir():
     """
     Return the directory to which packages will be downloaded by default.
     """
-    package_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    package_dir = os.path.dirname(os.path.dirname(
+        os.path.dirname(os.path.dirname(__file__))))
     if os.access(package_dir, os.W_OK):
         texar_download_dir = os.path.join(package_dir, 'texar_download')
     else:
