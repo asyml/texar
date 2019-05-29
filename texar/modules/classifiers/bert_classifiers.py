@@ -51,8 +51,7 @@ class BertClassifier(ClassifierBase):
             `bert-base-uncased`, `bert-large-uncased`, `bert-base-cased`,
             `bert-large-cased`, `bert-base-multilingual-uncased`,
             `bert-base-multilingual-cased`, `bert-base-chinese`.
-            If `None` (default), model parameters will be initialized
-            randomly.
+            If `None`, will use the model name in :attr:`hparams`.
         cache_dir (optional): the path to a folder in which the
             pre-trained models will be cached. If `None` (default),
             a default directory will be used.
@@ -131,19 +130,24 @@ class BertClassifier(ClassifierBase):
         :class:`~texar.modules.BertEncoder`.
         See the :meth:`~texar.modules.BertEncoder.default_hparams`.
         An instance of BertEncoder is created for feature extraction.
+
         2. Additional hyperparameters:
+
             "num_classes" : int
                 Number of classes:
+
                 - If **`> 0`**, an additional :tf_main:`Dense <layers/Dense>` \
                 layer is appended to the encoder to compute the logits over \
                 classes.
                 - If **`<= 0`**, no dense layer is appended. The number of \
                 classes is assumed to be the final dense layer size of the \
                 encoder.
+
             "logit_layer_kwargs" : dict
                 Keyword arguments for the logit Dense layer constructor,
                 except for argument "units" which is set to "num_classes".
                 Ignored if no extra logit layer is appended.
+
             "clas_strategy" : str
                 The classification strategy, one of:
                 - **"cls_time"**: Sequence-leve classification based on the \
@@ -152,11 +156,14 @@ class BertClassifier(ClassifierBase):
                 the output of all time steps. Each sequence has a class.
                 - **"time_wise"**: Step-wise classfication, i.e., make \
                 classification for each time step based on its output.
+
             "max_seq_length" : int, optional
                 Maximum possible length of input sequences. Required if
                 "clas_strategy" is "all_time".
+
             "dropout" : float
                 The dropout rate of the bert encoder output.
+
             "name" : str
                 Name of the classifier.
         """
@@ -192,7 +199,7 @@ class BertClassifier(ClassifierBase):
             segment_ids (optional): A 2D Tensor of shape
                 `[batch_size, max_time]`, containing the segment ids
                 of tokens in input sequences. If `None` (default), a tensor
-                 with all elements set to zero is used.
+                with all elements set to zero is used.
             mode (optional): A tensor taking value in
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`,
                 including `TRAIN`, `EVAL`, and `PREDICT`. Used to toggle
