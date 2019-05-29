@@ -259,6 +259,12 @@ Classifiers
     :members:
     :inherited-members:
 
+:hidden:`BertClassifier`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.BertClassifier
+    :members:
+    :inherited-members:
+
 Networks
 ========
 
