@@ -121,7 +121,6 @@ def _main(_):
         decoder_initial_state_size = decoder.cell.state_size
     elif config.decoder_hparams["type"] == 'transformer':
         decoder = tx.modules.TransformerDecoder(
-            embedding=decoder_embedder.embedding,
             hparams=config.trans_hparams)
         decoder_initial_state_size = tf.TensorShape(
             [1, config.dec_emb_hparams["dim"]])
@@ -292,6 +291,7 @@ def _main(_):
                 memory=dcdr_states,
                 decoding_strategy="infer_sample",
                 memory_sequence_length=tf.ones(tf.shape(dcdr_states)[0]),
+                embedding=decoder_embedder,
                 max_decoding_length=100,
                 start_tokens=start_tokens,
                 end_token=end_token)
