@@ -28,6 +28,11 @@ import os
 import zipfile
 import tensorflow as tf
 
+__all__ = [
+    "transform_bert_to_texar_config",
+    "init_bert_checkpoint",
+    "load_pretrained_model"
+]
 _MODEL2URL = {
     'bert-base-uncased': "https://storage.googleapis.com/bert_models/2018_10_18/uncased_L-12_H-768_A-12.zip",
     'bert-large-uncased': "https://storage.googleapis.com/bert_models/2018_10_18/uncased_L-24_H-1024_A-16.zip",
