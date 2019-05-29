@@ -329,3 +329,23 @@ Q-Nets
 .. autoclass:: texar.modules.CategoricalQNet
     :members:
     :inherited-members:
+
+Berts
+=========
+
+:hidden:`BertBase`
+~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.BertBase
+    :members:
+
+:hidden:`init_bert_checkpoint`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.modules.init_bert_checkpoint
+
+:hidden:`load_pretrained_model`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.modules.load_pretrained_model
+
+:hidden:`transform_bert_to_texar_config`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.modules.transform_bert_to_texar_config

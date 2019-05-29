@@ -33,7 +33,7 @@ __all__ = [
 
 
 class BertEncoder(BertBase, EncoderBase):
-    """raw BERT Transformer for encoding sequences.
+    """Raw BERT Transformer for encoding sequences.
 
     This module basically stacks
     :class:`~texar.modules.embedders.WordEmbedder`,
@@ -46,13 +46,9 @@ class BertEncoder(BertBase, EncoderBase):
     Args:
         pretrained_model_name (optional): a str with the name
             of a pre-trained model to load selected in the list of:
-                    . `bert-base-uncased`
-                    . `bert-large-uncased`
-                    . `bert-base-cased`
-                    . `bert-large-cased`
-                    . `bert-base-multilingual-uncased`
-                    . `bert-base-multilingual-cased`
-                    . `bert-base-chinese`
+            `bert-base-uncased`, `bert-large-uncased`, `bert-base-cased`,
+            `bert-large-cased`, `bert-base-multilingual-uncased`,
+            `bert-base-multilingual-cased`, `bert-base-chinese`.
             If `None` (default), model parameters will be initialized
             randomly.
         cache_dir (optional): the path to a folder in which the
@@ -165,7 +161,7 @@ class BertEncoder(BertBase, EncoderBase):
                     'use_bert_config': True
                 },
                 'hidden_size': 768,
-                'pretrained_model_name': None,
+                'pretrained_model_name': 'bert-base-uncased',
                 'initializer': None,
                 'name': 'bert_encoder'
             }
@@ -199,8 +195,8 @@ class BertEncoder(BertBase, EncoderBase):
             See :func:`~texar.modules.TransformerEncoder.default_harams`
             for details.
 
-        "hidden_size" :
-            Size of the pooler layer.
+        "hidden_size" : int
+            Size of the pooler dense layer.
 
         "initializer" : dict, optional
             Hyperparameters of the default initializer that initializes
@@ -208,7 +204,7 @@ class BertEncoder(BertBase, EncoderBase):
             See :func:`~texar.core.get_initializer` for details.
 
         "pretrained_model_name" : str or None
-            The name of the pretrained bert model. If None, the model
+             The name of the pretrained bert model. If None, the model
              will be randomly initialized.
 
         "name" : str
@@ -306,7 +302,7 @@ class BertEncoder(BertBase, EncoderBase):
             A pair :attr:`(outputs, pooled_output)`
 
                 - :attr:`outputs`:  A Tensor of shape \
-                `[batch_size, max_time, hidden_size]` containing the \
+                `[batch_size, max_time, dim]` containing the \
                  encoded vectors.
 
                 - :attr:`pooled_output`: A Tensor of size \
