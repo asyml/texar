@@ -27,3 +27,4 @@ from texar.modules.encoders.hierarchical_encoders import *
 from texar.modules.encoders.transformer_encoders import *
 from texar.modules.encoders.multihead_attention import *
 from texar.modules.encoders.conv_encoders import *
+from texar.modules.encoders.bert_encoders import *

@@ -30,4 +30,4 @@ from texar.modules.classifiers import *
 from texar.modules.policies import *
 from texar.modules.qnets import *
 from texar.modules.memory import *
-from texar.modules.berts.berts import *
+from texar.modules.berts import *

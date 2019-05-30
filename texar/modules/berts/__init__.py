@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,3 +22,4 @@ from __future__ import print_function
 # pylint: disable=wildcard-import
 
 from texar.modules.berts.berts import *
+from texar.modules.berts.bert_utils import *

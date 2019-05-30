@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,6 +28,11 @@ import os
 import zipfile
 import tensorflow as tf
 
+__all__ = [
+    "transform_bert_to_texar_config",
+    "init_bert_checkpoint",
+    "load_pretrained_model"
+]
 _MODEL2URL = {
     'bert-base-uncased': "https://storage.googleapis.com/bert_models/2018_10_18/uncased_L-12_H-768_A-12.zip",
     'bert-large-uncased': "https://storage.googleapis.com/bert_models/2018_10_18/uncased_L-24_H-1024_A-16.zip",
@@ -128,7 +133,8 @@ def _default_download_dir():
     """
     Return the directory to which packages will be downloaded by default.
     """
-    package_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    package_dir = os.path.dirname(os.path.dirname(
+        os.path.dirname(os.path.dirname(__file__))))
     if os.access(package_dir, os.W_OK):
         texar_download_dir = os.path.join(package_dir, 'texar_download')
     else:
