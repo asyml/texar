@@ -48,7 +48,6 @@ class BertClassifierTest(tf.test.TestCase):
         _, _ = clas(inputs)
         self.assertEqual(len(clas.trainable_variables), 199+2)
 
-
     def test_encode(self):
         """Tests encoding.
         """
@@ -119,7 +118,6 @@ class BertClassifierTest(tf.test.TestCase):
                                              clas.hparams.num_classes))
             self.assertEqual(pred_.shape, (batch_size, ))
 
-
     def test_binary(self):
         """Tests binary classification.
         """
@@ -160,7 +158,6 @@ class BertClassifierTest(tf.test.TestCase):
                                                      size=(batch_size, 6))})
             self.assertEqual(logits_.shape, (batch_size, ))
             self.assertEqual(pred_.shape, (batch_size, ))
-
 
         # case 4
         hparams = {

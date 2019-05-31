@@ -17,7 +17,6 @@ class BertEncoderTest(tf.test.TestCase):
     """Tests :class:`~texar.modules.BertEncoder` class.
     """
 
-
     def test_hparams(self):
         """Tests the priority of the encoder arch parameter.
         """
@@ -60,10 +59,6 @@ class BertEncoderTest(tf.test.TestCase):
         _, _ = encoder(inputs)
         self.assertEqual(encoder.hparams.encoder.num_blocks, 12)
 
-
-
-
-
     def test_trainable_variables(self):
         """Tests the functionality of automatically collecting trainable
         variables.
@@ -93,7 +88,6 @@ class BertEncoderTest(tf.test.TestCase):
         encoder = BertEncoder(hparams=hparams)
         _, _ = encoder(inputs)
         self.assertEqual(len(encoder.trainable_variables), 3+2+6*16+2)
-
 
     def test_encode(self):
         """Tests encoding.
