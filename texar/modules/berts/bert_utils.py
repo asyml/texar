@@ -25,22 +25,30 @@ import collections
 import re
 import sys
 import os
-import zipfile
 import tensorflow as tf
-
+from texar.data.data_utils import maybe_download
 __all__ = [
     "transform_bert_to_texar_config",
     "init_bert_checkpoint",
     "load_pretrained_model"
 ]
+
+_BERT_PATH = "https://storage.googleapis.com/bert_models/"
 _MODEL2URL = {
-    'bert-base-uncased': "https://storage.googleapis.com/bert_models/2018_10_18/uncased_L-12_H-768_A-12.zip",
-    'bert-large-uncased': "https://storage.googleapis.com/bert_models/2018_10_18/uncased_L-24_H-1024_A-16.zip",
-    'bert-base-cased': "https://storage.googleapis.com/bert_models/2018_10_18/cased_L-12_H-768_A-12.zip",
-    'bert-large-cased': "https://storage.googleapis.com/bert_models/2018_10_18/cased_L-24_H-1024_A-16.zip",
-    'bert-base-multilingual-uncased': "https://storage.googleapis.com/bert_models/2018_11_23/multi_cased_L-12_H-768_A-12.zip",
-    'bert-base-multilingual-cased': "https://storage.googleapis.com/bert_models/2018_11_03/multilingual_L-12_H-768_A-12.zip",
-    'bert-base-chinese': "https://storage.googleapis.com/bert_models/2018_11_03/chinese_L-12_H-768_A-12.zip",
+    'bert-base-uncased':
+        _BERT_PATH + "2018_10_18/uncased_L-12_H-768_A-12.zip",
+    'bert-large-uncased':
+        _BERT_PATH + "2018_10_18/uncased_L-24_H-1024_A-16.zip",
+    'bert-base-cased':
+        _BERT_PATH + "2018_10_18/cased_L-12_H-768_A-12.zip",
+    'bert-large-cased':
+        _BERT_PATH + "2018_10_18/cased_L-24_H-1024_A-16.zip",
+    'bert-base-multilingual-uncased':
+        _BERT_PATH + "2018_11_23/multi_cased_L-12_H-768_A-12.zip",
+    'bert-base-multilingual-cased':
+        _BERT_PATH + "2018_11_03/multilingual_L-12_H-768_A-12.zip",
+    'bert-base-chinese':
+        _BERT_PATH + "2018_11_03/chinese_L-12_H-768_A-12.zip",
 }
 
 def _get_assignment_map_from_checkpoint(tvars, init_checkpoint, scope_name):
@@ -63,11 +71,16 @@ def _get_assignment_map_from_checkpoint(tvars, init_checkpoint, scope_name):
     init_vars = tf.train.list_variables(init_checkpoint)
 
     assignment_map = {
-        'bert/embeddings/word_embeddings': scope_name + '/word_embeddings/w',
-        'bert/embeddings/token_type_embeddings': scope_name + '/token_type_embeddings/w',
-        'bert/embeddings/position_embeddings': scope_name + '/position_embeddings/w',
-        'bert/embeddings/LayerNorm/beta': scope_name + '/encoder/LayerNorm/beta',
-        'bert/embeddings/LayerNorm/gamma': scope_name + '/encoder/LayerNorm/gamma',
+        'bert/embeddings/word_embeddings':
+            scope_name + '/word_embeddings/w',
+        'bert/embeddings/token_type_embeddings':
+            scope_name + '/token_type_embeddings/w',
+        'bert/embeddings/position_embeddings':
+            scope_name + '/position_embeddings/w',
+        'bert/embeddings/LayerNorm/beta':
+            scope_name + '/encoder/LayerNorm/beta',
+        'bert/embeddings/LayerNorm/gamma':
+            scope_name + '/encoder/LayerNorm/gamma',
     }
     for check_name, model_name in assignment_map.items():
         initialized_variable_names[model_name] = 1
@@ -205,20 +218,11 @@ def load_pretrained_model(pretrained_model_name, cache_dir):
     if cache_dir is None:
         cache_dir = _default_download_dir()
 
-    if not os.path.exists(cache_dir):
-        os.mkdir(cache_dir)
-
     file_name = download_path.split('/')[-1]
 
     cache_path = os.path.join(cache_dir, file_name.split('.')[0])
     if not os.path.exists(cache_path):
-        print("Downloading pre-trained BERT model to: %s." % cache_path)
-        _http_get(download_path, cache_dir)
-        zipfile_path = os.path.join(cache_dir, file_name)
-        zip_ref = zipfile.ZipFile(zipfile_path, 'r')
-        zip_ref.extractall(cache_dir)
-        zip_ref.close()
-        os.remove(zipfile_path)
+        maybe_download(download_path, cache_dir, extract=True)
     else:
         print("Using cached pre-trained BERT model from: %s." % cache_path)
 
