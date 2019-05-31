@@ -105,9 +105,19 @@ class BertEncoder(BertBase, EncoderBase):
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
+        * The encoder arch is determined by the constructor argument \
+        :attr:`pretrained_model_name` if it's specified. In this case, \
+        hparams are ignored.
+        * Otherwise, the encoder arch is determined by \
+        `hparams['pretrained_model_name']` if it's specified. All other \
+        configs in hparams are ignored.
+        * If the above two are `None`, the encoder arch is defined by \
+        the configs in hparams and weights are randomly initialized.
+
         .. code-block:: python
 
             {
+                'pretrained_model_name': 'bert-base-uncased',
                 'embed': {
                     'dim': 768,
                     'name': 'word_embeddings'
@@ -160,7 +170,6 @@ class BertEncoder(BertBase, EncoderBase):
                     'use_bert_config': True
                 },
                 'hidden_size': 768,
-                'pretrained_model_name': 'bert-base-uncased',
                 'initializer': None,
                 'name': 'bert_encoder'
             }
@@ -170,6 +179,11 @@ class BertEncoder(BertBase, EncoderBase):
         Here:
 
         The default parameters are values for uncased BERT-Base model.
+
+
+        "pretrained_model_name" : str or None
+             The name of the pretrained bert model. If None, the model
+             will be randomly initialized.
 
         "embed" : dict
             Hyperparameters for word embedding layer.
@@ -202,15 +216,12 @@ class BertEncoder(BertBase, EncoderBase):
             variables created in this module.
             See :func:`~texar.core.get_initializer` for details.
 
-        "pretrained_model_name" : str or None
-             The name of the pretrained bert model. If None, the model
-             will be randomly initialized.
-
         "name" : str
             Name of the module.
         """
 
         return {
+            'pretrained_model_name': 'bert-base-uncased',
             'embed': {
                 'dim': 768,
                 'name': 'word_embeddings'
@@ -267,7 +278,6 @@ class BertEncoder(BertBase, EncoderBase):
             },
             'hidden_size': 768,
             'initializer': None,
-            'pretrained_model_name': 'bert-base-uncased',
             'name': 'bert_encoder',
             '@no_typecheck': ['pretrained_model_name']
         }

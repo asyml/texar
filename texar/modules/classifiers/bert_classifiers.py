@@ -150,8 +150,9 @@ class BertClassifier(ClassifierBase):
 
             "clas_strategy" : str
                 The classification strategy, one of:
-                - **"cls_time"**: Sequence-leve classification based on the \
-                output of the first time step (CLS). Each sequence has a class.
+                - **"cls_time"**: Sequence-level classification based on the \
+                output of the first time step (which is the "CLS" token). \
+                Each sequence has a class.
                 - **"all_time"**: Sequence-level classification based on \
                 the output of all time steps. Each sequence has a class.
                 - **"time_wise"**: Step-wise classfication, i.e., make \

@@ -88,7 +88,10 @@ def main(_):
     input_length = tf.reduce_sum(1 - tf.to_int32(tf.equal(input_ids, 0)),
                                  axis=1)
     # Builds BERT
-    model = tx.modules.BertClassifier()
+    hparams = {
+        'clas_strategy': 'cls_time'
+    }
+    model = tx.modules.BertClassifier(hparams=hparams)
     logits, preds = model(input_ids, input_length, segment_ids)
 
     accu = tx.evals.accuracy(batch['label_ids'], preds)
