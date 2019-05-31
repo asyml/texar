@@ -17,6 +17,53 @@ class BertEncoderTest(tf.test.TestCase):
     """Tests :class:`~texar.modules.BertEncoder` class.
     """
 
+
+    def test_hparams(self):
+        """Tests the priority of the encoder arch parameter.
+        """
+
+        inputs = tf.placeholder(dtype=tf.int32, shape=[None, None])
+
+        # case 1: set "pretrained_mode_name" by constructor argument
+        hparams = {
+            "pretrained_model_name": "bert-large-uncased",
+        }
+        encoder = BertEncoder(pretrained_model_name="bert-base-uncased",
+                              hparams=hparams)
+        _, _ = encoder(inputs)
+        self.assertEqual(encoder.hparams.encoder.num_blocks, 12)
+
+        # case 2: set "pretrained_mode_name" by hparams
+        hparams = {
+            "pretrained_model_name": "bert-large-uncased",
+            "encoder": {
+                "num_blocks": 6
+            }
+        }
+        encoder = BertEncoder(hparams=hparams)
+        _, _ = encoder(inputs)
+        self.assertEqual(encoder.hparams.encoder.num_blocks, 24)
+
+        # case 3: set to None in both hparams and constructor argument
+        hparams = {
+            "pretrained_model_name": None,
+            "encoder": {
+                "num_blocks": 6
+            },
+        }
+        encoder = BertEncoder(hparams=hparams)
+        _, _ = encoder(inputs)
+        self.assertEqual(encoder.hparams.encoder.num_blocks, 6)
+
+        # case 4: using default hparams
+        encoder = BertEncoder()
+        _, _ = encoder(inputs)
+        self.assertEqual(encoder.hparams.encoder.num_blocks, 12)
+
+
+
+
+
     def test_trainable_variables(self):
         """Tests the functionality of automatically collecting trainable
         variables.
@@ -38,8 +85,8 @@ class BertEncoderTest(tf.test.TestCase):
 
         # case 3: self-designed bert
         hparams = {
-            'encoder': {
-                'num_blocks': 6,
+            "encoder": {
+                "num_blocks": 6,
             },
             "pretrained_model_name": None
         }
@@ -72,7 +119,7 @@ class BertEncoderTest(tf.test.TestCase):
 
         # case 2: self-designed bert
         hparams = {
-            'hidden_size': 100,
+            "hidden_size": 100,
             "pretrained_model_name": None
         }
         encoder = BertEncoder(hparams=hparams)
