@@ -105,13 +105,13 @@ class BertEncoder(BertBase, EncoderBase):
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
 
-        * The encoder arch is determined by the constructor argument
-        :attr:`pretrained_model_name` if it's specified. In this case,
+        * The encoder arch is determined by the constructor argument \
+        :attr:`pretrained_model_name` if it's specified. In this case, \
         hparams are ignored.
-        * Otherwise, the encoder arch is determined by
-        `hparams['pretrained_model_name']` if it's specified. all other
+        * Otherwise, the encoder arch is determined by \
+        `hparams['pretrained_model_name']` if it's specified. all other \
         configs in hparams are ignored.`
-        * If the above two are `None`, the encoder arch is defined by
+        * If the above two are `None`, the encoder arch is defined by \
         the configs in hparams and weights are randomly initialized.
 
         .. code-block:: python
