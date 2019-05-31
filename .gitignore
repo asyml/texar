@@ -257,6 +257,9 @@ simple-examples.tgz
 
 /examples/vae_text/simple-examples/
 /examples/vae_text/data/
+/examples/vae_text/models/
+/examples/vae_text/yahoo.zip
+/examples/vae_text/simple-examples.tgz
 
 /examples/transformer/data/
 /examples/transformer/temp/

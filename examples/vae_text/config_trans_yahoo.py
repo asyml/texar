@@ -42,9 +42,7 @@ attention_dropout = 0.2
 residual_dropout = 0.2
 num_blocks = 3
 
-decoder_hparams = {
-    "type": "transformer"
-}
+decoder_type = 'transformer'
 
 enc_cell_hparams = {
     "type": "LSTMBlockCell",
@@ -80,6 +78,12 @@ dec_emb_hparams = {
             'stddev': embed_dim**-0.5,
         },
     }
+}
+
+
+max_pos = 200 # max sequence length in training data
+dec_pos_emb_hparams = {
+    'dim': hidden_size,
 }
 
 # due to the residual connection, the embed_dim should be equal to hidden_size
@@ -134,7 +138,7 @@ trans_hparams = {
 }
 
 # KL annealing
-kl_anneal_hparams={
+kl_anneal_hparams = {
     "warm_up": 10,
     "start": 0.1
 }

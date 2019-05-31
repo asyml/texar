@@ -43,9 +43,7 @@ attention_dropout = 0.2
 residual_dropout = 0.2
 num_blocks = 3
 
-decoder_hparams = {
-    "type": "lstm"
-}
+decoder_type = 'lstm'
 
 enc_cell_hparams = {
     "type": "LSTMBlockCell",

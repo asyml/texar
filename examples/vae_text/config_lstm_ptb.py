@@ -38,9 +38,7 @@ lr_decay_hparams = {
 }
 
 
-decoder_hparams = {
-    "type": "lstm"
-}
+decoder_type = 'lstm'
 
 enc_cell_hparams = {
     "type": "LSTMBlockCell",
