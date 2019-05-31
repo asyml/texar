@@ -62,6 +62,11 @@ Encoders
 .. autoclass:: texar.modules.TransformerEncoder
     :members:
 
+:hidden:`BertEncoder`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.BertEncoder
+    :members:
+
 :hidden:`Conv1DEncoder`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.modules.Conv1DEncoder
@@ -254,6 +259,12 @@ Classifiers
     :members:
     :inherited-members:
 
+:hidden:`BertClassifier`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.BertClassifier
+    :members:
+    :inherited-members:
+
 Networks
 ========
 
@@ -324,3 +335,11 @@ Q-Nets
 .. autoclass:: texar.modules.CategoricalQNet
     :members:
     :inherited-members:
+
+Berts
+=========
+
+:hidden:`BertBase`
+~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.BertBase
+    :members:
