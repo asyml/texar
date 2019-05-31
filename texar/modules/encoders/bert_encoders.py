@@ -109,8 +109,8 @@ class BertEncoder(BertBase, EncoderBase):
         :attr:`pretrained_model_name` if it's specified. In this case, \
         hparams are ignored.
         * Otherwise, the encoder arch is determined by \
-        `hparams['pretrained_model_name']` if it's specified. all other \
-        configs in hparams are ignored.`
+        `hparams['pretrained_model_name']` if it's specified. All other \
+        configs in hparams are ignored.
         * If the above two are `None`, the encoder arch is defined by \
         the configs in hparams and weights are randomly initialized.
 
