@@ -169,42 +169,6 @@ def _default_download_dir():
     return os.path.join(texar_download_dir, 'bert')
 
 
-def _http_get(url, cache_dir):
-    """
-    Download files from http `url` and save in `cache_dir`.
-    """
-    if sys.version_info[0] < 3:
-        from urllib2 import urlopen
-        u = urlopen(url)
-        meta = u.info()
-        file_size = int(meta.getheaders("Content-Length")[0])
-    else:
-        from urllib.request import urlopen
-        u = urlopen(url)
-        file_size = int(u.getheader("Content-Length"))
-
-    file_name = url.split('/')[-1]
-    f = open(os.path.join(cache_dir, file_name), 'wb')
-
-    file_size_dl = 0
-    block_sz = 8192
-    while True:
-        buffer_ = u.read(block_sz)
-        if not buffer_:
-            break
-
-        file_size_dl += len(buffer_)
-        f.write(buffer_)
-
-        done = int(50 * file_size_dl / file_size)
-        sys.stdout.write("\r[%s%s] %3.2f%%" % (
-            '=' * done, ' ' * (50 - done), file_size_dl * 100. / file_size))
-        sys.stdout.flush()
-    sys.stdout.write('\n')
-
-    f.close()
-
-
 def load_pretrained_model(pretrained_model_name, cache_dir):
     """
     Return the directory in which the pretrained model is cached.
