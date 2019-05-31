@@ -4,6 +4,7 @@
 ### New features
 
 * Add support for GPT-2 345M model in [examples/gpt-2](https://github.com/asyml/texar/tree/master/examples/gpt-2). ([#156](https://github.com/asyml/texar/pull/156)) 
+* Add BERT modules, including `texar.modules.BERTEncoder` ([doc](https://texar.readthedocs.io/en/latest/code/modules.html#texar.modules.BertEncoder)) and `texar.modules.BERTClassifier` ([doc](https://texar.readthedocs.io/en/latest/code/modules.html#bertclassifierv)). ([#167](https://github.com/asyml/texar/pull/167))
 
 ### Feature improvements
 
@@ -16,7 +17,8 @@
 
 * Fix `texar.losses.reduce_batch_time` when `sequence` has dtype other than `tf.float32`. ([#143](https://github.com/asyml/texar/issues/143))
 * Fix `texar.losses.reduce_dimensions` when `average_axes` or `sum_axes` is `int`. ([#141](https://github.com/asyml/texar/pull/141))
-* Fix GPT-2 tokenization loading path. ([165](https://github.com/asyml/texar/pull/165))
+* Fix [GPT-2](https://github.com/asyml/texar/tree/master/examples/gpt-2) tokenization loading path. ([165](https://github.com/asyml/texar/pull/165))
+* Fix [examples/vae_text](https://github.com/asyml/texar/tree/master/examples/vae_text) EOS bug. ([168](https://github.com/asyml/texar/pull/168)) 
 
 ## [v0.2.0](https://github.com/asyml/texar/releases/tag/v0.2.0) (2019-04-09)
 

@@ -2,7 +2,10 @@
 
 This is a Texar implementation of Google's BERT model, which allows to load pre-trained model parameters downloaded from the [official release](https://github.com/google-research/bert) and build/fine-tune arbitrary downstream applications with **distributed training** (This example showcases BERT for sentence classification).
 
-With Texar, building the BERT model is as simple as creating a [`TransformerEncoder`](https://texar.readthedocs.io/en/latest/code/modules.html#transformerencoder) instance. We can initialize the parameters of the TransformerEncoder using a pre-trained BERT checkpoint by calling `init_bert_checkpoint(path_to_bert_checkpoint)`. 
+This example shows two ways of building a BERT classifier, at different abstraction levels:
+
+  * Use `texar.modules.BERTClassifier` ([doc](https://texar.readthedocs.io/en/latest/code/modules.html#texar.modules.BertClassifier)) directly. The module supports both sequence classification (one label per sequence) and sequence labeling (one label per token). --- See `bert_classifier_main_v2.py` for implementation.
+  * Use lower-level modules by creating a `TransformerEncoder` ([doc](https://texar.readthedocs.io/en/latest/code/modules.html#transformerencoder)) instance and adding additional layers. Initialization with a pre-trained BERT checkpoint is done by calling `init_bert_checkpoint(path_to_bert_checkpoint)`. --- See `bert_classifier_main.py` for implementation. 
 
 In sum, this example showcases:
 
@@ -76,6 +79,8 @@ Here:
 - `config_downstream`: Configuration of the downstream part. In this example, [`config_classifier`](./config_classifier.py) configures the classification layer and the optimization method.
 - `config_data`: The data configuration. See the default [`config_data.py`](./config_data.py) for example. Make sure to specify `num_classes`, `num_train_data`, `max_seq_length`, and `tfrecord_data_dir` as used or output in the above [data preparation](#prepare-data) step.
 - `output_dir`: The output path where checkpoints and TensorBoard summaries are saved.
+
+*[NOTE: you can also use `bert_classifier_main_v2.py` in the above]*
 
 For **Multi-GPU training** on one or multiple machines, you may first install the prerequisite OpenMPI and Hovorod packages, as detailed in the [distributed_gpu](https://github.com/asyml/texar/tree/master/examples/distributed_gpu) example. 
 
