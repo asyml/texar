@@ -308,8 +308,9 @@ class SinusoidsPositionEmbedder(EmbedderBase):
                 `[batch_size]`. Time steps beyond
                 the respective sequence lengths will have zero-valued
                 embeddings.
+
         Returns:
-            A `Tensor` of shape `[batch_size, position_size, dim]`.
+            A `Tensor` of shape `[batch_size, max_time, dim]`.
         """
         inputs = positions
         if positions is None:

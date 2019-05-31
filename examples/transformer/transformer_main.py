@@ -75,8 +75,6 @@ def main():
     # (text sequence length excluding padding)
     encoder_input_length = tf.reduce_sum(
         1 - tf.to_int32(tf.equal(encoder_input, 0)), axis=1)
-    decoder_input_length = tf.reduce_sum(
-        1 - tf.to_int32(tf.equal(decoder_input, 0)), axis=1)
 
     labels = tf.placeholder(tf.int64, shape=(None, None))
     is_target = tf.to_float(tf.not_equal(labels, 0))
@@ -152,8 +150,9 @@ def main():
     start_tokens = tf.fill([batch_size], bos_token_id)
 
     def _embedding_fn(x, y):
-        return tgt_embedder(x) * config_model.hidden_dim ** 0.5 + pos_embedder(
-            y)
+        x_w_embed = tgt_embedder(x)
+        y_p_embed = pos_embedder(y)
+        return x_w_embed * config_model.hidden_dim ** 0.5 + y_p_embed
 
     predictions = decoder(
         memory=encoder_output,

@@ -11,13 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""VAE config.
+"""Config file of VAE with Trasnformer decoder, on PTB data.
 """
 
 # pylint: disable=invalid-name, too-few-public-methods, missing-docstring
 
-dataset = "ptb"
+dataset = 'ptb'
 num_epochs = 100
 hidden_size = 256
 dec_dropout_in = 0.
@@ -29,10 +28,10 @@ embed_dim = 256
 latent_dims = 32
 
 lr_decay_hparams = {
-    "init_lr": 0.001,
-    "threshold": 2,
-    "decay_factor": 0.5,
-    "max_decay": 5
+    'init_lr': 0.001,
+    'threshold': 2,
+    'decay_factor': 0.5,
+    'max_decay': 5
 }
 
 
@@ -42,24 +41,22 @@ attention_dropout = 0.2
 residual_dropout = 0.2
 num_blocks = 3
 
-decoder_hparams = {
-    "type": "transformer"
-}
+decoder_type = 'transformer'
 
 enc_cell_hparams = {
-    "type": "LSTMBlockCell",
-    "kwargs": {
-        "num_units": hidden_size,
-        "forget_bias": 0.
+    'type': 'LSTMBlockCell',
+    'kwargs': {
+        'num_units': hidden_size,
+        'forget_bias': 0.
     },
-    "dropout": {"output_keep_prob": 1. - enc_dropout_out},
-    "num_layers": 1
+    'dropout': {'output_keep_prob': 1. - enc_dropout_out},
+    'num_layers': 1
 }
 
 enc_emb_hparams = {
     'name': 'lookup_table',
-    "dim": embed_dim,
-    "dropout_rate": enc_dropout_in,
+    'dim': embed_dim,
+    'dropout_rate': enc_dropout_in,
     'initializer' : {
         'type': 'random_normal_initializer',
         'kwargs': {
@@ -71,8 +68,8 @@ enc_emb_hparams = {
 
 dec_emb_hparams = {
     'name': 'lookup_table',
-    "dim": embed_dim,
-    "dropout_rate": dec_dropout_in,
+    'dim': embed_dim,
+    'dropout_rate': dec_dropout_in,
     'initializer' : {
         'type': 'random_normal_initializer',
         'kwargs': {
@@ -82,6 +79,11 @@ dec_emb_hparams = {
     }
 }
 
+max_pos = 200 # max sequence length in training data
+dec_pos_emb_hparams = {
+    'dim': hidden_size,
+}
+
 # due to the residual connection, the embed_dim should be equal to hidden_size
 trans_hparams = {
     'output_layer_bias': False,
@@ -89,9 +91,6 @@ trans_hparams = {
     'residual_dropout': residual_dropout,
     'num_blocks': num_blocks,
     'dim': hidden_size,
-    'position_embedder_hparams': {
-        'dim': hidden_size,
-    },
     'initializer': {
         'type': 'variance_scaling_initializer',
         'kwargs': {
@@ -138,48 +137,48 @@ trans_hparams = {
 
 # KL annealing
 kl_anneal_hparams = {
-    "warm_up": 10,
-    "start": 0.1
+    'warm_up': 10,
+    'start': 0.1
 }
 
 train_data_hparams = {
-    "num_epochs": 1,
-    "batch_size": batch_size,
-    "seed": 123,
-    "dataset": {
-        "files": './simple-examples/data/ptb.train.txt',
-        "vocab_file": './simple-examples/data/vocab.txt'
+    'num_epochs': 1,
+    'batch_size': batch_size,
+    'seed': 123,
+    'dataset': {
+        'files': './simple-examples/data/ptb.train.txt',
+        'vocab_file': './simple-examples/data/vocab.txt'
     }
 }
 
 val_data_hparams = {
-    "num_epochs": 1,
-    "batch_size": batch_size,
-    "seed": 123,
-    "dataset": {
-        "files": './simple-examples/data/ptb.valid.txt',
-        "vocab_file": './simple-examples/data/vocab.txt'
+    'num_epochs': 1,
+    'batch_size': batch_size,
+    'seed': 123,
+    'dataset': {
+        'files': './simple-examples/data/ptb.valid.txt',
+        'vocab_file': './simple-examples/data/vocab.txt'
     }
 }
 
 test_data_hparams = {
-    "num_epochs": 1,
-    "batch_size": batch_size,
-    "dataset": {
-        "files": './simple-examples/data/ptb.test.txt',
-        "vocab_file": './simple-examples/data/vocab.txt'
+    'num_epochs': 1,
+    'batch_size': batch_size,
+    'dataset': {
+        'files': './simple-examples/data/ptb.test.txt',
+        'vocab_file': './simple-examples/data/vocab.txt'
     }
 }
 
 opt_hparams = {
-    "optimizer": {
-        "type": "AdamOptimizer",
-        "kwargs": {
-            "learning_rate": 0.001
+    'optimizer': {
+        'type': 'AdamOptimizer',
+        'kwargs': {
+            'learning_rate': 0.001
         }
     },
-    "gradient_clip": {
-        "type": "clip_by_global_norm",
-        "kwargs": {"clip_norm": 5.}
+    'gradient_clip': {
+        'type': 'clip_by_global_norm',
+        'kwargs': {'clip_norm': 5.}
     }
 }
