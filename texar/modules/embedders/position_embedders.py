@@ -27,13 +27,15 @@ from texar.modules.embedders.embedder_base import EmbedderBase
 from texar.modules.embedders import embedder_utils
 from texar.utils.mode import is_train_mode
 from texar.utils.shapes import mask_sequences
+from texar.utils.shapes import shape_list
 
 # pylint: disable=arguments-differ, invalid-name
 
 __all__ = [
     "PositionEmbedder",
-    "SinusoidsPositionEmbedder",
+    "SinusoidsPositionEmbedder"
 ]
+
 
 class PositionEmbedder(EmbedderBase):
     """Simple position embedder that maps position indexes into embeddings
@@ -68,18 +70,21 @@ class PositionEmbedder(EmbedderBase):
 
         if init_value is None and position_size is None:
             raise ValueError(
-                "Either `init_value` or `position_size` is required.")
+                "Either `init_value` or `position_size` is required."
+            )
 
-        self._init_parameterized_embedding(init_value, position_size,
-                                           self._hparams)
+        self._init_parameterized_embedding(
+            init_value, position_size, self._hparams
+        )
 
         self._position_size = position_size
         if position_size is None:
             self._position_size = self._num_embeds
         if self._position_size != self._num_embeds:
             raise ValueError(
-                'position_size must equal to init_value.shape[0].'
-                'Got %d and %d' % (self._position_size, self._num_embeds))
+                "position_size must equal to init_value.shape[0]."
+                "Got %d and %d" % (self._position_size, self._num_embeds)
+            )
 
         self._built = True
 
@@ -148,11 +153,13 @@ class PositionEmbedder(EmbedderBase):
             A `Tensor` of shape `shape(inputs) + embedding dimension`.
         """
         # Gets embedder inputs
+        # pylint:disable=too-many-locals
         inputs = positions
         if positions is None:
             if sequence_length is None:
                 raise ValueError(
-                    'Either `positions` or `sequence_length` is required.')
+                    "Either `positions` or `sequence_length` is required."
+                )
             max_length = tf.reduce_max(sequence_length)
             single_inputs = tf.range(start=0, limit=max_length, dtype=tf.int32)
             # Expands `single_inputs` to have shape [batch_size, max_length]
@@ -166,38 +173,46 @@ class PositionEmbedder(EmbedderBase):
 
         # Gets dropout strategy
         st = self._hparams.dropout_strategy
-        if positions is None and st == 'item':
+        if positions is None and st == "item":
             # If `inputs` is based on `sequence_length`, then dropout
             # strategies 'item' and 'item_type' have the same effect, we
             # use 'item_type' to avoid unknown noise_shape in the 'item'
             # strategy
-            st = 'item_type'
+            st = "item_type"
 
         # Dropouts as 'item_type' before embedding
-        if st == 'item_type':
+        if st == "item_type":
             dropout_layer = self._get_dropout_layer(
-                self._hparams, dropout_strategy=st)
+                self._hparams, dropout_strategy=st
+            )
             if dropout_layer:
-                embedding = dropout_layer.apply(inputs=embedding,
-                                                training=is_training)
+                embedding = dropout_layer.apply(
+                    inputs=embedding, training=is_training
+                )
 
         # Embeds
         outputs = tf.nn.embedding_lookup(embedding, inputs, **kwargs)
 
         # Dropouts as 'item' or 'elements' after embedding
-        if st != 'item_type':
+        if st != "item_type":
             dropout_layer = self._get_dropout_layer(
-                self._hparams, ids_rank=ids_rank, dropout_input=outputs,
-                dropout_strategy=st)
+                self._hparams,
+                ids_rank=ids_rank,
+                dropout_input=outputs,
+                dropout_strategy=st,
+            )
             if dropout_layer:
-                outputs = dropout_layer.apply(inputs=outputs,
-                                              training=is_training)
+                outputs = dropout_layer.apply(
+                    inputs=outputs, training=is_training
+                )
 
         # Optionally masks
         if sequence_length is not None:
             outputs = mask_sequences(
-                outputs, sequence_length,
-                tensor_rank=len(inputs.shape.dims) + self._dim_rank)
+                outputs,
+                sequence_length,
+                tensor_rank=len(inputs.shape.dims) + self._dim_rank,
+            )
 
         return outputs
 
@@ -248,27 +263,38 @@ class SinusoidsPositionEmbedder(EmbedderBase):
     .. document private functions
     .. automethod:: _build
     """
+
     def __init__(self, position_size, hparams=None):
         EmbedderBase.__init__(self, hparams=hparams)
 
-        dim = self._hparams.dim
-        num_timescales = dim // 2
+        self._num_embeds = position_size
+        self._dim = self._hparams.dim
+        self._cache_embeddings = self._hparams.cache_embeddings
+
+        num_timescales = self._dim // 2
         min_timescale = self._hparams.min_timescale
         max_timescale = self._hparams.max_timescale
 
-        positions = tf.to_float(tf.range(position_size, dtype=tf.int32))
-        log_timescale_increment = (
-            math.log(float(max_timescale) / float(min_timescale)) /
-            (tf.to_float(num_timescales) - 1))
+        log_timescale_increment = math.log(
+            float(max_timescale) / float(min_timescale)
+        ) / (tf.to_float(num_timescales) - 1)
         inv_timescales = min_timescale * tf.exp(
-            tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
-        scaled_time = tf.expand_dims(positions, 1) \
-            * tf.expand_dims(inv_timescales, 0)
-        signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=1)
-        signal = tf.pad(signal, [[0, 0], [0, tf.mod(dim, 2)]])
-        self.signal = signal
+            tf.to_float(tf.range(num_timescales)) * -log_timescale_increment
+        )
+        self.inv_timescales = inv_timescales
 
-    def default_hparams(self):
+        if self._cache_embeddings:
+            if position_size is None:
+                raise ValueError(
+                    "'position_size' must not be None when "
+                    "'cache_embeddings' is set to True"
+                )
+            positions = tf.to_float(tf.range(position_size, dtype=tf.int32))
+            signal = self._compute_embeddings(positions)
+            self.signal = signal
+
+    @staticmethod
+    def default_hparams():
         """Returns a dictionary of hyperparameters with default values
         We use a geometric sequence of timescales starting with
         min_timescale and ending with max_timescale. The number of different
@@ -280,16 +306,41 @@ class SinusoidsPositionEmbedder(EmbedderBase):
                 'min_timescale': 1.0,
                 'max_timescale': 10000.0,
                 'dim': 512,
+                'cache_embeddings': True,
                 'name':'sinusoid_posisiton_embedder',
             }
+
+            Here:
+
+            `"cache_embeddings"`: bool
+                If `True`, precompute embeddings for positions in range
+                `[0, position_size - 1]`. This leads to faster lookup but
+                requires lookup indices to be within this range.
+
+                If `False`, embeddings are computed on-the-fly during lookup.
+                Set to `False` if your application needs to handle sequences
+                of arbitrary length, or requires embeddings at negative
+                positions.
         """
         hparams = {
-            'min_timescale': 1.0,
-            'max_timescale': 1.0e4,
-            'dim': 512,
-            'name':'sinusoid_posisiton_embedder',
+            "min_timescale": 1.0,
+            "max_timescale": 1.0e4,
+            "dim": 512,
+            "cache_embeddings": True,
+            "name": "sinusoid_posisiton_embedder",
         }
         return hparams
+
+    def _compute_embeddings(self, positions):
+        inv_timescales = self.inv_timescales
+        scaled_time = tf.reshape(tf.cast(positions, inv_timescales.dtype),
+                                 (-1, 1)) * tf.expand_dims(inv_timescales, 0)
+        signal = tf.concat(
+            [tf.sin(scaled_time), tf.cos(scaled_time)], axis=1
+        )
+        signal = tf.pad(signal, [[0, 0], [0, tf.mod(self._dim, 2)]])
+        signal = tf.reshape(signal, shape_list(positions) + [self._dim])
+        return signal
 
     def _build(self, positions=None, sequence_length=None):
         """Embeds.
@@ -312,18 +363,23 @@ class SinusoidsPositionEmbedder(EmbedderBase):
         Returns:
             A `Tensor` of shape `[batch_size, max_time, dim]`.
         """
-        inputs = positions
+
         if positions is None:
             if sequence_length is None:
                 raise ValueError(
-                    'Either `positions` or `sequence_length` is required.')
+                    "Either `positions` or `sequence_length` is required."
+                )
             max_length = tf.reduce_max(sequence_length)
             single_inputs = tf.range(start=0, limit=max_length, dtype=tf.int32)
             # Expands `single_inputs` to have shape [batch_size, max_length]
             expander = tf.expand_dims(tf.ones_like(sequence_length), -1)
             inputs = expander * tf.expand_dims(single_inputs, 0)
+        else:
+            inputs = positions
 
-        embedding = self.signal
-        outputs = tf.nn.embedding_lookup(embedding, inputs)
+        if self._cache_embeddings:
+            outputs = tf.nn.embedding_lookup(self.signal, inputs)
+        else:
+            outputs = self._compute_embeddings(inputs)
+
         return outputs
-
