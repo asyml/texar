@@ -258,7 +258,9 @@ class SinusoidsPositionEmbedder(EmbedderBase):
 
     Args:
         position_size (int): The number of possible positions, e.g., the maximum
-            sequence length.
+            sequence length. Set `position_size=None` and
+            `hparams['cache_embeddings']=False` to enable infinite large or
+             negative position indexes.
 
     .. document private functions
     .. automethod:: _build
