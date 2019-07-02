@@ -12,13 +12,15 @@
 * Allow passing a Tensor to `output_layer` of decoders' constructors -- used for weight tie b/w the output layer and input embedding matrix.  ([#126](https://github.com/asyml/texar/pull/126))
 * `TransformerDecoder` constructor interface made exact the same with `RNN decoders` constructor interfaces. ([#126](https://github.com/asyml/texar/pull/126))
 * Refactor decoder `Helper`s to allow two-argument `embedding_fn` (supporting for position embedding). ([#126](https://github.com/asyml/texar/pull/126))
+* Refactor `SinusoidsPositionEmbedder` to enable infinite large or negative position indexes. ([#176](https://github.com/asyml/texar/pull/176))
 
 ### Fixes
 
 * Fix `texar.losses.reduce_batch_time` when `sequence` has dtype other than `tf.float32`. ([#143](https://github.com/asyml/texar/issues/143))
 * Fix `texar.losses.reduce_dimensions` when `average_axes` or `sum_axes` is `int`. ([#141](https://github.com/asyml/texar/pull/141))
-* Fix [GPT-2](https://github.com/asyml/texar/tree/master/examples/gpt-2) tokenization loading path. ([165](https://github.com/asyml/texar/pull/165))
-* Fix [examples/vae_text](https://github.com/asyml/texar/tree/master/examples/vae_text) EOS bug. ([168](https://github.com/asyml/texar/pull/168)) 
+* Fix [GPT-2](https://github.com/asyml/texar/tree/master/examples/gpt-2) tokenization loading path. ([#165](https://github.com/asyml/texar/pull/165))
+* Fix [examples/vae_text](https://github.com/asyml/texar/tree/master/examples/vae_text) EOS bug. ([#168](https://github.com/asyml/texar/pull/168)) 
+* Fix transformer [bleu_tool.py](https://github.com/asyml/texar/blob/master/examples/transformer/bleu_tool.py) when `translation_length` is 0. ([#176](https://github.com/asyml/texar/pull/176))
 
 ## [v0.2.0](https://github.com/asyml/texar/releases/tag/v0.2.0) (2019-04-09)
 

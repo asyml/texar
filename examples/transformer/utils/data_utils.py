@@ -20,15 +20,26 @@ import numpy as np
 
 # pylint: disable=no-member
 
+
 def load_data_numpy(input_dir, prefix):
-    train_data = np.load(os.path.join(input_dir,\
-        prefix + 'train.npy'), encoding='latin1').tolist()
-    dev_data = np.load(os.path.join(input_dir,\
-        prefix + 'valid.npy'), encoding='latin1').tolist()
-    test_data = np.load(os.path.join(input_dir,\
-        prefix + 'test.npy'), encoding='latin1').tolist()
-    print('train data size:{}'.format(len(train_data)))
+    train_data = np.load(
+        os.path.join(input_dir, prefix + "train.npy"),
+        encoding="latin1",
+        allow_pickle=True,
+    ).tolist()
+    dev_data = np.load(
+        os.path.join(input_dir, prefix + "valid.npy"),
+        encoding="latin1",
+        allow_pickle=True,
+    ).tolist()
+    test_data = np.load(
+        os.path.join(input_dir, prefix + "test.npy"),
+        encoding="latin1",
+        allow_pickle=True,
+    ).tolist()
+    print("train data size:{}".format(len(train_data)))
     return train_data, dev_data, test_data
+
 
 def seq2seq_pad_concat_convert(xy_batch, eos_id=2, bos_id=1):
     """
@@ -55,20 +66,22 @@ def seq2seq_pad_concat_convert(xy_batch, eos_id=2, bos_id=1):
     y_block = _concat_examples(y_seqs, padding=0)
 
     # Add EOS
-    x_block = np.pad(x_block, ((0, 0), (0, 1)), 'constant',
-                     constant_values=0)
+    x_block = np.pad(x_block, ((0, 0), (0, 1)), "constant", constant_values=0)
     for i_batch, seq in enumerate(x_seqs):
         x_block[i_batch, len(seq)] = eos_id
 
-    y_out_block = np.pad(y_block, ((0, 0), (0, 1)), 'constant',
-                         constant_values=0)
+    y_out_block = np.pad(
+        y_block, ((0, 0), (0, 1)), "constant", constant_values=0
+    )
     for i_batch, seq in enumerate(y_seqs):
         y_out_block[i_batch, len(seq)] = eos_id
 
     # Add BOS in target language
-    y_in_block = np.pad(y_block, ((0, 0), (1, 0)), 'constant',
-                        constant_values=bos_id)
+    y_in_block = np.pad(
+        y_block, ((0, 0), (1, 0)), "constant", constant_values=bos_id
+    )
     return x_block, y_in_block, y_out_block
+
 
 def source_pad_concat_convert(x_seqs, eos_id=2, bos_id=1):
     """
@@ -77,14 +90,15 @@ def source_pad_concat_convert(x_seqs, eos_id=2, bos_id=1):
     x_block = _concat_examples(x_seqs, padding=0)
 
     # add EOS
-    x_block = np.pad(x_block, ((0, 0), (0, 1)), 'constant', constant_values=0)
+    x_block = np.pad(x_block, ((0, 0), (0, 1)), "constant", constant_values=0)
     for i_batch, seq in enumerate(x_seqs):
         x_block[i_batch, len(seq)] = eos_id
     return x_block
 
+
 def _concat_examples(arrays, padding=0):
     if len(arrays) == 0:
-        raise ValueError('batch is empty')
+        raise ValueError("batch is empty")
 
     first_elem = arrays[0]
     assert isinstance(first_elem, np.ndarray)
@@ -102,8 +116,8 @@ def _concat_examples(arrays, padding=0):
         result[(i,) + slices] = src
     return result
 
-def write_words(words_list, filename):
-    with codecs.open(filename, 'w+', 'utf-8') as myfile:
-        for words in words_list:
-            myfile.write(' '.join(words) + '\n')
 
+def write_words(words_list, filename):
+    with codecs.open(filename, "w+", "utf-8") as myfile:
+        for words in words_list:
+            myfile.write(" ".join(words) + "\n")

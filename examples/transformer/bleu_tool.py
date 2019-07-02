@@ -132,9 +132,12 @@ def compute_bleu(reference_corpus,
 
     if use_bp:
         ratio = translation_length / reference_length
-        if ratio == 0:
+        if ratio <= 0:
             bp = 0
-        bp = math.exp(1 - 1. / ratio) if ratio < 1.0 else 1.0
+        elif ratio < 1.0:
+            bp = math.exp(1 - 1. / ratio)
+        else:
+            bp = 1.0
     bleu = geo_mean * bp
     return np.float32(bleu)
 
