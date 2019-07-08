@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,7 +54,10 @@ def _assert_same_size(outputs, output_size):
     flat_output = nest.flatten(outputs)
 
     for (output, size) in zip(flat_output, flat_output_size):
-        if output[0].shape != tf.TensorShape(size):
+        if isinstance(size, tf.TensorShape):
+            if output.shape == size:
+                pass
+        elif output[0].shape != tf.TensorShape(size):
             raise ValueError(
                 "The output size does not match the the required output_size")
 
@@ -518,7 +521,8 @@ class ReparameterizedStochasticConnector(ConnectorBase):
             - output: A Tensor or a (nested) tuple of Tensors with the same \
             structure and size of :attr:`output_size`. The batch dimension \
             equals :attr:`num_samples` if specified, or is determined by the \
-            distribution dimensionality.
+            distribution dimensionality. If :attr:`transform` is `False`, \
+            :attr:`output` will be equal to :attr:`sample`.
             - sample: The sample from the distribution, prior to transformation.
 
         Raises:
@@ -549,9 +553,10 @@ class ReparameterizedStochasticConnector(ConnectorBase):
             fn_modules = ['tensorflow', 'tensorflow.nn', 'texar.custom']
             activation_fn = get_function(self.hparams.activation_fn, fn_modules)
             output = _mlp_transform(sample, self._output_size, activation_fn)
+        else:
+            output = sample
 
         _assert_same_size(output, self._output_size)
-
         if not self._built:
             self._add_internal_trainable_variables()
             self._built = True
@@ -616,7 +621,7 @@ class StochasticConnector(ConnectorBase):
     def _build(self,
                distribution='MultivariateNormalDiag',
                distribution_kwargs=None,
-               transform=False,
+               transform=True,
                num_samples=None):
         """Samples from a distribution and optionally performs transformation
         with an MLP layer.
@@ -649,7 +654,8 @@ class StochasticConnector(ConnectorBase):
             - output: A Tensor or a (nested) tuple of Tensors with the same \
             structure and size of :attr:`output_size`. The batch dimension \
             equals :attr:`num_samples` if specified, or is determined by the \
-            distribution dimensionality.
+            distribution dimensionality. If :attr:`transform` is `False`, \
+            :attr:`output` will be equal to :attr:`sample`.
             - sample: The sample from the distribution, prior to transformation.
 
         Raises:
@@ -661,31 +667,32 @@ class StochasticConnector(ConnectorBase):
              "tensorflow.contrib.distributions", "texar.custom"])
 
         if num_samples:
-            output = dstr.sample(num_samples)
+            sample = dstr.sample(num_samples)
         else:
-            output = dstr.sample()
+            sample = dstr.sample()
 
         if dstr.event_shape == []:
-            output = tf.reshape(output,
-                                output.shape.concatenate(tf.TensorShape(1)))
+            sample = tf.reshape(sample,
+                                sample.shape.concatenate(tf.TensorShape(1)))
 
         # Disable gradients through samples
-        output = tf.stop_gradient(output)
+        sample = tf.stop_gradient(sample)
 
-        output = tf.cast(output, tf.float32)
+        sample = tf.cast(sample, tf.float32)
 
         if transform:
             fn_modules = ['tensorflow', 'tensorflow.nn', 'texar.custom']
             activation_fn = get_function(self.hparams.activation_fn, fn_modules)
-            output = _mlp_transform(output, self._output_size, activation_fn)
+            output = _mlp_transform(sample, self._output_size, activation_fn)
+        else:
+            output = sample
 
         _assert_same_size(output, self._output_size)
-
         if not self._built:
             self._add_internal_trainable_variables()
             self._built = True
 
-        return output
+        return output, sample
 
 
 #class ConcatConnector(ConnectorBase):

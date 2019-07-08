@@ -15,7 +15,8 @@ from tensorflow.python.util import nest    # pylint: disable=E0611
 from texar.core import layers
 from texar.modules import ConstantConnector
 from texar.modules import MLPTransformConnector
-from texar.modules import ReparameterizedStochasticConnector
+from texar.modules import (ReparameterizedStochasticConnector,
+                           StochasticConnector)
 from texar.modules.connectors.connectors import _assert_same_size
 
 # pylint: disable=too-many-locals, invalid-name
@@ -131,6 +132,36 @@ class TestConnectors(tf.test.TestCase):
             # for i in range(variable_size):
                # self.assertAlmostEqual(0, sample_mu[i], delta=0.2)
                # self.assertAlmostEqual(1, sample_var[i], delta=0.2)
+
+    def test_stochastic_connector(self):
+        """Tests the logic of
+        :class:`~texar.modules.StochasticConnector`.
+        """
+        state_size = (10, 10)
+        variable_size = 100
+        state_size_ts = tf.TensorShape([self._batch_size, variable_size])
+        gauss_connector = StochasticConnector(state_size)
+        mu = tf.zeros([self._batch_size, variable_size])
+        var = tf.ones([self._batch_size, variable_size])
+        gauss_ds = tfpd.MultivariateNormalDiag(loc=mu, scale_diag=var)
+        output_1, _ = gauss_connector(gauss_ds)
+
+        gauss_connector_2 = StochasticConnector(state_size_ts)
+        output_2, sample2 = gauss_connector_2(
+            distribution="MultivariateNormalDiag",
+            distribution_kwargs={"loc": mu, "scale_diag": var}, transform=False)
+        test_list = [output_1, output_2, sample2]
+
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            out_list = sess.run(test_list)
+            out1 = out_list[0]
+            out2 = out_list[1]
+            sample2 = out_list[2]
+            self.assertEqual(out1[0].shape,
+                             tf.TensorShape([self._batch_size, state_size[0]]))
+            self.assertEqual(out2.shape, state_size_ts)
+            self.assertEqual(out2.shape, sample2.shape)
 
     #def test_concat_connector(self): # pylint: disable=too-many-locals
     #    """Tests the logic of
