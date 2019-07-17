@@ -23,4 +23,3 @@ from __future__ import print_function
 
 from texar.modules.connectors.connector_base import *
 from texar.modules.connectors.connectors import *
-
