@@ -34,6 +34,7 @@ __all__ = [
 ]
 
 _BERT_PATH = "https://storage.googleapis.com/bert_models/"
+_XLNET_PATH = "https://storage.googleapis.com/xlnet/released_models/"
 _MODEL2URL = {
     'bert-base-uncased':
         _BERT_PATH + "2018_10_18/uncased_L-12_H-768_A-12.zip",
@@ -49,7 +50,9 @@ _MODEL2URL = {
         _BERT_PATH + "2018_11_03/multilingual_L-12_H-768_A-12.zip",
     'bert-base-chinese':
         _BERT_PATH + "2018_11_03/chinese_L-12_H-768_A-12.zip",
+    'xlnet-large-cased': _XLNET_PATH + "xlnet_cased_L-24_H-1024_A-16.zip"
 }
+
 
 def _get_assignment_map_from_checkpoint(tvars, init_checkpoint, scope_name):
     """
@@ -142,7 +145,7 @@ def init_bert_checkpoint(init_checkpoint_dir, scope_name):
         tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
 
-def _default_download_dir():
+def _default_download_dir(model_name):
     """
     Return the directory to which packages will be downloaded by default.
     """
@@ -166,7 +169,7 @@ def _default_download_dir():
     if not os.path.exists(texar_download_dir):
         os.mkdir(texar_download_dir)
 
-    return os.path.join(texar_download_dir, 'bert')
+    return os.path.join(texar_download_dir, model_name)
 
 
 def load_pretrained_model(pretrained_model_name, cache_dir):
@@ -180,7 +183,7 @@ def load_pretrained_model(pretrained_model_name, cache_dir):
             "Pre-trained model not found: {}".format(pretrained_model_name))
 
     if cache_dir is None:
-        cache_dir = _default_download_dir()
+        cache_dir = _default_download_dir(pretrained_model_name)
 
     file_name = download_path.split('/')[-1]
 
@@ -188,7 +191,8 @@ def load_pretrained_model(pretrained_model_name, cache_dir):
     if not os.path.exists(cache_path):
         maybe_download(download_path, cache_dir, extract=True)
     else:
-        print("Using cached pre-trained BERT model from: %s." % cache_path)
+        print("Using cached pre-trained model {} from: {}".format(
+            pretrained_model_name, cache_dir))
 
     return cache_path
 
@@ -256,3 +260,22 @@ def transform_bert_to_texar_config(config_dir):
         },
     }
     return configs
+
+
+def transform_xlnet_to_texar_config(config_dir):
+    """
+    Load the Json config file and transform it into Texar style configuration.
+    """
+    config_ckpt = json.loads(
+        open(os.path.join(config_dir, 'xlnet_config.json')).read())
+    config = dict(untie_r=config_ckpt["untie_r"],
+                  num_layers=config_ckpt["n_layer"],
+                  # layer
+                  head_dim=config_ckpt["d_head"],
+                  hidden_dim=config_ckpt["d_model"],
+                  num_heads=config_ckpt["n_head"],
+                  vocab_size=config_ckpt["n_token"],
+                  activation="gelu",
+                  ffn_inner_dim=config_ckpt["d_inner"])
+
+    return config

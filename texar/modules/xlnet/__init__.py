@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Modules of texar library encoders.
+Modules of texar library qnets.
 """
 
 from __future__ import absolute_import
@@ -20,12 +20,3 @@ from __future__ import division
 from __future__ import print_function
 
 # pylint: disable=wildcard-import
-
-from texar.modules.encoders.encoder_base import *
-from texar.modules.encoders.rnn_encoders import *
-from texar.modules.encoders.hierarchical_encoders import *
-from texar.modules.encoders.transformer_encoders import *
-from texar.modules.encoders.multihead_attention import *
-from texar.modules.encoders.conv_encoders import *
-from texar.modules.encoders.bert_encoders import *
-from texar.modules.encoders.xlnet_encoders import *

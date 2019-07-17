@@ -31,3 +31,4 @@ from texar.modules.policies import *
 from texar.modules.qnets import *
 from texar.modules.memory import *
 from texar.modules.berts import *
+from texar.modules.xlnet import *
