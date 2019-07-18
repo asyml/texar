@@ -19,7 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import numpy as np
 import tensorflow as tf
 
 from texar.core import layers
@@ -54,10 +53,29 @@ class PositionWiseFF(ModuleBase):
         if activation == 'gelu':
             activation = layers.gelu
 
-        self.linear1 = tf.keras.layers.Dense(units=ffn_inner_dim,
-                                             activation=activation)
-        self.dropout = tf.keras.layers.Dropout(rate=dropout)
-        self.linear2 = tf.keras.layers.Dense(units=hidden_dim)
+        l1_hparams = {
+            "type": "Dense",
+            "kwargs": {
+                "units": ffn_inner_dim,
+                "activation": activation
+            }
+        }
+        self.linear1 = layers.get_layer(hparams=l1_hparams)
+        dropout_hparams = {
+            "type": "Dropout",
+            "kwargs": {
+                "rate": dropout
+            }
+        }
+        self.dropout = layers.get_layer(hparams=dropout_hparams)
+        l2_hparams = {
+            "type": "Dense",
+            "kwargs": {
+                "units": hidden_dim,
+                "activation": activation
+            }
+        }
+        self.linear2 = layers.get_layer(hparams=l2_hparams)
 
     @staticmethod
     def default_hparams():
@@ -76,8 +94,8 @@ class PositionWiseFF(ModuleBase):
         output = self.linear2(output)
         output = self.dropout(output)
         # residual + layer norm
-        output = tf.contrib.layers.layer_norm(input + output, begin_norm_axis=-1,
-                                     scope=self.variable_scope)
+        output = tf.contrib.layers.layer_norm(
+            input + output, begin_norm_axis=-1, scope=self.variable_scope)
         return output
 
 
@@ -156,15 +174,41 @@ class RelativeMutiheadAttention(ModuleBase):
                 tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
 
-            self.head_projection = tf.keras.layers.Dense(
-                units=3 * self.num_heads * self.head_dim, use_bias=False)
-            self.pos_projection = tf.keras.layers.Dense(
-                units=self.num_heads * self.head_dim, use_bias=False)
-            self.dropout = tf.keras.layers.Dropout(rate=self._hparams.dropout)
-            self.dropout_attn = tf.keras.layers.Dropout(
-                rate=self._hparams.attention_dropout)
-            self.output_projection = tf.keras.layers.Dense(
-                units=hidden_dim, use_bias=False)
+            self.head_projection = layers.get_layer(hparams={
+                "type": "Dense",
+                "kwargs": {"units": 3 * self.num_heads * self.head_dim,
+                           "use_bias": False}
+            })
+
+            self.pos_projection = layers.get_layer(hparams={
+                "type": "Dense",
+                "kwargs": {
+                    "units": self.num_heads * self.head_dim,
+                    "use_bias": False
+                }
+            })
+
+            self.dropout = layers.get_layer(hparams={
+                "type": "Dropout",
+                "kwargs": {
+                    "rate": self._hparams.dropout
+                }
+            })
+
+            self.dropout_attn = layers.get_layer(hparams={
+                "type": "Dropout",
+                "kwargs": {
+                    "rate": self._hparams.attention_dropout
+                }
+            })
+
+            self.output_projection = layers.get_layer(hparams={
+                "type": "Dense",
+                "kwargs": {
+                    "units": hidden_dim,
+                    "use_bias": False
+                }
+            })
 
             bias_shape = (self.num_heads, self.head_dim)
             self.untie_r = r_r_bias is None
@@ -338,44 +382,34 @@ class XLNetEncoder(EncoderBase):
                                       cache_dir)
         else:
             self.pretrained_model = None
-        self.pretrained_model_hparams = bert_utils.\
-            transform_xlnet_to_texar_config(self.pretrained_model)
-        self._hparams = HParams(self.pretrained_model_hparams,
-                                self._hparams.todict())
+
+        if self.pretrained_model:
+            self.pretrained_model_hparams = bert_utils.\
+                transform_xlnet_to_texar_config(self.pretrained_model)
+            self._hparams = HParams(self.pretrained_model_hparams,
+                                    self._hparams.todict())
 
         num_layers = self._hparams.num_layers
 
         with tf.variable_scope(self.variable_scope):
 
-            if self._hparams.untie_r:
+            if not self._hparams.untie_r:
                 self.r_w_bias = tf.get_variable('r_w_bias',
-                                                [self._hparams.num_layers,
-                                                 self._hparams.num_heads,
+                                                [self._hparams.num_heads,
                                                  self._hparams.head_dim],
                                                 dtype=tf.float32)
                 self.r_r_bias = tf.get_variable('r_r_bias',
-                                                [self._hparams.num_layers,
-                                                 self._hparams.num_heads,
+                                                [self._hparams.num_heads,
                                                  self._hparams.head_dim],
                                                 dtype=tf.float32)
                 self.r_s_bias = tf.get_variable('r_s_bias',
-                                                [self._hparams.num_layers,
-                                                 self._hparams.num_heads,
+                                                [self._hparams.num_heads,
                                                  self._hparams.head_dim],
                                                 dtype=tf.float32)
             else:
-                self.r_w_bias = tf.get_variable('r_w_bias',
-                                                [self._hparams.num_heads,
-                                                 self._hparams.head_dim],
-                                                dtype=tf.float32)
-                self.r_r_bias = tf.get_variable('r_r_bias',
-                                                [self._hparams.num_heads,
-                                                 self._hparams.head_dim],
-                                                dtype=tf.float32)
-                self.r_s_bias = tf.get_variable('r_s_bias',
-                                                [self._hparams.num_heads,
-                                                 self._hparams.head_dim],
-                                                dtype=tf.float32)
+                self.r_w_bias = None
+                self.r_r_bias = None
+                self.r_s_bias = None
             # Word embedding
             self.word_embedder = WordEmbedder(
                 vocab_size=self._hparams.vocab_size,
@@ -428,7 +462,12 @@ class XLNetEncoder(EncoderBase):
             # embedding
             "vocab_size": 32000,
             "max_seq_len": 512,
+            '@no_typecheck': ['pretrained_model_name']
         }
+
+    @property
+    def output_size(self):
+        return self._hparams.hidden_dim
 
     @staticmethod
     def _cache_mem(curr_out, prev_mem, mem_len, reuse_len=None):
@@ -471,7 +510,7 @@ class XLNetEncoder(EncoderBase):
         reuse_len = self._hparams.reuse_len
         is_training = kwargs["is_training"]
 
-        ##### Attention mask
+        # Attention mask
         # causal attention mask
         if attn_type == 'uni':
             attn_mask = self._create_mask(seq_len, mem_len, tf.float32,
