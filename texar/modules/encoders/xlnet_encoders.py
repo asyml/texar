@@ -22,6 +22,7 @@ from __future__ import print_function
 import tensorflow as tf
 
 from texar.core import layers
+from texar import global_mode
 
 from texar.hyperparams import HParams
 
@@ -252,7 +253,7 @@ class RelativeMutiheadAttention(ModuleBase):
 
     def _compute_attention_score(self, q_head, k_head_h, v_head_h, k_head_r,
                                  segment_mat, attn_mask=None, **kwargs):
-        is_training = kwargs["is_training"]
+        mode = kwargs["mode"]
 
         # Content based attention score.
         q_head_rw = q_head + self.r_w_bias
@@ -283,7 +284,8 @@ class RelativeMutiheadAttention(ModuleBase):
 
         # attention probability
         attn_prob = tf.nn.softmax(attn_score, 1)
-        attn_prob = self.dropout(attn_prob, training=is_training)
+        attn_prob = self.dropout(attn_prob,
+                                 training=(mode == tf.estimator.ModeKeys.TRAIN))
 
         # attention output
         attn_vec = tf.einsum('ijbn,jbnd->ibnd', attn_prob, v_head_h)
@@ -368,6 +370,27 @@ class RelativeMutiheadAttention(ModuleBase):
 
 
 class XLNetEncoder(EncoderBase):
+    """XLNet Transformer for encoding sequences.
+
+        This module supports the architecture proposed
+        in `(Zhiling et al.)` BERT.
+
+        Args:
+            pretrained_model_name (optional): a str with the name
+                of a pre-trained model to load. Currently 'xlnet-large-cased'
+                and 'xlnet-base-cased' are supported.
+                If `None`, will use the model name in :attr:`hparams`.
+            cache_dir (optional): the path to a folder in which the
+                pre-trained models will be cached. If `None` (default),
+                a default directory will be used.
+            hparams (dict or HParams, optional): Hyperparameters. Missing
+                hyperparameter will be set to default values. See
+                :meth:`default_hparams` for the hyperparameter sturcture
+                and default values.
+
+        .. document private functions
+        .. automethod:: _build
+    """
     def __init__(self,
                  pretrained_model_name=None,
                  cache_dir=None,
@@ -439,6 +462,106 @@ class XLNetEncoder(EncoderBase):
 
     @staticmethod
     def default_hparams():
+        """Returns a dictionary of hyperparameters with default values.
+
+        * The encoder arch is determined by the constructor argument \
+        :attr:`pretrained_model_name` if it's specified. In this case, \
+        hparams are ignored.
+        * Otherwise, the encoder arch is determined by \
+        `hparams['pretrained_model_name']` if it's specified. All other \
+        configs in hparams are ignored.
+        * If the above two are `None`, the encoder arch is defined by \
+        the configs in hparams and weights are randomly initialized.
+
+        .. code-block:: python
+
+            {
+                "name": "xlnet_encoder",
+                'pretrained_model_name': 'xlnet-large-cased',
+                "untie_r": True,
+                "num_layers": 24,
+                "mem_len": 0,
+                "reuse_len": 0,
+                # initializer
+                "initializer": None,
+                # layer
+                "num_heads": 16,
+                "hidden_dim": 1024,
+                "head_dim": 64,
+                "dropout": 0.1,
+                "attention_dropout": 0.1,
+                "use_segments": True,
+                # ffn
+                "ffn_inner_dim": 4096,
+                "activation": 'gelu',
+                # embedding
+                "vocab_size": 32000,
+                "max_seq_len": 512,
+            }
+
+
+
+        Here:
+
+        The default parameters are values for cased XLNet-Base model.
+
+
+        "pretrained_model_name" : str or None
+             The name of the pretrained bert model. If None, the model
+             will be randomly initialized.
+
+        "untie_r": bool
+            Boolean value to indicate if biases should be untied for all the
+            layers
+
+        "num_layers": int
+            Number of layers in the network
+
+        "mem_len": int
+            Length of the memory to be used during attention score calculation.
+
+        "reuse_len": int
+            Length of the memory that can be re-used
+
+        "initializer" : dict, optional
+            Hyperparameters of the default initializer that initializes
+            variables created in this module.
+            See :func:`~texar.core.get_initializer` for details.
+
+        "num_heads": int
+            Number of heads in the attention
+
+        "hidden_dim": int
+            Hidden dimension of the embeddings
+
+        "head_dim": int
+            Size of the vectors after head projection.
+
+        "dropout": float
+            Dropout rate for layers
+
+        "attention_dropout": floar
+            Dropout rate for attention layers
+
+        "use_segments": bool
+            Boolean to indicate if the input has segments
+
+        "ffn_inner_dim": int
+            Dimension of PositionWise FF network's hidden layer
+
+        "activation": str or callable
+            Activation function applied to the output of the PositionWise FF.
+            See :func:`~texar.core.get_activation_fn` for more details.
+
+        "vocab_size" : int
+            The vocabulary size of `inputs` in `XLNet`.
+
+        "max_seq_len": int
+            Maximum len of the sequence allowed in one segment
+
+        "name" : str
+            Name of the module.
+        """
 
         return {
             "name": "xlnet_encoder",
@@ -458,7 +581,7 @@ class XLNetEncoder(EncoderBase):
             "use_segments": True,
             # ffn
             "ffn_inner_dim": 4096,
-            "activation": 'relu',
+            "activation": 'gelu',
             # embedding
             "vocab_size": 32000,
             "max_seq_len": 512,
@@ -467,6 +590,8 @@ class XLNetEncoder(EncoderBase):
 
     @property
     def output_size(self):
+        """Return the output size of the network.
+        """
         return self._hparams.hidden_dim
 
     @staticmethod
@@ -501,14 +626,39 @@ class XLNetEncoder(EncoderBase):
     def _build(self, inputs, segment_ids=None, input_mask=None, memory=None,
                permute_mask=None, bi_data=False, clamp_len=None, cache_len=0,
                same_length=False, attn_type='bi', **kwargs):
-        r"""Encodes the inputs.
+        r"""Compute XLNet representations for the input.
+
+        Args:
+            inputs: Shape `(seq_len, batch_size, word_embed_dim)`.
+            segment_ids: Shape `(seq_len, batch_size)`.
+            input_mask: Float tensor of shape `(seq_len, batch_size)`. Note that
+                positions with value 1 are masked out.
+            memory: Memory from previous batches. A list of length `num_layers`,
+                each a tensor of shape `(mem_len, batch_size, hidden_dim)`.
+            permute_mask: The permutation mask. Float tensor of shape
+                `(seq_len, seq_len, batch_size)`.
+                A value of 0 for ``permute_mask[i, j, k]`` indicates that
+                position `i` attends to position `j` in batch `k`.
+            bi_data (bool): Whether to use bidirectional data input pipeline.
+            clamp_len (int): Clamp all relative distances larger than
+                :attr:`clamp_len`. A value of -1 means no clamping.
+            cache_len (int): Length of memory (number of tokens) to cache.
+            same_length (bool): Whether to use the same attention length for
+                each token.
+            attn_type (str): Attention type. Supported values are `"uni"`
+                and `"bi"`.
+
+        :returns: A tuple of `(output)`:
+
+            - **`output`**: The final layer output representations. Shape
+              `(seq_len, batch_size, hidden_dim)`.
         """
         seq_len = tf.shape(inputs)[0]
         batch_size = tf.shape(inputs)[1]
         mem_len = tf.shape(memory[0])[0] if memory is not None else 0
         tot_len = seq_len + mem_len
         reuse_len = self._hparams.reuse_len
-        is_training = kwargs["is_training"]
+        mode = kwargs.get("mode", global_mode())
 
         # Attention mask
         # causal attention mask
@@ -572,9 +722,11 @@ class XLNetEncoder(EncoderBase):
         # Position embedding
         pos_embed = self.pos_embed(
             batch_size, seq_len, tot_len, clamp_len, attn_type, bi_data)
-        pos_embed = self.dropout(pos_embed, training=is_training)
+        pos_embed = self.dropout(pos_embed,
+                                 training=(mode == tf.estimator.ModeKeys.TRAIN))
 
-        states_h = self.dropout(word_embed, training=is_training)
+        states_h = self.dropout(word_embed,
+                                training=(mode == tf.estimator.ModeKeys.TRAIN))
 
         new_memory = []
         for i in range(self._hparams.num_layers):
@@ -585,7 +737,7 @@ class XLNetEncoder(EncoderBase):
                 states_h=states_h, states_g=None, pos_embed=pos_embed,
                 segment_mat=segment_matrix, attn_mask_h=non_tgt_mask,
                 attn_mask_g=attn_mask, target_mapping=None, memory=cur_memory,
-                is_training=is_training)
+                mode=mode)
             states_h = self.ff_layers[i](states_h)
 
         if not self._built:

@@ -26,7 +26,7 @@ class XLNetEncoderTest(tf.test.TestCase):
         # case 1: set "pretrained_mode_name" by constructor argument
         encoder = XLNetEncoder(pretrained_model_name="xlnet-large-cased",
                                hparams={})
-        encoder(inputs, is_training=False)
+        encoder(inputs)
         self.assertEqual(len(encoder.attn_layers), 24)
         self.assertEqual(len(encoder.ff_layers), 24)
 
@@ -35,7 +35,7 @@ class XLNetEncoderTest(tf.test.TestCase):
             "pretrained_model_name": "xlnet-large-cased"
         }
         encoder = XLNetEncoder(hparams=hparams)
-        encoder(inputs, is_training=False)
+        encoder(inputs)
         self.assertEqual(len(encoder.attn_layers), 24)
         self.assertEqual(len(encoder.ff_layers), 24)
 
@@ -46,13 +46,13 @@ class XLNetEncoderTest(tf.test.TestCase):
             "num_layers": 16
         }
         encoder = XLNetEncoder(hparams=hparams)
-        encoder(inputs, is_training=False)
+        encoder(inputs)
         self.assertEqual(len(encoder.attn_layers), 16)
         self.assertEqual(len(encoder.ff_layers), 16)
 
         # case 4: using default hparams
         encoder = XLNetEncoder()
-        encoder(inputs, is_training=False)
+        encoder(inputs)
         self.assertEqual(len(encoder.attn_layers), 24)
 
     def test_trainable_variables(self):
@@ -66,7 +66,7 @@ class XLNetEncoderTest(tf.test.TestCase):
                                    "pretrained_model_name": None,
                                    "untie_r": False
                                })
-        encoder(inputs, is_training=False)
+        encoder(inputs)
 
         n_word_embed_vars = 1
         n_bias_vars = 3  # r_r_bias, r_w_bias, r_s_bias
@@ -86,7 +86,7 @@ class XLNetEncoderTest(tf.test.TestCase):
             "num_layers": 16
         }
         encoder = XLNetEncoder(hparams=hparams)
-        encoder(inputs, is_training=False)
+        encoder(inputs)
         n_layers = encoder.hparams.num_layers
         n_trainable_variables = \
             n_word_embed_vars + n_segment_embed_vars + \
@@ -108,7 +108,7 @@ class XLNetEncoderTest(tf.test.TestCase):
         batch_size = 128
         inputs = tf.random_uniform([max_time, batch_size],
                                    maxval=30521, dtype=tf.int32)
-        outputs = encoder(inputs, is_training=False)
+        outputs = encoder(inputs)
 
         outputs_dim = encoder.hparams.hidden_dim
         with self.session() as sess:
@@ -124,7 +124,7 @@ class XLNetEncoderTest(tf.test.TestCase):
         }
 
         encoder = XLNetEncoder(hparams=hparams)
-        outputs = encoder(inputs, is_training=False)
+        outputs = encoder(inputs)
         with self.session() as sess:
             sess.run(tf.global_variables_initializer())
             outputs_ = sess.run(outputs)
@@ -136,7 +136,7 @@ class XLNetEncoderTest(tf.test.TestCase):
             "pretrained_model_name": None
         }
         encoder = XLNetEncoder(hparams=hparams)
-        outputs = encoder(inputs, is_training=False)
+        outputs = encoder(inputs)
         with self.session() as sess:
             sess.run(tf.global_variables_initializer())
             outputs_ = sess.run(outputs)
