@@ -32,12 +32,12 @@ class XLNetEncoderTest(tf.test.TestCase):
 
         # case 2: set "pretrained_mode_name" by hparams
         hparams = {
-            "pretrained_model_name": "xlnet-large-cased"
+            "pretrained_model_name": "xlnet-base-cased"
         }
         encoder = XLNetEncoder(hparams=hparams)
         encoder(inputs)
-        self.assertEqual(len(encoder.attn_layers), 24)
-        self.assertEqual(len(encoder.ff_layers), 24)
+        self.assertEqual(len(encoder.attn_layers), 12)
+        self.assertEqual(len(encoder.ff_layers), 12)
 
         # case 3: set to None in both hparams and constructor argument
         # load no pre-trained model
@@ -53,7 +53,8 @@ class XLNetEncoderTest(tf.test.TestCase):
         # case 4: using default hparams
         encoder = XLNetEncoder()
         encoder(inputs)
-        self.assertEqual(len(encoder.attn_layers), 24)
+        self.assertEqual(len(encoder.attn_layers), 12)
+        self.assertEqual(len(encoder.ff_layers), 12)
 
     def test_trainable_variables(self):
         """Tests the functionality of automatically collecting trainable

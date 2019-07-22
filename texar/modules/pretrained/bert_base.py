@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Various Bert modules.
+Bert base module.
 """
 
 from __future__ import absolute_import
@@ -20,7 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 from texar import ModuleBase
-from texar.modules.berts import bert_utils
+from texar.modules.pretrained import bert_utils
 
 __all__ = [
     "BertBase",
@@ -55,11 +55,11 @@ class BertBase(ModuleBase):
 
         if pretrained_model_name:
             self.pretrained_model = bert_utils.\
-                load_pretrained_model(pretrained_model_name,
+                load_pretrained_bert(pretrained_model_name,
                                       cache_dir)
         elif self._hparams.pretrained_model_name is not None:
             self.pretrained_model = bert_utils.\
-                load_pretrained_model(self._hparams.pretrained_model_name,
+                load_pretrained_bert(self._hparams.pretrained_model_name,
                                       cache_dir)
         else:
             self.pretrained_model = None

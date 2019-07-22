@@ -24,7 +24,8 @@ from texar.core import layers
 from texar.modules.encoders.transformer_encoders import TransformerEncoder
 from texar.modules.embedders import WordEmbedder, PositionEmbedder
 from texar import HParams
-from texar.modules.berts import BertBase, bert_utils
+from texar.modules.pretrained.bert_base import BertBase
+from texar.modules.pretrained import bert_utils
 from texar.modules.encoders import EncoderBase
 
 __all__ = [

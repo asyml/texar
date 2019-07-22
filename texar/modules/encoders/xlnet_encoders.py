@@ -21,394 +21,54 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from texar.core import layers
 from texar import global_mode
 
 from texar.hyperparams import HParams
 
-from texar.modules.xlnet import model_utils
-from texar.modules.berts import bert_utils
+from texar.modules.pretrained.xlnet_base import XLNetBase
+from texar.modules.pretrained import xlnet_utils
+from texar.modules.pretrained.xlnet_model_utils import \
+    (PositionWiseFF, RelativePositionalEncoding, RelativeMutiheadAttention)
 from texar.modules.embedders import WordEmbedder
 from texar.modules.encoders import EncoderBase
-
-from texar.module_base import ModuleBase
 
 from texar.utils import dict_fetch
 
 __all__ = [
-    "XLNetEncoder",
-    "PositionWiseFF",
-    "RelativePositionalEncoding",
-    "RelativeMutiheadAttention"
+    "XLNetEncoder"
 ]
 
 
-class PositionWiseFF(ModuleBase):
-    def __init__(self, hparams=None):
-        super().__init__(hparams)
+class XLNetEncoder(XLNetBase, EncoderBase):
+    r"""XLNet Transformer for encoding sequences.
 
-        hidden_dim = self._hparams.hidden_dim
-        ffn_inner_dim = self._hparams.ffn_inner_dim
-        dropout = self._hparams.dropout
-        activation = self._hparams.activation
-        if activation == 'gelu':
-            activation = layers.gelu
+    This module supports the architecture proposed
+    in `(Zhiling et al.)` XLNet.
 
-        l1_hparams = {
-            "type": "Dense",
-            "kwargs": {
-                "units": ffn_inner_dim,
-                "activation": activation
-            }
-        }
-        self.linear1 = layers.get_layer(hparams=l1_hparams)
-        dropout_hparams = {
-            "type": "Dropout",
-            "kwargs": {
-                "rate": dropout
-            }
-        }
-        self.dropout = layers.get_layer(hparams=dropout_hparams)
-        l2_hparams = {
-            "type": "Dense",
-            "kwargs": {
-                "units": hidden_dim,
-                "activation": activation
-            }
-        }
-        self.linear2 = layers.get_layer(hparams=l2_hparams)
+    Args:
+        pretrained_model_name (optional): a str with the name
+            of a pre-trained model to load. Currently 'xlnet-large-cased'
+            and 'xlnet-base-cased' are supported.
+            If `None`, will use the model name in :attr:`hparams`.
+        cache_dir (optional): the path to a folder in which the
+            pre-trained models will be cached. If `None` (default),
+            a default directory will be used.
+        hparams (dict or HParams, optional): Hyperparameters. Missing
+            hyperparameter will be set to default values. See
+            :meth:`default_hparams` for the hyperparameter sturcture
+            and default values.
 
-    @staticmethod
-    def default_hparams():
-        return {
-            "name": "position_wise_FF",
-            "hidden_dim": 1024,
-            "ffn_inner_dim": 4096,
-            "dropout": 0.1,
-            "activation": 'gelu',
-        }
-
-    def _build(self, input):
-        # Position-wise feed-forward
-        output = self.linear1(input)
-        output = self.dropout(output)
-        output = self.linear2(output)
-        output = self.dropout(output)
-        # residual + layer norm
-        output = tf.contrib.layers.layer_norm(
-            input + output, begin_norm_axis=-1, scope=self.variable_scope)
-        return output
-
-
-class PositionalEmbedding(ModuleBase):
-    def __init__(self, embed_dim):
-        super().__init__()
-        freq_seq = tf.range(0.0, embed_dim, 2.0)
-        self.inv_freq = 1 / (10000 ** (freq_seq / embed_dim))
-
-    def _build(self, pos_seq):
-        pos_seq = tf.dtypes.cast(pos_seq, dtype=self.inv_freq.dtype)
-        sinusoid_inp = tf.einsum('i,d->id', pos_seq, self.inv_freq)
-        pos_emb = tf.concat([tf.sin(sinusoid_inp), tf.cos(sinusoid_inp)], -1)
-        return pos_emb
-
-
-class RelativePositionalEncoding(ModuleBase):
-    def __init__(self, hparams=None):
-        super().__init__(hparams)
-        self.sinusoid_embed = PositionalEmbedding(self._hparams.dim)
-
-    @staticmethod
-    def default_hparams():
-        return {
-            "name": "relative_positional_encoder",
-            "dim": 1024,
-            "max_seq_len": 512,
-        }
-
-    def _create_positional_embedding(self, start, end, step, batch_size,
-                                     clamp_len=None):
-        pos_seq = tf.range(start, end, step)
-        if clamp_len is not None:
-            pos_seq = tf.clip_by_value(pos_seq, -clamp_len, clamp_len)
-        pos_emb = self.sinusoid_embed(pos_seq)
-        pos_emb = pos_emb[:, None, :]
-
-        if batch_size is not None:
-            pos_emb = tf.tile(pos_emb, [1, batch_size, 1])
-
-        return pos_emb
-
-    def _build(self, batch_size, seq_len, total_len, clamp_len=None,
-               attn_type='bi', bi_data=True):
-        if attn_type == 'bi':
-            start, end = total_len, -seq_len
-        elif attn_type == 'uni':
-            start, end = total_len, -1
-        else:
-            raise ValueError(f"Unknown `attn_type` {attn_type}")
-
-        if bi_data:
-            if batch_size % 2 != 0:
-                raise ValueError("`batch_size` must be an even number")
-            fwd_pos_embed = self._create_positional_embedding(
-                start, end, -1, batch_size // 2, clamp_len)
-            bwd_pos_embed = self._create_positional_embedding(
-                -start, -end, 1, batch_size // 2, clamp_len)
-            pos_embed = tf.concat([fwd_pos_embed, bwd_pos_embed], axis=1)
-        else:
-            pos_embed = self._create_positional_embedding(
-                start, end, -1, batch_size, clamp_len)
-        return pos_embed
-
-
-class RelativeMutiheadAttention(ModuleBase):
-    def __init__(self, r_r_bias, r_w_bias, r_s_bias, hparams=None):
-        super().__init__(hparams=hparams)
-
-        self.num_heads = self._hparams.num_heads
-        self.head_dim = self._hparams.head_dim
-        hidden_dim = self._hparams.hidden_dim
-
-        with tf.variable_scope(self.variable_scope):
-            if self._hparams.initializer:
-                tf.get_variable_scope().set_initializer(
-                    layers.get_initializer(self._hparams.initializer))
-
-            self.head_projection = layers.get_layer(hparams={
-                "type": "Dense",
-                "kwargs": {"units": 3 * self.num_heads * self.head_dim,
-                           "use_bias": False}
-            })
-
-            self.pos_projection = layers.get_layer(hparams={
-                "type": "Dense",
-                "kwargs": {
-                    "units": self.num_heads * self.head_dim,
-                    "use_bias": False
-                }
-            })
-
-            self.dropout = layers.get_layer(hparams={
-                "type": "Dropout",
-                "kwargs": {
-                    "rate": self._hparams.dropout
-                }
-            })
-
-            self.dropout_attn = layers.get_layer(hparams={
-                "type": "Dropout",
-                "kwargs": {
-                    "rate": self._hparams.attention_dropout
-                }
-            })
-
-            self.output_projection = layers.get_layer(hparams={
-                "type": "Dense",
-                "kwargs": {
-                    "units": hidden_dim,
-                    "use_bias": False
-                }
-            })
-
-            bias_shape = (self.num_heads, self.head_dim)
-            self.untie_r = r_r_bias is None
-            self.r_r_bias = (r_r_bias if r_r_bias is not None else
-                             tf.get_variable('r_r_bias', shape=bias_shape))
-            self.r_w_bias = (r_w_bias if r_w_bias is not None else
-                             tf.get_variable('r_w_bias', shape=bias_shape))
-
-            if self._hparams.use_segments:
-                self.segment_embed = tf.get_variable(
-                    'segment_embedding', [2, self.num_heads, self.head_dim])
-                self.r_s_bias = (r_s_bias if r_s_bias is not None else
-                                 tf.get_variable('r_s_bias', shape=bias_shape))
-
-            self.scale = 1 / (self.head_dim ** 0.5)
-
-    @staticmethod
-    def default_hparams():
-        return {
-            "name": "relative_multihead_attention",
-            "initializer": None,
-            "num_heads": 16,
-            "hidden_dim": 1024,
-            "head_dim": 64,
-            "dropout": 0.1,
-            "attention_dropout": 0.1,
-            "use_segments": True,
-        }
-
-    @staticmethod
-    def _rel_shift(x, klen=-1):
-        """Perform relative shift to form the relative attention score."""
-        x_size = tf.shape(x)
-
-        x = tf.reshape(x, [x_size[1], x_size[0], x_size[2], x_size[3]])
-        x = tf.slice(x, [1, 0, 0, 0], [-1, -1, -1, -1])
-        x = tf.reshape(x, [x_size[0], x_size[1] - 1, x_size[2], x_size[3]])
-        x = tf.slice(x, [0, 0, 0, 0], [-1, klen, -1, -1])
-
-        return x
-
-    def _compute_attention_score(self, q_head, k_head_h, v_head_h, k_head_r,
-                                 segment_mat, attn_mask=None, **kwargs):
-        mode = kwargs["mode"]
-
-        # Content based attention score.
-        q_head_rw = q_head + self.r_w_bias
-        # attn_ac: (seq_len, tot_len, batch_size, n_head)
-        attn_ac = tf.einsum('ibnd,jbnd->ijbn', q_head_rw, k_head_h)
-
-        # Position based attention score.
-        q_head_rr = q_head + self.r_r_bias
-        # attn_bd: (seq_len, tot_len, batch_size, n_head)
-        attn_bd = tf.einsum('ibnd,jbnd->ijbn', q_head_rr, k_head_r)
-        attn_bd = self._rel_shift(attn_bd, klen=tf.shape(attn_ac)[1])
-
-        # Segment based attention score.
-        if segment_mat is None:
-            attn_ef = 0
-        else:
-            q_head_rs = q_head + self.r_s_bias
-            attn_ef = tf.einsum(
-                'ibnd,snd->ibns', q_head_rs, self.segment_embed)
-            attn_ef = tf.einsum('ijbs,ibns->ijbn', segment_mat, attn_ef)
-
-        # Merge attention scores and perform masking.
-        # attn_score: (seq_len, tot_len, batch_size, n_head)
-        attn_score = (attn_ac + attn_bd + attn_ef) * self.scale
-        if attn_mask is not None:
-            # attn_score = attn_score * (1 - attn_mask) - 1e30 * attn_mask
-            attn_score = attn_score - 1e30 * attn_mask
-
-        # attention probability
-        attn_prob = tf.nn.softmax(attn_score, 1)
-        attn_prob = self.dropout(attn_prob,
-                                 training=(mode == tf.estimator.ModeKeys.TRAIN))
-
-        # attention output
-        attn_vec = tf.einsum('ijbn,jbnd->ibnd', attn_prob, v_head_h)
-
-        return attn_vec
-
-    def _post_attention(self, attn_vec):
-        shape = tf.shape(attn_vec)
-        attn_vec = tf.reshape(tensor=attn_vec, shape=[shape[0], shape[1], self.num_heads*self.head_dim])
-        attn_out = self.output_projection(attn_vec)
-        attn_out = self.dropout(attn_out)
-        return attn_out
-
-    def _build(self, states_h, states_g, pos_embed, segment_mat,
-               attn_mask_h=None, attn_mask_g=None, target_mapping=None,
-               memory=None, **kwargs):
-        shape = tf.shape(states_h)
-        seq_len, batch_size = shape[0], shape[1]
-        pos_len = tf.shape(pos_embed)[0]
-
-        if memory is not None and memory.dim() > 1:
-            concat_input = tf.concat([memory, states_h], axis=0)
-        else:
-            concat_input = states_h
-
-        # Content heads.
-        heads = self.head_projection(concat_input)
-        q_head_h, k_head_h, v_head_h = tf.split(heads, num_or_size_splits=3, axis=-1)
-        q_head_h = q_head_h[-seq_len:]
-        tot_len = tf.shape(k_head_h)[0]
-
-        q_head_h = tf.reshape(
-            tensor=q_head_h,
-            shape=[seq_len, batch_size, self.num_heads, self.head_dim])
-        k_head_h = tf.reshape(
-            tensor=k_head_h,
-            shape=[tot_len, batch_size, self.num_heads, self.head_dim])
-        v_head_h = tf.reshape(
-            tensor=v_head_h,
-            shape=[tot_len, batch_size, self.num_heads, self.head_dim])
-
-        # Positional heads.
-        k_head_r = self.pos_projection(pos_embed)
-        k_head_r = tf.reshape(
-            tensor=k_head_r,
-            shape=[pos_len, batch_size, self.num_heads, self.head_dim])
-
-        # Core attention ops.
-        attn_vec_h = self._compute_attention_score(
-            q_head_h, k_head_h, v_head_h, k_head_r, segment_mat, attn_mask_h, **kwargs)
-
-        # Post attention processing.
-        attn_out_h = self._post_attention(attn_vec_h)
-
-        output_h = tf.contrib.layers.layer_norm(
-            attn_out_h + states_h, begin_norm_axis=-1,
-            scope=self.variable_scope)
-
-        if states_g is not None:
-            heads_g = self.head_projection(states_g)
-            q_head_g, _, _ = tf.split(heads_g, num_or_size_splits=3, axis=-1)
-            shape = tf.shape(q_head_g)
-            q_head_g = tf.reshape(
-                shape[0], batch_size, self.num_heads, self.head_dim)
-            if target_mapping is not None:
-                q_head_g = tf.einsum(
-                    'mbnd,mlb->lbnd', q_head_g, target_mapping)
-            attn_vec_g = self._compute_attention_score(
-                q_head_g, k_head_h, v_head_h, k_head_r,
-                segment_mat, attn_mask_g, **kwargs)
-            if target_mapping is not None:
-                attn_vec_g = tf.einsum(
-                    'lbnd,mlb->mbnd', attn_vec_g, target_mapping)
-            attn_out_g = self._post_attention(attn_vec_g)
-            output_g = tf.contrib.layers.layer_norm(
-                attn_out_g + states_g, begin_norm_axis=-1,
-                scope=self.variable_scope)
-        else:
-            output_g = None
-
-        return output_h, output_g
-
-
-class XLNetEncoder(EncoderBase):
-    """XLNet Transformer for encoding sequences.
-
-        This module supports the architecture proposed
-        in `(Zhiling et al.)` BERT.
-
-        Args:
-            pretrained_model_name (optional): a str with the name
-                of a pre-trained model to load. Currently 'xlnet-large-cased'
-                and 'xlnet-base-cased' are supported.
-                If `None`, will use the model name in :attr:`hparams`.
-            cache_dir (optional): the path to a folder in which the
-                pre-trained models will be cached. If `None` (default),
-                a default directory will be used.
-            hparams (dict or HParams, optional): Hyperparameters. Missing
-                hyperparameter will be set to default values. See
-                :meth:`default_hparams` for the hyperparameter sturcture
-                and default values.
-
-        .. document private functions
-        .. automethod:: _build
+    .. document private functions
+    .. automethod:: _build
     """
     def __init__(self,
                  pretrained_model_name=None,
                  cache_dir=None,
                  hparams=None):
         EncoderBase.__init__(self, hparams)
-        if pretrained_model_name:
-            self.pretrained_model = bert_utils.\
-                load_pretrained_model(pretrained_model_name, cache_dir)
-        elif self._hparams.pretrained_model_name is not None:
-            self.pretrained_model = bert_utils.\
-                load_pretrained_model(self._hparams.pretrained_model_name,
-                                      cache_dir)
-        else:
-            self.pretrained_model = None
+        XLNetBase.__init__(self, pretrained_model_name, cache_dir, hparams)
 
         if self.pretrained_model:
-            self.pretrained_model_hparams = bert_utils.\
-                transform_xlnet_to_texar_config(self.pretrained_model)
             self._hparams = HParams(self.pretrained_model_hparams,
                                     self._hparams.todict())
 
@@ -462,7 +122,7 @@ class XLNetEncoder(EncoderBase):
 
     @staticmethod
     def default_hparams():
-        """Returns a dictionary of hyperparameters with default values.
+        r"""Returns a dictionary of hyperparameters with default values.
 
         * The encoder arch is determined by the constructor argument \
         :attr:`pretrained_model_name` if it's specified. In this case, \
@@ -565,7 +225,7 @@ class XLNetEncoder(EncoderBase):
 
         return {
             "name": "xlnet_encoder",
-            'pretrained_model_name': 'xlnet-large-cased',
+            'pretrained_model_name': 'xlnet-base-cased',
             "untie_r": True,
             "num_layers": 24,
             "mem_len": 0,
@@ -590,7 +250,7 @@ class XLNetEncoder(EncoderBase):
 
     @property
     def output_size(self):
-        """Return the output size of the network.
+        r"""Return the output size of the network.
         """
         return self._hparams.hidden_dim
 
@@ -734,7 +394,7 @@ class XLNetEncoder(EncoderBase):
             if cache_len > 0:
                 new_memory.append(self._cache_mem(states_h, cur_memory, cache_len, reuse_len))
             states_h, _ = self.attn_layers[i](
-                states_h=states_h, states_g=None, pos_embed=pos_embed,
+                states_h=states_h, pos_embed=pos_embed, states_g=None,
                 segment_mat=segment_matrix, attn_mask_h=non_tgt_mask,
                 attn_mask_g=attn_mask, target_mapping=None, memory=cur_memory,
                 mode=mode)
@@ -745,7 +405,7 @@ class XLNetEncoder(EncoderBase):
             self._built = True
 
             if self.pretrained_model:
-                model_utils.init_from_checkpoint(self.pretrained_model,
+                xlnet_utils.init_from_checkpoint(self.pretrained_model,
                                                  self.variable_scope.name)
 
         output = self.dropout(states_h)
