@@ -29,6 +29,12 @@ import tensorflow as tf
 
 from texar.data.data_utils import maybe_download
 
+__all__ = [
+    'init_from_checkpoint',
+    'load_pretrained_xlnet',
+    'transform_xlnet_to_texar_config'
+]
+
 _XLNET_PATH = "https://storage.googleapis.com/xlnet/released_models/"
 _MODEL2URL = {
     'xlnet-large-cased': _XLNET_PATH + "cased_L-24_H-1024_A-16.zip",

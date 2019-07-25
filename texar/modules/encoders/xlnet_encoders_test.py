@@ -70,28 +70,30 @@ class XLNetEncoderTest(tf.test.TestCase):
         encoder(inputs)
 
         n_word_embed_vars = 1
+        n_mask_embed_vars = 1
         n_bias_vars = 3  # r_r_bias, r_w_bias, r_s_bias
         n_pos_wise_ff_vars = 6  # 2 kernels + 2 bias + beta + gamma
         n_rel_multi_head_vars = 5  # 3 dense layers + beta + gamma
         n_segment_embed_vars = encoder.hparams.num_layers
         n_layers = encoder.hparams.num_layers
         n_trainable_variables = \
-            n_word_embed_vars + n_segment_embed_vars + \
+            n_word_embed_vars + n_segment_embed_vars + n_mask_embed_vars + \
             n_layers*(n_rel_multi_head_vars + n_pos_wise_ff_vars) + n_bias_vars
         self.assertEqual(len(encoder.trainable_variables),
                          n_trainable_variables)
 
         # case 2: XLNet with pre-trained model
         hparams = {
-            "pretrained_model_name": "xlnet-large-cased",
-            "num_layers": 16
+            "pretrained_model_name": "xlnet-large-cased"
         }
         encoder = XLNetEncoder(hparams=hparams)
         encoder(inputs)
+        n_segment_embed_vars = encoder.hparams.num_layers
         n_layers = encoder.hparams.num_layers
         n_trainable_variables = \
-            n_word_embed_vars + n_segment_embed_vars + \
-            n_layers * (n_bias_vars + n_rel_multi_head_vars + n_pos_wise_ff_vars)
+            n_word_embed_vars + n_segment_embed_vars + n_mask_embed_vars + \
+            n_layers * (n_bias_vars + n_rel_multi_head_vars +
+                        n_pos_wise_ff_vars)
         self.assertEqual(len(encoder.trainable_variables),
                          n_trainable_variables)
 
@@ -107,16 +109,16 @@ class XLNetEncoderTest(tf.test.TestCase):
 
         max_time = 8
         batch_size = 128
-        inputs = tf.random_uniform([max_time, batch_size],
+        inputs = tf.random_uniform([batch_size, max_time],
                                    maxval=30521, dtype=tf.int32)
-        outputs = encoder(inputs)
+        outputs, _ = encoder(inputs)
 
         outputs_dim = encoder.hparams.hidden_dim
         with self.session() as sess:
             sess.run(tf.global_variables_initializer())
             outputs_ = sess.run(outputs)
             self.assertEqual(outputs_.shape,
-                             (max_time, batch_size, outputs_dim))
+                             (batch_size, max_time, outputs_dim))
 
         # case 2: XLNet pre-trained, untie_r=True
         hparams = {
@@ -125,24 +127,25 @@ class XLNetEncoderTest(tf.test.TestCase):
         }
 
         encoder = XLNetEncoder(hparams=hparams)
-        outputs = encoder(inputs)
+        outputs, _ = encoder(inputs)
         with self.session() as sess:
             sess.run(tf.global_variables_initializer())
             outputs_ = sess.run(outputs)
             self.assertEqual(outputs_.shape,
-                             (max_time, batch_size, outputs_dim))
+                             (batch_size, max_time, outputs_dim))
 
         # case 3: XLNet with no pre-trained model
         hparams = {
             "pretrained_model_name": None
         }
         encoder = XLNetEncoder(hparams=hparams)
-        outputs = encoder(inputs)
+        outputs_dim = encoder.hparams.hidden_dim
+        outputs, _ = encoder(inputs)
         with self.session() as sess:
             sess.run(tf.global_variables_initializer())
             outputs_ = sess.run(outputs)
             self.assertEqual(outputs_.shape,
-                             (max_time, batch_size, outputs_dim))
+                             (batch_size, max_time, outputs_dim))
 
 
 if __name__ == "__main__":

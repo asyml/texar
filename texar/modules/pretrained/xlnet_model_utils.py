@@ -112,7 +112,8 @@ class PositionWiseFF(ModuleBase):
         output = self.dropout(output)
         # residual + layer norm
         output = tf.contrib.layers.layer_norm(
-            input + output, begin_norm_axis=-1, scope=self.variable_scope)
+            input + output, begin_norm_axis=-1, scope=self.variable_scope,
+            reuse=tf.AUTO_REUSE)
         return output
 
 
@@ -312,7 +313,9 @@ class RelativeMutiheadAttention(ModuleBase):
 
     def _post_attention(self, attn_vec):
         shape = tf.shape(attn_vec)
-        attn_vec = tf.reshape(tensor=attn_vec, shape=[shape[0], shape[1], self.num_heads*self.head_dim])
+        attn_vec = tf.reshape(
+            tensor=attn_vec,
+            shape=[shape[0], shape[1], self.num_heads*self.head_dim])
         attn_out = self.output_projection(attn_vec)
         attn_out = self.dropout(attn_out)
         return attn_out
@@ -324,14 +327,15 @@ class RelativeMutiheadAttention(ModuleBase):
         seq_len, batch_size = shape[0], shape[1]
         pos_len = tf.shape(pos_embed)[0]
 
-        if memory is not None and memory.dim() > 1:
+        if memory is not None and memory.shape.ndims > 1:
             concat_input = tf.concat([memory, states_h], axis=0)
         else:
             concat_input = states_h
 
         # Content heads.
         heads = self.head_projection(concat_input)
-        q_head_h, k_head_h, v_head_h = tf.split(heads, num_or_size_splits=3, axis=-1)
+        q_head_h, k_head_h, v_head_h = tf.split(
+            heads, num_or_size_splits=3, axis=-1)
         q_head_h = q_head_h[-seq_len:]
         tot_len = tf.shape(k_head_h)[0]
 
@@ -353,21 +357,23 @@ class RelativeMutiheadAttention(ModuleBase):
 
         # Core attention ops.
         attn_vec_h = self._compute_attention_score(
-            q_head_h, k_head_h, v_head_h, k_head_r, segment_mat, attn_mask_h, **kwargs)
+            q_head_h, k_head_h, v_head_h, k_head_r, segment_mat, attn_mask_h,
+            **kwargs)
 
         # Post attention processing.
         attn_out_h = self._post_attention(attn_vec_h)
 
         output_h = tf.contrib.layers.layer_norm(
             attn_out_h + states_h, begin_norm_axis=-1,
-            scope=self.variable_scope)
+            scope=self.variable_scope, reuse=tf.AUTO_REUSE)
 
         if states_g is not None:
             heads_g = self.head_projection(states_g)
             q_head_g, _, _ = tf.split(heads_g, num_or_size_splits=3, axis=-1)
             shape = tf.shape(q_head_g)
             q_head_g = tf.reshape(
-                shape[0], batch_size, self.num_heads, self.head_dim)
+                q_head_g,
+                shape=(shape[0], batch_size, self.num_heads, self.head_dim))
             if target_mapping is not None:
                 q_head_g = tf.einsum(
                     'mbnd,mlb->lbnd', q_head_g, target_mapping)
@@ -380,7 +386,7 @@ class RelativeMutiheadAttention(ModuleBase):
             attn_out_g = self._post_attention(attn_vec_g)
             output_g = tf.contrib.layers.layer_norm(
                 attn_out_g + states_g, begin_norm_axis=-1,
-                scope=self.variable_scope)
+                scope=self.variable_scope, reuse=tf.AUTO_REUSE)
         else:
             output_g = None
 

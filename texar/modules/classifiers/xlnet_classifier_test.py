@@ -30,7 +30,7 @@ class XLNetClassifierTest(tf.test.TestCase):
         # case 1
         clas = XLNetClassifier()
         clas(inputs)
-        n_xlnet_vars = 361
+        n_xlnet_vars = 182
         n_projection_vars = 2
         n_logits_vars = 2
         self.assertEqual(len(clas.trainable_variables),
@@ -59,7 +59,7 @@ class XLNetClassifierTest(tf.test.TestCase):
         """
         max_time = 8
         batch_size = 16
-        inputs = tf.random_uniform([max_time, batch_size],
+        inputs = tf.random_uniform([batch_size, max_time],
                                    maxval=30521, dtype=tf.int32)
 
         # case 1
@@ -108,7 +108,7 @@ class XLNetClassifierTest(tf.test.TestCase):
             "num_classes": 10,
             "summary_type": "mean"
         }
-        inputs = tf.placeholder(tf.int32, shape=[6, batch_size])
+        inputs = tf.placeholder(tf.int32, shape=[batch_size, 6])
         clas = XLNetClassifier(hparams=hparams)
         logits, pred = clas(inputs)
 
@@ -117,7 +117,7 @@ class XLNetClassifierTest(tf.test.TestCase):
             logits_, pred_ = sess.run(
                 [logits, pred],
                 feed_dict={inputs: np.random.randint(30521,
-                                                     size=(6, batch_size))})
+                                                     size=(batch_size, 6))})
             self.assertEqual(logits_.shape, (batch_size,
                                              clas.hparams.num_classes))
             self.assertEqual(pred_.shape, (batch_size,))
@@ -127,7 +127,7 @@ class XLNetClassifierTest(tf.test.TestCase):
         """
         max_time = 8
         batch_size = 16
-        inputs = tf.random_uniform([max_time, batch_size],
+        inputs = tf.random_uniform([batch_size, max_time],
                                    maxval=30521, dtype=tf.int32)
 
         # case 1
@@ -149,7 +149,7 @@ class XLNetClassifierTest(tf.test.TestCase):
             "num_classes": 1,
             "summary_type": "last"
         }
-        inputs = tf.placeholder(tf.int32, shape=[6, batch_size])
+        inputs = tf.placeholder(tf.int32, shape=[batch_size, 6])
         clas = XLNetClassifier(hparams=hparams)
         logits, pred = clas(inputs)
 
@@ -158,7 +158,7 @@ class XLNetClassifierTest(tf.test.TestCase):
             logits_, pred_ = sess.run(
                 [logits, pred],
                 feed_dict={inputs: np.random.randint(30521,
-                                                     size=(6, batch_size))})
+                                                     size=(batch_size, 6))})
             self.assertEqual(logits_.shape, (batch_size,))
             self.assertEqual(pred_.shape, (batch_size,))
 
@@ -167,7 +167,7 @@ class XLNetClassifierTest(tf.test.TestCase):
             "num_classes": 1,
             "summary_type": "mean"
         }
-        inputs = tf.placeholder(tf.int32, shape=[6, batch_size])
+        inputs = tf.placeholder(tf.int32, shape=[batch_size, 6])
         clas = XLNetClassifier(hparams=hparams)
         logits, pred = clas(inputs)
 
@@ -176,7 +176,7 @@ class XLNetClassifierTest(tf.test.TestCase):
             logits_, pred_ = sess.run(
                 [logits, pred],
                 feed_dict={inputs: np.random.randint(30521,
-                                                     size=(6, batch_size))})
+                                                     size=(batch_size, 6))})
             self.assertEqual(logits_.shape, (batch_size,))
             self.assertEqual(pred_.shape, (batch_size,))
 

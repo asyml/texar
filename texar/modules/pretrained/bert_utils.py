@@ -137,9 +137,9 @@ def init_bert_checkpoint(init_checkpoint_dir, scope_name):
     tvars = tf.trainable_variables()
     init_checkpoint = os.path.join(init_checkpoint_dir, 'bert_model.ckpt')
     if init_checkpoint:
-        (assignment_map, initialized_variable_names
-        ) = _get_assignment_map_from_checkpoint(
-            tvars, init_checkpoint, scope_name)
+        assignment_map, initialized_variable_names = \
+            _get_assignment_map_from_checkpoint(
+                tvars, init_checkpoint, scope_name)
         tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
 
@@ -258,4 +258,3 @@ def transform_bert_to_texar_config(config_dir):
         },
     }
     return configs
-

@@ -93,7 +93,3 @@ class XLNetBase(ModuleBase):
             Encoding results or prediction results.
         """
         raise NotImplementedError
-
-
-
-

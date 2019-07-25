@@ -24,7 +24,7 @@ import tensorflow as tf
 from texar import global_mode
 
 from texar.hyperparams import HParams
-
+from texar.core import layers
 from texar.modules.pretrained.xlnet_base import XLNetBase
 from texar.modules.pretrained import xlnet_utils
 from texar.modules.pretrained.xlnet_model_utils import \
@@ -76,6 +76,10 @@ class XLNetEncoder(XLNetBase, EncoderBase):
 
         with tf.variable_scope(self.variable_scope):
 
+            if self._hparams.initializer:
+                tf.get_variable_scope().set_initializer(
+                    layers.get_initializer(self._hparams.initializer))
+
             if not self._hparams.untie_r:
                 self.r_w_bias = tf.get_variable('r_w_bias',
                                                 [self._hparams.num_heads,
@@ -118,7 +122,16 @@ class XLNetEncoder(XLNetBase, EncoderBase):
                     hparams=rel_attn_hparams))
                 self.ff_layers.append(PositionWiseFF(hparams=ff_hparams))
 
-            self.dropout = tf.keras.layers.Dropout(rate=self._hparams.dropout)
+            dropout_hparams = {
+                "type": "Dropout",
+                "kwargs": {
+                    "rate": self._hparams.dropout
+                }
+            }
+            self.dropout = layers.get_layer(hparams=dropout_hparams)
+
+            self.mask_embed = tf.get_variable(
+                'mask_emb', [1, 1, self.hparams.hidden_dim], dtype=tf.float32)
 
     @staticmethod
     def default_hparams():
@@ -227,20 +240,20 @@ class XLNetEncoder(XLNetBase, EncoderBase):
             "name": "xlnet_encoder",
             'pretrained_model_name': 'xlnet-base-cased',
             "untie_r": True,
-            "num_layers": 24,
+            "num_layers": 12,
             "mem_len": 0,
             "reuse_len": 0,
             # initializer
             "initializer": None,
             # layer
-            "num_heads": 16,
-            "hidden_dim": 1024,
+            "num_heads": 12,
+            "hidden_dim": 768,
             "head_dim": 64,
             "dropout": 0.1,
             "attention_dropout": 0.1,
             "use_segments": True,
             # ffn
-            "ffn_inner_dim": 4096,
+            "ffn_inner_dim": 3072,
             "activation": 'gelu',
             # embedding
             "vocab_size": 32000,
@@ -283,20 +296,31 @@ class XLNetEncoder(XLNetBase, EncoderBase):
 
         return ret
 
-    def _build(self, inputs, segment_ids=None, input_mask=None, memory=None,
-               permute_mask=None, bi_data=False, clamp_len=None, cache_len=0,
-               same_length=False, attn_type='bi', **kwargs):
+    def _build(self, inputs, *args, **kwargs):
+        r"""A wrapper for :meth:`_execute`. This layer exists because
+        :class:`XLNetDecoder` compute embeddings in the decoder helper.
+
+        Args:
+            inputs: Shape `(batch_size, seq_len)`.
+            **kwargs: Remaining arguments to pass to :meth:`_forward`.
+        """
+        return self._execute(self.word_embedder(inputs), *args, **kwargs)
+
+    def _execute(self, word_embed, segment_ids=None, input_mask=None,
+                 memory=None, permute_mask=None, target_mapping=None,
+                 bi_data=False, clamp_len=None, cache_len=0, same_length=False,
+                 attn_type='bi', two_stream=False, **kwargs):
         r"""Compute XLNet representations for the input.
 
         Args:
-            inputs: Shape `(seq_len, batch_size, word_embed_dim)`.
-            segment_ids: Shape `(seq_len, batch_size)`.
-            input_mask: Float tensor of shape `(seq_len, batch_size)`. Note that
+            word_embed: Shape `(batch_size, seq_len, word_embed_dim)`.
+            segment_ids: Shape `(batch_siz,e seq_len)`.
+            input_mask: Float tensor of shape `(batch_size, seq_len)`. Note that
                 positions with value 1 are masked out.
             memory: Memory from previous batches. A list of length `num_layers`,
-                each a tensor of shape `(mem_len, batch_size, hidden_dim)`.
+                each a tensor of shape `(batch_size, mem_len, hidden_dim)`.
             permute_mask: The permutation mask. Float tensor of shape
-                `(seq_len, seq_len, batch_size)`.
+                `(batch_size, seq_len, seq_len)`.
                 A value of 0 for ``permute_mask[i, j, k]`` indicates that
                 position `i` attends to position `j` in batch `k`.
             bi_data (bool): Whether to use bidirectional data input pipeline.
@@ -313,8 +337,27 @@ class XLNetEncoder(XLNetBase, EncoderBase):
             - **`output`**: The final layer output representations. Shape
               `(seq_len, batch_size, hidden_dim)`.
         """
-        seq_len = tf.shape(inputs)[0]
-        batch_size = tf.shape(inputs)[1]
+        # word_embed: [seq_len, batch_size, word_embed_dim]
+        word_embed = tf.transpose(word_embed, perm=[1, 0, 2])
+        # segment_ids: [seq_len, batch_size]
+        if segment_ids is not None:
+            segment_ids = tf.transpose(segment_ids, perm=[1, 0])
+        # input_mask: [seq_len, batch_size]
+        if input_mask is not None:
+            input_mask = tf.transpose(input_mask, perm=[1, 0])
+        # memory: A list of length num_layers
+        # each tensor of shape [mem_len, batch_size, hidden_dim]
+        if memory is not None:
+            memory = [tf.transpose(m, perm=[1, 0, 2]) for m in memory]
+        # permute_mask: [seq_len, seq_len, batch_size]
+        if permute_mask is not None:
+            permute_mask = tf.transpose(permute_mask, perm=[1, 2, 0])
+        # target_mapping: [num_targets, seq_len, batch_size]
+        if target_mapping is not None:
+            target_mapping = tf.transpose(target_mapping, perm=[1, 2, 0])
+
+        seq_len = tf.shape(word_embed)[0]
+        batch_size = tf.shape(word_embed)[1]
         mem_len = tf.shape(memory[0])[0] if memory is not None else 0
         tot_len = seq_len + mem_len
         reuse_len = self._hparams.reuse_len
@@ -365,15 +408,13 @@ class XLNetEncoder(XLNetBase, EncoderBase):
         else:
             non_tgt_mask = None
 
-        # word embedding
-        word_embed = self.word_embedder(inputs)
-
         # Segment embedding
         if segment_ids is not None:
             mem_pad = tf.zeros([mem_len, batch_size], dtype=tf.int32)
             cat_ids = tf.concat([mem_pad, segment_ids], 0)
             segment_matrix = tf.cast(
-                tf.logical_not(tf.equal(segment_ids[:, None], cat_ids[None, :])),
+                tf.logical_not(
+                    tf.equal(segment_ids[:, None], cat_ids[None, :])),
                 tf.int32)
             segment_matrix = tf.one_hot(segment_matrix, 2, dtype=tf.float32)
         else:
@@ -388,17 +429,31 @@ class XLNetEncoder(XLNetBase, EncoderBase):
         states_h = self.dropout(word_embed,
                                 training=(mode == tf.estimator.ModeKeys.TRAIN))
 
+        if two_stream:
+            if target_mapping is not None:
+                word_embed_q = tf.tile(
+                    self.mask_embed, [tf.shape(target_mapping)[0],
+                                      batch_size, 1])
+            else:
+                word_embed_q = word_embed
+            states_g = self.dropout(word_embed_q)
+        else:
+            states_g = None
+
         new_memory = []
         for i in range(self._hparams.num_layers):
             cur_memory = memory[i] if memory is not None else None
             if cache_len > 0:
-                new_memory.append(self._cache_mem(states_h, cur_memory, cache_len, reuse_len))
-            states_h, _ = self.attn_layers[i](
-                states_h=states_h, pos_embed=pos_embed, states_g=None,
+                new_memory.append(
+                    self._cache_mem(states_h, cur_memory, cache_len, reuse_len))
+            states_h, states_g = self.attn_layers[i](
+                states_h=states_h, pos_embed=pos_embed, states_g=states_g,
                 segment_mat=segment_matrix, attn_mask_h=non_tgt_mask,
                 attn_mask_g=attn_mask, target_mapping=None, memory=cur_memory,
                 mode=mode)
             states_h = self.ff_layers[i](states_h)
+            if states_g is not None:
+                states_g = self.ff_layers[i](states_g)
 
         if not self._built:
             self._add_internal_trainable_variables()
@@ -408,6 +463,15 @@ class XLNetEncoder(XLNetBase, EncoderBase):
                 xlnet_utils.init_from_checkpoint(self.pretrained_model,
                                                  self.variable_scope.name)
 
-        output = self.dropout(states_h)
-        return output
+        output = self.dropout(states_h if states_g is None else states_g)
 
+        # Now output: [seq_len, batch_size, hidden_dim]
+        # new_memory: None or A list of length num_layers,
+        # each tensor of shape [cache_len, batch_size, hidden_dim]
+        output = tf.transpose(output, perm=[1, 0, 2])
+        if new_memory is not None:
+            new_memory = [tf.transpose(m, perm=[1, 0, 2]) for m in new_memory]
+
+        if cache_len == 0:
+            return output, None
+        return output, new_memory

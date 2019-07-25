@@ -56,11 +56,11 @@ class BertBase(ModuleBase):
         if pretrained_model_name:
             self.pretrained_model = bert_utils.\
                 load_pretrained_bert(pretrained_model_name,
-                                      cache_dir)
+                                     cache_dir)
         elif self._hparams.pretrained_model_name is not None:
             self.pretrained_model = bert_utils.\
                 load_pretrained_bert(self._hparams.pretrained_model_name,
-                                      cache_dir)
+                                     cache_dir)
         else:
             self.pretrained_model = None
 
@@ -96,7 +96,3 @@ class BertBase(ModuleBase):
             Encoding results or prediction results.
         """
         raise NotImplementedError
-
-
-
-
