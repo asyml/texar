@@ -86,11 +86,11 @@ class XLNetRegressor(RegressorBase):
 
             # summary type
             if self._hparams.summary_type == 'last':
-                self.summary_op = lambda output: output[-1]
+                self.summary_op = lambda output: output[:, -1]
             elif self._hparams.summary_type == 'first':
-                self.summary_op = lambda output: output[0]
+                self.summary_op = lambda output: output[:, 0]
             elif self._hparams.summary_type == 'mean':
-                self.summary_op = lambda output: tf.reduce_mean(output, axis=0)
+                self.summary_op = lambda output: tf.reduce_mean(output, axis=1)
             elif self._hparams.summary_type == 'attn':
                 raise NotImplementedError
             else:
@@ -132,8 +132,8 @@ class XLNetRegressor(RegressorBase):
     def _build(self, token_ids, segment_ids=None, input_mask=None, mode=None):
         if mode is None:
             mode = global_mode()
-        output = self._encoder(token_ids, segment_ids, input_mask=input_mask,
-                               mode=mode)
+        output, _ = self._encoder(token_ids, segment_ids, input_mask=input_mask,
+                                  mode=mode)
         summary = self.summary_op(output)
         if self._hparams.use_projection:
             summary = tf.tanh(self.projection(summary))

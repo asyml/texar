@@ -53,4 +53,3 @@ class RegressorBase(ModuleBase):
           Regression output.
         """
         raise NotImplementedError
-

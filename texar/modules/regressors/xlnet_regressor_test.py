@@ -30,7 +30,7 @@ class XLNetRegressorTest(tf.test.TestCase):
         # case 1
         regressor = XLNetRegressor()
         regressor(inputs)
-        n_xlnet_vars = 361
+        n_xlnet_vars = 182
         n_projection_vars = 2
         n_logits_vars = 2
         self.assertEqual(len(regressor.trainable_variables),
@@ -59,7 +59,7 @@ class XLNetRegressorTest(tf.test.TestCase):
         """
         max_time = 8
         batch_size = 16
-        inputs = tf.random_uniform([max_time, batch_size],
+        inputs = tf.random_uniform([batch_size, max_time],
                                    maxval=30521, dtype=tf.int32)
 
         # case 1
@@ -80,7 +80,7 @@ class XLNetRegressorTest(tf.test.TestCase):
 
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
-            logits_= sess.run(logits)
+            logits_ = sess.run(logits)
             self.assertEqual(logits_.shape, (batch_size,))
 
         # case 3
@@ -96,12 +96,11 @@ class XLNetRegressorTest(tf.test.TestCase):
             self.assertEqual(logits_.shape,
                              (batch_size,))
 
-
         # case 4
         hparams = {
             "summary_type": "mean"
         }
-        inputs = tf.placeholder(tf.int32, shape=[6, batch_size])
+        inputs = tf.placeholder(tf.int32, shape=[batch_size, 6])
         regressor = XLNetRegressor(hparams=hparams)
         logits = regressor(inputs)
 
@@ -110,7 +109,7 @@ class XLNetRegressorTest(tf.test.TestCase):
             logits_ = sess.run(
                 logits,
                 feed_dict={inputs: np.random.randint(30521,
-                                                     size=(6, batch_size))})
+                                                     size=(batch_size, 6))})
             self.assertEqual(logits_.shape, (batch_size,))
 
     def test_regression(self):
@@ -120,16 +119,16 @@ class XLNetRegressorTest(tf.test.TestCase):
         hparams = {
             "summary_type": "mean"
         }
-        inputs = tf.placeholder(tf.int32, shape=[6, batch_size])
+        inputs = tf.placeholder(tf.int32, shape=[batch_size, 6])
         regressor = XLNetRegressor(hparams=hparams)
         logits = regressor(inputs)
 
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
-            logits_= sess.run(
+            logits_ = sess.run(
                 logits,
                 feed_dict={inputs: np.random.randint(30521,
-                                                     size=(6, batch_size))})
+                                                     size=(batch_size, 6))})
             self.assertEqual(logits_.dtype, np.float32)
 
 
