@@ -106,6 +106,52 @@ class XLNetRegressor(RegressorBase):
 
     @staticmethod
     def default_hparams():
+        r"""Returns a dictionary of hyperparameters with default values.
+
+        .. code-block:: python
+
+            {
+                # (1) Same hyperparameters as in XLNetEncoder
+                ...
+                # (2) Additional hyperparameters
+                "regr_strategy": "cls_time",
+                "use_projection": True,
+                "logit_layer_kwargs": None,
+                "name": "xlnet_regressor",
+            }
+
+        Here:
+
+        1. Same hyperparameters as in
+           :class:`~texar.modules.XLNetEncoder`.
+           See the :meth:`~texar.modules.XLNetEncoder.default_hparams`.
+           An instance of XLNetEncoder is created for feature extraction.
+
+        2. Additional hyperparameters:
+
+            `"regr_strategy"`: str
+                The regression strategy, one of:
+
+                - **cls_time**: Sequence-level regression based on the
+                  output of the first time step (which is the `CLS` token).
+                  Each sequence has a prediction.
+                - **all_time**: Sequence-level regression based on
+                  the output of all time steps. Each sequence has a prediction.
+                - **time_wise**: Step-wise regression, i.e., make
+                  regression for each time step based on its output.
+
+            `"logit_layer_kwargs"` : dict
+                Keyword arguments for the logit Dense layer constructor,
+                except for argument "units" which is set to "num_classes".
+                Ignored if no extra logit layer is appended.
+
+            `"use_projection"`: bool
+                If `True`, an additional :torch_nn:`Linear` layer is added after
+                the summary step.
+
+            `"name"`: str
+                Name of the regressor.
+        """
         hparams = XLNetEncoder.default_hparams()
         hparams.update({
             "logit_layer_kwargs": None,
@@ -117,6 +163,28 @@ class XLNetRegressor(RegressorBase):
         return hparams
 
     def _build(self, token_ids, segment_ids=None, input_mask=None, mode=None):
+        r"""Feeds the inputs through the network and makes regression.
+
+        Args:
+            token_ids: Shape `[batch_size, max_time]`.
+            segment_ids: Shape `[batch_size, max_time]`.
+            input_mask: Float tensor of shape `[batch_size, max_time]`. Note
+                that positions with value 1 are masked out.
+            mode (optional): A tensor taking value in
+                :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`,
+                including `TRAIN`, `EVAL`, and `PREDICT`. Used to toggle
+                dropout.
+                If `None` (default), :func:`texar.global_mode` is used.
+
+        Returns:
+            Regression predictions.
+
+            - If ``regr_strategy`` is ``cls_time`` or ``all_time``, predictions
+              have shape `[batch_size]`.
+
+            - If ``clas_strategy`` is ``time_wise``, predictions have shape
+              `[batch_size, max_time]`.
+        """
         is_training = is_train_mode(mode)
         output, _ = self._encoder(token_ids, segment_ids, input_mask=input_mask,
                                   mode=mode)

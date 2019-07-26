@@ -111,6 +111,63 @@ class XLNetClassifier(ClassifierBase):
 
     @staticmethod
     def default_hparams():
+        r"""Returns a dictionary of hyperparameters with default values.
+
+        .. code-block:: python
+
+            {
+                # (1) Same hyperparameters as in XLNetEncoder
+                ...
+                # (2) Additional hyperparameters
+                "clas_strategy": "cls_time",
+                "use_projection": True,
+                "num_classes": 2,
+                "logit_layer_kwargs": None,
+                "name": "xlnet_classifier",
+            }
+
+        Here:
+
+        1. Same hyperparameters as in
+            :class:`~texar.modules.XLNetEncoder`.
+            See the :meth:`~texar.modules.XLNetEncoder.default_hparams`.
+            An instance of XLNetEncoder is created for feature extraction.
+
+        2. Additional hyperparameters:
+
+            `"clas_strategy"`: str
+                The classification strategy, one of:
+
+                - **cls_time**: Sequence-level classification based on the
+                  output of the last time step (which is the `CLS` token).
+                  Each sequence has a class.
+                - **all_time**: Sequence-level classification based on
+                  the output of all time steps. Each sequence has a class.
+                - **time_wise**: Step-wise classification, i.e., make
+                  classification for each time step based on its output.
+
+            `"use_projection"`: bool
+                If `True`, an additional `Linear` layer is added after the
+                summary step.
+
+            `"num_classes"`: int
+                Number of classes:
+
+                - If **> 0**, an additional :torch_nn:`Linear`
+                  layer is appended to the encoder to compute the logits over
+                  classes.
+                - If **<= 0**, no dense layer is appended. The number of
+                  classes is assumed to be the final dense layer size of the
+                  encoder.
+
+            `"logit_layer_kwargs"` : dict
+                Keyword arguments for the logit Dense layer constructor,
+                except for argument "units" which is set to "num_classes".
+                Ignored if no extra logit layer is appended.
+
+            `"name"`: str
+                Name of the classifier.
+        """
         hparams = XLNetEncoder.default_hparams()
         hparams.update({
             "num_classes": 2,
@@ -123,6 +180,39 @@ class XLNetClassifier(ClassifierBase):
         return hparams
 
     def _build(self, token_ids, segment_ids=None, input_mask=None, mode=None):
+        r"""Feeds the inputs through the network and makes classification.
+
+        Args:
+            token_ids: Shape `[batch_size, max_time]`.
+            segment_ids: Shape `[batch_size, max_time]`.
+            input_mask: Float tensor of shape `[batch_size, max_time]`. Note
+                that positions with value 1 are masked out.
+            mode (optional): A tensor taking value in
+                :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`,
+                including `TRAIN`, `EVAL`, and `PREDICT`. Used to toggle
+                dropout.
+                If `None` (default), :func:`texar.global_mode` is used.
+
+        Returns:
+            A tuple `(logits, preds)`, containing the logits over classes and
+            the predictions, respectively.
+
+            - If ``clas_strategy`` is ``cls_time`` or ``all_time``:
+
+                - If ``num_classes`` == 1, ``logits`` and ``pred`` are both of
+                  shape ``[batch_size]``.
+                - If ``num_classes`` > 1, ``logits`` is of shape
+                  ``[batch_size, num_classes]`` and ``pred`` is of shape
+                  ``[batch_size]``.
+
+            - If ``clas_strategy`` is ``time_wise``:
+
+                - ``num_classes`` == 1, ``logits`` and ``pred`` are both of
+                  shape ``[batch_size, max_time]``.
+                - If ``num_classes`` > 1, ``logits`` is of shape
+                  ``[batch_size, max_time, num_classes]`` and ``pred`` is of
+                  shape ``[batch_size, max_time]``.
+        """
         is_training = is_train_mode(mode)
         output, _ = self._encoder(token_ids, segment_ids, input_mask=input_mask,
                                   mode=mode)
