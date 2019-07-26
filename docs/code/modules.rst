@@ -82,6 +82,12 @@ Encoders
 .. autoclass:: texar.modules.RNNEncoderBase
     :members:
 
+:hidden:`XLNetEncoder`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.XLNetEncoder
+    :members:
+    :exclude-members: _execute
+
 :hidden:`default_transformer_poswise_net_hparams`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.modules.default_transformer_poswise_net_hparams
@@ -265,6 +271,11 @@ Classifiers
     :members:
     :inherited-members:
 
+:hidden:`XLNetClassifier`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.XLNetClassifier
+    :members:
+
 Networks
 ========
 
@@ -285,6 +296,25 @@ Networks
 .. autoclass:: texar.modules.Conv1DNetwork
     :members:
     :inherited-members:
+
+Pre-trained
+===========
+
+.. spelling::
+    pooler
+
+:hidden:`PretrainedBase`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.PretrainedBase
+    :members:
+
+Regressor
+==========
+
+:hidden:`XLNetRegressor`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.modules.XLNetRegressor
+    :members:
 
 Memory
 ======

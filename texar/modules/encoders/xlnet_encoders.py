@@ -25,7 +25,7 @@ from texar import global_mode
 
 from texar.hyperparams import HParams
 from texar.core import layers
-from texar.modules.pretrained.xlnet_base import XLNetBase
+from texar.modules.pretrained.pretrained_base import PretrainedBase
 from texar.modules.pretrained import xlnet_utils
 from texar.modules.pretrained.xlnet_model_utils import \
     (PositionWiseFF, RelativePositionalEncoding, RelativeMutiheadAttention)
@@ -39,7 +39,7 @@ __all__ = [
 ]
 
 
-class XLNetEncoder(XLNetBase, EncoderBase):
+class XLNetEncoder(PretrainedBase, EncoderBase):
     r"""XLNet Transformer for encoding sequences.
 
     This module supports the architecture proposed
@@ -61,14 +61,16 @@ class XLNetEncoder(XLNetBase, EncoderBase):
     .. document private functions
     .. automethod:: _build
     """
+
+    model_name = "XLNet"
+
     def __init__(self,
                  pretrained_model_name=None,
                  cache_dir=None,
                  hparams=None):
-        EncoderBase.__init__(self, hparams)
-        XLNetBase.__init__(self, pretrained_model_name, cache_dir, hparams)
+        super().__init__(pretrained_model_name, cache_dir, hparams)
 
-        if self.pretrained_model:
+        if self.pretrained_model_dir:
             self._hparams = HParams(self.pretrained_model_hparams,
                                     self._hparams.todict())
 
@@ -459,8 +461,8 @@ class XLNetEncoder(XLNetBase, EncoderBase):
             self._add_internal_trainable_variables()
             self._built = True
 
-            if self.pretrained_model:
-                xlnet_utils.init_from_checkpoint(self.pretrained_model,
+            if self.pretrained_model_dir:
+                xlnet_utils.init_from_checkpoint(self.pretrained_model_dir,
                                                  self.variable_scope.name)
 
         output = self.dropout(states_h if states_g is None else states_g)

@@ -20,13 +20,12 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
-import sys
 import json
 import os
 import re
 
 import tensorflow as tf
-
+from texar.modules.pretrained.pretrained_utils import default_download_dir
 from texar.data.data_utils import maybe_download
 
 __all__ = [
@@ -86,33 +85,6 @@ def get_assignment_map_from_checkpoint(tvars, init_checkpoint):
     return assignment_map, initialized_variable_names
 
 
-def _default_download_dir():
-    """
-    Return the directory to which packages will be downloaded by default.
-    """
-    package_dir = os.path.dirname(os.path.dirname(
-        os.path.dirname(os.path.dirname(__file__))))
-    if os.access(package_dir, os.W_OK):
-        texar_download_dir = os.path.join(package_dir, 'texar_download')
-    else:
-        # On Windows, use %APPDATA%
-        if sys.platform == 'win32' and 'APPDATA' in os.environ:
-            home_dir = os.environ['APPDATA']
-
-        # Otherwise, install in the user's home directory.
-        else:
-            home_dir = os.path.expanduser('~/')
-            if home_dir == '~/':
-                raise ValueError("Could not find a default download directory")
-
-        texar_download_dir = os.path.join(home_dir, 'texar_download')
-
-    if not os.path.exists(texar_download_dir):
-        os.mkdir(texar_download_dir)
-
-    return os.path.join(texar_download_dir, "xlnet")
-
-
 def load_pretrained_xlnet(pretrained_model_name, cache_dir=None):
     """
     Return the directory in which the pretrained model is cached.
@@ -124,7 +96,7 @@ def load_pretrained_xlnet(pretrained_model_name, cache_dir=None):
             "Pre-trained model not found: {}".format(pretrained_model_name))
 
     if cache_dir is None:
-        cache_dir = _default_download_dir()
+        cache_dir = default_download_dir("xlnet")
 
     file_name = download_path.split('/')[-1]
     # this is required because of the way xlnet model is bundled
