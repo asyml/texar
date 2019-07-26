@@ -102,7 +102,7 @@ class XLNetEncoderTest(tf.test.TestCase):
         """
         # case 1: XLNet pre-trained
         hparams = {
-            "pretrained_model_name": "xlnet-large-cased",
+            "pretrained_model_name": "xlnet-base-cased",
             "untie_r": False
         }
         encoder = XLNetEncoder(hparams=hparams)
@@ -122,7 +122,7 @@ class XLNetEncoderTest(tf.test.TestCase):
 
         # case 2: XLNet pre-trained, untie_r=True
         hparams = {
-            "pretrained_model_name": "xlnet-large-cased",
+            "pretrained_model_name": "xlnet-base-cased",
             "untie_r": True
         }
 

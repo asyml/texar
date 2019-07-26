@@ -21,7 +21,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from texar import global_mode
+from texar.utils.mode import is_train_mode
 
 from texar.hyperparams import HParams
 from texar.core import layers
@@ -298,20 +298,64 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
 
         return ret
 
-    def _build(self, inputs, *args, **kwargs):
-        r"""A wrapper for :meth:`_execute`. This layer exists because
-        :class:`XLNetDecoder` compute embeddings in the decoder helper.
+    def _build(self, token_ids, segment_ids=None, input_mask=None,
+               memory=None, permute_mask=None, target_mapping=None,
+               bi_data=False, clamp_len=None, cache_len=0, same_length=False,
+               attn_type='bi', two_stream=False, **kwargs):
+        r"""Compute XLNet representations for the input.
 
         Args:
-            inputs: Shape `(batch_size, seq_len)`.
-            **kwargs: Remaining arguments to pass to :meth:`_forward`.
+            token_ids: Shape `[batch_size, seq_len]`.
+            segment_ids: Shape `[batch_size, seq_len]`.
+            input_mask: Float tensor of shape `[batch_size, seq_len]`. Note that
+                positions with value 1 are masked out.
+            memory: Memory from previous batches. A list of length `num_layers`,
+                each tensor of shape `[batch_size, mem_len, hidden_dim]`.
+            permute_mask: The permutation mask. Float tensor of shape
+                `[batch_size, seq_len, seq_len]`.
+                A value of 0 for ``permute_mask[i, j, k]`` indicates that
+                position `i` attends to position `j` in batch `k`.
+            target_mapping: The target token mapping. Float tensor of shape
+                `[batch_size, num_targets, seq_len]`.
+                A value of 1 for ``target_mapping[i, j, k]`` indicates that
+                the `i`-th target token (in order of permutation) in batch `k`
+                is the token at position `j`.
+                Each row ``target_mapping[i, :, k]`` can have no more than one
+                value of 1.
+            bi_data (bool): Whether to use bidirectional data input pipeline.
+            clamp_len (int): Clamp all relative distances larger than
+                :attr:`clamp_len`. A value of -1 means no clamping.
+            cache_len (int): Length of memory (number of tokens) to cache.
+            same_length (bool): Whether to use the same attention length for
+                each token.
+            attn_type (str): Attention type. Supported values are `"uni"`
+                and `"bi"`.
+            two_stream (bool): Whether to use two-stream attention. Only set to
+                `True` when pre-training or generating text. Defaults to
+                `False`.
+
+        :returns: A tuple of `(output, new_memory)`:
+
+            - **`output`**: The final layer output representations. Shape
+              `[batch_size, seq_len, hidden_dim]`.
+            - **`new_memory`**: The memory of the current batch.
+              If `cache_len` is 0, then `new_memory` is `None`. Otherwise, it is
+              a list of length `num_layers`, each tensor of shape
+              `[batch_size, cache_len, hidden_dim]`.
+              This can be used as the :attr:`memory` argument in the next batch.
         """
-        return self._execute(self.word_embedder(inputs), *args, **kwargs)
+        return self._execute(self.word_embedder(token_ids),
+                             segment_ids=segment_ids, input_mask=input_mask,
+                             memory=memory, permute_mask=permute_mask,
+                             target_mapping=target_mapping, bi_data=bi_data,
+                             clamp_len=clamp_len, cache_len=cache_len,
+                             same_length=same_length, attn_type=attn_type,
+                             two_stream=two_stream, **kwargs)
 
     def _execute(self, word_embed, segment_ids=None, input_mask=None,
                  memory=None, permute_mask=None, target_mapping=None,
                  bi_data=False, clamp_len=None, cache_len=0, same_length=False,
-                 attn_type='bi', two_stream=False, **kwargs):
+                 attn_type='bi', two_stream=False, mode=None):
         r"""Compute XLNet representations for the input.
 
         Args:
@@ -333,6 +377,13 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
                 each token.
             attn_type (str): Attention type. Supported values are `"uni"`
                 and `"bi"`.
+            two_stream (bool): Whether to use two-stream attention. Only set to
+                `True` when pre-training or generating text. Defaults to
+                `False`.
+            mode (optional): A tensor taking value in
+                :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
+                `TRAIN`, `EVAL`, and `PREDICT`. If `None`, dropout is
+                controlled by :func:`texar.global_mode`.
 
         :returns: A tuple of `(output)`:
 
@@ -363,7 +414,7 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
         mem_len = tf.shape(memory[0])[0] if memory is not None else 0
         tot_len = seq_len + mem_len
         reuse_len = self._hparams.reuse_len
-        mode = kwargs.get("mode", global_mode())
+        is_training = is_train_mode(mode)
 
         # Attention mask
         # causal attention mask
@@ -426,10 +477,10 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
         pos_embed = self.pos_embed(
             batch_size, seq_len, tot_len, clamp_len, attn_type, bi_data)
         pos_embed = self.dropout(pos_embed,
-                                 training=(mode == tf.estimator.ModeKeys.TRAIN))
+                                 training=is_training)
 
         states_h = self.dropout(word_embed,
-                                training=(mode == tf.estimator.ModeKeys.TRAIN))
+                                training=is_training)
 
         if two_stream:
             if target_mapping is not None:

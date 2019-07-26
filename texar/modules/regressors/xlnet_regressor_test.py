@@ -38,7 +38,7 @@ class XLNetRegressorTest(tf.test.TestCase):
 
         # case 2
         hparams = {
-            "summary_type": "first"
+            "regr_strategy": "all_time"
         }
         regressor = XLNetRegressor(hparams=hparams)
         regressor(inputs)
@@ -47,7 +47,7 @@ class XLNetRegressorTest(tf.test.TestCase):
 
         # case 3
         hparams = {
-            "summary_type": "mean",
+            "regr_strategy": "time_wise"
         }
         regressor = XLNetRegressor(hparams=hparams)
         regressor(inputs)
@@ -73,7 +73,7 @@ class XLNetRegressorTest(tf.test.TestCase):
 
         # case 2
         hparams = {
-            "summary_type": "mean"
+            "regr_strategy": "cls_time"
         }
         regressor = XLNetRegressor(hparams=hparams)
         logits = regressor(inputs)
@@ -85,7 +85,7 @@ class XLNetRegressorTest(tf.test.TestCase):
 
         # case 3
         hparams = {
-            "summary_type": "first"
+            "regr_strategy": "time_wise"
         }
         regressor = XLNetRegressor(hparams=hparams)
         logits = regressor(inputs)
@@ -94,11 +94,12 @@ class XLNetRegressorTest(tf.test.TestCase):
             sess.run(tf.global_variables_initializer())
             logits_ = sess.run(logits)
             self.assertEqual(logits_.shape,
-                             (batch_size,))
+                             (batch_size, max_time))
 
         # case 4
         hparams = {
-            "summary_type": "mean"
+            "regr_strategy": "all_time",
+            "max_seq_len": max_time
         }
         inputs = tf.placeholder(tf.int32, shape=[batch_size, 6])
         regressor = XLNetRegressor(hparams=hparams)
@@ -117,7 +118,7 @@ class XLNetRegressorTest(tf.test.TestCase):
         batch_size = 8
 
         hparams = {
-            "summary_type": "mean"
+            "regr_strategy": "cls_time"
         }
         inputs = tf.placeholder(tf.int32, shape=[batch_size, 6])
         regressor = XLNetRegressor(hparams=hparams)

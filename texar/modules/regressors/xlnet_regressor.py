@@ -20,7 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from texar import global_mode
+from texar.utils.mode import is_train_mode
 from texar.core import layers
 from texar.modules.regressors.regressor_base import RegressorBase
 from texar.modules import XLNetEncoder
@@ -84,19 +84,6 @@ class XLNetRegressor(RegressorBase):
                     }
                 })
 
-            # summary type
-            if self._hparams.summary_type == 'last':
-                self.summary_op = lambda output: output[:, -1]
-            elif self._hparams.summary_type == 'first':
-                self.summary_op = lambda output: output[:, 0]
-            elif self._hparams.summary_type == 'mean':
-                self.summary_op = lambda output: tf.reduce_mean(output, axis=1)
-            elif self._hparams.summary_type == 'attn':
-                raise NotImplementedError
-            else:
-                raise ValueError(
-                    f"Unsupported summary type {self._hparams.summary_type}")
-
             # Creates an dropout layer
             drop_kwargs = {"rate": self._hparams.dropout}
             layer_hparams = {"type": "Dropout", "kwargs": drop_kwargs}
@@ -122,7 +109,7 @@ class XLNetRegressor(RegressorBase):
         hparams = XLNetEncoder.default_hparams()
         hparams.update({
             "logit_layer_kwargs": None,
-            "summary_type": "last",
+            "regr_strategy": "cls_time",
             "dropout": 0.1,
             "use_projection": True,
             "name": "xlnet_regressor"
@@ -130,19 +117,31 @@ class XLNetRegressor(RegressorBase):
         return hparams
 
     def _build(self, token_ids, segment_ids=None, input_mask=None, mode=None):
-        if mode is None:
-            mode = global_mode()
+        is_training = is_train_mode(mode)
         output, _ = self._encoder(token_ids, segment_ids, input_mask=input_mask,
                                   mode=mode)
-        summary = self.summary_op(output)
+
+        strategy = self._hparams.regr_strategy
+        if strategy == "time_wise":
+            summary = output
+        elif strategy == "cls_time":
+            summary = output[:, -1]
+        elif strategy == "all_time":
+            length_diff = self._hparams.max_seq_len - tf.shape(token_ids)[1]
+            summary_input = tf.pad(output,
+                                   paddings=[[0, 0], [0, length_diff], [0, 0]])
+            summary_input_dim = \
+                self._encoder.output_size * self._hparams.max_seq_len
+            summary = tf.reshape(summary_input, shape=[-1, summary_input_dim])
+        else:
+            raise ValueError(f"Unknown classification strategy: {strategy}")
+
         if self._hparams.use_projection:
             summary = tf.tanh(self.projection(summary))
         # summary: (batch_size, hidden_dim)
-        summary = self._dropout_layer(
-            summary, training=(mode == tf.estimator.ModeKeys.TRAIN))
+        summary = self._dropout_layer(summary, training=is_training)
 
-        logits = self._logit_layer(summary)
-        logits = tf.reshape(logits, [-1])
+        logits = tf.squeeze(self._logit_layer(summary), -1)
 
         if not self._built:
             self._add_internal_trainable_variables()

@@ -20,7 +20,7 @@ https://github.com/zihangdai/xlnet/blob/master/modeling.py
 import tensorflow as tf
 
 from texar.core import layers
-from texar import global_mode
+from texar.utils.mode import is_train_mode
 from texar.module_base import ModuleBase
 
 
@@ -271,8 +271,8 @@ class RelativeMutiheadAttention(ModuleBase):
         return x
 
     def _compute_attention_score(self, q_head, k_head_h, v_head_h, k_head_r,
-                                 segment_mat, attn_mask=None, **kwargs):
-        mode = kwargs.get("mode", global_mode())
+                                 segment_mat, attn_mask=None, mode=None):
+        is_training = is_train_mode(mode)
 
         # Content based attention score.
         q_head_rw = q_head + self.r_w_bias
@@ -304,7 +304,7 @@ class RelativeMutiheadAttention(ModuleBase):
         # attention probability
         attn_prob = tf.nn.softmax(attn_score, 1)
         attn_prob = self.dropout(attn_prob,
-                                 training=(mode == tf.estimator.ModeKeys.TRAIN))
+                                 training=is_training)
 
         # attention output
         attn_vec = tf.einsum('ijbn,jbnd->ibnd', attn_prob, v_head_h)
@@ -322,7 +322,7 @@ class RelativeMutiheadAttention(ModuleBase):
 
     def _build(self, states_h, pos_embed, states_g=None, segment_mat=None,
                attn_mask_h=None, attn_mask_g=None, target_mapping=None,
-               memory=None, **kwargs):
+               memory=None, mode=None):
         shape = tf.shape(states_h)
         seq_len, batch_size = shape[0], shape[1]
         pos_len = tf.shape(pos_embed)[0]
@@ -358,7 +358,7 @@ class RelativeMutiheadAttention(ModuleBase):
         # Core attention ops.
         attn_vec_h = self._compute_attention_score(
             q_head_h, k_head_h, v_head_h, k_head_r, segment_mat, attn_mask_h,
-            **kwargs)
+            mode)
 
         # Post attention processing.
         attn_out_h = self._post_attention(attn_vec_h)
@@ -379,7 +379,7 @@ class RelativeMutiheadAttention(ModuleBase):
                     'mbnd,mlb->lbnd', q_head_g, target_mapping)
             attn_vec_g = self._compute_attention_score(
                 q_head_g, k_head_h, v_head_h, k_head_r,
-                segment_mat, attn_mask_g, **kwargs)
+                segment_mat, attn_mask_g, mode)
             if target_mapping is not None:
                 attn_vec_g = tf.einsum(
                     'lbnd,mlb->mbnd', attn_vec_g, target_mapping)

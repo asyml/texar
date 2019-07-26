@@ -20,7 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from texar import global_mode
+from texar.utils.mode import is_train_mode
 from texar.core import layers
 from texar.modules.classifiers.classifier_base import ClassifierBase
 from texar.modules import XLNetEncoder
@@ -84,19 +84,6 @@ class XLNetClassifier(ClassifierBase):
                     }
                 })
 
-            # summary type
-            if self._hparams.summary_type == 'last':
-                self.summary_op = lambda output: output[:, -1]
-            elif self._hparams.summary_type == 'first':
-                self.summary_op = lambda output: output[:, 0]
-            elif self._hparams.summary_type == 'mean':
-                self.summary_op = lambda output: tf.reduce_mean(output, axis=1)
-            elif self._hparams.summary_type == 'attn':
-                raise NotImplementedError
-            else:
-                raise ValueError(
-                    f"Unsupported summary type {self._hparams.summary_type}")
-
             # Creates an dropout layer
             drop_kwargs = {"rate": self._hparams.dropout}
             layer_hparams = {"type": "Dropout", "kwargs": drop_kwargs}
@@ -128,7 +115,7 @@ class XLNetClassifier(ClassifierBase):
         hparams.update({
             "num_classes": 2,
             "logit_layer_kwargs": None,
-            "summary_type": "last",
+            "clas_strategy": "cls_time",
             "dropout": 0.1,
             "use_projection": True,
             "name": "xlnet_classifier"
@@ -136,31 +123,51 @@ class XLNetClassifier(ClassifierBase):
         return hparams
 
     def _build(self, token_ids, segment_ids=None, input_mask=None, mode=None):
-        if mode is None:
-            mode = global_mode()
+        is_training = is_train_mode(mode)
         output, _ = self._encoder(token_ids, segment_ids, input_mask=input_mask,
                                   mode=mode)
-        summary = self.summary_op(output)
+        strategy = self._hparams.clas_strategy
+        if strategy == "time_wise":
+            summary = output
+        elif strategy == "cls_time":
+            summary = output[:,-1]
+        elif strategy == "all_time":
+            length_diff = self._hparams.max_seq_len - tf.shape(token_ids)[1]
+            summary_input = tf.pad(output,
+                                   paddings=[[0, 0], [0, length_diff], [0, 0]])
+            summary_input_dim = \
+                self._encoder.output_size*self._hparams.max_seq_len
+            summary = tf.reshape(summary_input, shape=[-1, summary_input_dim])
+        else:
+            raise ValueError(f"Unknown classification strategy: {strategy}")
+
         if self._hparams.use_projection:
             summary = tf.tanh(self.projection(summary))
         # summary: (batch_size, hidden_dim)
-        summary = self._dropout_layer(
-            summary, training=(mode == tf.estimator.ModeKeys.TRAIN))
+        summary = self._dropout_layer(summary, training=is_training)
 
         logits = (self._logit_layer(summary) if self._logit_layer is not None
                   else summary)
 
-        # Compute predications
+        # Compute predictions
         num_classes = self._hparams.num_classes
-        is_binary = num_classes == 1
-        is_binary = is_binary or (num_classes <= 0 and logits.shape[-1] == 1)
+        is_binary = num_classes == 1 or \
+                    (num_classes <= 0 and logits.shape[-1] == 1)
 
-        if is_binary:
-            pred = tf.greater(logits, 0)
-            logits = tf.reshape(logits, [-1])
+        if strategy == "time_wise":
+            if is_binary:
+                pred = tf.squeeze(tf.greater(logits, 0), -1)
+                logits = tf.squeeze(logits, -1)
+            else:
+                pred = tf.argmax(logits, axis=-1)
         else:
-            pred = tf.argmax(logits, axis=-1)
-        pred = tf.reshape(pred, [-1])
+            if is_binary:
+                pred = tf.greater(logits, 0)
+                logits = tf.reshape(logits, [-1])
+            else:
+                pred = tf.argmax(logits, axis=-1)
+            pred = tf.reshape(pred, [-1])
+
         pred = tf.to_int64(pred)
 
         if not self._built:

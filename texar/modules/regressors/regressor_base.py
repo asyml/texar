@@ -38,7 +38,7 @@ class RegressorBase(ModuleBase):
         """Returns a dictionary of hyperparameters with default values.
         """
         return {
-            "name": "classifier"
+            "name": "regressor"
         }
 
     def _build(self, inputs, *args, **kwargs):

@@ -38,7 +38,7 @@ class XLNetClassifierTest(tf.test.TestCase):
 
         # case 2
         hparams = {
-            "summary_type": "first"
+            "clas_strategy": "time_wise"
         }
         clas = XLNetClassifier(hparams=hparams)
         clas(inputs)
@@ -47,7 +47,7 @@ class XLNetClassifierTest(tf.test.TestCase):
 
         # case 3
         hparams = {
-            "summary_type": "mean",
+            "clas_strategy": "all_time"
         }
         clas = XLNetClassifier(hparams=hparams)
         clas(inputs)
@@ -63,7 +63,10 @@ class XLNetClassifierTest(tf.test.TestCase):
                                    maxval=30521, dtype=tf.int32)
 
         # case 1
-        clas = XLNetClassifier()
+        hparams = {
+            "pretrained_model_name": None
+        }
+        clas = XLNetClassifier(hparams=hparams)
         logits, pred = clas(inputs)
 
         with self.test_session() as sess:
@@ -75,8 +78,9 @@ class XLNetClassifierTest(tf.test.TestCase):
 
         # case 2
         hparams = {
+            "pretrained_model_name": None,
             "num_classes": 10,
-            "summary_type": "mean"
+            "clas_strategy": "time_wise"
         }
         clas = XLNetClassifier(hparams=hparams)
         logits, pred = clas(inputs)
@@ -85,13 +89,14 @@ class XLNetClassifierTest(tf.test.TestCase):
             sess.run(tf.global_variables_initializer())
             logits_, pred_ = sess.run([logits, pred])
             self.assertEqual(logits_.shape,
-                             (batch_size, clas.hparams.num_classes))
-            self.assertEqual(pred_.shape, (batch_size,))
+                             (batch_size, max_time, clas.hparams.num_classes))
+            self.assertEqual(pred_.shape, (batch_size, max_time))
 
         # case 3
         hparams = {
+            "pretrained_model_name": None,
             "num_classes": 0,
-            "summary_type": "first"
+            "clas_strategy": "time_wise"
         }
         clas = XLNetClassifier(hparams=hparams)
         logits, pred = clas(inputs)
@@ -100,13 +105,16 @@ class XLNetClassifierTest(tf.test.TestCase):
             sess.run(tf.global_variables_initializer())
             logits_, pred_ = sess.run([logits, pred])
             self.assertEqual(logits_.shape,
-                             (batch_size, clas.hparams.hidden_dim))
-            self.assertEqual(pred_.shape, (batch_size,))
+                             (batch_size, max_time, clas.hparams.hidden_dim))
+            self.assertEqual(pred_.shape, (batch_size, max_time))
 
         # case 4
         hparams = {
-            "num_classes": 10,
-            "summary_type": "mean"
+            "pretrained_model_name": None,
+            "num_classes": 3,
+            "clas_strategy": "all_time",
+            "use_projection": False,
+            "vocab_size": 1000
         }
         inputs = tf.placeholder(tf.int32, shape=[batch_size, 6])
         clas = XLNetClassifier(hparams=hparams)
@@ -132,8 +140,9 @@ class XLNetClassifierTest(tf.test.TestCase):
 
         # case 1
         hparams = {
+            "pretrained_model_name": None,
             "num_classes": 1,
-            "summary_type": "first"
+            "clas_strategy": "time_wise"
         }
         clas = XLNetClassifier(hparams=hparams)
         logits, pred = clas(inputs)
@@ -141,13 +150,15 @@ class XLNetClassifierTest(tf.test.TestCase):
         with self.test_session() as sess:
             sess.run(tf.global_variables_initializer())
             logits_, pred_ = sess.run([logits, pred])
-            self.assertEqual(logits_.shape, (batch_size,))
-            self.assertEqual(pred_.shape, (batch_size,))
+            self.assertEqual(logits_.shape, (batch_size, max_time))
+            self.assertEqual(pred_.shape, (batch_size, max_time))
 
         # case 2
         hparams = {
+            "pretrained_model_name": None,
             "num_classes": 1,
-            "summary_type": "last"
+            "clas_strategy": "cls_time",
+            "max_seq_len": max_time
         }
         inputs = tf.placeholder(tf.int32, shape=[batch_size, 6])
         clas = XLNetClassifier(hparams=hparams)
@@ -164,8 +175,10 @@ class XLNetClassifierTest(tf.test.TestCase):
 
         # case 3
         hparams = {
+            "pretrained_model_name": None,
             "num_classes": 1,
-            "summary_type": "mean"
+            "clas_strategy": "all_time",
+            "max_seq_len": max_time
         }
         inputs = tf.placeholder(tf.int32, shape=[batch_size, 6])
         clas = XLNetClassifier(hparams=hparams)
