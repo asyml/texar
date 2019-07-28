@@ -22,7 +22,6 @@ from __future__ import division
 import copy
 import json
 
-from texar.utils.dtypes import is_callable
 
 __all__ = [
     "HParams"
@@ -211,6 +210,8 @@ class HParams(object):
                     parsed_hparams[name] = HParams({}, {})
                 else:
                     parsed_hparams[name] = HParams(value, value)
+
+        from texar.utils.dtypes import is_callable
 
         # Parse hparams
         for name, value in hparams.items():

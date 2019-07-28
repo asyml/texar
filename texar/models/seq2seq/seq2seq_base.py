@@ -25,7 +25,7 @@ from texar.models.model_base import ModelBase
 from texar.losses.mle_losses import sequence_sparse_softmax_cross_entropy
 from texar.data.data.paired_text_data import PairedTextData
 from texar.core.optimization import get_train_op
-from texar import HParams
+from texar.hyperparams import HParams
 from texar.utils import utils
 from texar.utils.variables import collect_trainable_variables
 

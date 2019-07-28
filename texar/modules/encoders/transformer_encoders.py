@@ -26,7 +26,7 @@ from texar.utils import transformer_attentions as attn
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.encoders.multihead_attention import MultiheadAttentionEncoder
 from texar.modules.networks.networks import FeedForwardNetwork
-from texar import utils
+import texar.utils as utils
 from texar.utils.shapes import shape_list
 from texar.utils.mode import is_train_mode
 

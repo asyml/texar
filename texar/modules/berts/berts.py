@@ -19,7 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from texar import ModuleBase
+from texar.module_base import ModuleBase
 from texar.modules.berts import bert_utils
 
 __all__ = [
