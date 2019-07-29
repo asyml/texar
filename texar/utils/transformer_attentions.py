@@ -23,7 +23,6 @@ import numpy as np
 
 import tensorflow as tf
 
-from texar import context
 
 # pylint: disable=too-many-arguments, invalid-name, no-member
 

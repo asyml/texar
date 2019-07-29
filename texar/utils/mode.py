@@ -21,7 +21,7 @@ from __future__ import division
 
 import tensorflow as tf
 
-from texar import context
+import texar.context as context
 
 __all__ = [
     "maybe_global_mode",

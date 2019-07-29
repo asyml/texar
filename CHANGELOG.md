@@ -3,6 +3,16 @@
 
 ### New features
 
+### Feature improvements
+
+* Use lazy import to be compatible with [texar-pytorch](https://github.com/asyml/texar-pytorch). ([#183](https://github.com/asyml/texar/pull/183)) 
+
+### Fixes
+
+## [v0.2.1](https://github.com/asyml/texar/releases/tag/v0.2.1) (2019-07-28)
+
+### New features
+
 * Add support for GPT-2 345M model in [examples/gpt-2](https://github.com/asyml/texar/tree/master/examples/gpt-2). ([#156](https://github.com/asyml/texar/pull/156)) 
 * Add BERT modules, including `texar.modules.BERTEncoder` ([doc](https://texar.readthedocs.io/en/latest/code/modules.html#texar.modules.BertEncoder)) and `texar.modules.BERTClassifier` ([doc](https://texar.readthedocs.io/en/latest/code/modules.html#bertclassifierv)). ([#167](https://github.com/asyml/texar/pull/167))
 
