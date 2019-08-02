@@ -22,7 +22,7 @@ from __future__ import print_function
 import tensorflow as tf
 from tensorflow.python.ops import array_ops
 from tensorflow.python.ops.distributions import categorical
-from tensorflow.contrib.distributions import RelaxedOneHotCategorical \
+from tensorflow_probability.distributions import RelaxedOneHotCategorical \
     as GumbelSoftmax
 
 from texar.modules.decoders.tf_helpers import \

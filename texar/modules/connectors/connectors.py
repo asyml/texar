@@ -664,7 +664,7 @@ class StochasticConnector(ConnectorBase):
         dstr = check_or_get_instance(
             distribution, distribution_kwargs,
             ["tensorflow.distributions", "tensorflow_probability.distributions",
-             "tensorflow.contrib.distributions", "texar.custom"])
+             "texar.custom"])
 
         if num_samples:
             sample = dstr.sample(num_samples)

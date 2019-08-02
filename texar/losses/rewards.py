@@ -163,7 +163,7 @@ def _discount_reward_tensor_1d(reward, sequence_length,
         mask = tf.concat([mask[:, 1:], tf.zeros_like(mask[:, -1:])], axis=1)
         # Make each row = [discount, ..., discount, 1, ..., 1]
         dmat = mask * discount + (1 - mask)
-        dmat = tf.cumprod(dmat, axis=1, reverse=True)
+        dmat = tf.math.cumprod(dmat, axis=1, reverse=True)
 
     disc_reward = dmat * tf.expand_dims(reward, -1)
     disc_reward = mask_sequences(

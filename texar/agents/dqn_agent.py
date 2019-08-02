@@ -292,7 +292,7 @@ class DQNAgent(EpisodicAgentBase):
         return self._target(inputs=state_inputs, **self._qnet_caller_kwargs)
 
     def _get_td_error(self, qnet_qvalues, actions, y):
-        return y - tf.reduce_sum(qnet_qvalues * tf.to_float(actions), axis=1)
+        return y - tf.reduce_sum(qnet_qvalues * tf.cast(actions, tf.float), axis=1)
 
     def _get_train_op(self):
         train_op = opt.get_train_op(

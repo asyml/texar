@@ -19,9 +19,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import tensorflow as tf
+
 # pylint: disable=wildcard-import
 
-import sys
+if tf.__version__ >= "1.13.0":
+    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 if sys.version_info.major < 3:
     # PY 2.x, import as is because Texar-PyTorch cannot be installed.

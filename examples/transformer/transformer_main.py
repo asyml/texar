@@ -77,7 +77,7 @@ def main():
         1 - tf.to_int32(tf.equal(encoder_input, 0)), axis=1)
 
     labels = tf.placeholder(tf.int64, shape=(None, None))
-    is_target = tf.to_float(tf.not_equal(labels, 0))
+    is_target = tf.cast(tf.not_equal(labels, 0), tf.float32)
 
     global_step = tf.Variable(0, dtype=tf.int64, trainable=False)
     learning_rate = tf.placeholder(tf.float64, shape=(), name='lr')

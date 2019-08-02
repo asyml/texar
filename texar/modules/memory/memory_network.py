@@ -587,7 +587,7 @@ class MemNetRNNLike(MemNetBase):
                 random_tensor = keep_prob + noise
                 binary_tensor = tf.floor(random_tensor)
             def _variational_dropout(val):
-                return tf.div(val, keep_prob) * binary_tensor
+                return tf.math.div(val, keep_prob) * binary_tensor
 
         for _ in range(self._n_hops):
             u_ = self._AC(self._u[-1], self._m, self._c)

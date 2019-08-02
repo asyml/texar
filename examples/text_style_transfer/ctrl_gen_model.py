@@ -55,7 +55,7 @@ class CtrlGenModel(object):
         label_connector = MLPTransformConnector(self._hparams.dim_c)
 
         # Gets the sentence representation: h = (c, z)
-        labels = tf.to_float(tf.reshape(inputs['labels'], [-1, 1]))
+        labels = tf.cast(tf.reshape(inputs['labels'], [-1, 1]), tf.float32)
         c = label_connector(labels)
         c_ = label_connector(1 - labels)
         h = tf.concat([c, z], 1)
@@ -106,7 +106,7 @@ class CtrlGenModel(object):
             inputs=clas_embedder(ids=inputs['text_ids'][:, 1:]),
             sequence_length=inputs['length']-1)
         loss_d_clas = tf.nn.sigmoid_cross_entropy_with_logits(
-            labels=tf.to_float(inputs['labels']), logits=clas_logits)
+            labels=tf.cast(inputs['labels'], tf.float32), logits=clas_logits)
         loss_d_clas = tf.reduce_mean(loss_d_clas)
         accu_d = tx.evals.accuracy(labels=inputs['labels'], preds=clas_preds)
 
@@ -115,7 +115,7 @@ class CtrlGenModel(object):
             inputs=clas_embedder(soft_ids=soft_outputs_.sample_id),
             sequence_length=soft_length_)
         loss_g_clas = tf.nn.sigmoid_cross_entropy_with_logits(
-            labels=tf.to_float(1-inputs['labels']), logits=soft_logits)
+            labels=tf.cast(1-inputs['labels'], tf.float32), logits=soft_logits)
         loss_g_clas = tf.reduce_mean(loss_g_clas)
 
         # Accuracy on soft samples, for training progress monitoring

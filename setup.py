@@ -33,7 +33,7 @@ setuptools.setup(
     ],
     extras_require={
         'tensorflow-cpu': [
-            'tensorflow>=1.7.0,<2.0.0',
+            'tensorflow>=1.7.0',
             'tensorflow-probability>=0.3.0'
         ],
         'tensorflow-gpu': [

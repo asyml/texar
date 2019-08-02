@@ -102,7 +102,7 @@ class MLELossesTest(tf.test.TestCase):
         labels = tf.placeholder(dtype=tf.int32, shape=None)
         loss = tx.losses.sequence_sigmoid_cross_entropy(
             logits=self._logits[:, :, 0],
-            labels=tf.to_float(labels),
+            labels=tf.cast(labels, tf.float32),
             sequence_length=self._sequence_length)
         with self.test_session() as sess:
             rank = sess.run(
