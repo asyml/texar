@@ -105,10 +105,10 @@ class InterpolationHelper(SampleEmbeddingHelper):
             lambda: tf.ones_like(self._ground_truth[:, 0],
                                  dtype=tf.int32) * self._vocab.eos_token_id)
 
-        self_feeding = lambda : SampleEmbeddingHelper.sample(
+        self_feeding = lambda: SampleEmbeddingHelper.sample(
             self, time, outputs, state, name)
 
-        reward_feeding = lambda : self._sample_by_reward(time, state)
+        reward_feeding = lambda: self._sample_by_reward(time, state)
 
         sample_ids = tf.cond(
             tf.logical_or(tf.equal(time, 0), tf.equal(sample_method_id, 1)),

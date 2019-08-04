@@ -22,8 +22,8 @@ import pickle
 import random
 import os
 import importlib
-from torchtext import data
 import tensorflow as tf
+from torchtext import data
 import texar as tx
 from texar.modules import TransformerEncoder, TransformerDecoder
 from texar.utils import transformer_utils

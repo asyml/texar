@@ -198,7 +198,7 @@ def main(_):
         periodically.
         """
         iterator.restart_dataset(sess, 'train')
-        
+
         fetches = {
             'train_op': train_op,
             'loss': loss,

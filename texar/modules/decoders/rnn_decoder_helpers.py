@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import tensorflow as tf
 from tensorflow.python.ops import array_ops
-from tensorflow.python.ops.distributions import categorical
 from tensorflow_probability import distributions as tfpd
 
 from texar.modules.decoders.tf_helpers import \

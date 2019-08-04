@@ -27,8 +27,7 @@ from packaging import version
 import tensorflow as tf
 
 
-VERSION_WARNING =  "1.13.2"
-
+VERSION_WARNING = "1.13.2"
 
 if version.parse(tf.__version__) <= version.parse(VERSION_WARNING):
     tf.logging.set_verbosity(tf.logging.ERROR)
