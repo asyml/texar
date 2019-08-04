@@ -79,7 +79,7 @@ agent = tx.agents.SeqPGAgent(samples=outputs.sample_id,
 Many more examples are available [here](./examples)
   
 ### Installation
-Texar requires tensorflow 1.7.0 or higher (lower than tensorflow 2.0.0a0) and tensorflow_probability 0.3.0 or higher. Please follow the [tensorflow official instructions](https://www.tensorflow.org/install) and [tensorflow_probability official instractions](https://www.tensorflow.org/probability/install) to install the appropriate version.
+Texar requires tensorflow 1.10.0 or higher (lower than tensorflow 2.0.0a0) and tensorflow_probability 0.3.0 or higher. Please follow the [tensorflow official instructions](https://www.tensorflow.org/install) and [tensorflow_probability official instractions](https://www.tensorflow.org/probability/install) to install the appropriate version.
 
 After Tensorflow is installed, please run the following commands to install Texar:
 ```
