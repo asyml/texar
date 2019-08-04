@@ -74,7 +74,7 @@ def main():
     batch_size = tf.shape(encoder_input)[0]
     # (text sequence length excluding padding)
     encoder_input_length = tf.reduce_sum(
-        1 - tf.to_int32(tf.equal(encoder_input, 0)), axis=1)
+        1 - tf.cast(tf.equal(encoder_input, 0), tf.int32), axis=1)
 
     labels = tf.placeholder(tf.int64, shape=(None, None))
     is_target = tf.cast(tf.not_equal(labels, 0), tf.float32)

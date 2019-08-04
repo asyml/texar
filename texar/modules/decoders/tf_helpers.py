@@ -40,8 +40,7 @@ from tensorflow.python.ops import embedding_ops
 from tensorflow.python.ops import gen_array_ops
 from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import tensor_array_ops
-from tensorflow.python.ops.distributions import bernoulli
-from tensorflow.python.ops.distributions import categorical
+from tensorflow_probability import distributions as tfpd
 from tensorflow.python.util import nest
 
 from texar.utils.shapes import shape_list
@@ -340,11 +339,11 @@ class ScheduledEmbeddingTrainingHelper(TrainingHelper):
         with ops.name_scope(name, "ScheduledEmbeddingTrainingHelperSample",
                             [time, outputs, state]):
             # Return -1s where we did not sample, and sample_ids elsewhere
-            select_sampler = bernoulli.Bernoulli(
+            select_sampler = tfpd.Bernoulli(
                 probs=self._sampling_probability, dtype=dtypes.bool)
             select_sample = select_sampler.sample(
                 sample_shape=self.batch_size, seed=self._scheduling_seed)
-            sample_id_sampler = categorical.Categorical(logits=outputs)
+            sample_id_sampler = tfpd.Categorical(logits=outputs)
             return array_ops.where(
                 select_sample,
                 sample_id_sampler.sample(seed=self._seed),
@@ -468,7 +467,7 @@ class ScheduledOutputTrainingHelper(TrainingHelper):
         """Gets a sample for one step."""
         with ops.name_scope(name, "ScheduledOutputTrainingHelperSample",
                             [time, outputs, state]):
-            sampler = bernoulli.Bernoulli(probs=self._sampling_probability)
+            sampler = tfpd.Bernoulli(probs=self._sampling_probability)
             return sampler.sample(sample_shape=self.batch_size, seed=self._seed)
 
     def next_inputs(self, time, outputs, state, sample_ids, name=None):
@@ -700,7 +699,7 @@ class SampleEmbeddingHelper(GreedyEmbeddingHelper):
         else:
             logits = outputs / self._softmax_temperature
 
-        sample_id_sampler = categorical.Categorical(logits=logits)
+        sample_id_sampler = tfpd.Categorical(logits=logits)
         sample_ids = sample_id_sampler.sample(seed=self._seed)
 
         return sample_ids

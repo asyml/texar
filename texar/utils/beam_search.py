@@ -306,7 +306,7 @@ def beam_search(symbols_to_logits_fn,
 
         # Set the scores of the unfinished seq in curr_seq to large
         # negative values
-        curr_scores += (1. - tf.cast(curr_finished), tf.float32) * -INF
+        curr_scores += (1. - tf.cast(curr_finished, tf.float32)) * -INF
         # concatenating the sequences and scores along beam axis
         curr_finished_seq = tf.concat([finished_seq, curr_seq], axis=1)
         curr_finished_scores = tf.concat([finished_scores, curr_scores],

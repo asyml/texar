@@ -24,6 +24,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import tensorflow as tf
+from tensorflow_probability import distributions as tfpd
 
 # pylint: disable=invalid-name, too-many-arguments, too-many-locals
 
@@ -68,7 +69,7 @@ class PadRemover(object):
             # float32, checking zero equality is done with |x| < epsilon, with
             # epsilon=1e-9 as standard, here pad_mask only contains positive
             # values so tf.abs would be redundant)
-            self.nonpad_ids = tf.to_int32(tf.where(pad_mask < 1e-9))
+            self.nonpad_ids = tf.cast(tf.where(pad_mask < 1e-9), tf.int32)
             self.dim_origin = tf.shape(pad_mask)[:1]
 
     def remove(self, x):
@@ -161,8 +162,7 @@ def smoothing_cross_entropy(logits,
 
         if gaussian and confidence > 0.0:
             labels = tf.cast(labels, tf.float32)
-            normal_dist = tf.distributions.Normal(loc=labels,
-                                                  scale=confidence)
+            normal_dist = tfpd.Normal(loc=labels, scale=confidence)
             soft_targets = normal_dist.prob(
                 tf.cast(tf.range(vocab_size), tf.float32)\
                     [:, None, None])

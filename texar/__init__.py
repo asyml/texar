@@ -19,11 +19,20 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
 
 # pylint: disable=wildcard-import
 
-if tf.__version__ >= "1.13.0":
+import sys
+from packaging import version
+import tensorflow as tf
+
+
+VERSION_WARNING =  "1.13.2"
+
+
+if version.parse(tf.__version__) <= version.parse(VERSION_WARNING):
+    tf.logging.set_verbosity(tf.logging.ERROR)
+else:
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 if sys.version_info.major < 3:
