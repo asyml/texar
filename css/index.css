@@ -1,0 +1,77 @@
+.row-img {
+  display: flex;
+}
+
+.col-img {
+  /* flex: 33.33%; */
+  flex: 40%;
+  padding: 5px;
+}
+
+.hero .inner,
+.logos img,
+.apps .app-row .app-cell>div,
+.apps .app-row .btn {
+    position: relative;
+    top: 50%;
+    -webkit-transform: translateY(-50%);
+    -ms-transform: translateY(-50%);
+    transform: translateY(-50%)
+}
+.hero {
+    background-image: url(../assets/1.jpg);
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+    background-color: #333;
+    height: 500px;
+    position: relative;
+    margin-bottom: 50px;
+}
+.hero .container {
+    height: 100%;
+    text-align: center
+}
+.hero h1 {
+    color: #fff;
+    font-size: 40px;
+    letter-spacing: -0.01em;
+    line-height: 1.22em;
+    margin-bottom: 30px
+}
+.hero h2 {
+    color: #fff;
+    font-size: 18px;
+    line-height: 1.55em;
+    letter-spacing: 0em;
+    margin-bottom: 25px
+}
+@media screen and (max-width: 400px) {
+    .hero h1 {
+        font-size: 30px
+    }
+    .hero h2 {
+        font-size: 15px
+    }
+    .hero .btn {
+        font-size: 13px
+    }
+}
+.hero .btn {
+    font-weight: 600;
+    font-size: 18px;
+    height: 48px;
+    line-height: 46px;
+    padding: 0 45px;
+    border: 2px solid #fff;
+    margin-top: 10px;
+    color: #fff;
+    -webkit-border-radius: 24px;
+    -moz-border-radius: 24px;
+    -ms-border-radius: 24px;
+    border-radius: 24px
+}
+.hero .btn:hover {
+    background-color: #fff;
+    color: #672FFF 
+}
