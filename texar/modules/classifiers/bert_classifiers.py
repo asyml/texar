@@ -273,7 +273,7 @@ class BertClassifier(ClassifierBase):
             else:
                 pred = tf.argmax(logits, axis=-1)
             pred = tf.reshape(pred, [-1])
-        pred = tf.to_int64(pred)
+        pred = tf.cast(pred, tf.int64)
 
         if not self._built:
             self._add_internal_trainable_variables()

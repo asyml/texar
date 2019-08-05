@@ -182,7 +182,7 @@ class Vocab(object):
         Returns:
             A tensor of text tokens of the same shape.
         """
-        return self.id_to_token_map.lookup(tf.to_int64(ids))
+        return self.id_to_token_map.lookup(tf.cast(ids, tf.int64))
 
     def map_tokens_to_ids(self, tokens):
         """Maps text tokens into ids.

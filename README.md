@@ -4,6 +4,8 @@
  
 -----------------
 
+
+[![pypi](https://img.shields.io/pypi/v/texar.svg)](https://pypi.python.org/pypi/texar)
 [![Build Status](https://travis-ci.org/asyml/texar.svg?branch=master)](https://travis-ci.org/asyml/texar)
 [![Documentation Status](https://readthedocs.org/projects/texar/badge/?version=latest)](https://texar.readthedocs.io/en/latest/?badge=latest)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/asyml/texar/blob/master/LICENSE)
@@ -79,6 +81,13 @@ agent = tx.agents.SeqPGAgent(samples=outputs.sample_id,
 Many more examples are available [here](./examples)
   
 ### Installation
+Besides the packages in requirements.txt, Texar additionally requires:
+
+* tensorflow >= 1.10.0 (but <= 2.0). Follow the tensorflow official instructions to install the appropriate version
+
+* tensorflow_probability >= 0.3.0. Follow the tensorflow_probability official instractions to install.
+
+After Tensorflow is installed, please run the following commands to install Texar:
 ```
 git clone https://github.com/asyml/texar.git
 cd texar

@@ -279,9 +279,10 @@ class SinusoidsPositionEmbedder(EmbedderBase):
 
         log_timescale_increment = math.log(
             float(max_timescale) / float(min_timescale)
-        ) / (tf.to_float(num_timescales) - 1)
+        ) / (tf.cast(num_timescales, tf.float32) - 1)
+        num_range = tf.range(num_timescales, dtype=tf.float32)
         inv_timescales = min_timescale * tf.exp(
-            tf.to_float(tf.range(num_timescales)) * -log_timescale_increment
+            num_range * -log_timescale_increment
         )
         self.inv_timescales = inv_timescales
 
@@ -291,7 +292,8 @@ class SinusoidsPositionEmbedder(EmbedderBase):
                     "'position_size' must not be None when "
                     "'cache_embeddings' is set to True"
                 )
-            positions = tf.to_float(tf.range(position_size, dtype=tf.int32))
+            
+            positions = tf.range(position_size, dtype=tf.float32)
             signal = self._compute_embeddings(positions)
             self.signal = signal
 

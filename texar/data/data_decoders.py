@@ -630,7 +630,7 @@ class TFRecordDataDecoder(data_decoder.DataDecoder):
             if from_type is to_type:
                 continue
             elif to_type is tf.string:
-                decoded_data[key] = tf.dtypes.as_string(decoded_data[key])
+                decoded_data[key] = tf.as_string(decoded_data[key])
             elif from_type is tf.string:
                 decoded_data[key] = tf.string_to_number(
                     decoded_data[key], to_type)

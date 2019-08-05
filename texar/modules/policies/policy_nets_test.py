@@ -9,6 +9,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import tensorflow as tf
+from tensorflow_probability import distributions as tfpd
 
 from texar.modules.policies.policy_nets import CategoricalPolicyNet
 
@@ -26,7 +27,7 @@ class CategoricalPolicyNetTest(tf.test.TestCase):
         self.assertEqual(list(outputs['action'].shape[1:]),
                          list(policy.action_space.shape))
         self.assertIsInstance(outputs['dist'],
-                              tf.distributions.Categorical)
+                              tfpd.Categorical)
 
 
         inputs = tf.random_uniform(shape=[64, 4])

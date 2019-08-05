@@ -14,8 +14,12 @@ import sys
 import copy
 import shutil
 import tempfile
+import ssl
 import tensorflow as tf
 import texar as tx
+
+
+ssl._create_default_https_context = ssl._create_unverified_context
 
 
 class TFRecordDataTest(tf.test.TestCase):

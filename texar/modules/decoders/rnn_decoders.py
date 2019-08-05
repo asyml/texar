@@ -683,4 +683,3 @@ class AttentionRNNDecoder(RNNDecoderBase):
         Equivalent to :attr:`decoder.cell.state_size`.
         """
         return self._cell.state_size
-

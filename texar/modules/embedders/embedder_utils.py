@@ -208,8 +208,9 @@ def get_embedding(hparams=None,
                                         regularizer=regularizer,
                                         trainable=hparams["trainable"])
         else:
+            init_value = tf.cast(init_value, tf.float32)
             embedding = tf.get_variable(name='w',
-                                        initializer=tf.to_float(init_value),
+                                        initializer=init_value,
                                         regularizer=regularizer,
                                         trainable=hparams["trainable"])
 
@@ -239,4 +240,4 @@ def soft_embedding_lookup(embedding, soft_ids):
         soft_seq_emb = soft_embedding_lookup(
             embedding, tf.nn.softmax(decoder_outputs.logits))
     """
-    return tf.tensordot(tf.to_float(soft_ids), embedding, [-1, 0])
+    return tf.tensordot(tf.cast(soft_ids, tf.float32), embedding, [-1, 0])

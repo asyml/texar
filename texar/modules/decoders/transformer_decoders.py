@@ -510,7 +510,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 cache=None,
                 mode=mode)
             logits = self._output_layer(decoder_output)
-            preds = tf.to_int32(tf.argmax(logits, axis=-1))
+            preds = tf.cast(tf.argmax(logits, axis=-1), tf.int32)
             rets = TransformerDecoderOutput(
                 logits=logits,
                 sample_id=preds
