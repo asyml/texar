@@ -5,6 +5,16 @@
 
 ### Feature improvements
 
+### Fixes
+
+## [v0.2.2](https://github.com/asyml/texar/releases/tag/v0.2.2) (2019-08-05)
+
+### New features
+
+* Enable installation from [Pypi](https://pypi.org/project/texar/). ([#186](https://github.com/asyml/texar/pull/186))
+
+### Feature improvements
+
 * Use lazy import to be compatible with [texar-pytorch](https://github.com/asyml/texar-pytorch). ([#183](https://github.com/asyml/texar/pull/183)) 
 
 ### Fixes
