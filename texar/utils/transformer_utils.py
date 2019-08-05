@@ -158,7 +158,7 @@ def smoothing_cross_entropy(logits,
                 vocab_size - 2, tf.float32)
         else:
             low_confidence = (1.0 - confidence) / tf.cast(
-                vocab_size - 1, f.float32)
+                vocab_size - 1, tf.float32)
 
         if gaussian and confidence > 0.0:
             labels = tf.cast(labels, tf.float32)
