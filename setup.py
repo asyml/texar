@@ -15,7 +15,7 @@ interfaces.
 
 setuptools.setup(
     name="texar",
-    version="0.2.1",
+    version="0.2.2",
     url="https://github.com/asyml/texar",
 
     description="Toolkit for Machine Learning and Text Generation",
@@ -30,14 +30,15 @@ setuptools.setup(
         'pyyaml',
         'requests',
         'funcsigs>=1.0.2',
+        'packaging'
     ],
     extras_require={
         'tensorflow-cpu': [
-            'tensorflow>=1.10.0',
+            'tensorflow>=1.10.0,<2.0',
             'tensorflow-probability>=0.3.0'
         ],
         'tensorflow-gpu': [
-            'tensorflow-gpu>=1.10.0',
+            'tensorflow-gpu>=1.10.0,<2.0',
             'tensorflow-probability-gpu>=0.3.0'
         ]
     },
