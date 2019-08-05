@@ -11,7 +11,7 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/asyml/texar/blob/master/LICENSE)
  
 
-**Texar** is a toolkit aiming to support a broad set of machine learning, especially natural language processing and text generation tasks. Texar provides a library of highly reusable ML modules and functionalities for composing whatever models and algorithms. The tool is designed for both researchers and practitioners for fast prototyping and experimentation.
+**Texar** is a toolkit aiming to support a broad set of machine learning, especially natural language processing and text generation tasks. Texar provides a library of easy-to-use ML modules and functionalities for composing whatever models and algorithms. The tool is designed for both researchers and practitioners for fast prototyping and experimentation.
 
 
 ### Key Features
@@ -23,7 +23,7 @@
 * **Versatile** to support broad tasks, models, algorithms, data processing, evaluation, etc. 
    - encoder(s) to decoder(s), sequential- and self-attentions, memory, hierarchical models, classifiers... 
    - maximum likelihood learning, reinforcement learning, adversarial learning, probabilistic modeling, ... 
-* **Modularized** for maximal re-use and clean APIs, based on principled decomposition of *Learning--Inference--Model Architecture*. 
+* **Modularized** for maximal re-use and clean APIs, based on principled decomposition of *Learning-Inference-Model Architecture*. 
 * **Distributed** model training with multiple GPUs.
 * Clean, detailed [documentation](https://texar.readthedocs.io) and rich [examples](./examples).
 
@@ -77,17 +77,17 @@ agent = tx.agents.SeqPGAgent(samples=outputs.sample_id,
 Many more examples are available [here](./examples)
   
 ### Installation
-Besides the packages in requirements.txt, Texar additionally requires:
+Texar requires:
 
-* `tensorflow >= 1.10.0 (but <= 2.0)`. Follow the tensorflow official instructions to install the appropriate version
-* `tensorflow_probability >= 0.3.0`. Follow the tensorflow_probability official instractions to install.
+* `tensorflow >= 1.10.0 (but <= 2.0)`. Follow the [tensorflow official instructions](https://www.tensorflow.org/install) to install the appropriate version
+* `tensorflow_probability >= 0.3.0`. Follow the [tensorflow_probability official instractions](https://www.tensorflow.org/probability/install) to install.
 
-Install from PyPI: 
+After `tensorflow` and `tensorflow_probability` are installed, install Texar from PyPI: 
 ```bash
 pip install texar
 ```
 
-To use the cutting-edge features or develop locally, install from source: 
+To use cutting-edge features or develop locally, install from source: 
 ```
 git clone https://github.com/asyml/texar.git
 cd texar
