@@ -24,18 +24,13 @@ from __future__ import print_function
 
 import sys
 from packaging import version
-import tensorflow as tf
 
 
 VERSION_WARNING = "1.13.2"
 
-if version.parse(tf.__version__) <= version.parse(VERSION_WARNING):
-    tf.logging.set_verbosity(tf.logging.ERROR)
-else:
-    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
-
 if sys.version_info.major < 3:
     # PY 2.x, import as is because Texar-PyTorch cannot be installed.
+    import tensorflow as tf
     from texar.version import VERSION as __version__
 
     from texar.module_base import *
@@ -50,6 +45,12 @@ if sys.version_info.major < 3:
     from texar import agents
     from texar import run
     from texar import utils
+
+    if version.parse(tf.__version__) <= version.parse(VERSION_WARNING):
+        tf.logging.set_verbosity(tf.logging.ERROR)
+    else:
+        tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+
 else:
     # Lazily load Texar-TF modules upon usage. This is to ensure that Texar-TF
     # and TensorFlow will not be imported if the user only requires
@@ -83,6 +84,11 @@ else:
 
 
     def _import_all():
+        import tensorflow as tf
+        if version.parse(tf.__version__) <= version.parse(VERSION_WARNING):
+            tf.logging.set_verbosity(tf.logging.ERROR)
+        else:
+            tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
         from texar.version import VERSION
         globals()["__version__"] = VERSION
 
