@@ -1,0 +1,16 @@
+
+.lead-small {
+  margin-bottom: 20px;
+  font-size: 12px;
+  font-weight: 300;
+  line-height: 1.4;
+}
+@media (min-width: 768px) {
+  .lead-small {
+    font-size: 17px;
+  }
+}
+.lead-small li {
+    font-size: 15px;
+    margin-bottom: 5px;
+}
