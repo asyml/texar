@@ -7,6 +7,8 @@
 
 ### Fixes
 
+* Fix docstring of connector `_mlp_transform`. ([#192](https://github.com/asyml/texar/pull/192))
+
 ## [v0.2.2](https://github.com/asyml/texar/releases/tag/v0.2.2) (2019-08-05)
 
 ### New features
