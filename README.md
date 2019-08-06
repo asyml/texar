@@ -33,32 +33,35 @@
 </div> 
 
 ### Library API Example
-Builds a (self-)attentional sequence encoder-decoder model, with different learning algorithms:
+Builds an encoder-decoder model, with maximum likelihood learning:
 ```python
 import texar as tx
 
 # Data 
-data = tx.data.PairedTextData(hparams=hparams_data) # Hyperparameter configs in `hparams` 
+data = tx.data.PairedTextData(hparams=hparams_data) # a dict of hyperparameters 
 iterator = tx.data.DataIterator(data)
-batch = iterator.get_next() # A data mini-batch
+batch = iterator.get_next()                         # get a data mini-batch
 
 # Model architecture
 embedder = tx.modules.WordEmbedder(data.target_vocab.size, hparams=hparams_emb)
-encoder = tx.modules.TransformerEncoder(hparams=hparams_encoder)
-outputs_enc = encoder(inputs=embedder(batch['source_text_ids']),
+encoder = tx.modules.TransformerEncoder(hparams=hparams_enc)
+outputs_enc = encoder(inputs=embedder(batch['source_text_ids']),  # call as a function
                       sequence_length=batch['source_length'])
                       
-decoder = tx.modules.AttentionRNNDecoder(memory=output_enc, 
-                                         memory_sequence_length=batch['source_length'],
-                                         hparams=hparams_decoder)
-outputs, _, _ = decoder(inputs=embedder(batch['target_text_ids']),
-                        sequence_length=batch['target_length']-1)
+decoder = tx.modules.TransformerDecoder(
+    output_layer=tf.transpose(embedder.embedding) # tie input embedding w/ output layer
+    hparams=hparams_decoder)
+outputs, _, _ = decoder(memory=output_enc, 
+                        memory_sequence_length=batch['source_length'],
+                        inputs=embedder(batch['target_text_ids']),
+                        sequence_length=batch['target_length']-1,
+                        decoding_strategy='greedy_train')    # teacher-forcing decoding
                         
 # Loss for maximum likelihood learning
 loss = tx.losses.sequence_sparse_softmax_cross_entropy(
     labels=batch['target_text_ids'][:, 1:],
     logits=outputs.logits,
-    sequence_length=batch['target_length']-1) # Automatic masks
+    sequence_length=batch['target_length']-1)  # automatic sequence masks
 
 # Beam search decoding
 outputs_bs, _, _ = tx.modules.beam_search_decode(
@@ -67,8 +70,21 @@ outputs_bs, _, _ = tx.modules.beam_search_decode(
     start_tokens=[data.target_vocab.bos_token_id]*num_samples,
     end_token=data.target_vocab.eos_token_id)
 ```
+The same model, but with adversarial learning:
 ```python
-# Policy gradient agent for RL learning
+helper = tx.modules.GumbelSoftmaxTraingHelper( # Gumbel-softmax decoding
+    start_tokens=[BOS]*batch_size, end_token=EOS, embedding=embedder)
+outputs, _ = decoder(helper=helper)            # automatic re-use of the decoder variables
+
+discriminator = tx.modules.BertClassifier(hparams=hparams_bert)        # pre-trained model
+
+G_loss, D_loss = tx.losses.binary_adversarial_losses(
+    real_data=data['target_text_ids'][:, 1:],
+    fake_data=outputs.sample_id,
+    discriminator_fn=discriminator)
+```
+The same model, but with RL policy gradient learning:
+```python
 agent = tx.agents.SeqPGAgent(samples=outputs.sample_id,
                              logits=outputs.logits,
                              sequence_length=batch['target_length']-1,
