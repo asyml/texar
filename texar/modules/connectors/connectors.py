@@ -80,7 +80,11 @@ def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
             Tensors with shape `[max_time, batch_size, ...]` (i.e., time-major)
             can be transposed to batch-major using
             :func:`~texar.utils.transpose_batch_time` prior to this
-            function.
+            function(The `max_time` dimension will not be ).
+            If :attr:`inputs` is A N-D(N > 2) tensor of shape
+            `[batch_size, d1, d2, ..., dn]` or a (nested) tuple of
+            N-D Tensors, then all dimension `d1, .., dn` will be treated the
+            same and transformed with a dense layer.
         output_size: Can be an Integer, a TensorShape, or a (nested) tuple of
             Integers or TensorShape.
         activation_fn: Activation function applied to the output.
