@@ -227,7 +227,7 @@ class Vocab(object):
 
     @property
     def id_to_token_map(self):
-        """The :tf_main:`HashTable <contrib/lookup/HashTable>`instance that
+        """The :tf_main:`HashTable <contrib/lookup/HashTable>` instance that
         maps from token index to the string form.
         """
         return self._id_to_token_map

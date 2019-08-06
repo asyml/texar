@@ -22,11 +22,10 @@ from __future__ import print_function
 import tensorflow as tf
 
 from texar.core import layers
-from texar.utils import transformer_attentions as attn
+from texar.utils import transformer_attentions as attn, transformer_utils
 from texar.modules.encoders.encoder_base import EncoderBase
 from texar.modules.encoders.multihead_attention import MultiheadAttentionEncoder
 from texar.modules.networks.networks import FeedForwardNetwork
-import texar.utils as utils
 from texar.utils.shapes import shape_list
 from texar.utils.mode import is_train_mode
 
@@ -320,7 +319,7 @@ class TransformerEncoder(EncoderBase):
         if self._hparams.use_bert_config:
             pad_remover = None
         else:
-            pad_remover = utils.transformer_utils.PadRemover(inputs_padding)
+            pad_remover = transformer_utils.PadRemover(inputs_padding)
 
         for i in range(self._hparams.num_blocks):
             with tf.variable_scope("layer_{}".format(i)):

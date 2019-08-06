@@ -227,8 +227,7 @@ class DQNAgent(EpisodicAgentBase):
 
             - If **"copy"**, the target network is assigned with the parameter \
             of Q-net every :attr:`"update_period"` steps.
-
-            - If **"tau"**, target will be updated by assigning as
+            - If **"tau"**, target will be updated by assigning as \
             ``` (1 - 1/update_period) * target + 1/update_period * qnet ```
 
         "update_period": int

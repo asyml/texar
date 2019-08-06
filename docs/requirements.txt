@@ -2,6 +2,8 @@ sphinx
 sphinx-rtd-theme >= 0.2.4
 sphinxcontrib-napoleon >= 0.6.1
 Pygments >= 2.1.1
-tensorflow >= 1.7.0
+tensorflow >= 1.10.0
+tensorflow_probability >= 0.3.0
 pyyaml
 funcsigs
+packaging
