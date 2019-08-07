@@ -45,7 +45,7 @@ class RegressorBase(ModuleBase):
         """Runs regressors on inputs.
 
         Args:
-          inputs: Inputs to the classifier.
+          inputs: Inputs to the regressor.
           *args: Other arguments.
           **kwargs: Keyword arguments.
 
