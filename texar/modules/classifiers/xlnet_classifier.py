@@ -231,7 +231,8 @@ class XLNetClassifier(ClassifierBase):
                 self._encoder.output_size*self._hparams.max_seq_len
             summary = tf.reshape(summary_input, shape=[-1, summary_input_dim])
         else:
-            raise ValueError(f"Unknown classification strategy: {strategy}")
+            raise ValueError("Unknown classification strategy: {}"
+                             .format(strategy))
 
         if self._hparams.use_projection:
             summary = tf.tanh(self.projection(summary))

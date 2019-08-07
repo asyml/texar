@@ -233,7 +233,7 @@ class RelativePositionalEncoding(ModuleBase):
         elif attn_type == 'uni':
             start, end = total_len, -1
         else:
-            raise ValueError(f"Unknown `attn_type` {attn_type}")
+            raise ValueError("Unknown `attn_type` {}".format(attn_type))
 
         if bi_data:
             if batch_size % 2 != 0:

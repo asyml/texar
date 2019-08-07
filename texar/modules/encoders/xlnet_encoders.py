@@ -349,7 +349,7 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
                 decay_rate = lr_layer_scale ** (num_layers - idx - 1)
                 param_group = {
                     "params": tf.trainable_variables(
-                        scope=scope + "/" + f"layer_{idx}/"),
+                        scope=scope + "/" + "layer_{}".format(idx)),
                     "lr": lr * decay_rate,
                 }
                 param_groups.append(param_group)
