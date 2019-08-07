@@ -29,8 +29,7 @@ setuptools.setup(
         'numpy<1.17.0',
         'pyyaml',
         'requests',
-        'funcsigs>=1.0.2',
-        'packaging'
+        'funcsigs>=1.0.2'
     ],
     extras_require={
         'tensorflow-cpu': [
