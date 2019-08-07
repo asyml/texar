@@ -29,7 +29,7 @@ from texar.modules.pretrained.pretrained_utils import default_download_dir
 from texar.data.data_utils import maybe_download
 
 __all__ = [
-    'init_from_checkpoint',
+    'init_xlnet_checkpoint',
     'load_pretrained_xlnet',
     'transform_xlnet_to_texar_config'
 ]
@@ -41,26 +41,14 @@ _MODEL2URL = {
 }
 
 
-def init_from_checkpoint(init_checkpoint_dir, global_vars=False):
-    tvars = tf.global_variables() if global_vars else tf.trainable_variables()
-    tf.logging.info("Initialize from the ckpt {}".format(init_checkpoint_dir))
-    init_checkpoint = os.path.join(init_checkpoint_dir, 'xlnet_model.ckpt')
-    (assignment_map, initialized_variable_names
-     ) = get_assignment_map_from_checkpoint(tvars, init_checkpoint)
-    tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
-
-    # Log customized initialization
-    tf.logging.info("**** Global Variables ****")
-    for var in tvars:
-        init_string = ""
-        if var.name in initialized_variable_names:
-            init_string = ", *INIT_FROM_CKPT*"
-        tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
-                        init_string)
-
-
-def get_assignment_map_from_checkpoint(tvars, init_checkpoint):
-    """Compute the union of the current variables and checkpoint variables."""
+def _get_assignment_map_from_checkpoint(tvars,  # noqa: C901
+                                        init_checkpoint, scope_name):
+    """
+    Compute the union of the current variables and checkpoint variables.
+    Because of the variable scope of the original XLNet and Texar
+    implementation, we need to build a assignment map to match the variables.
+    """
+    assignment_map = {}
     initialized_variable_names = {}
 
     name_to_variable = collections.OrderedDict()
@@ -73,16 +61,61 @@ def get_assignment_map_from_checkpoint(tvars, init_checkpoint):
 
     init_vars = tf.train.list_variables(init_checkpoint)
 
-    assignment_map = collections.OrderedDict()
-    for x in init_vars:
-        (name, var) = (x[0], x[1])
-        if name not in name_to_variable:
-            continue
-        assignment_map[name] = name_to_variable[name]
-        initialized_variable_names[name] = 1
-        initialized_variable_names[name + ":0"] = 1
+    for check_name, _ in init_vars:
+        check_name_scope = check_name.replace(
+            'model/transformer/', scope_name + '/')
+        model_name = check_name_scope
+        if check_name.startswith('model/lm_loss/bias'):
+            model_name = scope_name + '/lm_loss/bias'
+        elif check_name.startswith('model/transformer/mask_emb'):
+            model_name = check_name_scope.replace(
+                'mask_emb/mask_emb', 'mask_emb')
+        elif check_name.startswith('model/transformer/word_embedding'):
+            model_name = scope_name + '/word_embedder/w'
+        elif re.match('model/transformer/r_[r,s,w]_bias', check_name):
+            model_name = check_name_scope
+        elif re.match('model/transformer/seg_embed', check_name):
+            model_name = check_name_scope
+        elif re.match('model/transformer/layer_\\d+/rel_attn/[q,k,v,r,o]',
+                      check_name):
+            model_name = check_name_scope
+        elif re.match('model/transformer/layer_\\d+/rel_attn/LayerNorm',
+                      check_name):
+            model_name = check_name_scope.replace('LayerNorm/', '')
+        elif re.match('model/transformer/layer_\\d+/ff/layer_[1,2]',
+                      check_name):
+            model_name = check_name_scope.replace('ff/layer_1', 'ff/dense')
+            if model_name == check_name_scope:
+                model_name = check_name_scope.replace(
+                    'ff/layer_2', 'ff/dense_1')
+        elif re.match('model/transformer/layer_\\d+/ff/LayerNorm', check_name):
+            model_name = check_name_scope.replace('LayerNorm/', '')
+
+        if model_name in name_to_variable.keys():
+            assignment_map[check_name] = model_name
+            initialized_variable_names[model_name] = 1
+            initialized_variable_names[model_name + ":0"] = 1
+        else:
+            tf.logging.info('model name:{} not exist'.format(model_name))
 
     return assignment_map, initialized_variable_names
+
+
+def init_xlnet_checkpoint(init_checkpoint_dir, scope_name):
+    """
+    Initializes XLnet model parameters from a checkpoint.
+
+    Args:
+        init_checkpoint_dir (str): path to the checkpoint.
+        scope_name: variable scope of XLNet encoder.
+    """
+    tvars = tf.trainable_variables()
+    init_checkpoint = os.path.join(init_checkpoint_dir, 'xlnet_model.ckpt')
+    if init_checkpoint:
+        assignment_map, initialized_variable_names = \
+            _get_assignment_map_from_checkpoint(
+                tvars, init_checkpoint, scope_name)
+        tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
 
 def load_pretrained_xlnet(pretrained_model_name, cache_dir=None):

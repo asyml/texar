@@ -75,6 +75,8 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
                                     self._hparams.todict())
 
         num_layers = self._hparams.num_layers
+        use_segments = self._hparams.use_segments
+        untie_r = self._hparams.untie_r
 
         with tf.variable_scope(self.variable_scope):
 
@@ -82,7 +84,18 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
                 tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
 
-            if not self._hparams.untie_r:
+            if untie_r:
+                self.r_w_bias = tf.get_variable('r_w_bias',
+                                                [num_layers,
+                                                 self._hparams.num_heads,
+                                                 self._hparams.head_dim],
+                                                dtype=tf.float32)
+                self.r_r_bias = tf.get_variable('r_r_bias',
+                                                [num_layers,
+                                                 self._hparams.num_heads,
+                                                 self._hparams.head_dim],
+                                                dtype=tf.float32)
+            else:
                 self.r_w_bias = tf.get_variable('r_w_bias',
                                                 [self._hparams.num_heads,
                                                  self._hparams.head_dim],
@@ -91,14 +104,26 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
                                                 [self._hparams.num_heads,
                                                  self._hparams.head_dim],
                                                 dtype=tf.float32)
-                self.r_s_bias = tf.get_variable('r_s_bias',
-                                                [self._hparams.num_heads,
-                                                 self._hparams.head_dim],
-                                                dtype=tf.float32)
+
+            if use_segments:
+                self.segment_embed = tf.get_variable('seg_embed',
+                                                     [num_layers, 2,
+                                                      self._hparams.num_heads,
+                                                      self._hparams.head_dim],
+                                                     dtype=tf.float32)
+                self.r_s_bias = (tf.get_variable('r_s_bias',
+                                                 [num_layers,
+                                                  self._hparams.num_heads,
+                                                  self._hparams.head_dim],
+                                                 dtype=tf.float32) if untie_r
+                                 else tf.get_variable('r_s_bias',
+                                                      [self._hparams.num_heads,
+                                                       self._hparams.head_dim],
+                                                      dtype=tf.float32))
             else:
-                self.r_w_bias = None
-                self.r_r_bias = None
+                self.segment_embed = None
                 self.r_s_bias = None
+
             # Word embedding
             self.word_embedder = WordEmbedder(
                 vocab_size=self._hparams.vocab_size,
@@ -114,15 +139,37 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
             self.ff_layers = []
             rel_attn_hparams = dict_fetch(
                 self._hparams, RelativeMutiheadAttention.default_hparams())
+            rel_attn_hparams["name"] = "rel_attn"
 
             ff_hparams = dict_fetch(
                 self._hparams, PositionWiseFF.default_hparams())
+            ff_hparams["name"] = "ff"
 
-            for _ in range(num_layers):
-                self.attn_layers.append(RelativeMutiheadAttention(
-                    self.r_r_bias, self.r_w_bias, self.r_s_bias,
-                    hparams=rel_attn_hparams))
-                self.ff_layers.append(PositionWiseFF(hparams=ff_hparams))
+            for i in range(num_layers):
+                with tf.variable_scope("layer_{}".format(i)):
+                    if self._hparams.untie_r:
+                        if use_segments:
+                            self.attn_layers.append(RelativeMutiheadAttention(
+                                self.r_r_bias[i], self.r_w_bias[i],
+                                self.r_s_bias[i],
+                                self.segment_embed[i],
+                                hparams=rel_attn_hparams))
+                        else:
+                            self.attn_layers.append(RelativeMutiheadAttention(
+                                self.r_r_bias[i], self.r_w_bias[i],
+                                hparams=rel_attn_hparams))
+                    else:
+                        if use_segments:
+                            self.attn_layers.append(RelativeMutiheadAttention(
+                                self.r_r_bias, self.r_w_bias,
+                                self.r_s_bias,
+                                self.segment_embed[i],
+                                hparams=rel_attn_hparams))
+                        else:
+                            self.attn_layers.append(RelativeMutiheadAttention(
+                                self.r_r_bias, self.r_w_bias,
+                                hparams=rel_attn_hparams))
+                    self.ff_layers.append(PositionWiseFF(hparams=ff_hparams))
 
             dropout_hparams = {
                 "type": "Dropout",
@@ -152,24 +199,20 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
 
             {
                 "name": "xlnet_encoder",
-                'pretrained_model_name': 'xlnet-large-cased',
+                "pretrained_model_name": "xlnet-base-cased",
                 "untie_r": True,
-                "num_layers": 24,
+                "num_layers": 12,
                 "mem_len": 0,
                 "reuse_len": 0,
-                # initializer
                 "initializer": None,
-                # layer
-                "num_heads": 16,
-                "hidden_dim": 1024,
+                "num_heads": 12,
+                "hidden_dim": 768,
                 "head_dim": 64,
                 "dropout": 0.1,
                 "attention_dropout": 0.1,
                 "use_segments": True,
-                # ffn
-                "ffn_inner_dim": 4096,
+                "ffn_inner_dim": 3072,
                 "activation": 'gelu',
-                # embedding
                 "vocab_size": 32000,
                 "max_seq_len": 512,
             }
@@ -215,7 +258,7 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
         "dropout": float
             Dropout rate for layers
 
-        "attention_dropout": floar
+        "attention_dropout": float
             Dropout rate for attention layers
 
         "use_segments": bool
@@ -262,6 +305,57 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
             "max_seq_len": 512,
             '@no_typecheck': ['pretrained_model_name']
         }
+
+    def param_groups(self, lr=None, lr_layer_scale=1.0,
+                     decay_base_params=False):
+        r"""Create parameter groups for optimizers. When
+        :attr:`lr_layer_decay_rate` is not 1.0, parameters from each layer form
+        separate groups with different base learning rates.
+
+        Args:
+            lr (float): The learning rate. Can be omitted if
+                :attr:`lr_layer_decay_rate` is 1.0.
+            lr_layer_scale (float): Per-layer LR scaling rate. The `i`-th layer
+                will be scaled by `lr_layer_scale ^ (num_layers - i - 1)`.
+            decay_base_params (bool): If `True`, treat non-layer parameters
+                (e.g. embeddings) as if they're in layer 0. If `False`, these
+                parameters are not scaled.
+
+        Returns:
+            The parameter groups, used as the first argument for optimizers.
+        """
+
+        if lr_layer_scale != 1.0:
+            if lr is None:
+                raise ValueError(
+                    "lr must be specified when lr_layer_decay_rate is not 1.0")
+
+            num_layers = self._hparams.num_layers
+            scope = self.variable_scope.name
+            base_var_names = ['r_w_bias', 'r_r_bias', 'word_embedder']
+
+            if self._hparams.use_segments:
+                base_var_names.extend(['r_s_bias', 'seg_embed'])
+
+            base_params = [tf.trainable_variables(scope=scope + "/" + name)[0]
+                           for name in base_var_names]
+            base_group = {
+                "params": base_params,
+                "lr": lr * (lr_layer_scale ** num_layers
+                            if decay_base_params else 1.0)
+            }
+            param_groups = [base_group]
+            for idx in range(num_layers):
+                decay_rate = lr_layer_scale ** (num_layers - idx - 1)
+                param_group = {
+                    "params": tf.trainable_variables(
+                        scope=scope + "/" + f"layer_{idx}/"),
+                    "lr": lr * decay_rate,
+                }
+                param_groups.append(param_group)
+        else:
+            param_groups = self.trainable_variables
+        return param_groups
 
     @property
     def output_size(self):
@@ -352,15 +446,16 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
                              same_length=same_length, attn_type=attn_type,
                              two_stream=two_stream, **kwargs)
 
-    def _execute(self, word_embed, segment_ids=None, input_mask=None,
-                 memory=None, permute_mask=None, target_mapping=None,
-                 bi_data=False, clamp_len=None, cache_len=0, same_length=False,
-                 attn_type='bi', two_stream=False, mode=None):
+    def _execute(self, word_embed, segment_ids=None,  # noqa: C901
+                 input_mask=None, memory=None, permute_mask=None,
+                 target_mapping=None, bi_data=False, clamp_len=None,
+                 cache_len=0, same_length=False, attn_type='bi',
+                 two_stream=False, mode=None):
         r"""Compute XLNet representations for the input.
 
         Args:
             word_embed: Shape `(batch_size, seq_len, word_embed_dim)`.
-            segment_ids: Shape `(batch_siz,e seq_len)`.
+            segment_ids: Shape `(batch_size, seq_len)`.
             input_mask: Float tensor of shape `(batch_size, seq_len)`. Note that
                 positions with value 1 are masked out.
             memory: Memory from previous batches. A list of length `num_layers`,
@@ -369,6 +464,13 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
                 `(batch_size, seq_len, seq_len)`.
                 A value of 0 for ``permute_mask[i, j, k]`` indicates that
                 position `i` attends to position `j` in batch `k`.
+            target_mapping: The target token mapping. Float tensor of shape
+                `[batch_size, num_targets, seq_len]`.
+                A value of 1 for ``target_mapping[i, j, k]`` indicates that
+                the `i`-th target token (in order of permutation) in batch `k`
+                is the token at position `j`.
+                Each row ``target_mapping[i, :, k]`` can have no more than one
+                value of 1.
             bi_data (bool): Whether to use bidirectional data input pipeline.
             clamp_len (int): Clamp all relative distances larger than
                 :attr:`clamp_len`. A value of -1 means no clamping.
@@ -494,7 +596,8 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
             states_g = None
 
         new_memory = []
-        for i in range(self._hparams.num_layers):
+        num_layers = self._hparams.num_layers
+        for i in range(num_layers):
             cur_memory = memory[i] if memory is not None else None
             if cache_len > 0:
                 new_memory.append(
@@ -504,19 +607,14 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
                 segment_mat=segment_matrix, attn_mask_h=non_tgt_mask,
                 attn_mask_g=attn_mask, target_mapping=None, memory=cur_memory,
                 mode=mode)
-            states_h = self.ff_layers[i](states_h)
+            ff_layer = self.ff_layers[i]
+            states_h = ff_layer(states_h, mode=mode)
+
             if states_g is not None:
-                states_g = self.ff_layers[i](states_g)
+                states_g = ff_layer(states_g, mode=mode)
 
-        if not self._built:
-            self._add_internal_trainable_variables()
-            self._built = True
-
-            if self.pretrained_model_dir:
-                xlnet_utils.init_from_checkpoint(self.pretrained_model_dir,
-                                                 self.variable_scope.name)
-
-        output = self.dropout(states_h if states_g is None else states_g)
+        output = self.dropout(states_h if states_g is None else states_g,
+                              training=is_training)
 
         # Now output: [seq_len, batch_size, hidden_dim]
         # new_memory: None or A list of length num_layers,
@@ -525,6 +623,15 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
         if new_memory is not None:
             new_memory = [tf.transpose(m, perm=[1, 0, 2]) for m in new_memory]
 
+        if not self._built:
+            self._add_internal_trainable_variables()
+            self._built = True
+
+            if self.pretrained_model_dir:
+                xlnet_utils.init_xlnet_checkpoint(self.pretrained_model_dir,
+                                                  self.variable_scope.name)
+
         if cache_len == 0:
             return output, None
+
         return output, new_memory
