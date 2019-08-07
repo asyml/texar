@@ -68,7 +68,7 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
                  pretrained_model_name=None,
                  cache_dir=None,
                  hparams=None):
-        super().__init__(pretrained_model_name, cache_dir, hparams)
+        PretrainedBase.__init__(self, pretrained_model_name, cache_dir, hparams)
 
         if self.pretrained_model_dir:
             self._hparams = HParams(self.pretrained_model_hparams,

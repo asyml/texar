@@ -23,7 +23,7 @@ from __future__ import print_function
 # pylint: disable=wildcard-import
 
 import sys
-from packaging import version
+import packaging.version
 
 
 VERSION_WARNING = "1.13.2"
@@ -46,7 +46,8 @@ if sys.version_info.major < 3:
     from texar import run
     from texar import utils
 
-    if version.parse(tf.__version__) <= version.parse(VERSION_WARNING):
+    if packaging.version.parse(tf.__version__) <= \
+            packaging.version.parse(VERSION_WARNING):
         tf.logging.set_verbosity(tf.logging.ERROR)
     else:
         tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -85,7 +86,8 @@ else:
 
     def _import_all():
         import tensorflow as tf
-        if version.parse(tf.__version__) <= version.parse(VERSION_WARNING):
+        if packaging.version.parse(tf.__version__) <= \
+                packaging.version.parse(VERSION_WARNING):
             tf.logging.set_verbosity(tf.logging.ERROR)
         else:
             tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)

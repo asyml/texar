@@ -35,7 +35,7 @@ __all__ = [
 class PositionWiseFF(ModuleBase):
     r"""Position Wise feed forward."""
     def __init__(self, hparams=None):
-        super().__init__(hparams)
+        ModuleBase.__init__(self, hparams)
 
         hidden_dim = self._hparams.hidden_dim
         ffn_inner_dim = self._hparams.ffn_inner_dim
@@ -136,7 +136,7 @@ class PositionWiseFF(ModuleBase):
 class PositionalEmbedding(ModuleBase):
     r"""Sinosoidal Positional Embedding."""
     def __init__(self, embed_dim):
-        super().__init__()
+        ModuleBase.__init__(self)
         freq_seq = tf.range(0.0, embed_dim, 2.0)
         self.inv_freq = 1 / (10000 ** (freq_seq / embed_dim))
 
@@ -157,7 +157,7 @@ class PositionalEmbedding(ModuleBase):
 class RelativePositionalEncoding(ModuleBase):
     r"""Relative positional encodings."""
     def __init__(self, hparams=None):
-        super().__init__(hparams)
+        ModuleBase.__init__(self, hparams)
         self.sinusoid_embed = PositionalEmbedding(self._hparams.dim)
 
     @staticmethod
@@ -278,7 +278,7 @@ class RelativeMutiheadAttention(ModuleBase):
     """
     def __init__(self, r_r_bias, r_w_bias, r_s_bias=None, segment_embed=None,
                  hparams=None):
-        super().__init__(hparams=hparams)
+        ModuleBase.__init__(self, hparams=hparams)
 
         self.num_heads = self._hparams.num_heads
         self.head_dim = self._hparams.head_dim

@@ -48,7 +48,7 @@ class PretrainedBase(ModuleBase):
                  cache_dir=None,
                  hparams=None):
 
-        super().__init__(hparams=hparams)
+        ModuleBase.__init__(self, hparams=hparams)
 
         self.pretrained_model_dir = None
 
