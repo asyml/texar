@@ -67,11 +67,13 @@ class XLNetRegressor(RegressorBase):
         RegressorBase.__init__(self, hparams)
 
         with tf.variable_scope(self.variable_scope):
+            tf.get_variable_scope().set_initializer(
+                layers.get_initializer(self._hparams.initializer))
             # Creates the underlying encoder
             encoder_hparams = utils.dict_fetch(
                 hparams, XLNetEncoder.default_hparams())
             if encoder_hparams is not None:
-                encoder_hparams['name'] = None
+                encoder_hparams['name'] = "encoder"
             self._encoder = XLNetEncoder(
                 pretrained_model_name=pretrained_model_name,
                 cache_dir=cache_dir,
@@ -206,6 +208,7 @@ class XLNetRegressor(RegressorBase):
 
         if self._hparams.use_projection:
             summary = tf.tanh(self.projection(summary))
+
         # summary: (batch_size, hidden_dim)
         summary = self._dropout_layer(summary, training=is_training)
 

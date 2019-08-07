@@ -67,11 +67,13 @@ class XLNetClassifier(ClassifierBase):
         ClassifierBase.__init__(self, hparams)
 
         with tf.variable_scope(self.variable_scope):
+            tf.get_variable_scope().set_initializer(
+                layers.get_initializer(self._hparams.initializer))
             # Creates the underlying encoder
             encoder_hparams = utils.dict_fetch(
                 hparams, XLNetEncoder.default_hparams())
             if encoder_hparams is not None:
-                encoder_hparams['name'] = None
+                encoder_hparams['name'] = "encoder"
             self._encoder = XLNetEncoder(
                 pretrained_model_name=pretrained_model_name,
                 cache_dir=cache_dir,
@@ -220,7 +222,7 @@ class XLNetClassifier(ClassifierBase):
         if strategy == "time_wise":
             summary = output
         elif strategy == "cls_time":
-            summary = output[:,-1]
+            summary = output[:, -1]
         elif strategy == "all_time":
             length_diff = self._hparams.max_seq_len - tf.shape(token_ids)[1]
             summary_input = tf.pad(output,
@@ -241,8 +243,8 @@ class XLNetClassifier(ClassifierBase):
 
         # Compute predictions
         num_classes = self._hparams.num_classes
-        is_binary = num_classes == 1 or \
-                    (num_classes <= 0 and logits.shape[-1] == 1)
+        is_binary = num_classes == 1 or (num_classes <= 0
+                                         and logits.shape[-1] == 1)
 
         if strategy == "time_wise":
             if is_binary:

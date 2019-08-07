@@ -24,3 +24,4 @@ from __future__ import print_function
 from texar.modules.classifiers.conv_classifiers import *
 from texar.modules.classifiers.rnn_classifiers import *
 from texar.modules.classifiers.bert_classifiers import *
+from texar.modules.classifiers.xlnet_classifier import *
