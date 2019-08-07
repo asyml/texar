@@ -41,7 +41,7 @@ from __future__ import print_function
 import importlib
 import numpy as np
 import tensorflow as tf
-import texar as tx
+import texar.tf as tx
 
 from ptb_reader import prepare_data
 from ptb_reader import ptb_iterator_memnet as ptb_iterator

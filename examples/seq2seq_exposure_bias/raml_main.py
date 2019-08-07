@@ -29,7 +29,7 @@ from __future__ import unicode_literals
 from io import open
 import importlib
 import tensorflow as tf
-import texar as tx
+import texar.tf as tx
 import numpy as np
 import random
 from rouge import Rouge

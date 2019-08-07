@@ -14,7 +14,7 @@
 """Downloads data.
 """
 import tensorflow as tf
-import texar as tx
+import texar.tf as tx
 
 # pylint: disable=invalid-name
 

@@ -25,7 +25,7 @@ from __future__ import print_function
 
 import importlib
 import tensorflow as tf
-import texar as tx
+import texar.tf as tx
 
 # pylint: disable=invalid-name, too-many-locals
 

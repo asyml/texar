@@ -4,5 +4,5 @@
 HParams
 *******
 
-.. autoclass:: texar.HParams
+.. autoclass:: texar.tf.HParams
     :members:

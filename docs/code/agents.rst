@@ -10,7 +10,7 @@ Sequence Agents
 
 :hidden:`SeqPGAgent`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.agents.SeqPGAgent
+.. autoclass:: texar.tf.agents.SeqPGAgent
     :members:
     :inherited-members:
 
@@ -20,25 +20,25 @@ Episodic Agents
 
 :hidden:`EpisodicAgentBase`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.agents.EpisodicAgentBase
+.. autoclass:: texar.tf.agents.EpisodicAgentBase
     :members:
     :inherited-members:
 
 :hidden:`PGAgent`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.agents.PGAgent
+.. autoclass:: texar.tf.agents.PGAgent
     :members:
     :inherited-members:
 
 :hidden:`DQNAgent`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.agents.DQNAgent
+.. autoclass:: texar.tf.agents.DQNAgent
     :members:
     :inherited-members:
 
 :hidden:`ActorCriticAgent`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.agents.ActorCriticAgent
+.. autoclass:: texar.tf.agents.ActorCriticAgent
     :members:
     :inherited-members:
 
@@ -47,18 +47,18 @@ Agent Utils
 
 :hidden:`Space`
 ~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.agents.Space
+.. autoclass:: texar.tf.agents.Space
     :members:
 
 :hidden:`EnvConfig`
 ~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.agents.EnvConfig
+.. autoclass:: texar.tf.agents.EnvConfig
     :members:
 
 :hidden:`convert_gym_space`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: texar.agents.convert_gym_space
+.. autofunction:: texar.tf.agents.convert_gym_space
 
 :hidden:`get_gym_env_config`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: texar.agents.get_gym_env_config
+.. autofunction:: texar.tf.agents.get_gym_env_config

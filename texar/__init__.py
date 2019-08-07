@@ -91,12 +91,12 @@ else:
             tf.logging.set_verbosity(tf.logging.ERROR)
         else:
             tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
-        from texar.version import VERSION
+        from texar.tf.version import VERSION
         globals()["__version__"] = VERSION
 
         for module_name in __import_star_modules__:
             # from ... import *. Requires manually handling `__all__`.
-            module = importlib.import_module("." + module_name, package="texar")
+            module = importlib.import_module("." + module_name, package="texar.tf")
             try:
                 variables = module.__all__
             except AttributeError:
@@ -107,7 +107,7 @@ else:
 
         for module_name in __import_modules__:
             # from ... import module
-            module = importlib.import_module("." + module_name, package="texar")
+            module = importlib.import_module("." + module_name, package="texar.tf")
             globals()[module_name] = module
 
 
@@ -117,11 +117,12 @@ else:
             if name in globals():
                 # Shortcut to global names.
                 return globals()[name]
-            if name == "torch":
+            if name in ["torch", "tf"]:
                 # To use `texar.torch`, Texar-TF and TensorFlow should not be
-                # imported.
-                module = importlib.import_module(".torch", package="texar")
-                globals()["torch"] = module
+                # imported; To use `texar.tf`, Texar-PyTorch and PyTorch should
+                # not be imported.
+                module = importlib.import_module("." + name, package="texar")
+                globals()[name] = module
                 return module
 
             # The user tries to access Texar-TF modules, so we load all modules

@@ -7,7 +7,7 @@ Modules
 ModuleBase
 ===========
 
-.. autoclass:: texar.ModuleBase
+.. autoclass:: texar.tf.ModuleBase
     :members:
 
 Embedders
@@ -15,22 +15,22 @@ Embedders
 
 :hidden:`WordEmbedder`
 ~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.WordEmbedder
+.. autoclass:: texar.tf.modules.WordEmbedder
     :members:
 
 :hidden:`PositionEmbedder`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.PositionEmbedder
+.. autoclass:: texar.tf.modules.PositionEmbedder
     :members:
 
 :hidden:`SinusoidsPositionEmbedder`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.SinusoidsPositionEmbedder
+.. autoclass:: texar.tf.modules.SinusoidsPositionEmbedder
     :members:
 
 :hidden:`EmbedderBase`
 ~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.EmbedderBase
+.. autoclass:: texar.tf.modules.EmbedderBase
     :members:
 
 
@@ -39,47 +39,47 @@ Encoders
 
 :hidden:`UnidirectionalRNNEncoder`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.UnidirectionalRNNEncoder
+.. autoclass:: texar.tf.modules.UnidirectionalRNNEncoder
     :members:
 
 :hidden:`BidirectionalRNNEncoder`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.BidirectionalRNNEncoder
+.. autoclass:: texar.tf.modules.BidirectionalRNNEncoder
     :members:
 
 :hidden:`HierarchicalRNNEncoder`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.HierarchicalRNNEncoder
+.. autoclass:: texar.tf.modules.HierarchicalRNNEncoder
     :members:
 
 :hidden:`MultiheadAttentionEncoder`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.MultiheadAttentionEncoder
+.. autoclass:: texar.tf.modules.MultiheadAttentionEncoder
     :members:
 
 :hidden:`TransformerEncoder`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.TransformerEncoder
+.. autoclass:: texar.tf.modules.TransformerEncoder
     :members:
 
 :hidden:`BertEncoder`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.BertEncoder
+.. autoclass:: texar.tf.modules.BertEncoder
     :members:
 
 :hidden:`Conv1DEncoder`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.Conv1DEncoder
+.. autoclass:: texar.tf.modules.Conv1DEncoder
     :members:
 
 :hidden:`EncoderBase`
 ~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.EncoderBase
+.. autoclass:: texar.tf.modules.EncoderBase
     :members:
 
 :hidden:`RNNEncoderBase`
 ~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.RNNEncoderBase
+.. autoclass:: texar.tf.modules.RNNEncoderBase
     :members:
 
 :hidden:`XLNetEncoder`
@@ -90,124 +90,124 @@ Encoders
 
 :hidden:`default_transformer_poswise_net_hparams`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: texar.modules.default_transformer_poswise_net_hparams
+.. autofunction:: texar.tf.modules.default_transformer_poswise_net_hparams
 
 Decoders
 ========
 
 :hidden:`RNNDecoderBase`
 ~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.RNNDecoderBase
+.. autoclass:: texar.tf.modules.RNNDecoderBase
     :members:
     :inherited-members:
     :exclude-members: initialize,step,finalize,tracks_own_finished,output_size,output_dtype
 
 :hidden:`BasicRNNDecoder`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.BasicRNNDecoder
+.. autoclass:: texar.tf.modules.BasicRNNDecoder
     :members:
     :inherited-members:
     :exclude-members: initialize,step,finalize,tracks_own_finished,output_size,output_dtype
 
 :hidden:`BasicRNNDecoderOutput`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.BasicRNNDecoderOutput
+.. autoclass:: texar.tf.modules.BasicRNNDecoderOutput
     :members:
 
 :hidden:`AttentionRNNDecoder`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.AttentionRNNDecoder
+.. autoclass:: texar.tf.modules.AttentionRNNDecoder
     :members:
     :inherited-members:
     :exclude-members: initialize,step,finalize,tracks_own_finished,output_size,output_dtype
 
 :hidden:`AttentionRNNDecoderOutput`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.AttentionRNNDecoderOutput
+.. autoclass:: texar.tf.modules.AttentionRNNDecoderOutput
     :members:
 
 :hidden:`beam_search_decode`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: texar.modules.beam_search_decode
+.. autofunction:: texar.tf.modules.beam_search_decode
 
 :hidden:`TransformerDecoder`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.TransformerDecoder
+.. autoclass:: texar.tf.modules.TransformerDecoder
     :members:
 
 :hidden:`TransformerDecoderOutput`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.TransformerDecoderOutput
+.. autoclass:: texar.tf.modules.TransformerDecoderOutput
     :members:
 
 :hidden:`Helper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.Helper
+.. autoclass:: texar.tf.modules.Helper
     :members:
 
 :hidden:`GreedyEmbeddingHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.GreedyEmbeddingHelper
+.. autoclass:: texar.tf.modules.GreedyEmbeddingHelper
     :members:
     :inherited-members:
 
 :hidden:`SampleEmbeddingHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.SampleEmbeddingHelper
+.. autoclass:: texar.tf.modules.SampleEmbeddingHelper
     :members:
     :inherited-members:
 
 :hidden:`TopKSampleEmbeddingHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.TopKSampleEmbeddingHelper
+.. autoclass:: texar.tf.modules.TopKSampleEmbeddingHelper
     :members:
     :inherited-members:
 
 :hidden:`SoftmaxEmbeddingHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.SoftmaxEmbeddingHelper
+.. autoclass:: texar.tf.modules.SoftmaxEmbeddingHelper
     :members:
     :inherited-members:
 
 :hidden:`GumbelSoftmaxEmbeddingHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.GumbelSoftmaxEmbeddingHelper
+.. autoclass:: texar.tf.modules.GumbelSoftmaxEmbeddingHelper
     :members:
     :inherited-members:
 
 :hidden:`TrainingHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.TrainingHelper
+.. autoclass:: texar.tf.modules.TrainingHelper
     :members:
     :inherited-members:
 
 :hidden:`ScheduledEmbeddingTrainingHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.ScheduledEmbeddingTrainingHelper
+.. autoclass:: texar.tf.modules.ScheduledEmbeddingTrainingHelper
     :members:
     :inherited-members:
 
 :hidden:`ScheduledOutputTrainingHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.ScheduledOutputTrainingHelper
+.. autoclass:: texar.tf.modules.ScheduledOutputTrainingHelper
     :members:
     :inherited-members:
 
 :hidden:`InferenceHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.InferenceHelper
+.. autoclass:: texar.tf.modules.InferenceHelper
     :members:
     :inherited-members:
 
 :hidden:`CustomHelper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.CustomHelper
+.. autoclass:: texar.tf.modules.CustomHelper
     :members:
     :inherited-members:
 
 :hidden:`get_helper`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: texar.modules.get_helper
+.. autofunction:: texar.tf.modules.get_helper
 
 
 Connectors
@@ -215,37 +215,37 @@ Connectors
 
 :hidden:`ConnectorBase`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.ConnectorBase
+.. autoclass:: texar.tf.modules.ConnectorBase
     :members:
     :inherited-members:
 
 :hidden:`ConstantConnector`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.ConstantConnector
+.. autoclass:: texar.tf.modules.ConstantConnector
     :members:
     :inherited-members:
 
 :hidden:`ForwardConnector`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.ForwardConnector
+.. autoclass:: texar.tf.modules.ForwardConnector
     :members:
     :inherited-members:
 
 :hidden:`MLPTransformConnector`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.MLPTransformConnector
+.. autoclass:: texar.tf.modules.MLPTransformConnector
     :members:
     :inherited-members:
 
 :hidden:`ReparameterizedStochasticConnector`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.ReparameterizedStochasticConnector
+.. autoclass:: texar.tf.modules.ReparameterizedStochasticConnector
     :members:
     :inherited-members:
 
 :hidden:`StochasticConnector`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.StochasticConnector
+.. autoclass:: texar.tf.modules.StochasticConnector
     :members:
     :inherited-members:
 
@@ -255,19 +255,19 @@ Classifiers
 
 :hidden:`Conv1DClassifier`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.Conv1DClassifier
+.. autoclass:: texar.tf.modules.Conv1DClassifier
     :members:
     :inherited-members:
 
 :hidden:`UnidirectionalRNNClassifier`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.UnidirectionalRNNClassifier
+.. autoclass:: texar.tf.modules.UnidirectionalRNNClassifier
     :members:
     :inherited-members:
 
 :hidden:`BertClassifier`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.BertClassifier
+.. autoclass:: texar.tf.modules.BertClassifier
     :members:
     :inherited-members:
 
@@ -281,19 +281,19 @@ Networks
 
 :hidden:`FeedForwardNetworkBase`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.FeedForwardNetworkBase
+.. autoclass:: texar.tf.modules.FeedForwardNetworkBase
     :members:
     :inherited-members:
 
 :hidden:`FeedForwardNetwork`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.FeedForwardNetwork
+.. autoclass:: texar.tf.modules.FeedForwardNetwork
     :members:
     :inherited-members:
 
 :hidden:`Conv1DNetwork`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.Conv1DNetwork
+.. autoclass:: texar.tf.modules.Conv1DNetwork
     :members:
     :inherited-members:
 
@@ -321,33 +321,33 @@ Memory
 
 :hidden:`MemNetBase`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.MemNetBase
+.. autoclass:: texar.tf.modules.MemNetBase
     :members:
     :inherited-members:
 
 :hidden:`MemNetRNNLike`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.MemNetRNNLike
+.. autoclass:: texar.tf.modules.MemNetRNNLike
     :members:
     :inherited-members:
     :exclude-members: get_default_embed_fn 
 
 :hidden:`default_memnet_embed_fn_hparams`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: texar.modules.default_memnet_embed_fn_hparams
+.. autofunction:: texar.tf.modules.default_memnet_embed_fn_hparams
 
 Policy
 =========
 
 :hidden:`PolicyNetBase`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.PolicyNetBase
+.. autoclass:: texar.tf.modules.PolicyNetBase
     :members:
     :inherited-members:
 
 :hidden:`CategoricalPolicyNet`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.CategoricalPolicyNet
+.. autoclass:: texar.tf.modules.CategoricalPolicyNet
     :members:
     :inherited-members:
 
@@ -356,13 +356,13 @@ Q-Nets
 
 :hidden:`QNetBase`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.QNetBase
+.. autoclass:: texar.tf.modules.QNetBase
     :members:
     :inherited-members:
 
 :hidden:`CategoricalPolicyNet`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.CategoricalQNet
+.. autoclass:: texar.tf.modules.CategoricalQNet
     :members:
     :inherited-members:
 
@@ -371,5 +371,5 @@ Berts
 
 :hidden:`BertBase`
 ~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.BertBase
+.. autoclass:: texar.tf.modules.BertBase
     :members:

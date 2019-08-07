@@ -17,7 +17,7 @@ import os
 import argparse
 
 import tensorflow as tf
-import texar as tx
+import texar.tf as tx
 
 def prepare_data(data_name):
     """Prepare datasets.

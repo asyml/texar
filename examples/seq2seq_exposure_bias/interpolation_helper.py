@@ -24,7 +24,7 @@ import numpy as np
 
 from tensorflow_probability import distributions as tfpd
 from tensorflow.contrib.seq2seq import SampleEmbeddingHelper
-from texar.evals.bleu import sentence_bleu
+from texar.tf.evals.bleu import sentence_bleu
 from rouge import Rouge
 
 rouge = Rouge()

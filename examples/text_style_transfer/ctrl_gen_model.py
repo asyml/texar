@@ -21,12 +21,12 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-import texar as tx
-from texar.modules import WordEmbedder, UnidirectionalRNNEncoder, \
+import texar.tf as tx
+from texar.tf.modules import WordEmbedder, UnidirectionalRNNEncoder, \
         MLPTransformConnector, AttentionRNNDecoder, \
         GumbelSoftmaxEmbeddingHelper, Conv1DClassifier
-from texar.core import get_train_op
-from texar.utils import collect_trainable_variables, get_batch_size
+from texar.tf.core import get_train_op
+from texar.tf.utils import collect_trainable_variables, get_batch_size
 
 
 class CtrlGenModel(object):

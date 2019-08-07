@@ -1,5 +1,5 @@
 # Basic Seq2seq model of medium size. See 
-# `texar.models.BasicSeq2seq.default_hparams()` for possible hyperparameters 
+# `texar.tf.models.BasicSeq2seq.default_hparams()` for possible hyperparameters
 # default values. Hyperparameters not specified here will take the default 
 # values.
 model: BasicSeq2seq

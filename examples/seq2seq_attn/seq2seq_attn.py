@@ -21,7 +21,7 @@ from __future__ import division
 
 import importlib
 import tensorflow as tf
-import texar as tx
+import texar.tf as tx
 
 flags = tf.flags
 

@@ -1,7 +1,7 @@
 """Configurations of Transformer model
 """
 import copy
-import texar as tx
+import texar.tf as tx
 
 random_seed = 1234
 beam_width = 5

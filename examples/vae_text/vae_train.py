@@ -39,7 +39,7 @@ from io import open
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-import texar as tx
+import texar.tf as tx
 
 
 tfd = tfp.distributions
