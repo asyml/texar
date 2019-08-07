@@ -22,7 +22,7 @@ import time
 import importlib
 import numpy as np
 import tensorflow as tf
-import texar as tx
+import texar.tf as tx
 
 from examples.sequence_tagging.conll_reader import create_vocabs, read_data, iterate_batch, load_glove, construct_init_word_vecs
 from examples.sequence_tagging.conll_writer import CoNLLWriter

@@ -10,13 +10,13 @@ Vocabulary
 :hidden:`SpecialTokens`
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: texar.data.SpecialTokens
+.. autoclass:: texar.tf.data.SpecialTokens
     :members:
 
 :hidden:`Vocab`
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: texar.data.Vocab
+.. autoclass:: texar.tf.data.Vocab
     :members:
 
 Embedding
@@ -25,17 +25,17 @@ Embedding
 :hidden:`Embedding`
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: texar.data.Embedding
+.. autoclass:: texar.tf.data.Embedding
     :members:
 
 :hidden:`load_word2vec`
 ~~~~~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: texar.data.load_word2vec
+.. autofunction:: texar.tf.data.load_word2vec
 
 :hidden:`load_glove`
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autofunction:: texar.data.load_glove
+.. autofunction:: texar.tf.data.load_glove
 
 Data
 ==========
@@ -43,13 +43,13 @@ Data
 :hidden:`DataBase`
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: texar.data.DataBase
+.. autoclass:: texar.tf.data.DataBase
     :members:
 
 :hidden:`MonoTextData`
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: texar.data.MonoTextData
+.. autoclass:: texar.tf.data.MonoTextData
     :members:
     :inherited-members:
     :exclude-members: make_vocab,make_embedding
@@ -57,7 +57,7 @@ Data
 :hidden:`PairedTextData`
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: texar.data.PairedTextData
+.. autoclass:: texar.tf.data.PairedTextData
     :members:
     :inherited-members:
     :exclude-members: make_vocab,make_embedding
@@ -65,14 +65,14 @@ Data
 :hidden:`ScalarData`
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: texar.data.ScalarData
+.. autoclass:: texar.tf.data.ScalarData
     :members:
     :inherited-members:
 
 :hidden:`TFRecordData`
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: texar.data.TFRecordData
+.. autoclass:: texar.tf.data.TFRecordData
     :members:
     :inherited-members:
 
@@ -80,7 +80,7 @@ Data
 :hidden:`MultiAlignedData`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: texar.data.MultiAlignedData
+.. autoclass:: texar.tf.data.MultiAlignedData
     :members:
     :inherited-members:
     :exclude-members: make_vocab,make_embedding
@@ -88,7 +88,7 @@ Data
 :hidden:`TextDataBase`
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: texar.data.TextDataBase
+.. autoclass:: texar.tf.data.TextDataBase
     :members:
 
 
@@ -98,33 +98,33 @@ Data Iterators
 :hidden:`DataIteratorBase`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: texar.data.DataIteratorBase
+.. autoclass:: texar.tf.data.DataIteratorBase
     :members:
 
 :hidden:`DataIterator`
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: texar.data.DataIterator
+.. autoclass:: texar.tf.data.DataIterator
     :members:
 
 :hidden:`TrainTestDataIterator`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: texar.data.TrainTestDataIterator
+.. autoclass:: texar.tf.data.TrainTestDataIterator
     :members:
 
 
 :hidden:`FeedableDataIterator`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: texar.data.FeedableDataIterator
+.. autoclass:: texar.tf.data.FeedableDataIterator
     :members:
 
 
 :hidden:`TrainTestFeedableDataIterator`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: texar.data.TrainTestFeedableDataIterator
+.. autoclass:: texar.tf.data.TrainTestFeedableDataIterator
     :members:
 
 Data Utils
@@ -132,36 +132,36 @@ Data Utils
 
 :hidden:`random_shard_dataset`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: texar.data.random_shard_dataset
+.. autofunction:: texar.tf.data.random_shard_dataset
 
 :hidden:`maybe_tuple`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: texar.data.maybe_tuple
+.. autofunction:: texar.tf.data.maybe_tuple
 
 :hidden:`make_partial`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: texar.data.make_partial
+.. autofunction:: texar.tf.data.make_partial
 
 :hidden:`maybe_download`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: texar.data.maybe_download
+.. autofunction:: texar.tf.data.maybe_download
 
 :hidden:`read_words`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: texar.data.read_words
+.. autofunction:: texar.tf.data.read_words
 
 :hidden:`make_vocab`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: texar.data.make_vocab
+.. autofunction:: texar.tf.data.make_vocab
 
 :hidden:`count_file_lines`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: texar.data.count_file_lines
+.. autofunction:: texar.tf.data.count_file_lines
 
 :hidden:`make_chained_transformation`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: texar.data.make_chained_transformation
+.. autofunction:: texar.tf.data.make_chained_transformation
 
 :hidden:`make_combined_transformation`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: texar.data.make_combined_transformation
+.. autofunction:: texar.tf.data.make_combined_transformation

@@ -20,7 +20,7 @@ from __future__ import print_function
 
 import os
 import tensorflow as tf
-import texar as tx
+import texar.tf as tx
 
 # pylint: disable=no-name-in-module
 from utils import data_utils, tokenization

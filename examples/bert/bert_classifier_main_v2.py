@@ -22,7 +22,7 @@ from __future__ import print_function
 import os
 import importlib
 import tensorflow as tf
-import texar as tx
+import texar.tf as tx
 
 from utils import model_utils
 

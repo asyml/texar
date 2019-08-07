@@ -5,10 +5,10 @@ This example builds an attentional seq2seq model that is trained with policy gra
 The data and model configs are exact the same as the [MLE seq2seq example](../seq2seq_attn). The only difference is that MLE cross-entropy minimization is replaced with policy gradient training.
 
 The example shows:
-  * Use of `texar.agents.SeqPGAgent` for policy gradient sequence generation.
-  * Use of the Python-based `texar.evals.sentence/corpus_bleu` for efficient reward computing, and the Moses `texar.evals.sentence/corpus_bleu_moses`
+  * Use of `texar.tf.agents.SeqPGAgent` for policy gradient sequence generation.
+  * Use of the Python-based `texar.tf.evals.sentence/corpus_bleu` for efficient reward computing, and the Moses `texar.tf.evals.sentence/corpus_bleu_moses`
     for standard test set evaluation.
-  * Use of `texar.data.FeedableDataIterator` for data feeding and resuming from breakpoint. 
+  * Use of `texar.tf.data.FeedableDataIterator` for data feeding and resuming from breakpoint. 
 
 ## Usage ##
 

@@ -25,7 +25,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from texar.modules.decoders.rnn_decoders import \
+from texar.tf.modules.decoders.rnn_decoders import \
     AttentionRNNDecoder, AttentionRNNDecoderOutput
 
 
@@ -47,7 +47,7 @@ class InterpolationDecoder(AttentionRNNDecoder):
         cell_dropout_mode (optional): A Tensor taking value of
             :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, which
             toggles dropout in the RNN cell (e.g., activates dropout in
-            TRAIN mode). If `None`, :func:`~texar.global_mode` is used.
+            TRAIN mode). If `None`, :func:`~texar.tf.global_mode` is used.
             Ignored if :attr:`cell` is given.
         vocab_size (int, optional): Vocabulary size. Required if
             :attr:`output_layer` is `None`.

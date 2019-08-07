@@ -7,7 +7,7 @@ import re
 import random
 import tensorflow as tf
 import numpy as np
-from texar import HParams
+from texar.tf import HParams
 
 
 def transform_bert_to_texar_config(input_json):

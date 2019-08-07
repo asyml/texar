@@ -4,7 +4,7 @@ This is a Texar implementation of Google's BERT model, which allows to load pre-
 
 This example shows two ways of building a BERT classifier, at different abstraction levels:
 
-  * Use `texar.modules.BERTClassifier` ([doc](https://texar.readthedocs.io/en/latest/code/modules.html#texar.modules.BertClassifier)) directly. The module supports both sequence classification (one label per sequence) and sequence labeling (one label per token). --- See `bert_classifier_main_v2.py` for implementation.
+  * Use `texar.tf.modules.BERTClassifier` ([doc](https://texar.readthedocs.io/en/latest/code/modules.html#texar.modules.BertClassifier)) directly. The module supports both sequence classification (one label per sequence) and sequence labeling (one label per token). --- See `bert_classifier_main_v2.py` for implementation.
   * Use lower-level modules by creating a `TransformerEncoder` ([doc](https://texar.readthedocs.io/en/latest/code/modules.html#transformerencoder)) instance and adding additional layers. Initialization with a pre-trained BERT checkpoint is done by calling `init_bert_checkpoint(path_to_bert_checkpoint)`. --- See `bert_classifier_main.py` for implementation. 
 
 In sum, this example showcases:

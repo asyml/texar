@@ -21,7 +21,7 @@ from __future__ import print_function
 import importlib
 import numpy as np
 import tensorflow as tf
-import texar as tx
+import texar.tf as tx
 
 from utils import model_utils, processor
 

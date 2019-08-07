@@ -23,8 +23,8 @@ from __future__ import print_function
 import importlib
 import gym
 import tensorflow as tf
-import texar as tx
-from texar.agents import PGAgent
+import texar.tf as tx
+from texar.tf.agents import PGAgent
 
 flags = tf.flags
 

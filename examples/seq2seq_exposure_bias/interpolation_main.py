@@ -23,7 +23,7 @@ import importlib
 from io import open
 
 import tensorflow as tf
-import texar as tx
+import texar.tf as tx
 import numpy as np
 
 from interpolation_decoder import InterpolationDecoder

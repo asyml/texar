@@ -20,7 +20,7 @@ from json_lines import reader
 from nltk.tokenize import WordPunctTokenizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-import texar as tx
+import texar.tf as tx
 
 from config_data import data_root
 
