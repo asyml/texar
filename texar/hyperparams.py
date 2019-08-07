@@ -22,7 +22,6 @@ from __future__ import division
 import copy
 import json
 
-from texar.utils.dtypes import is_callable
 
 __all__ = [
     "HParams"
@@ -35,8 +34,8 @@ class HParams(object):
     """A class that maintains hyperparameters for configing Texar modules.
     The class has several useful features:
 
-    - **Auto-completion of missing values.** Users can specify only a subset of\
-    hyperparameters they care about. Other hyperparameters will automatically\
+    - **Auto-completion of missing values.** Users can specify only a subset of \
+    hyperparameters they care about. Other hyperparameters will automatically \
     take the default values. The auto-completion performs **recursively** so \
     that hyperparameters taking `dict` values will also be auto-completed \
     **All Texar modules** provide a \
@@ -211,6 +210,8 @@ class HParams(object):
                     parsed_hparams[name] = HParams({}, {})
                 else:
                     parsed_hparams[name] = HParams(value, value)
+
+        from texar.utils.dtypes import is_callable
 
         # Parse hparams
         for name, value in hparams.items():

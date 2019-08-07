@@ -26,7 +26,7 @@ def accuracy(labels, preds):
         A float scalar Tensor containing the accuracy.
     """
     labels = tf.cast(labels, preds.dtype)
-    return tf.reduce_mean(tf.to_float(tf.equal(preds, labels)))
+    return tf.reduce_mean(tf.cast(tf.equal(preds, labels), tf.float32))
 
 def binary_clas_accuracy(pos_preds=None, neg_preds=None):
     """Calculates the accuracy of binary predictions.
@@ -44,7 +44,7 @@ def binary_clas_accuracy(pos_preds=None, neg_preds=None):
     """
     pos_accu = accuracy(tf.ones_like(pos_preds), pos_preds)
     neg_accu = accuracy(tf.zeros_like(neg_preds), neg_preds)
-    psize = tf.to_float(tf.size(pos_preds))
-    nsize = tf.to_float(tf.size(neg_preds))
+    psize = tf.cast(tf.size(pos_preds), tf.float32)
+    nsize = tf.cast(tf.size(neg_preds), tf.float32)
     accu = (pos_accu * psize + neg_accu * nsize) / (psize + nsize)
     return accu

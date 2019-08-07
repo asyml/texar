@@ -189,7 +189,7 @@ class Conv1DClassifier(ClassifierBase):
             logits = tf.reshape(logits, [-1])
         else:
             pred = tf.argmax(logits, 1)
-        pred = tf.to_int64(tf.reshape(pred, [-1]))
+        pred = tf.cast(tf.reshape(pred, [-1]), tf.int64)
 
         self._built = True
 

@@ -22,6 +22,7 @@ from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 
+from tensorflow_probability import distributions as tfpd
 from tensorflow.contrib.seq2seq import SampleEmbeddingHelper
 from texar.evals.bleu import sentence_bleu
 from rouge import Rouge
@@ -95,19 +96,19 @@ class InterpolationHelper(SampleEmbeddingHelper):
         of 'state'([decoded_ids, rnn_state])
         """
         sample_method_sampler = \
-            tf.distributions.Categorical(probs=self._lambdas)
+            tfpd.Categorical(probs=self._lambdas)
         sample_method_id = sample_method_sampler.sample()
 
         truth_feeding = lambda: tf.cond(
             tf.less(time, tf.shape(self._ground_truth)[1]),
-            lambda: tf.to_int32(self._ground_truth[:, time]),
+            lambda: tf.cast(self._ground_truth[:, time], tf.int32),
             lambda: tf.ones_like(self._ground_truth[:, 0],
                                  dtype=tf.int32) * self._vocab.eos_token_id)
 
-        self_feeding = lambda : SampleEmbeddingHelper.sample(
+        self_feeding = lambda: SampleEmbeddingHelper.sample(
             self, time, outputs, state, name)
 
-        reward_feeding = lambda : self._sample_by_reward(time, state)
+        reward_feeding = lambda: self._sample_by_reward(time, state)
 
         sample_ids = tf.cond(
             tf.logical_or(tf.equal(time, 0), tf.equal(sample_method_id, 1)),
@@ -207,7 +208,7 @@ class InterpolationHelper(SampleEmbeddingHelper):
 
             return result
 
-        sampler = tf.distributions.Categorical(
+        sampler = tfpd.Categorical(
             logits=tf.py_func(_get_rewards, [
                 time, state[0], self._ground_truth,
                 self._ground_truth_length], tf.float32))

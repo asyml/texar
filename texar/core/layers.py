@@ -573,7 +573,7 @@ def get_layer(hparams):
     if not is_str(layer_type) and not isinstance(layer_type, type):
         layer = layer_type
     else:
-        layer_modules = ["tensorflow.layers", "texar.core", "texar.costum"]
+        layer_modules = ["tensorflow.layers", "texar.core", "texar.custom"]
         layer_class = utils.check_or_get_class(layer_type, layer_modules)
         if isinstance(hparams, dict):
             default_kwargs = _layer_class_to_default_kwargs_map.get(layer_class,

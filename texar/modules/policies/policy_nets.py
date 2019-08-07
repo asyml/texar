@@ -21,6 +21,7 @@ from __future__ import print_function
 import numpy as np
 
 import tensorflow as tf
+from tensorflow_probability import distributions as tfpd
 
 from texar.module_base import ModuleBase
 from texar.agents.agent_utils import Space
@@ -303,7 +304,7 @@ class CategoricalPolicyNet(PolicyNetBase):
 
         dkwargs = self._hparams.distribution_kwargs.todict()
         dkwargs['dtype'] = get_tf_dtype(dkwargs['dtype'])
-        dist = tf.distributions.Categorical(logits=logits, **dkwargs)
+        dist = tfpd.Categorical(logits=logits, **dkwargs)
 
         action = dist.sample()
         to_shape = [-1] # for batch dimension

@@ -21,7 +21,7 @@ from __future__ import division
 
 import tensorflow as tf
 
-from texar import context
+import texar.context as context
 
 __all__ = [
     "maybe_global_mode",
@@ -145,4 +145,5 @@ def switch_dropout(dropout_keep_prob, mode=None):
         A unit Tensor that equals the dropout keep probability in `TRAIN` mode,
         and `1.0` in other modes.
     """
-    return 1. - (1. - dropout_keep_prob) * tf.to_float(is_train_mode(mode))
+    return 1. - (1. - dropout_keep_prob) \
+        * tf.cast(is_train_mode(mode), tf.float32)

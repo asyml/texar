@@ -182,7 +182,7 @@ class Vocab(object):
         Returns:
             A tensor of text tokens of the same shape.
         """
-        return self.id_to_token_map.lookup(tf.to_int64(ids))
+        return self.id_to_token_map.lookup(tf.cast(ids, tf.int64))
 
     def map_tokens_to_ids(self, tokens):
         """Maps text tokens into ids.
@@ -227,7 +227,7 @@ class Vocab(object):
 
     @property
     def id_to_token_map(self):
-        """The :tf_main:`HashTable <contrib/lookup/HashTable>`instance that
+        """The :tf_main:`HashTable <contrib/lookup/HashTable>` instance that
         maps from token index to the string form.
         """
         return self._id_to_token_map

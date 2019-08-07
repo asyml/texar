@@ -107,7 +107,7 @@ def main(_):
     input_ids = batch["input_ids"]
     segment_ids = batch["segment_ids"]
     batch_size = tf.shape(input_ids)[0]
-    input_length = tf.reduce_sum(1 - tf.to_int32(tf.equal(input_ids, 0)),
+    input_length = tf.reduce_sum(1 - tf.cast(tf.equal(input_ids, 0), tf.int32),
                                  axis=1)
     # Builds BERT
     with tf.variable_scope('bert'):
@@ -198,7 +198,7 @@ def main(_):
         periodically.
         """
         iterator.restart_dataset(sess, 'train')
-        
+
         fetches = {
             'train_op': train_op,
             'loss': loss,

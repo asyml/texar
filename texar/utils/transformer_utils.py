@@ -24,6 +24,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import tensorflow as tf
+from tensorflow_probability import distributions as tfpd
 
 # pylint: disable=invalid-name, too-many-arguments, too-many-locals
 
@@ -68,7 +69,7 @@ class PadRemover(object):
             # float32, checking zero equality is done with |x| < epsilon, with
             # epsilon=1e-9 as standard, here pad_mask only contains positive
             # values so tf.abs would be redundant)
-            self.nonpad_ids = tf.to_int32(tf.where(pad_mask < 1e-9))
+            self.nonpad_ids = tf.cast(tf.where(pad_mask < 1e-9), tf.int32)
             self.dim_origin = tf.shape(pad_mask)[:1]
 
     def remove(self, x):
@@ -124,7 +125,7 @@ def embedding_to_padding(emb):
         a float Tensor with shape [...].
     """
     emb_sum = tf.reduce_sum(tf.abs(emb), axis=-1)
-    return tf.to_float(tf.equal(emb_sum, 0.0))
+    return tf.cast(tf.equal(emb_sum, 0.0), tf.float32)
 
 def smoothing_cross_entropy(logits,
                             labels,
@@ -153,16 +154,15 @@ def smoothing_cross_entropy(logits,
     with tf.name_scope("smoothing_cross_entropy", values=[logits, labels]):
         # Low confidence is given to all non-true labels, uniformly.
         if zero_pad:
-            low_confidence = (1.0 - confidence) / tf.to_float(
-                vocab_size - 2)
+            low_confidence = (1.0 - confidence) / tf.cast(
+                vocab_size - 2, tf.float32)
         else:
-            low_confidence = (1.0 - confidence) / tf.to_float(
-                vocab_size - 1)
+            low_confidence = (1.0 - confidence) / tf.cast(
+                vocab_size - 1, tf.float32)
 
         if gaussian and confidence > 0.0:
             labels = tf.cast(labels, tf.float32)
-            normal_dist = tf.distributions.Normal(loc=labels,
-                                                  scale=confidence)
+            normal_dist = tfpd.Normal(loc=labels, scale=confidence)
             soft_targets = normal_dist.prob(
                 tf.cast(tf.range(vocab_size), tf.float32)\
                     [:, None, None])

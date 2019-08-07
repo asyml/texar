@@ -259,8 +259,8 @@ def get_learning_rate_decay_fn(hparams=None):
     if fn_kwargs is HParams:
         fn_kwargs = fn_kwargs.todict()
 
-    start_step = tf.to_int32(hparams["start_decay_step"])
-    end_step = tf.to_int32(hparams["end_decay_step"])
+    start_step = tf.cast(hparams["start_decay_step"], tf.int32)
+    end_step = tf.cast(hparams["end_decay_step"], tf.int32)
 
     def lr_decay_fn(learning_rate, global_step):
         """Learning rate decay function.
@@ -273,7 +273,8 @@ def get_learning_rate_decay_fn(hparams=None):
             scalar float Tensor: decayed learning rate.
         """
         offset_global_step = tf.maximum(
-            tf.minimum(tf.to_int32(global_step), end_step) - start_step, 0)
+            tf.minimum(tf.cast(global_step, tf.int32), end_step) - start_step,
+            0)
         if decay_fn == tf.train.piecewise_constant:
             decayed_lr = decay_fn(x=offset_global_step, **fn_kwargs)
         else:

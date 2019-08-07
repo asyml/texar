@@ -21,9 +21,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 from tensorflow.python.ops import array_ops
-from tensorflow.python.ops.distributions import categorical
-from tensorflow.contrib.distributions import RelaxedOneHotCategorical \
-    as GumbelSoftmax
+from tensorflow_probability import distributions as tfpd
 
 from texar.modules.decoders.tf_helpers import \
         Helper, TrainingHelper, GreedyEmbeddingHelper
@@ -271,7 +269,7 @@ class TopKSampleEmbeddingHelper(GreedyEmbeddingHelper):
 
         logits = _top_k_logits(logits, k=self._top_k)
 
-        sample_id_sampler = categorical.Categorical(logits=logits)
+        sample_id_sampler = tfpd.Categorical(logits=logits)
         sample_ids = sample_id_sampler.sample(seed=self._seed)
 
         return sample_ids
@@ -475,7 +473,8 @@ class GumbelSoftmaxEmbeddingHelper(SoftmaxEmbeddingHelper):
         this is one-hot vectors of the greedy samples.
         """
         sample_ids = tf.nn.softmax(outputs / self._tau)
-        sample_ids = GumbelSoftmax(self._tau, logits=outputs).sample()
+        sample_ids = tfpd.RelaxedOneHotCategorical(
+            self._tau, logits=outputs).sample()
         if self._straight_through:
             size = tf.shape(sample_ids)[-1]
             sample_ids_hard = tf.cast(
