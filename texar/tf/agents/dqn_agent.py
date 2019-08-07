@@ -22,7 +22,7 @@ import numpy as np
 
 import tensorflow as tf
 
-import texar.tf as tx
+from texar.tf import context
 from texar.tf.agents.episodic_agent_base import EpisodicAgentBase
 from texar.tf.utils import utils
 from texar.tf.core import optimization as opt
@@ -344,7 +344,7 @@ class DQNAgent(EpisodicAgentBase):
         target_qvalue = self._sess.run(
             self._target_outputs['qvalues'], feed_dict={
                 self._observ_inputs: next_observ_batch,
-                tx.global_mode(): tf.estimator.ModeKeys.PREDICT})
+                context.global_mode(): tf.estimator.ModeKeys.PREDICT})
 
         y_batch = reward_batch
         for i in range(self._sample_batch_size):
@@ -372,13 +372,13 @@ class DQNAgent(EpisodicAgentBase):
         return self._sess.run(
             self._qnet_outputs['qvalues'],
             feed_dict={self._observ_inputs: np.array([observ]),
-                       tx.global_mode(): tf.estimator.ModeKeys.PREDICT})
+                       context.global_mode(): tf.estimator.ModeKeys.PREDICT})
 
     def _qvalues_from_target(self, observ):
         return self._sess.run(
             self._target_outputs['qvalues'],
             feed_dict={self._observ_inputs: np.array([observ]),
-                       tx.global_mode(): tf.estimator.ModeKeys.PREDICT})
+                       context.global_mode(): tf.estimator.ModeKeys.PREDICT})
 
     def _update_observ_action(self, observ, action):
         self._observ = observ

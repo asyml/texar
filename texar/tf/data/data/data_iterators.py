@@ -22,7 +22,7 @@ from __future__ import unicode_literals
 
 import tensorflow as tf
 
-import texar.tf as tx
+from texar.tf.data.data.data_base import DataBase
 from texar.tf.utils.variables import get_unique_named_variable_scope
 
 __all__ = [
@@ -53,10 +53,10 @@ class DataIteratorBase(object):
 
     def __init__(self, datasets):
         self._default_dataset_name = 'data'
-        if isinstance(datasets, (tf.data.Dataset, tx.data.DataBase)):
+        if isinstance(datasets, (tf.data.Dataset, DataBase)):
             datasets = {self._default_dataset_name: datasets}
         elif isinstance(datasets, (list, tuple)):
-            if any(not isinstance(d, tx.data.DataBase) for d in datasets):
+            if any(not isinstance(d, DataBase) for d in datasets):
                 raise ValueError("`datasets` must be an non-empty list of "
                                  "`tx.data.DataBase` instances.")
             num_datasets = len(datasets)

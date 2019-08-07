@@ -56,24 +56,6 @@ else:
     # Lazily load Texar-TF modules upon usage. This is to ensure that Texar-TF
     # and TensorFlow will not be imported if the user only requires
     # Texar-PyTorch modules from `texar.torch`.
-    #
-    # Due to the lazy loading mechanism, it is now impossible to write
-    # `from texar import <module>` within library code (i.e., code that will be
-    # accessible from the `texar` module). Please use the following workarounds
-    # instead:
-    #
-    # 1. To import a class / function that is directly accessible from `texar`,
-    #    import them from their containing modules. For instance:
-    #
-    #    `from texar import HParams`
-    #      ->  `from texar.hyperparams import HParams`
-    #    `from texar import ModuleBase`
-    #      ->  `from texar.module_base import ModuleBase`
-    # 2. To import a module that is directly accessible from `texar`, use the
-    #    `import ... as` syntax. For instance:
-    #
-    #    `from texar import utils`  ->  `import texar.utils as utils`
-    #    `from texar import context`  ->  `import texar.context as context`
 
     import importlib
 

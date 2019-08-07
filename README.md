@@ -36,7 +36,7 @@
 ### Library API Example
 Builds an encoder-decoder model, with maximum likelihood learning:
 ```python
-import texar as tx
+import texar.tf as tx
 
 # Data 
 data = tx.data.PairedTextData(hparams=hparams_data) # a dict of hyperparameters 
@@ -108,7 +108,7 @@ To use cutting-edge features or develop locally, install from source:
 ```
 git clone https://github.com/asyml/texar.git
 cd texar
-pip install -e .
+pip install .
 ```
 
 ### Getting Started
