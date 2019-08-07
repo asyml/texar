@@ -6,7 +6,7 @@ python:
   - "3.6"
 
 install:
-  - pip install -e .[tensorflow-cpu]
+  - pip install .[tensorflow-cpu]
   - pip install flake8
 
 before_script:
