@@ -30,7 +30,7 @@ class XLNetRegressorTest(tf.test.TestCase):
         # case 1
         regressor = XLNetRegressor()
         regressor(inputs)
-        n_xlnet_vars = 182
+        n_xlnet_vars = 162
         n_projection_vars = 2
         n_logits_vars = 2
         self.assertEqual(len(regressor.trainable_variables),

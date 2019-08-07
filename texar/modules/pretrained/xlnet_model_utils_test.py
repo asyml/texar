@@ -44,8 +44,13 @@ class XLNetModelUtilsTest(tf.test.TestCase):
         self.assertEqual(outputs.shape, [32, 16])
 
     def test_RelativeMultiheadAttention(self):
+        num_heads = 12
+        head_dim = 64
 
-        model = RelativeMutiheadAttention()
+        r_r_bias = tf.random_normal(shape=(num_heads, head_dim))
+        r_w_bias = tf.random_normal(shape=(num_heads, head_dim))
+
+        model = RelativeMutiheadAttention(r_r_bias=r_r_bias, r_w_bias=r_w_bias)
 
         states_h = tf.random_uniform(shape=(16, 32, model._hparams.hidden_dim))
         pos_embed = tf.random_uniform(shape=(24, 32, model._hparams.hidden_dim))

@@ -73,8 +73,8 @@ class XLNetEncoderTest(tf.test.TestCase):
         n_mask_embed_vars = 1
         n_bias_vars = 3  # r_r_bias, r_w_bias, r_s_bias
         n_pos_wise_ff_vars = 6  # 2 kernels + 2 bias + beta + gamma
-        n_rel_multi_head_vars = 5  # 3 dense layers + beta + gamma
-        n_segment_embed_vars = encoder.hparams.num_layers
+        n_rel_multi_head_vars = 7  # q,k,v,r,o + beta + gamma
+        n_segment_embed_vars = 1
         n_layers = encoder.hparams.num_layers
         n_trainable_variables = \
             n_word_embed_vars + n_segment_embed_vars + n_mask_embed_vars + \
@@ -88,12 +88,12 @@ class XLNetEncoderTest(tf.test.TestCase):
         }
         encoder = XLNetEncoder(hparams=hparams)
         encoder(inputs)
-        n_segment_embed_vars = encoder.hparams.num_layers
+        n_segment_embed_vars = 1
         n_layers = encoder.hparams.num_layers
         n_trainable_variables = \
             n_word_embed_vars + n_segment_embed_vars + n_mask_embed_vars + \
-            n_layers * (n_bias_vars + n_rel_multi_head_vars +
-                        n_pos_wise_ff_vars)
+            n_layers * (n_rel_multi_head_vars + n_pos_wise_ff_vars) \
+            + n_bias_vars
         self.assertEqual(len(encoder.trainable_variables),
                          n_trainable_variables)
 

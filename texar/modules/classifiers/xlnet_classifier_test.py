@@ -30,7 +30,7 @@ class XLNetClassifierTest(tf.test.TestCase):
         # case 1
         clas = XLNetClassifier()
         clas(inputs)
-        n_xlnet_vars = 182
+        n_xlnet_vars = 162
         n_projection_vars = 2
         n_logits_vars = 2
         self.assertEqual(len(clas.trainable_variables),
@@ -114,7 +114,7 @@ class XLNetClassifierTest(tf.test.TestCase):
             "num_classes": 3,
             "clas_strategy": "all_time",
             "use_projection": False,
-            "vocab_size": 1000
+            "vocab_size": 40000
         }
         inputs = tf.placeholder(tf.int32, shape=[batch_size, 6])
         clas = XLNetClassifier(hparams=hparams)

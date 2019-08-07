@@ -395,7 +395,7 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
     def _build(self, token_ids, segment_ids=None, input_mask=None,
                memory=None, permute_mask=None, target_mapping=None,
                bi_data=False, clamp_len=None, cache_len=0, same_length=False,
-               attn_type='bi', two_stream=False, **kwargs):
+               attn_type='bi', two_stream=False, mode=None):
         r"""Compute XLNet representations for the input.
 
         Args:
@@ -444,53 +444,18 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
                              target_mapping=target_mapping, bi_data=bi_data,
                              clamp_len=clamp_len, cache_len=cache_len,
                              same_length=same_length, attn_type=attn_type,
-                             two_stream=two_stream, **kwargs)
+                             two_stream=two_stream, mode=mode)
 
     def _execute(self, word_embed, segment_ids=None,  # noqa: C901
                  input_mask=None, memory=None, permute_mask=None,
                  target_mapping=None, bi_data=False, clamp_len=None,
                  cache_len=0, same_length=False, attn_type='bi',
                  two_stream=False, mode=None):
-        r"""Compute XLNet representations for the input.
-
-        Args:
-            word_embed: Shape `(batch_size, seq_len, word_embed_dim)`.
-            segment_ids: Shape `(batch_size, seq_len)`.
-            input_mask: Float tensor of shape `(batch_size, seq_len)`. Note that
-                positions with value 1 are masked out.
-            memory: Memory from previous batches. A list of length `num_layers`,
-                each a tensor of shape `(batch_size, mem_len, hidden_dim)`.
-            permute_mask: The permutation mask. Float tensor of shape
-                `(batch_size, seq_len, seq_len)`.
-                A value of 0 for ``permute_mask[i, j, k]`` indicates that
-                position `i` attends to position `j` in batch `k`.
-            target_mapping: The target token mapping. Float tensor of shape
-                `[batch_size, num_targets, seq_len]`.
-                A value of 1 for ``target_mapping[i, j, k]`` indicates that
-                the `i`-th target token (in order of permutation) in batch `k`
-                is the token at position `j`.
-                Each row ``target_mapping[i, :, k]`` can have no more than one
-                value of 1.
-            bi_data (bool): Whether to use bidirectional data input pipeline.
-            clamp_len (int): Clamp all relative distances larger than
-                :attr:`clamp_len`. A value of -1 means no clamping.
-            cache_len (int): Length of memory (number of tokens) to cache.
-            same_length (bool): Whether to use the same attention length for
-                each token.
-            attn_type (str): Attention type. Supported values are `"uni"`
-                and `"bi"`.
-            two_stream (bool): Whether to use two-stream attention. Only set to
-                `True` when pre-training or generating text. Defaults to
-                `False`.
-            mode (optional): A tensor taking value in
-                :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
-                `TRAIN`, `EVAL`, and `PREDICT`. If `None`, dropout is
-                controlled by :func:`texar.global_mode`.
-
-        :returns: A tuple of `(output)`:
-
-            - **`output`**: The final layer output representations. Shape
-              `(seq_len, batch_size, hidden_dim)`.
+        r"""Compute XLNet representations for the input. This layer exists
+        because :class:`XLNetDecoder` compute embeddings in the decoder helper.
+        `word_embed` has shape `[batch_size, seq_len, word_embed_dim]`.
+        Please refer to :meth:`_build` for the detailed information of other
+        arguments.
         """
         # word_embed: [seq_len, batch_size, word_embed_dim]
         word_embed = tf.transpose(word_embed, perm=[1, 0, 2])
