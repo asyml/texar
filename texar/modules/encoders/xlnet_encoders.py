@@ -363,7 +363,7 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
 
     @property
     def output_size(self):
-        r"""Return the output size of the network.
+        r"""Return the size of the undivided hidden dimension of the network.
         """
         return self._hparams.hidden_dim
 

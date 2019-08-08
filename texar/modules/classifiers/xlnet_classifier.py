@@ -181,6 +181,54 @@ class XLNetClassifier(ClassifierBase):
         })
         return hparams
 
+    def param_groups(self, lr=None, lr_layer_scale=1.0,
+                     decay_base_params=False):
+        r"""Create parameter groups for optimizers. When
+        :attr:`lr_layer_decay_rate` is not 1.0, parameters from each layer form
+        separate groups with different base learning rates.
+
+        This method should be called before applying gradients to the variables
+        through the optimizer. Particularly, after calling the optimizer's
+        `compute_gradients` method, the user can call this method to get
+        variable-specific learning rates for the network. The gradients for each
+        variables can then be scaled accordingly. These scaled gradients are
+        finally applied by calling optimizer's `apply_gradients` method.
+
+        Args:
+            lr (float): The learning rate. Can be omitted if
+                :attr:`lr_layer_decay_rate` is 1.0.
+            lr_layer_scale (float): Per-layer LR scaling rate. The `i`-th layer
+                will be scaled by `lr_layer_scale ^ (num_layers - i - 1)`.
+            decay_base_params (bool): If `True`, treat non-layer parameters
+                (e.g. embeddings) as if they're in layer 0. If `False`, these
+                parameters are not scaled.
+
+        Returns: A dict mapping tensorflow variables to their learning rates.
+        """
+        vars_to_learning_rates = {}
+        if lr_layer_scale != 1.0:
+            if lr is None:
+                raise ValueError(
+                    "lr must be specified when lr_layer_decay_rate is not 1.0")
+
+            scope = self.variable_scope.name
+            projection_vars = tf.trainable_variables(scope=scope + "/dense")
+            logits_vars = tf.trainable_variables(
+                scope=self.variable_scope.name + "/logit_layer")
+            finetune_vars = projection_vars + logits_vars
+            for var in finetune_vars:
+                vars_to_learning_rates[var] = lr
+
+            vars_to_learning_rates.update(
+                self._encoder.param_groups(lr=lr,
+                                           lr_layer_scale=lr_layer_scale,
+                                           decay_base_params=decay_base_params))
+        else:
+            for variable in self.trainable_variables:
+                vars_to_learning_rates[variable] = lr
+
+        return vars_to_learning_rates
+
     def _build(self, token_ids, segment_ids=None, input_mask=None, mode=None):
         r"""Feeds the inputs through the network and makes classification.
 
