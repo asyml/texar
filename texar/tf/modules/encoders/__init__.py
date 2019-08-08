@@ -21,16 +21,6 @@ from __future__ import print_function
 
 # pylint: disable=wildcard-import
 
-<<<<<<< HEAD:texar/modules/encoders/__init__.py
-from texar.modules.encoders.encoder_base import *
-from texar.modules.encoders.rnn_encoders import *
-from texar.modules.encoders.hierarchical_encoders import *
-from texar.modules.encoders.transformer_encoders import *
-from texar.modules.encoders.multihead_attention import *
-from texar.modules.encoders.conv_encoders import *
-from texar.modules.encoders.bert_encoders import *
-from texar.modules.encoders.xlnet_encoders import *
-=======
 from texar.tf.modules.encoders.encoder_base import *
 from texar.tf.modules.encoders.rnn_encoders import *
 from texar.tf.modules.encoders.hierarchical_encoders import *
@@ -38,4 +28,4 @@ from texar.tf.modules.encoders.transformer_encoders import *
 from texar.tf.modules.encoders.multihead_attention import *
 from texar.tf.modules.encoders.conv_encoders import *
 from texar.tf.modules.encoders.bert_encoders import *
->>>>>>> Move Texar-TF under texar/tf/:texar/tf/modules/encoders/__init__.py
+from texar.tf.modules.encoders.xlnet_encoders import *

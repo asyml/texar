@@ -5,7 +5,7 @@ import os
 
 import tensorflow as tf
 
-from texar.modules.pretrained.xlnet_utils import \
+from texar.tf.modules.pretrained.xlnet_utils import \
     load_pretrained_xlnet, transform_xlnet_to_texar_config
 
 

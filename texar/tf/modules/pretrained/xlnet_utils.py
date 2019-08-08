@@ -25,8 +25,8 @@ import os
 import re
 
 import tensorflow as tf
-from texar.modules.pretrained.pretrained_utils import default_download_dir
-from texar.data.data_utils import maybe_download
+from texar.tf.modules.pretrained.pretrained_utils import default_download_dir
+from texar.tf.data.data_utils import maybe_download
 
 __all__ = [
     'init_xlnet_checkpoint',

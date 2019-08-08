@@ -5,7 +5,7 @@ Unit tests for bert utils.
 import os
 import tensorflow as tf
 
-from texar.modules.pretrained.bert_utils import \
+from texar.tf.modules.pretrained.bert_utils import \
     load_pretrained_bert, transform_bert_to_texar_config
 
 

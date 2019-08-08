@@ -10,11 +10,11 @@ from __future__ import unicode_literals
 
 import tensorflow as tf
 
-from texar.modules.encoders.xlnet_encoders import XLNetEncoder
+from texar.tf.modules.encoders.xlnet_encoders import XLNetEncoder
 
 
 class XLNetEncoderTest(tf.test.TestCase):
-    """Tests :class:`~texar.modules.XLNetEncoder` class.
+    """Tests :class:`~texar.tf.modules.XLNetEncoder` class.
     """
 
     def test_hparams(self):

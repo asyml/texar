@@ -12,13 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Modules of texar library regressors.
+Pre-trained modules of Texar library.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-# pylint: disable=wildcard-import
-
-from texar.modules.regressors.xlnet_regressor import *
+from texar.tf.modules.pretrained.bert_utils import *
+from texar.tf.modules.pretrained.pretrained_base import *
+from texar.tf.modules.pretrained.xlnet_utils import *

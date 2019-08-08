@@ -12,13 +12,13 @@ import numpy as np
 
 import tensorflow as tf
 
-from texar.modules.regressors.xlnet_regressor import XLNetRegressor
+from texar.tf.modules.regressors.xlnet_regressor import XLNetRegressor
 
 # pylint: disable=too-many-locals, no-member
 
 
 class XLNetRegressorTest(tf.test.TestCase):
-    """Tests :class:`~texar.modules.XLNetRegressor` class.
+    """Tests :class:`~texar.tf.modules.XLNetRegressor` class.
     """
 
     def test_trainable_variables(self):

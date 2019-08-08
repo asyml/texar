@@ -21,13 +21,8 @@ from __future__ import print_function
 
 # pylint: disable=wildcard-import
 
-<<<<<<< HEAD:texar/modules/classifiers/__init__.py
-from texar.modules.classifiers.conv_classifiers import *
-from texar.modules.classifiers.rnn_classifiers import *
-from texar.modules.classifiers.bert_classifiers import *
-from texar.modules.classifiers.xlnet_classifier import *
-=======
 from texar.tf.modules.classifiers.conv_classifiers import *
 from texar.tf.modules.classifiers.rnn_classifiers import *
 from texar.tf.modules.classifiers.bert_classifiers import *
->>>>>>> Move Texar-TF under texar/tf/:texar/tf/modules/classifiers/__init__.py
+from texar.tf.modules.classifiers.xlnet_classifier import *
+

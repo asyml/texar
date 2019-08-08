@@ -25,27 +25,7 @@ import sys
 
 if sys.version_info.major < 3:
     # PY 2.x, import as is because Texar-PyTorch cannot be installed.
-    import tensorflow as tf
-    from texar.version import VERSION as __version__
-
-    from texar.module_base import *
-    from texar.hyperparams import *
-    from texar.context import *
-    from texar import modules
-    from texar import core
-    from texar import losses
-    from texar import models
-    from texar import data
-    from texar import evals
-    from texar import agents
-    from texar import run
-    from texar import utils
-
-    if packaging.version.parse(tf.__version__) <= \
-            packaging.version.parse(VERSION_WARNING):
-        tf.logging.set_verbosity(tf.logging.ERROR)
-    else:
-        tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+    import texar.tf
 
 else:
     # Lazily load Texar-TF modules upon usage. This is to ensure that Texar-TF
@@ -62,23 +42,15 @@ else:
 
 
     def _import_all():
-<<<<<<< HEAD
-        import tensorflow as tf
-        if packaging.version.parse(tf.__version__) <= \
-                packaging.version.parse(VERSION_WARNING):
-            tf.logging.set_verbosity(tf.logging.ERROR)
-        else:
-            tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
-=======
         import warnings
 
         with warnings.catch_warnings():
             warnings.simplefilter("always", DeprecationWarning)
-            warnings.warn("Importing from `texar` is deprecated. Please import "
-                          "from `texar.tf` instead.", DeprecationWarning,
-                          stacklevel=3)
+            warnings.warn(
+                "Importing from `texar` is deprecated. Please import from "
+                "`texar.tf` instead, e.g. `import texar.tf as tx`",
+                DeprecationWarning, stacklevel=3)
 
->>>>>>> Add DeprecationWarning
         from texar.tf.version import VERSION
         globals()["__version__"] = VERSION
 

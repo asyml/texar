@@ -21,18 +21,18 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from texar.utils.mode import is_train_mode
+from texar.tf.utils.mode import is_train_mode
 
-from texar.hyperparams import HParams
-from texar.core import layers
-from texar.modules.pretrained.pretrained_base import PretrainedBase
-from texar.modules.pretrained import xlnet_utils
-from texar.modules.pretrained.xlnet_model_utils import \
+from texar.tf.hyperparams import HParams
+from texar.tf.core import layers
+from texar.tf.modules.pretrained.pretrained_base import PretrainedBase
+from texar.tf.modules.pretrained import xlnet_utils
+from texar.tf.modules.pretrained.xlnet_model_utils import \
     (PositionWiseFF, RelativePositionalEncoding, RelativeMutiheadAttention)
-from texar.modules.embedders import WordEmbedder
-from texar.modules.encoders import EncoderBase
+from texar.tf.modules.embedders import WordEmbedder
+from texar.tf.modules.encoders import EncoderBase
 
-from texar.utils import dict_fetch
+from texar.tf.utils import dict_fetch
 
 __all__ = [
     "XLNetEncoder"
@@ -244,7 +244,7 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
         "initializer" : dict, optional
             Hyperparameters of the default initializer that initializes
             variables created in this module.
-            See :func:`~texar.core.get_initializer` for details.
+            See :func:`~texar.tf.core.get_initializer` for details.
 
         "num_heads": int
             Number of heads in the attention
@@ -269,7 +269,7 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
 
         "activation": str or callable
             Activation function applied to the output of the PositionWise FF.
-            See :func:`~texar.core.get_activation_fn` for more details.
+            See :func:`~texar.tf.core.get_activation_fn` for more details.
 
         "vocab_size" : int
             The vocabulary size of `inputs` in `XLNet`.

@@ -84,7 +84,7 @@ Encoders
 
 :hidden:`XLNetEncoder`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.XLNetEncoder
+.. autoclass:: texar.tf.modules.XLNetEncoder
     :members:
     :exclude-members: _execute
 
@@ -273,7 +273,7 @@ Classifiers
 
 :hidden:`XLNetClassifier`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.XLNetClassifier
+.. autoclass:: texar.tf.modules.XLNetClassifier
     :members:
 
 Networks
@@ -305,7 +305,7 @@ Pre-trained
 
 :hidden:`PretrainedBase`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.PretrainedBase
+.. autoclass:: texar.tf.modules.PretrainedBase
     :members:
 
 Regressor
@@ -313,7 +313,7 @@ Regressor
 
 :hidden:`XLNetRegressor`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.modules.XLNetRegressor
+.. autoclass:: texar.tf.modules.XLNetRegressor
     :members:
 
 Memory

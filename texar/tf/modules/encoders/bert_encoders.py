@@ -20,22 +20,13 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-<<<<<<< HEAD:texar/modules/encoders/bert_encoders.py
-from texar.core import layers
-from texar.modules.encoders.transformer_encoders import TransformerEncoder
-from texar.modules.embedders import WordEmbedder, PositionEmbedder
-from texar import HParams
-from texar.modules.pretrained.pretrained_base import PretrainedBase
-from texar.modules.pretrained import bert_utils
-from texar.modules.encoders import EncoderBase
-=======
 from texar.tf.core import layers
 from texar.tf.modules.encoders.transformer_encoders import TransformerEncoder
 from texar.tf.modules.embedders import WordEmbedder, PositionEmbedder
-from texar.tf.hyperparams import HParams
-from texar.tf.modules.berts import BertBase, bert_utils
+from texar import HParams
+from texar.tf.modules.pretrained.pretrained_base import PretrainedBase
+from texar.tf.modules.pretrained import bert_utils
 from texar.tf.modules.encoders import EncoderBase
->>>>>>> Move Texar-TF under texar/tf/:texar/tf/modules/encoders/bert_encoders.py
 
 __all__ = [
     "BertEncoder",

@@ -12,13 +12,13 @@ import numpy as np
 
 import tensorflow as tf
 
-from texar.modules.classifiers.xlnet_classifier import XLNetClassifier
+from texar.tf.modules.classifiers.xlnet_classifier import XLNetClassifier
 
 # pylint: disable=too-many-locals, no-member
 
 
 class XLNetClassifierTest(tf.test.TestCase):
-    """Tests :class:`~texar.modules.XLNetClassifier` class.
+    """Tests :class:`~texar.tf.modules.XLNetClassifier` class.
     """
 
     def test_trainable_variables(self):

@@ -3,7 +3,7 @@ Unit tests for xlnet model utils.
 """
 import tensorflow as tf
 
-from texar.modules.pretrained.xlnet_model_utils import \
+from texar.tf.modules.pretrained.xlnet_model_utils import \
     PositionWiseFF, RelativePositionalEncoding, RelativeMutiheadAttention
 
 

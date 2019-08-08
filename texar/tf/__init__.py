@@ -21,15 +21,15 @@ from __future__ import print_function
 
 # pylint: disable=wildcard-import
 
-from setuptools.version import pkg_resources
+import pkg_resources
 import tensorflow as tf
 
 VERSION_WARNING = "1.13.2"
 
 
 
-if pkg_resources.parse_version(tf.__version__) <= \
-        pkg_resources.parse_version(VERSION_WARNING):
+if (pkg_resources.parse_version(tf.__version__) <=
+        pkg_resources.parse_version(VERSION_WARNING)):
     tf.logging.set_verbosity(tf.logging.ERROR)
 else:
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)

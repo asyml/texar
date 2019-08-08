@@ -23,14 +23,15 @@ from __future__ import unicode_literals
 import json
 import collections
 import re
-import sys
 import os
 import tensorflow as tf
+from texar.tf.modules.pretrained.pretrained_utils import default_download_dir
 from texar.tf.data.data_utils import maybe_download
+
 __all__ = [
     "transform_bert_to_texar_config",
     "init_bert_checkpoint",
-    "load_pretrained_model"
+    "load_pretrained_bert"
 ]
 
 _BERT_PATH = "https://storage.googleapis.com/bert_models/"
@@ -48,8 +49,9 @@ _MODEL2URL = {
     'bert-base-multilingual-cased':
         _BERT_PATH + "2018_11_03/multilingual_L-12_H-768_A-12.zip",
     'bert-base-chinese':
-        _BERT_PATH + "2018_11_03/chinese_L-12_H-768_A-12.zip",
+        _BERT_PATH + "2018_11_03/chinese_L-12_H-768_A-12.zip"
 }
+
 
 def _get_assignment_map_from_checkpoint(tvars, init_checkpoint, scope_name):
     """
@@ -136,40 +138,13 @@ def init_bert_checkpoint(init_checkpoint_dir, scope_name):
     tvars = tf.trainable_variables()
     init_checkpoint = os.path.join(init_checkpoint_dir, 'bert_model.ckpt')
     if init_checkpoint:
-        (assignment_map, initialized_variable_names
-        ) = _get_assignment_map_from_checkpoint(
-            tvars, init_checkpoint, scope_name)
+        assignment_map, initialized_variable_names = \
+            _get_assignment_map_from_checkpoint(
+                tvars, init_checkpoint, scope_name)
         tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
 
-def _default_download_dir():
-    """
-    Return the directory to which packages will be downloaded by default.
-    """
-    package_dir = os.path.dirname(os.path.dirname(
-        os.path.dirname(os.path.dirname(__file__))))
-    if os.access(package_dir, os.W_OK):
-        texar_download_dir = os.path.join(package_dir, 'texar.tf_download')
-    else:
-        # On Windows, use %APPDATA%
-        if sys.platform == 'win32' and 'APPDATA' in os.environ:
-            home_dir = os.environ['APPDATA']
-
-        # Otherwise, install in the user's home directory.
-        else:
-            home_dir = os.path.expanduser('~/')
-            if home_dir == '~/':
-                raise ValueError("Could not find a default download directory")
-
-        texar_download_dir = os.path.join(home_dir, 'texar.tf_download')
-
-    if not os.path.exists(texar_download_dir):
-        os.mkdir(texar_download_dir)
-
-    return os.path.join(texar_download_dir, 'bert')
-
-
-def load_pretrained_model(pretrained_model_name, cache_dir):
+def load_pretrained_bert(pretrained_model_name, cache_dir=None):
     """
     Return the directory in which the pretrained model is cached.
     """
@@ -180,7 +155,7 @@ def load_pretrained_model(pretrained_model_name, cache_dir):
             "Pre-trained model not found: {}".format(pretrained_model_name))
 
     if cache_dir is None:
-        cache_dir = _default_download_dir()
+        cache_dir = default_download_dir("bert")
 
     file_name = download_path.split('/')[-1]
 
@@ -188,7 +163,8 @@ def load_pretrained_model(pretrained_model_name, cache_dir):
     if not os.path.exists(cache_path):
         maybe_download(download_path, cache_dir, extract=True)
     else:
-        print("Using cached pre-trained BERT model from: %s." % cache_path)
+        print("Using cached pre-trained model {} from: {}".format(
+            pretrained_model_name, cache_dir))
 
     return cache_path
 

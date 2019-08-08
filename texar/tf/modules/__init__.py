@@ -21,18 +21,6 @@ from __future__ import print_function
 
 # pylint: disable=wildcard-import
 
-<<<<<<< HEAD:texar/modules/__init__.py
-from texar.modules.networks import *
-from texar.modules.embedders import *
-from texar.modules.encoders import *
-from texar.modules.decoders import *
-from texar.modules.connectors import *
-from texar.modules.classifiers import *
-from texar.modules.regressors import *
-from texar.modules.policies import *
-from texar.modules.qnets import *
-from texar.modules.memory import *
-=======
 from texar.tf.modules.networks import *
 from texar.tf.modules.embedders import *
 from texar.tf.modules.encoders import *
@@ -42,5 +30,4 @@ from texar.tf.modules.classifiers import *
 from texar.tf.modules.policies import *
 from texar.tf.modules.qnets import *
 from texar.tf.modules.memory import *
-from texar.tf.modules.berts import *
->>>>>>> Move Texar-TF under texar/tf/:texar/tf/modules/__init__.py
+from texar.tf.modules.regressors import *

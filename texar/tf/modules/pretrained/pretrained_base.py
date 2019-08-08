@@ -15,10 +15,10 @@
 Base class for Pre-trained Modules.
 """
 
-from texar.module_base import ModuleBase
-from texar.modules.pretrained.bert_utils import (
+from texar.tf.module_base import ModuleBase
+from texar.tf.modules.pretrained.bert_utils import (
     load_pretrained_bert, transform_bert_to_texar_config)
-from texar.modules.pretrained.xlnet_utils import (
+from texar.tf.modules.pretrained.xlnet_utils import (
     load_pretrained_xlnet, transform_xlnet_to_texar_config)
 
 

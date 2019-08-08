@@ -19,9 +19,9 @@ https://github.com/zihangdai/xlnet/blob/master/modeling.py
 
 import tensorflow as tf
 
-from texar.core import layers
-from texar.utils.mode import is_train_mode
-from texar.module_base import ModuleBase
+from texar.tf.core import layers
+from texar.tf.utils.mode import is_train_mode
+from texar.tf.module_base import ModuleBase
 
 
 __all__ = [
@@ -96,7 +96,7 @@ class PositionWiseFF(ModuleBase):
 
         "activation": str or callable
             Activation function applied to the output of the PositionWise FF.
-            See :func:`~texar.core.get_activation_fn` for more details.
+            See :func:`~texar.tf.core.get_activation_fn` for more details.
         """
         return {
             "name": "ff",
@@ -115,7 +115,7 @@ class PositionWiseFF(ModuleBase):
             mode (optional): A tensor taking value in
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
                 `TRAIN`, `EVAL`, and `PREDICT`. If `None`, dropout is
-                controlled by :func:`texar.global_mode`.
+                controlled by :func:`texar.tf.global_mode`.
 
         :returns: A tensor output of the position wise feed forward network
         """
@@ -361,7 +361,7 @@ class RelativeMutiheadAttention(ModuleBase):
         "initializer" : dict, optional
             Hyperparameters of the default initializer that initializes
             variables created in this module.
-            See :func:`~texar.core.get_initializer` for details.
+            See :func:`~texar.tf.core.get_initializer` for details.
 
         "num_heads": int
             Number of heads in the attention
@@ -498,7 +498,7 @@ class RelativeMutiheadAttention(ModuleBase):
             mode (optional): A tensor taking value in
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
                 `TRAIN`, `EVAL`, and `PREDICT`. If `None`, dropout is
-                controlled by :func:`texar.global_mode`.
+                controlled by :func:`texar.tf.global_mode`.
 
         :returns: Returns output states for `states_h` and `states_g`
             (`states_g` is not None)

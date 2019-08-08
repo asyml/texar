@@ -19,7 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from texar.module_base import ModuleBase
+from texar.tf.module_base import ModuleBase
 
 __all__ = [
     "RegressorBase"
