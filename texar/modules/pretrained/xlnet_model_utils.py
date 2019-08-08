@@ -134,7 +134,8 @@ class PositionWiseFF(ModuleBase):
 
 
 class PositionalEmbedding(ModuleBase):
-    r"""Sinosoidal Positional Embedding."""
+    r"""Sinosoidal Positional Embedding.
+    """
 
     # TODO(avinash) : See if this can be merged with Sinosoidal Position
     # Embedder
