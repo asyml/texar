@@ -380,11 +380,12 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
 
     @property
     def output_size(self):
-        r"""Return the size of the undivided hidden dimension of the network.
+        r"""The last dimension of the encoder output.
 
-        Note: The :meth:`_build` returns two tensors. This method returns the
-        size of the first tensor i.e `output` which represents encodings of
-        the input tensor.
+        Note: The :meth:`_build` returns two tensors of shapes
+        `[batch_size, max_time, hidden_dim]` and
+        `[batch_size, cache_len, hidden_dim]`. `output_size` here equals
+        `hidden_dim`
         """
         return self._hparams.hidden_dim
 
