@@ -28,7 +28,7 @@ import sys
 VERSION_WARNING = "1.13.2"
 
 def _tf_verion_greater_than(v1, v2):
-    """Compares two version strings :attr:`v1` and :attr:`v2`.
+    """Compares two :mod`tensorflow` version strings :attr:`v1` and :attr:`v2`.
     Returns `True` if :attr:`v1` > :attr:`v2`, otherwise returns `False`.
     """
     v1 = v1.replace("rc", ".").replace("a", ".").replace("b", ".")
