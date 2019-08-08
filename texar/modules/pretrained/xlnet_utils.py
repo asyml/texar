@@ -103,7 +103,7 @@ def _get_assignment_map_from_checkpoint(tvars,  # noqa: C901
 
 def init_xlnet_checkpoint(init_checkpoint_dir, scope_name):
     """
-    Initializes XLnet model parameters from a checkpoint.
+    Initialize XLnet model parameters from a checkpoint.
 
     Args:
         init_checkpoint_dir (str): path to the checkpoint.

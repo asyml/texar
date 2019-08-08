@@ -312,6 +312,13 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
         :attr:`lr_layer_decay_rate` is not 1.0, parameters from each layer form
         separate groups with different base learning rates.
 
+        This method should be called before applying gradients to the variables
+        through the optimizer. Particularly, after calling the optimizer's
+        `compute_gradients` method, the user can call this method to get
+        variable-specific learning rates for the network. The gradients for each
+        variables can then be scaled accordingly. These scaled gradients are
+        finally applied by calling optimizer's `apply_gradients` method.
+
         Args:
             lr (float): The learning rate. Can be omitted if
                 :attr:`lr_layer_decay_rate` is 1.0.
@@ -321,10 +328,9 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
                 (e.g. embeddings) as if they're in layer 0. If `False`, these
                 parameters are not scaled.
 
-        Returns:
-            The parameter groups, used as the first argument for optimizers.
+        Returns: A dict mapping tensorflow variables to their learning rates.
         """
-
+        vars_to_learning_rates = {}
         if lr_layer_scale != 1.0:
             if lr is None:
                 raise ValueError(
@@ -337,25 +343,23 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
             if self._hparams.use_segments:
                 base_var_names.extend(['r_s_bias', 'seg_embed'])
 
-            base_params = [tf.trainable_variables(scope=scope + "/" + name)[0]
-                           for name in base_var_names]
-            base_group = {
-                "params": base_params,
-                "lr": lr * (lr_layer_scale ** num_layers
-                            if decay_base_params else 1.0)
-            }
-            param_groups = [base_group]
+            for var in base_var_names:
+                tf_variable = tf.trainable_variables(scope=scope + "/" + var)[0]
+                vars_to_learning_rates[tf_variable] = \
+                    lr * (lr_layer_scale ** num_layers if decay_base_params
+                          else 1.0)
+
             for idx in range(num_layers):
                 decay_rate = lr_layer_scale ** (num_layers - idx - 1)
-                param_group = {
-                    "params": tf.trainable_variables(
-                        scope=scope + "/" + "layer_{}".format(idx)),
-                    "lr": lr * decay_rate,
-                }
-                param_groups.append(param_group)
+                layer_variables = tf.trainable_variables(
+                    scope=scope + "/" + "layer_{}".format(idx))
+                for variable in layer_variables:
+                    vars_to_learning_rates[variable] = lr * decay_rate
         else:
-            param_groups = self.trainable_variables
-        return param_groups
+            for variable in self.trainable_variables:
+                vars_to_learning_rates[variable] = lr
+
+        return vars_to_learning_rates
 
     @property
     def output_size(self):
@@ -399,18 +403,18 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
         r"""Compute XLNet representations for the input.
 
         Args:
-            token_ids: Shape `[batch_size, seq_len]`.
-            segment_ids: Shape `[batch_size, seq_len]`.
-            input_mask: Float tensor of shape `[batch_size, seq_len]`. Note that
+            token_ids: Shape `[batch_size, max_time]`.
+            segment_ids: Shape `[batch_size, max_time]`.
+            input_mask: Float tensor of shape `[batch_size, max_time]`. Note that
                 positions with value 1 are masked out.
             memory: Memory from previous batches. A list of length `num_layers`,
                 each tensor of shape `[batch_size, mem_len, hidden_dim]`.
             permute_mask: The permutation mask. Float tensor of shape
-                `[batch_size, seq_len, seq_len]`.
+                `[batch_size, max_time, max_time]`.
                 A value of 0 for ``permute_mask[i, j, k]`` indicates that
                 position `i` attends to position `j` in batch `k`.
             target_mapping: The target token mapping. Float tensor of shape
-                `[batch_size, num_targets, seq_len]`.
+                `[batch_size, num_targets, max_time]`.
                 A value of 1 for ``target_mapping[i, j, k]`` indicates that
                 the `i`-th target token (in order of permutation) in batch `k`
                 is the token at position `j`.
@@ -428,10 +432,10 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
                 `True` when pre-training or generating text. Defaults to
                 `False`.
 
-        :returns: A tuple of `(output, new_memory)`:
+        Returns: A tuple of `(output, new_memory)`:
 
             - **`output`**: The final layer output representations. Shape
-              `[batch_size, seq_len, hidden_dim]`.
+              `[batch_size, max_time, hidden_dim]`.
             - **`new_memory`**: The memory of the current batch.
               If `cache_len` is 0, then `new_memory` is `None`. Otherwise, it is
               a list of length `num_layers`, each tensor of shape
@@ -453,40 +457,40 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
                  two_stream=False, mode=None):
         r"""Compute XLNet representations for the input. This layer exists
         because :class:`XLNetDecoder` compute embeddings in the decoder helper.
-        `word_embed` has shape `[batch_size, seq_len, word_embed_dim]`.
+        `word_embed` has shape `[batch_size, max_time, word_embed_dim]`.
         Please refer to :meth:`_build` for the detailed information of other
         arguments.
         """
-        # word_embed: [seq_len, batch_size, word_embed_dim]
+        # word_embed: [max_time, batch_size, word_embed_dim]
         word_embed = tf.transpose(word_embed, perm=[1, 0, 2])
-        # segment_ids: [seq_len, batch_size]
+        # segment_ids: [max_time, batch_size]
         if segment_ids is not None:
             segment_ids = tf.transpose(segment_ids, perm=[1, 0])
-        # input_mask: [seq_len, batch_size]
+        # input_mask: [max_time, batch_size]
         if input_mask is not None:
             input_mask = tf.transpose(input_mask, perm=[1, 0])
         # memory: A list of length num_layers
         # each tensor of shape [mem_len, batch_size, hidden_dim]
         if memory is not None:
             memory = [tf.transpose(m, perm=[1, 0, 2]) for m in memory]
-        # permute_mask: [seq_len, seq_len, batch_size]
+        # permute_mask: [max_time, max_time, batch_size]
         if permute_mask is not None:
             permute_mask = tf.transpose(permute_mask, perm=[1, 2, 0])
-        # target_mapping: [num_targets, seq_len, batch_size]
+        # target_mapping: [num_targets, max_time, batch_size]
         if target_mapping is not None:
             target_mapping = tf.transpose(target_mapping, perm=[1, 2, 0])
 
-        seq_len = tf.shape(word_embed)[0]
+        max_time = tf.shape(word_embed)[0]
         batch_size = tf.shape(word_embed)[1]
         mem_len = tf.shape(memory[0])[0] if memory is not None else 0
-        tot_len = seq_len + mem_len
+        tot_len = max_time + mem_len
         reuse_len = self._hparams.reuse_len
         is_training = is_train_mode(mode)
 
         # Attention mask
         # causal attention mask
         if attn_type == 'uni':
-            attn_mask = self._create_mask(seq_len, mem_len, tf.float32,
+            attn_mask = self._create_mask(max_time, mem_len, tf.float32,
                                           same_length)
             attn_mask = attn_mask[:, :, None, None]
         elif attn_type == 'bi':
@@ -518,8 +522,8 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
             attn_mask = tf.cast(attn_mask > 0, dtype=tf.float32)
 
         if attn_mask is not None:
-            non_tgt_mask = -tf.eye(seq_len, dtype=tf.float32)
-            non_tgt_mask = tf.concat([tf.zeros([seq_len, mem_len],
+            non_tgt_mask = -tf.eye(max_time, dtype=tf.float32)
+            non_tgt_mask = tf.concat([tf.zeros([max_time, mem_len],
                                                dtype=tf.float32),
                                       non_tgt_mask], axis=-1)
             non_tgt_mask = tf.cast(
@@ -542,7 +546,7 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
 
         # Position embedding
         pos_embed = self.pos_embed(
-            batch_size, seq_len, tot_len, clamp_len, attn_type, bi_data)
+            batch_size, max_time, tot_len, clamp_len, attn_type, bi_data)
         pos_embed = self.dropout(pos_embed,
                                  training=is_training)
 
@@ -581,7 +585,7 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
         output = self.dropout(states_h if states_g is None else states_g,
                               training=is_training)
 
-        # Now output: [seq_len, batch_size, hidden_dim]
+        # Now output: [max_time, batch_size, hidden_dim]
         # new_memory: None or A list of length num_layers,
         # each tensor of shape [cache_len, batch_size, hidden_dim]
         output = tf.transpose(output, perm=[1, 0, 2])

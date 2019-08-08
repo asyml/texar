@@ -198,7 +198,7 @@ class RelativePositionalEncoding(ModuleBase):
 
         return pos_emb
 
-    def _build(self, batch_size, seq_len, total_len, clamp_len=None,
+    def _build(self, batch_size, max_time, total_len, clamp_len=None,
                attn_type='bi', bi_data=True):
         r"""Compute relative positional encoding.
 
@@ -206,7 +206,7 @@ class RelativePositionalEncoding(ModuleBase):
             batch_size: int
                 Batch size of the input
 
-            seq_len: int
+            max_time: int
                 Sequence length of the input
 
             total_len: int
@@ -223,13 +223,13 @@ class RelativePositionalEncoding(ModuleBase):
                 Whether to use bidirectional data input pipeline. Usually set to
                 True during pretraining and False during finetuning.
 
-        :returns: A tensor of shape `[total_len + seq_len, batch_size, dim]`
+        :returns: A tensor of shape `[total_len + max_time, batch_size, dim]`
             (if attn_type == `"bi"`) or of shape `[total_len, batch_size, dim]`
             (if attn_type == `"uni"`) representing relative positional encoding
             of the sequence.
         """
         if attn_type == 'bi':
-            start, end = total_len, -seq_len
+            start, end = total_len, -max_time
         elif attn_type == 'uni':
             start, end = total_len, -1
         else:
@@ -409,12 +409,12 @@ class RelativeMutiheadAttention(ModuleBase):
 
         # Content based attention score.
         q_head_rw = q_head + self.r_w_bias
-        # attn_ac: (seq_len, tot_len, batch_size, n_head)
+        # attn_ac: (max_time, tot_len, batch_size, n_head)
         attn_ac = tf.einsum('ibnd,jbnd->ijbn', q_head_rw, k_head_h)
 
         # Position based attention score.
         q_head_rr = q_head + self.r_r_bias
-        # attn_bd: (seq_len, tot_len, batch_size, n_head)
+        # attn_bd: (max_time, tot_len, batch_size, n_head)
         attn_bd = tf.einsum('ibnd,jbnd->ijbn', q_head_rr, k_head_r)
         attn_bd = self._rel_shift(attn_bd, klen=tf.shape(attn_ac)[1])
 
@@ -428,7 +428,7 @@ class RelativeMutiheadAttention(ModuleBase):
             attn_ef = tf.einsum('ijbs,ibns->ijbn', segment_mat, attn_ef)
 
         # Merge attention scores and perform masking.
-        # attn_score: (seq_len, tot_len, batch_size, n_head)
+        # attn_score: (max_time, tot_len, batch_size, n_head)
         attn_score = (attn_ac + attn_bd + attn_ef) * self.scale
         if attn_mask is not None:
             # attn_score = attn_score * (1 - attn_mask) - 1e30 * attn_mask
@@ -457,30 +457,30 @@ class RelativeMutiheadAttention(ModuleBase):
 
         Args:
             states_h: A content representation tensor of shape
-                `[seq_len, batch_size, hidden_dim]`
+                `[max_time, batch_size, hidden_dim]`
 
             pos_embed: Position embedding tensor of shape
-                `[seq_len, batch_size, hidden_dim]`.
+                `[max_time, batch_size, hidden_dim]`.
 
             states_g (optional): A query representation tensor of shape
-                `[seq_len, batch_size, hidden_dim]`. This tensor is set during
+                `[max_time, batch_size, hidden_dim]`. This tensor is set during
                 decoding.
 
             segment_mat (optional): A tensor of size
-                `[seq_len, tot_len, batch_size]` indicating if tokens are in the
+                `[max_time, tot_len, batch_size]` indicating if tokens are in the
                  same seqment. A value at `(i, j, k)` of `1` indicates tokens at
                   `i` and `j` are not in the same sequence in batch k.
 
             attn_mask_h (optional): A tensor of shape
-                `[seq_len, seq_len, batch_size, 1]` Attention mask used while
+                `[max_time, max_time, batch_size, 1]` Attention mask used while
                 computing attention score for `states_h`
 
             attn_mask_g (optional): A tensor of shape
-                `[seq_len, seq_len, batch_size, 1]` Attention mask used while
+                `[max_time, max_time, batch_size, 1]` Attention mask used while
                 computing attention score for `states_g`
 
             target_mapping (optional): The target token mapping. Float tensor of
-                shape `[num_targets, seq_len, batch_size]`.
+                shape `[num_targets, max_time, batch_size]`.
                 A value of 1 for ``target_mapping[i, j, k]`` indicates that
                 the `i`-th target token (in order of permutation) in batch `k`
                 is the token at position `j`.
