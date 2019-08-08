@@ -108,7 +108,7 @@ class PGLossesTest(tf.test.TestCase):
                                  tf.TensorShape([self._max_time]))
 
     def test_pg_losses_with_logits(self):
-        """Tests `texar.losses.pg_losses_with_logits`.
+        """Tests `pg_losses_with_logits`.
         """
         self._test_sequence_loss(tx.losses.pg_loss_with_logits,
                                  self._actions_batch,

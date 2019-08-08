@@ -181,7 +181,7 @@ class Embedding(object):
 
             .. code-block:: python
 
-                "read_fn": texar.data.load_word2vec
+                "read_fn": texar.tf.data.load_word2vec
                 "read_fn": "load_word2vec"
                 "read_fn": "texar.tf.data.load_word2vec"
                 "read_fn": "my_module.my_read_fn"
