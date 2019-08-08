@@ -19,14 +19,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
 # pylint: disable=wildcard-import
 
 import sys
-import packaging.version
-
-
-VERSION_WARNING = "1.13.2"
 
 if sys.version_info.major < 3:
     # PY 2.x, import as is because Texar-PyTorch cannot be installed.
@@ -67,12 +62,23 @@ else:
 
 
     def _import_all():
+<<<<<<< HEAD
         import tensorflow as tf
         if packaging.version.parse(tf.__version__) <= \
                 packaging.version.parse(VERSION_WARNING):
             tf.logging.set_verbosity(tf.logging.ERROR)
         else:
             tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+=======
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn("Importing from `texar` is deprecated. Please import "
+                          "from `texar.tf` instead.", DeprecationWarning,
+                          stacklevel=3)
+
+>>>>>>> Add DeprecationWarning
         from texar.tf.version import VERSION
         globals()["__version__"] = VERSION
 
@@ -86,6 +92,7 @@ else:
                              if not name.startswith("_")]
             globals().update({
                 name: module.__dict__[name] for name in variables})
+            globals()[module_name] = module
 
         for module_name in __import_modules__:
             # from ... import module
