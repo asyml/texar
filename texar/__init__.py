@@ -46,9 +46,10 @@ else:
 
         with warnings.catch_warnings():
             warnings.simplefilter("always", DeprecationWarning)
-            warnings.warn("Importing from `texar` is deprecated. Please import "
-                          "from `texar.tf` instead.", DeprecationWarning,
-                          stacklevel=3)
+            warnings.warn(
+                "Importing from `texar` is deprecated. Please import from "
+                "`texar.tf` instead, e.g. `import texar.tf as tx`",
+                DeprecationWarning, stacklevel=3)
 
         from texar.tf.version import VERSION
         globals()["__version__"] = VERSION

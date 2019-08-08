@@ -21,11 +21,13 @@ from __future__ import print_function
 
 # pylint: disable=wildcard-import
 
+import pkg_resources
 import tensorflow as tf
 
-VERSION_WARNING = (1, 13, 2)
+VERSION_WARNING = "1.13.2"
 
-if tuple(int(x) for x in tf.__version__.split(".")) <= VERSION_WARNING:
+if (pkg_resources.parse_version(tf.__version__) <=
+        pkg_resources.parse_version(VERSION_WARNING)):
     tf.logging.set_verbosity(tf.logging.ERROR)
 else:
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
