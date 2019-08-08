@@ -27,8 +27,9 @@ import sys
 
 VERSION_WARNING = "1.13.2"
 
-def _cmp_tf_verion_greater_than(v1, v2):
-    """Check if :mod:`tf` version strings :attr:`v1` greater than :attr:`v2`.
+def _tf_verion_greater_than(v1, v2):
+    """Compares two version strings :attr:`v1` and :attr:`v2`.
+    Returns `True` if :attr:`v1` > :attr:`v2`, otherwise returns `False`.
     """
     v1 = v1.replace("rc", ".").replace("a", ".").replace("b", ".")
     v2 = v2.replace("rc", ".").replace("a", ".").replace("b", ".")
@@ -57,7 +58,7 @@ if sys.version_info.major < 3:
     from texar import run
     from texar import utils
 
-    if not _cmp_tf_verion_greater_than(tf.__version__, VERSION_WARNING):
+    if not _tf_verion_greater_than(tf.__version__, VERSION_WARNING):
         tf.logging.set_verbosity(tf.logging.ERROR)
     else:
         tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -96,7 +97,7 @@ else:
 
     def _import_all():
         import tensorflow as tf
-        if not _cmp_tf_verion_greater_than(tf.__version__, VERSION_WARNING):
+        if not _tf_verion_greater_than(tf.__version__, VERSION_WARNING):
             tf.logging.set_verbosity(tf.logging.ERROR)
         else:
             tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
