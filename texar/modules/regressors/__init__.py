@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Modules of texar library classifiers.
+Modules of texar library regressors.
 """
 
 from __future__ import absolute_import
@@ -21,7 +21,4 @@ from __future__ import print_function
 
 # pylint: disable=wildcard-import
 
-from texar.modules.classifiers.conv_classifiers import *
-from texar.modules.classifiers.rnn_classifiers import *
-from texar.modules.classifiers.bert_classifiers import *
-from texar.modules.classifiers.xlnet_classifier import *
+from texar.modules.regressors.xlnet_regressor import *

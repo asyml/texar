@@ -12,14 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Modules of texar library qnets.
+Pre-trained modules of Texar library.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-# pylint: disable=wildcard-import
-
-from texar.modules.berts.berts import *
-from texar.modules.berts.bert_utils import *
+from texar.modules.pretrained.bert_utils import *
+from texar.modules.pretrained.pretrained_base import *
+from texar.modules.pretrained.xlnet_utils import *

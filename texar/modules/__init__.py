@@ -27,7 +27,7 @@ from texar.modules.encoders import *
 from texar.modules.decoders import *
 from texar.modules.connectors import *
 from texar.modules.classifiers import *
+from texar.modules.regressors import *
 from texar.modules.policies import *
 from texar.modules.qnets import *
 from texar.modules.memory import *
-from texar.modules.berts import *

@@ -23,8 +23,9 @@ import tensorflow as tf
 from texar.core import layers
 from texar.modules.encoders.transformer_encoders import TransformerEncoder
 from texar.modules.embedders import WordEmbedder, PositionEmbedder
-from texar.hyperparams import HParams
-from texar.modules.berts import BertBase, bert_utils
+from texar import HParams
+from texar.modules.pretrained.pretrained_base import PretrainedBase
+from texar.modules.pretrained import bert_utils
 from texar.modules.encoders import EncoderBase
 
 __all__ = [
@@ -32,7 +33,7 @@ __all__ = [
 ]
 
 
-class BertEncoder(BertBase, EncoderBase):
+class BertEncoder(PretrainedBase, EncoderBase):
     """Raw BERT Transformer for encoding sequences.
 
     This module basically stacks
@@ -61,14 +62,15 @@ class BertEncoder(BertBase, EncoderBase):
     .. document private functions
     .. automethod:: _build
     """
+
+    model_name = "BERT"
+
     def __init__(self,
                  pretrained_model_name=None,
                  cache_dir=None,
                  hparams=None):
-        EncoderBase.__init__(self, hparams)
-        BertBase.__init__(self, pretrained_model_name,
-                          cache_dir, hparams)  # put these things to BertBase
-        if self.pretrained_model:
+        PretrainedBase.__init__(self, pretrained_model_name, cache_dir, hparams)
+        if self.pretrained_model_dir:
             self._hparams = HParams(self.pretrained_model_hparams,
                                     self._hparams.todict())
 
@@ -349,8 +351,8 @@ class BertEncoder(BertBase, EncoderBase):
             self._add_internal_trainable_variables()
             self._built = True
 
-            if self.pretrained_model:
-                bert_utils.init_bert_checkpoint(self.pretrained_model,
+            if self.pretrained_model_dir:
+                bert_utils.init_bert_checkpoint(self.pretrained_model_dir,
                                                 self.variable_scope.name)
 
         return output, pooled_output
