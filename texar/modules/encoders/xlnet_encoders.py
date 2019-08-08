@@ -319,6 +319,23 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
         variables can then be scaled accordingly. These scaled gradients are
         finally applied by calling optimizer's `apply_gradients` method.
 
+        Example:
+
+            .. code-block:: python
+
+            grads_and_vars = optimizer.compute_gradients(loss)
+
+            vars_to_grads = {key: value for key, value in grads_and_vars}
+
+            vars_to_learning_rates = xlnet_encoder.param_groups(
+                                        lr=1, ly_layer_scale=0.75)
+
+            for key in vars_to_grads.keys():
+                vars_to_grads[key] *= vars_to_learning_rates[key]
+
+            train_op = optimizer.apply_gradients(zip(*vars_to_grads.items()))
+
+
         Args:
             lr (float): The learning rate. Can be omitted if
                 :attr:`lr_layer_decay_rate` is 1.0.
@@ -364,6 +381,10 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
     @property
     def output_size(self):
         r"""Return the size of the undivided hidden dimension of the network.
+
+        Note: The :meth:`_build` returns two tensors. This method returns the
+        size of the first tensor i.e `output` which represents encodings of
+        the input tensor.
         """
         return self._hparams.hidden_dim
 
