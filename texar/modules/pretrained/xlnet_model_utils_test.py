@@ -64,13 +64,13 @@ class XLNetModelUtilsTest(tf.test.TestCase):
     def test_RelativePositionalEncoding(self):
 
         batch_size = 16
-        seq_len = 8
+        max_time = 8
         total_len = 32
 
         # Case 1
         model = RelativePositionalEncoding()
         pos_embed = model(batch_size=batch_size,
-                          seq_len=seq_len,
+                          max_time=max_time,
                           total_len=total_len)
         self.assertEqual(pos_embed.shape,
                          [40, 16, model._hparams.dim])
@@ -78,7 +78,7 @@ class XLNetModelUtilsTest(tf.test.TestCase):
         # Case 2
         model = RelativePositionalEncoding()
         pos_embed = model(batch_size=batch_size,
-                          seq_len=seq_len,
+                          max_time=max_time,
                           total_len=total_len,
                           attn_type='uni')
         self.assertEqual(pos_embed.shape,

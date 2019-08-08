@@ -135,6 +135,9 @@ class PositionWiseFF(ModuleBase):
 
 class PositionalEmbedding(ModuleBase):
     r"""Sinosoidal Positional Embedding."""
+
+    # TODO(avinash) : See if this can be merged with Sinosoidal Position
+    # Embedder
     def __init__(self, embed_dim):
         ModuleBase.__init__(self)
         freq_seq = tf.range(0.0, embed_dim, 2.0)
