@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ import yaml
 
 import tensorflow as tf
 
-from texar import utils
-from texar.run import Executor
+from texar.tf import utils
+from texar.tf.run import Executor
 
 
 tf.flags.DEFINE_string("config_paths", "",
@@ -178,7 +178,7 @@ def main(_):
     }
     model = utils.check_or_get_instance_with_redundant_kwargs(
         config['model'], kwargs=kwargs,
-        module_paths=['texar.models', 'texar.custom'])
+        module_paths=['texar.tf.models', 'texar.tf.custom'])
 
     data_hparams = {
         'train': config['data_hparams_train'],

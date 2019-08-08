@@ -21,7 +21,7 @@ from recommonmark.parser import CommonMarkParser
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('..'))
-from texar import __version__
+from texar.tf import __version__
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.

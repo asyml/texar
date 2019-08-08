@@ -23,7 +23,7 @@ import tensorflow as tf
 from texar.tf.core import layers
 from texar.tf.modules.encoders.transformer_encoders import TransformerEncoder
 from texar.tf.modules.embedders import WordEmbedder, PositionEmbedder
-from texar import HParams
+from texar.tf import HParams
 from texar.tf.modules.pretrained.pretrained_base import PretrainedBase
 from texar.tf.modules.pretrained import bert_utils
 from texar.tf.modules.encoders import EncoderBase
