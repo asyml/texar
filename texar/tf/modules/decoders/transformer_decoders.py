@@ -191,19 +191,19 @@ class TransformerDecoder(ModuleBase, TFDecoder):
 
         Here:
 
-        "num_blocks" : int
+        "num_blocks": int
             Number of stacked blocks.
 
-        "dim" : int
+        "dim": int
             Hidden dimension of the encoder.
 
-        "embedding_dropout" : float
+        "embedding_dropout": float
             Dropout rate of the input word and position embeddings.
 
-        "residual_dropout" :  float
+        "residual_dropout":  float
             Dropout rate of the residual connections.
 
-        "poswise_feedforward" : dict
+        "poswise_feedforward": dict
             Hyperparameters for a feed-forward network used in residual
             connections.
             Make sure the dimension of the output tensor is equal to `dim`.
@@ -211,24 +211,24 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             See :func:`~texar.tf.modules.default_transformer_poswise_net_hparams`
             for details.
 
-        "multihead_attention" : dict
+        "multihead_attention": dict
             Hyperparameters for the multihead attention strategy.
             Make sure the `output_dim` in this module is equal to `dim`.
 
             See :func:`~texar.tf.modules.MultiheadAttentionEncoder.default_hparams`
             for details.
 
-        "initializer" : dict, optional
+        "initializer": dict, optional
             Hyperparameters of the default initializer that initializes
             variables created in this module.
             See :func:`~texar.tf.core.get_initializer` for details.
 
-        "output_layer_bias" : bool
+        "output_layer_bias": bool
             Whether to use bias to the output layer.
             Used only if :attr:`output_layer` is `None` when constructing
             the class instance.
 
-        "max_decoding_length" : int
+        "max_decoding_length": int
             The maximum allowed number of decoding steps.
             Set to a very large number of avoid the length constraint.
             Ignored if provided in :meth:`_build` or
@@ -237,7 +237,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             Length penalty coefficient. Refer to
             https://arxiv.org/abs/1609.08144 for more details.
 
-        "name" : str
+        "name": str
             Name of the module.
         """
         return {

@@ -168,11 +168,11 @@ class ConstantConnector(ConnectorBase):
 
         Here:
 
-        "value" : float
+        "value": float
             The constant scalar that the output tensor(s) has. Ignored if
             `value` is given to :meth:`_build`.
 
-        "name" : str
+        "name": str
             Name of the connector.
         """
         return {
@@ -263,7 +263,7 @@ class ForwardConnector(ConnectorBase):
 
         Here:
 
-        "name" : str
+        "name": str
             Name of the connector.
         """
         return {
@@ -364,12 +364,12 @@ class MLPTransformConnector(ConnectorBase):
 
         Here:
 
-        "activation_fn" : str or callable
+        "activation_fn": str or callable
             The activation function applied to the outputs of the MLP
             transformation layer. Can
             be a function, or its name or module path.
 
-        "name" : str
+        "name": str
             Name of the connector.
         """
         return {
@@ -471,12 +471,12 @@ class ReparameterizedStochasticConnector(ConnectorBase):
 
         Here:
 
-        "activation_fn" : str
+        "activation_fn": str
             The activation function applied to the outputs of the MLP
             transformation layer. Can
             be a function, or its name or module path.
 
-        "name" : str
+        "name": str
             Name of the connector.
         """
         return {
@@ -602,12 +602,12 @@ class StochasticConnector(ConnectorBase):
 
         Here:
 
-        "activation_fn" : str
+        "activation_fn": str
             The activation function applied to the outputs of the MLP
             transformation layer. Can
             be a function, or its name or module path.
 
-        "name" : str
+        "name": str
             Name of the connector.
         """
         return {
@@ -724,7 +724,7 @@ class StochasticConnector(ConnectorBase):
 #
 #            Here:
 #
-#            "activation_fn" : (str or callable)
+#            "activation_fn": (str or callable)
 #                The name or full path to the activation function applied to
 #                the outputs of the MLP layer. The activation functions can be:
 #
@@ -737,7 +737,7 @@ class StochasticConnector(ConnectorBase):
 #                The default value is :attr:`"identity"`, i.e., the MLP
 #                transformation is linear.
 #
-#            "name" : str
+#            "name": str
 #                Name of the connector.
 #
 #                The default value is "concat_connector".

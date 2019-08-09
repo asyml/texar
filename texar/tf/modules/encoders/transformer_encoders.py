@@ -195,13 +195,13 @@ class TransformerEncoder(EncoderBase):
 
         Here:
 
-        "num_blocks" : int
+        "num_blocks": int
             Number of stacked blocks.
 
-        "dim" : int
+        "dim": int
             Hidden dimension of the encoders.
 
-        "use_bert_config" : bool
+        "use_bert_config": bool
             If `False`, apply the standard Transformer Encoder architecture from
             the original paper `(Vaswani et al.) "Attention is All You Need"`.
             If `True`, apply the Transformer Encoder architecture used in BERT
@@ -221,13 +221,13 @@ class TransformerEncoder(EncoderBase):
                    layer normalization. In the standard arch, the tensors are \
                    connected *before* layer normalization.
 
-        "embedding_dropout" : float
+        "embedding_dropout": float
             Dropout rate of the input embedding.
 
-        "residual_dropout" :  float
+        "residual_dropout":  float
             Dropout rate of the residual connections.
 
-        "poswise_feedforward" : dict
+        "poswise_feedforward": dict
             Hyperparameters for a feed-forward network used in residual
             connections.
             Make sure the dimension of the output tensor is equal to `dim`.
@@ -235,18 +235,18 @@ class TransformerEncoder(EncoderBase):
             See :func:`~texar.tf.modules.default_transformer_poswise_net_hparams`
             for details.
 
-        "multihead_attention" : dict
+        "multihead_attention": dict
             Hyperparameters for the multihead attention strategy.
             Make sure the "output_dim" in this module is equal to "dim".
             See :func:`~texar.tf.modules.MultiheadAttentionEncoder.default_harams`
             for details.
 
-        "initializer" : dict, optional
+        "initializer": dict, optional
             Hyperparameters of the default initializer that initializes
             variables created in this module.
             See :func:`~texar.tf.core.get_initializer` for details.
 
-        "name" : str
+        "name": str
             Name of the module.
         """
         return {

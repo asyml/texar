@@ -44,19 +44,19 @@ def default_memnet_embed_fn_hparams():
 
     Here:
 
-    "embedding" : dict, optional
+    "embedding": dict, optional
         Hyperparameters for embedding operations. See
         :meth:`~texar.tf.modules.WordEmbedder.default_hparams` of
         :class:`~texar.tf.modules.WordEmbedder` for details. If `None`, the
         default hyperparameters are used.
 
-    "temporal_embedding" : dict, optional
+    "temporal_embedding": dict, optional
         Hyperparameters for temporal embedding operations. See
         :meth:`~texar.tf.modules.PositionEmbedder.default_hparams` of
         :class:`~texar.tf.modules.PositionEmbedder` for details. If `None`, the
         default hyperparameters are used.
 
-    "combine_mode" : str
+    "combine_mode": str
         Either **'add'** or **'concat'**. If 'add', memory
         embedding and temporal embedding are added up. In this case the two
         embedders must have the same dimension. If 'concat', the two

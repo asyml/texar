@@ -114,7 +114,7 @@ class Conv1DClassifier(ClassifierBase):
 
         2. Additional hyperparameters:
 
-            "num_classes" : int
+            "num_classes": int
                 Number of classes:
 
                 - If **`> 0`**, an additional :tf_main:`Dense <layers/Dense>` \
@@ -124,12 +124,12 @@ class Conv1DClassifier(ClassifierBase):
                 classes is assumed to be the final dense layer size of the \
                 encoder.
 
-            "logit_layer_kwargs" : dict
+            "logit_layer_kwargs": dict
                 Keyword arguments for the logit Dense layer constructor,
                 except for argument "units" which is set to "num_classes".
                 Ignored if no extra logit layer is appended.
 
-            "name" : str
+            "name": str
                 Name of the classifier.
         """
         hparams = Conv1DEncoder.default_hparams()

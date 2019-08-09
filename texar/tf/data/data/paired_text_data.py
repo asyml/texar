@@ -203,18 +203,18 @@ class PairedTextData(TextDataBase):
 
         For the new hyperparameters in "target_dataset":
 
-            "vocab_share" : bool
+            "vocab_share": bool
                 Whether to share the vocabulary of source.
                 If `True`, the vocab file of target is ignored.
 
-            "embedding_init_share" : bool
+            "embedding_init_share": bool
                 Whether to share the embedding initial value of source. If
                 `True`, :attr:`"embedding_init"` of target is ignored.
 
                 :attr:`"vocab_share"` must be true to share the embedding
                 initial value.
 
-            "processing_share" : bool
+            "processing_share": bool
                 Whether to share the processing configurations of source,
                 including
                 "delimiter", "bos_token", "eos_token", and

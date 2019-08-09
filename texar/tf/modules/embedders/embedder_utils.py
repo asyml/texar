@@ -54,14 +54,14 @@ def default_embedding_hparams():
 
         Here:
 
-        "name" : str
+        "name": str
             Name of the embedding variable.
 
-        "dim" : int or list
+        "dim": int or list
             Embedding dimension. Can be a list of integers to yield embeddings
             with dimensionality > 1.
 
-        "initializer" : dict or None
+        "initializer": dict or None
             Hyperparameters of the initializer for the embedding values. An
             example is as
 
@@ -79,7 +79,7 @@ def default_embedding_hparams():
             which corresponds to :tf_main:`tf.random_uniform_initializer
             <random_uniform_initializer>`, and includes:
 
-            "type" : str or initializer instance
+            "type": str or initializer instance
                 Name, full path, or instance of the initializer class; Or name
                 or full path to a function that returns the initializer class.
                 The class or function can be
@@ -95,7 +95,7 @@ def default_embedding_hparams():
                 - External initializer. Must provide the full path, \
                   e.g., :attr:`"my_module.MyInitializer"`, or the instance.
 
-            "kwargs" : dict
+            "kwargs": dict
                 A dictionary of arguments for constructor of the
                 initializer class or for the function. An initializer is
                 created by `initialzier = initializer_class_or_fn(**kwargs)`
@@ -103,13 +103,13 @@ def default_embedding_hparams():
                 :attr:`"type"`.
                 Ignored if :attr:`"type"` is an initializer instance.
 
-        "regularizer" : dict
+        "regularizer": dict
             Hyperparameters of the regularizer for the embedding values. The
             regularizer must be an instance of
             the base :tf_main:`Regularizer <keras/regularizers/Regularizer>`
             class. The hyperparameters include:
 
-            "type" : str or Regularizer instance
+            "type": str or Regularizer instance
                 Name, full path, or instance of the regularizer class. The
                 class can be
 
@@ -122,7 +122,7 @@ def default_embedding_hparams():
                 - External regularizer. Must provide the full path, \
                   e.g., :attr:`"my_module.MyRegularizer"`, or the instance.
 
-            "kwargs" : dict
+            "kwargs": dict
                 A dictionary of arguments for constructor of the
                 regularizer class. A regularizer is created by
                 calling `regularizer_class(**kwargs)` where
@@ -133,11 +133,11 @@ def default_embedding_hparams():
             :tf_main:`L1L2 <keras/regularizers/L1L2>` with `(l1=0, l2=0)`,
             which disables regularization.
 
-        "dropout_rate" : float
+        "dropout_rate": float
             The dropout rate between 0 and 1. E.g., `dropout_rate=0.1` would
             drop out 10% of the embedding.
 
-        "dropout_strategy" : str
+        "dropout_strategy": str
             The dropout strategy. Can be one of the following
 
             - 'element': The regular strategy that drops individual elements \
@@ -150,7 +150,7 @@ def default_embedding_hparams():
               where the word type 'the' is dropped. The dropout will never \
               yield '_ simpler the better' as in the 'item' strategy.
 
-        "trainable" : bool
+        "trainable": bool
             Whether the embedding is trainable.
     """
     return {

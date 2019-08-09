@@ -70,7 +70,7 @@ def default_optimization_hparams():
 
     Here:
 
-    "optimizer" : dict
+    "optimizer": dict
         Hyperparameters of a :tf_main:`tf.train.Optimizer <train/Optimizer>`.
 
         - **"type"** specifies the optimizer class. This can be
@@ -98,7 +98,7 @@ def default_optimization_hparams():
         the optimizer class instance, with :python:`opt_class(**kwargs)`. \
         Ignored if "type" is a class instance.
 
-    "learning_rate_decay" : dict
+    "learning_rate_decay": dict
         Hyperparameters of learning rate decay function. The learning rate
         starts decay from :attr:`"start_decay_step"` and keeps unchanged after
         :attr:`"end_decay_step"` or reaching :attr:`"min_learning_rate"`.
@@ -120,7 +120,7 @@ def default_optimization_hparams():
         <train/piecewise_constant>` which is called with
         :python:`lr = piecewise_constant(x=offset_step, **kwargs)`.
 
-    "gradient_clip" : dict
+    "gradient_clip": dict
         Hyperparameters of gradient clipping. The gradient clipping function
         takes a list of `(gradients, variables)` tuples and returns a list
         of `(clipped_gradients, variables)` tuples. Typical examples include
@@ -144,7 +144,7 @@ def default_optimization_hparams():
         :python:`clipped_grads = [clip_fn(t=grad, **kwargs) for grad in grads]`
         (e.g., for :tf_main:`tf.clip_by_value <clip_by_value>`).
 
-    "gradient_noise_scale" : float, optional
+    "gradient_noise_scale": float, optional
         Adds 0-mean normal noise scaled by this value to gradient.
     """
     return {

@@ -145,7 +145,7 @@ class UnidirectionalRNNClassifier(ClassifierBase):
 
         2. Additional hyperparameters:
 
-            "num_classes" : int
+            "num_classes": int
                 Number of classes:
 
                 - If **`> 0`**, an additional :tf_main:`Dense <layers/Dense>` \
@@ -155,12 +155,12 @@ class UnidirectionalRNNClassifier(ClassifierBase):
                 classes is assumed to be the final dense layer size of the \
                 encoder.
 
-            "logit_layer_kwargs" : dict
+            "logit_layer_kwargs": dict
                 Keyword arguments for the logit Dense layer constructor,
                 except for argument "units" which is set to "num_classes".
                 Ignored if no extra logit layer is appended.
 
-            "clas_strategy" : str
+            "clas_strategy": str
                 The classification strategy, one of:
 
                 - **"final_time"**: Sequence-leve classification based on \
@@ -170,11 +170,11 @@ class UnidirectionalRNNClassifier(ClassifierBase):
                 - **"time_wise"**: Step-wise classfication, i.e., make \
                 classification for each time step based on its output.
 
-            "max_seq_length" : int, optional
+            "max_seq_length": int, optional
                 Maximum possible length of input sequences. Required if
                 "clas_strategy" is "all_time".
 
-            "name" : str
+            "name": str
                 Name of the classifier.
         """
         hparams = UnidirectionalRNNEncoder.default_hparams()

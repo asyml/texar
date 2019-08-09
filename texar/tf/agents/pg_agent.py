@@ -179,29 +179,29 @@ class PGAgent(EpisodicAgentBase):
 
         Here:
 
-        "policy_type" : str or class or instance
+        "policy_type": str or class or instance
             Policy net. Can be class, its name or module path, or a class
             instance. If class name is given, the class must be from module
             :mod:`texar.tf.modules` or :mod:`texar.tf.custom`. Ignored if a
             `policy` is given to the agent constructor.
 
-        "policy_hparams" : dict, optional
+        "policy_hparams": dict, optional
             Hyperparameters for the policy net. With the :attr:`policy_kwargs`
             argument to the constructor, a network is created with
             :python:`policy_class(**policy_kwargs, hparams=policy_hparams)`.
 
-        "discount_factor" : float
+        "discount_factor": float
             The discount factor of reward.
 
-        "normalize_reward" : bool
+        "normalize_reward": bool
             Whether to normalize the discounted reward, by
             `(discounted_reward - mean) / std`.
 
-        "optimization" : dict
+        "optimization": dict
             Hyperparameters of optimization for updating the policy net.
             See :func:`~texar.tf.core.default_optimization_hparams` for details.
 
-        "name" : str
+        "name": str
             Name of the agent.
         """
         return {

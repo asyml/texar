@@ -174,46 +174,46 @@ class DQNAgent(EpisodicAgentBase):
 
         Here:
 
-        "qnet_type" : str or class or instance
+        "qnet_type": str or class or instance
             Q-value net. Can be class, its
             name or module path, or a class instance. If class name is given,
             the class must be from module :mod:`texar.tf.modules` or
             :mod:`texar.tf.custom`. Ignored if a `qnet` is given to
             the agent constructor.
 
-        "qnet_hparams" : dict, optional
+        "qnet_hparams": dict, optional
             Hyperparameters for the Q net. With the :attr:`qnet_kwargs`
             argument to the constructor, a network is created with
             :python:`qnet_class(**qnet_kwargs, hparams=qnet_hparams)`.
 
-        "replay_memory_type" : str or class or instance
+        "replay_memory_type": str or class or instance
             Replay memory class. Can be class, its name or module path,
             or a class instance.
             If class name is given, the class must be from module
             :mod:`texar.tf.core` or :mod:`texar.tf.custom`.
             Ignored if a `replay_memory` is given to the agent constructor.
 
-        "replay_memory_hparams" : dict, optional
+        "replay_memory_hparams": dict, optional
             Hyperparameters for the replay memory. With the
             :attr:`replay_memory_kwargs` argument to the constructor,
             a network is created with
             :python:`replay_memory_class(
             **replay_memory_kwargs, hparams=replay_memory_hparams)`.
 
-        "exploration_type" : str or class or instance
+        "exploration_type": str or class or instance
             Exploration class. Can be class,
             its name or module path, or a class instance. If class name is
             given, the class must be from module :mod:`texar.tf.core` or
             :mod:`texar.tf.custom`. Ignored if a `exploration` is given to
             the agent constructor.
 
-        "exploration_hparams" : dict, optional
+        "exploration_hparams": dict, optional
             Hyperparameters for the exploration class.
             With the :attr:`exploration_kwargs` argument to the constructor,
             a network is created with :python:`exploration_class(
             **exploration_kwargs, hparams=exploration_hparams)`.
 
-        "optimization" : dict
+        "optimization": dict
             Hyperparameters of optimization for updating the Q-net.
             See :func:`~texar.tf.core.default_optimization_hparams` for details.
 
@@ -234,10 +234,10 @@ class DQNAgent(EpisodicAgentBase):
             Frequecy of updating the target network, i.e., updating
             the target once for every "update_period" steps.
 
-        "discount_factor" : float
+        "discount_factor": float
             The discount factor of reward.
 
-        "name" : str
+        "name": str
             Name of the agent.
         """
         return {

@@ -124,24 +124,24 @@ class ScalarData(DataBase):
 
         1. For the hyperparameters in the :attr:`"dataset"` field:
 
-            "files" : str or list
+            "files": str or list
                 A (list of) file path(s).
 
                 Each line contains a single scalar number.
 
-            "compression_type" : str, optional
+            "compression_type": str, optional
                 One of "" (no compression), "ZLIB", or "GZIP".
 
-            "data_type" : str
+            "data_type": str
                 The scalar type. Currently supports "int" and "float".
 
-            "other_transformations" : list
+            "other_transformations": list
                 A list of transformation functions or function names/paths to
                 further transform each single data instance.
 
                 (More documentations to be added.)
 
-            "data_name" : str
+            "data_name": str
                 Name of the dataset.
 
         2. For the **general** hyperparameters, see

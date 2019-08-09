@@ -314,17 +314,17 @@ class SinusoidsPositionEmbedder(EmbedderBase):
                 'name':'sinusoid_posisiton_embedder',
             }
 
-            Here:
+        Here:
 
-            `"cache_embeddings"`: bool
-                If `True`, precompute embeddings for positions in range
-                `[0, position_size - 1]`. This leads to faster lookup but
-                requires lookup indices to be within this range.
+        `"cache_embeddings"`: bool
+            If `True`, precompute embeddings for positions in range
+            `[0, position_size - 1]`. This leads to faster lookup but
+            requires lookup indices to be within this range.
 
-                If `False`, embeddings are computed on-the-fly during lookup.
-                Set to `False` if your application needs to handle sequences
-                of arbitrary length, or requires embeddings at negative
-                positions.
+            If `False`, embeddings are computed on-the-fly during lookup.
+            Set to `False` if your application needs to handle sequences
+            of arbitrary length, or requires embeddings at negative
+            positions.
         """
         hparams = {
             "min_timescale": 1.0,

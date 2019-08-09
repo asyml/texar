@@ -188,28 +188,28 @@ class SeqPGAgent(SeqAgentBase):
 
         Here:
 
-        "discount_factor" : float
+        "discount_factor": float
             The discount factor of reward.
 
-        "normalize_reward" : bool
+        "normalize_reward": bool
             Whether to normalize the discounted reward, by
             `(discounted_reward - mean) / std`. Here `mean` and `std` are
             over all time steps and all samples in the batch.
 
-        "entropy_weight" : float
+        "entropy_weight": float
             The weight of entropy loss of the sample distribution, to encourage
             maximizing the Shannon entropy. Set to 0 to disable the loss.
 
-        "loss" : dict
+        "loss": dict
             Extra keyword arguments for
             :func:`~texar.tf.losses.pg_loss_with_logits`, including the
             reduce arguments (e.g., `average_across_batch`) and `time_major`
 
-        "optimization" : dict
+        "optimization": dict
             Hyperparameters of optimization for updating the policy net.
             See :func:`~texar.tf.core.default_optimization_hparams` for details.
 
-        "name" : str
+        "name": str
             Name of the agent.
         """
         return {

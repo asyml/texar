@@ -80,11 +80,11 @@ class FeedForwardNetwork(FeedForwardNetworkBase):
 
         Here:
 
-        "layers" : list
+        "layers": list
             A list of layer hyperparameters. See :func:`~texar.tf.core.get_layer`
             for the details of layer hyperparameters.
 
-        "name" : str
+        "name": str
             Name of the network.
         """
         return {

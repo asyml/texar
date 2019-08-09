@@ -322,40 +322,40 @@ class MemNetBase(ModuleBase):
 
         Here:
 
-        "n_hops" : int
+        "n_hops": int
             Number of hops.
 
-        "memory_dim" : int
+        "memory_dim": int
             Memory dimension, i.e., the dimension size of a memory entry
             embedding. Ignored if at least one of the embedding functions is
             created according to :attr:`hparams`. In this case
             :attr:`memory_dim` is inferred from the created embed_fn.
 
-        "relu_dim" : int
+        "relu_dim": int
             Number of elements in :attr:`memory_dim` that have relu at the end
             of each hop.
             Should be not less than 0 and not more than :attr`memory_dim`.
 
-        "memory_size" : int
+        "memory_size": int
             Number of entries in memory.
 
             For example, the number of sentences {x_i} in Fig.1(a) of
             (Sukhbaatar et al.) End-To-End Memory Networks.
 
-        "use_B" : bool
+        "use_B": bool
             Whether to create the query embedding function. Ignored if
             `query_embed_fn` is given to the constructor.
 
-        "use_H" : bool
+        "use_H": bool
             Whether to perform a linear transformation with matrix `H` at
             the end of each A-C layer.
 
-        "dropout_rate" : float
+        "dropout_rate": float
             The dropout rate to apply to the output of each hop. Should
             be between 0 and 1.
             E.g., `dropout_rate=0.1` would drop out 10% of the units.
 
-        "variational" : bool
+        "variational": bool
             Whether to share dropout masks after each hop.
         """
         return {
@@ -484,40 +484,40 @@ class MemNetRNNLike(MemNetBase):
 
         Here:
 
-        "n_hops" : int
+        "n_hops": int
             Number of hops.
 
-        "memory_dim" : int
+        "memory_dim": int
             Memory dimension, i.e., the dimension size of a memory entry
             embedding. Ignored if at least one of the embedding functions is
             created according to :attr:`hparams`. In this case
             :attr:`memory_dim` is inferred from the created embed_fn.
 
-        "relu_dim" : int
+        "relu_dim": int
             Number of elements in :attr:`memory_dim` that have relu at the end
             of each hop.
             Should be not less than 0 and not more than :attr`memory_dim`.
 
-        "memory_size" : int
+        "memory_size": int
             Number of entries in memory.
 
             For example, the number of sentences {x_i} in Fig.1(a) of
             (Sukhbaatar et al.) End-To-End Memory Networks.
 
-        "use_B" : bool
+        "use_B": bool
             Whether to create the query embedding function. Ignored if
             `query_embed_fn` is given to the constructor.
 
-        "use_H" : bool
+        "use_H": bool
             Whether to perform a linear transformation with matrix `H` at
             the end of each A-C layer.
 
-        "dropout_rate" : float
+        "dropout_rate": float
             The dropout rate to apply to the output of each hop. Should
             be between 0 and 1.
             E.g., `dropout_rate=0.1` would drop out 10% of the units.
 
-        "variational" : bool
+        "variational": bool
             Whether to share dropout masks after each hop.
         """
         hparams = MemNetBase.default_hparams()

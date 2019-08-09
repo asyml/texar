@@ -358,7 +358,7 @@ class RelativeMutiheadAttention(ModuleBase):
 
         The default parameters are values for cased XLNet-Base model.
 
-        "initializer" : dict, optional
+        "initializer": dict, optional
             Hyperparameters of the default initializer that initializes
             variables created in this module.
             See :func:`~texar.tf.core.get_initializer` for details.
@@ -381,7 +381,7 @@ class RelativeMutiheadAttention(ModuleBase):
         "use_segments": bool
             Boolean to indicate if the input has segments
 
-        "name" : str
+        "name": str
             Name of the module.
         """
         return {

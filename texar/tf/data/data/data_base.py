@@ -61,7 +61,7 @@ class DataBase(object):
 
         Here:
 
-            "num_epochs" : int
+            "num_epochs": int
                 Number of times the dataset should be repeated. An
                 :tf_main:`OutOfRangeError <errors/OutOfRangeError>` signal will
                 be raised after the whole repeated dataset has been iterated
@@ -71,11 +71,11 @@ class DataBase(object):
                 will get the signal after each epoch of training. Set to -1
                 to repeat the dataset indefinitely.
 
-            "batch_size" : int
+            "batch_size": int
                 Batch size, i.e., the number of consecutive elements of the
                 dataset to combine in a single batch.
 
-            "allow_smaller_final_batch" : bool
+            "allow_smaller_final_batch": bool
                Whether to allow the final batch to be smaller if there are
                insufficient elements left. If `False`, the final batch is
                discarded if it is smaller than batch size. Note that,
@@ -83,10 +83,10 @@ class DataBase(object):
                will have a a **static** batch_size dimension equal to
                "batch_size".
 
-            "shuffle" : bool
+            "shuffle": bool
                 Whether to randomly shuffle the elements of the dataset.
 
-            "shuffle_buffer_size" : int
+            "shuffle_buffer_size": int
                 The buffer size for data shuffling. The larger, the better
                 the resulting data is mixed.
 
@@ -94,7 +94,7 @@ class DataBase(object):
                 whole dataset (i.e., make the shuffling the maximally
                 effective).
 
-            "shard_and_shuffle" : bool
+            "shard_and_shuffle": bool
                 Whether to first shard the dataset and then shuffle each
                 block respectively. Useful when the whole data is too large to
                 be loaded efficiently into the memory.
@@ -102,10 +102,10 @@ class DataBase(object):
                 If `True`, :attr:`shuffle_buffer_size` must be specified to
                 determine the size of each shard.
 
-            "num_parallel_calls" : int
+            "num_parallel_calls": int
                 Number of elements from the datasets to process in parallel.
 
-            "prefetch_buffer_size" : int
+            "prefetch_buffer_size": int
                 The maximum number of elements that will be buffered when
                 prefetching.
 

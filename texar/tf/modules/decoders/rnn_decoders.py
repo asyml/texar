@@ -210,7 +210,7 @@ class BasicRNNDecoder(RNNDecoderBase):
 
         Here:
 
-        "rnn_cell" : dict
+        "rnn_cell": dict
             A dictionary of RNN cell hyperparameters. Ignored if
             :attr:`cell` is given to the decoder constructor.
             The default value is defined in
@@ -223,10 +223,10 @@ class BasicRNNDecoder(RNNDecoderBase):
             Ignored if `max_decoding_length` is given when calling
             the decoder.
 
-        "max_decoding_length_infer" : int or None
+        "max_decoding_length_infer": int or None
             Same as "max_decoding_length_train" but for inference mode.
 
-        "helper_train" : dict
+        "helper_train": dict
             The hyperparameters of the helper used in training.
             "type" can be a helper class, its name or module path, or a
             helper instance. If a class name is given, the class must be
@@ -239,7 +239,7 @@ class BasicRNNDecoder(RNNDecoderBase):
         "helper_infer": dict
             Same as "helper_train" but during inference mode.
 
-        "name" : str
+        "name": str
             Name of the decoder.
 
             The default value is "basic_rnn_decoder".
@@ -463,10 +463,10 @@ class AttentionRNNDecoder(RNNDecoderBase):
 
         Here:
 
-        "attention" : dict
+        "attention": dict
             Attention hyperparameters, including:
 
-            "type" : str or class or instance
+            "type": str or class or instance
                 The attention type. Can be an attention class, its name or
                 module path, or a class instance. The class must be a subclass
                 of :tf_main:`TF AttentionMechanism
@@ -490,7 +490,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
                         # instance
                         "type": LuongAttention(...)
 
-            "kwargs" : dict
+            "kwargs": dict
                 keyword arguments for the attention class constructor.
                 Arguments :attr:`memory` and
                 :attr:`memory_sequence_length` should **not** be
@@ -511,7 +511,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
                     Here "probability_fn" can also be set to the string name
                     or module path to a probability function.
 
-                "attention_layer_size" : int or None
+                "attention_layer_size": int or None
                     The depth of the attention (output) layer. The context and
                     cell output are fed into the attention layer to generate
                     attention at each time step.

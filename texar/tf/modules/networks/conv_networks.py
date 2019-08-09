@@ -131,16 +131,16 @@ class Conv1DNetwork(FeedForwardNetworkBase):
 
         1. For **convolutional** layers:
 
-            "num_conv_layers" : int
+            "num_conv_layers": int
                 Number of convolutional layers.
 
-            "filters" : int or list
+            "filters": int or list
                 The number of filters in the convolution, i.e., the
                 dimensionality
                 of the output space. If "num_conv_layers" > 1, "filters" must be
                 a list of "num_conv_layers" integers.
 
-            "kernel_size" : int or list
+            "kernel_size": int or list
                 Lengths of 1D convolution windows.
 
                 - If "num_conv_layers" == 1, this can be a list of arbitrary \
@@ -160,23 +160,23 @@ class Conv1DNetwork(FeedForwardNetworkBase):
                 layers. Set to "indentity" to maintain a linear activation.
                 See :func:`~texar.tf.core.get_activation_fn` for more details.
 
-            "conv_activation_kwargs" : dict, optional
+            "conv_activation_kwargs": dict, optional
                 Keyword arguments for conv layer activation functions.
                 See :func:`~texar.tf.core.get_activation_fn` for more details.
 
-            "other_conv_kwargs" : dict, optional
+            "other_conv_kwargs": dict, optional
                 Other keyword arguments for
                 :tf_main:`tf.layers.Conv1D <layers/Conv1d>` constructor, e.g.,
                 "data_format", "padding", etc.
 
         2. For **pooling** layers:
 
-            "pooling" : str or class or instance
+            "pooling": str or class or instance
                 Pooling layer after each of the convolutional layer(s). Can
                 a pooling layer class, its name or module path, or a class
                 instance.
 
-            "pool_size" : int or list, optional
+            "pool_size": int or list, optional
                 Size of the pooling window. If an `int`, all pooling layer
                 will have the same pool size. If a list, the list length must
                 equal "num_conv_layers". If `None` and the pooling type
@@ -186,55 +186,55 @@ class Conv1DNetwork(FeedForwardNetworkBase):
                 pool size will be set to input size. That is, the output of
                 the pooling layer is a single unit.
 
-            "pool_strides" : int or list, optional
+            "pool_strides": int or list, optional
                 Strides of the pooling operation. If an `int`, all pooling layer
                 will have the same stride. If a list, the list length must
                 equal "num_conv_layers".
 
-            "other_pool_kwargs" : dict, optional
+            "other_pool_kwargs": dict, optional
                 Other keyword arguments for pooling layer class constructor.
 
         3. For **dense** layers (note that here dense layers always follow conv
            and pooling layers):
 
-            "num_dense_layers" : int
+            "num_dense_layers": int
                 Number of dense layers.
 
-            "dense_size" : int or list
+            "dense_size": int or list
                 Number of units of each dense layers. If an `int`, all dense
                 layers will have the same size. If a list of `int`, the list
                 length must equal "num_dense_layers".
 
-            "dense_activation" : str or callable
+            "dense_activation": str or callable
                 Activation function applied to the output of the dense
                 layers **except** the last dense layer output . Set to
                 "indentity" to maintain a linear activation.
                 See :func:`~texar.tf.core.get_activation_fn` for more details.
 
-            "dense_activation_kwargs" : dict, optional
+            "dense_activation_kwargs": dict, optional
                 Keyword arguments for dense layer activation functions before
                 the last dense layer.
                 See :func:`~texar.tf.core.get_activation_fn` for more details.
 
-            "final_dense_activation" : str or callable
+            "final_dense_activation": str or callable
                 Activation function applied to the output of the **last** dense
                 layer. Set to `None` or
                 "indentity" to maintain a linear activation.
                 See :func:`~texar.tf.core.get_activation_fn` for more details.
 
-            "final_dense_activation_kwargs" : dict, optional
+            "final_dense_activation_kwargs": dict, optional
                 Keyword arguments for the activation function of last
                 dense layer.
                 See :func:`~texar.tf.core.get_activation_fn` for more details.
 
-            "other_dense_kwargs" : dict, optional
+            "other_dense_kwargs": dict, optional
                 Other keyword arguments for
                 :tf_main:`Dense <layers/Dense>`
                 layer class constructor.
 
         4. For **dropouts**:
 
-            "dropout_conv" : int or list
+            "dropout_conv": int or list
                 The indexes of conv layers (starting from `0`) whose **inputs**
                 are applied with dropout. The index = :attr:`num_conv_layers`
                 means dropout applies to the final conv layer output. E.g.,
@@ -252,17 +252,17 @@ class Conv1DNetwork(FeedForwardNetworkBase):
                 The dropout mode (training or not) is controlled
                 by the :attr:`mode` argument of :meth:`_build`.
 
-            "dropout_dense" : int or list
+            "dropout_dense": int or list
                 Same as "dropout_conv" but applied to dense layers (index
                 starting from `0`).
 
-            "dropout_rate" : float
+            "dropout_rate": float
                 The dropout rate, between 0 and 1. E.g.,
                 `"dropout_rate": 0.1` would drop out 10% of elements.
 
         5. Others:
 
-            "name" : str
+            "name": str
                 Name of the network.
         """
         return {

@@ -103,7 +103,7 @@ class DequeReplayMemory(ReplayMemoryBase):
 
         Here:
 
-        "capacity" : int
+        "capacity": int
             Maximum size of memory kept. Deletes oldest memories if exceeds
             the capacity.
         """

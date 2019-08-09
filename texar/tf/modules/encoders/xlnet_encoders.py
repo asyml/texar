@@ -224,7 +224,7 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
         The default parameters are values for cased XLNet-Base model.
 
 
-        "pretrained_model_name" : str or None
+        "pretrained_model_name": str or None
              The name of the pretrained bert model. If None, the model
              will be randomly initialized.
 
@@ -241,7 +241,7 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
         "reuse_len": int
             Length of the memory that can be re-used
 
-        "initializer" : dict, optional
+        "initializer": dict, optional
             Hyperparameters of the default initializer that initializes
             variables created in this module.
             See :func:`~texar.tf.core.get_initializer` for details.
@@ -271,13 +271,13 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
             Activation function applied to the output of the PositionWise FF.
             See :func:`~texar.tf.core.get_activation_fn` for more details.
 
-        "vocab_size" : int
+        "vocab_size": int
             The vocabulary size of `inputs` in `XLNet`.
 
         "max_seq_len": int
             Maximum len of the sequence allowed in one segment
 
-        "name" : str
+        "name": str
             Name of the module.
         """
 
@@ -456,9 +456,9 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
 
         Returns: A tuple of `(output, new_memory)`:
 
-            - **`output`**: The final layer output representations. Shape
+            - **output**: The final layer output representations. Shape
               `[batch_size, max_time, hidden_dim]`.
-            - **`new_memory`**: The memory of the current batch.
+            - **new_memory**: The memory of the current batch.
               If `cache_len` is 0, then `new_memory` is `None`. Otherwise, it is
               a list of length `num_layers`, each tensor of shape
               `[batch_size, cache_len, hidden_dim]`.

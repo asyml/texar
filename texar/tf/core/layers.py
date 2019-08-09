@@ -96,7 +96,7 @@ def default_rnn_cell_hparams():
 
     Here:
 
-    "type" : str or cell class or cell instance
+    "type": str or cell class or cell instance
         The RNN cell type. This can be
 
         - The string name or full module path of a cell class. If class \
@@ -118,18 +118,18 @@ def default_rnn_cell_hparams():
             "type": BasicRNNCell(num_units=100) # cell instance
             "type": MyCell(...) # cell instance
 
-    "kwargs" : dict
+    "kwargs": dict
         Keyword arguments for the constructor of the cell class.
         A cell is created by :python:`cell_class(**kwargs)`, where
         `cell_class` is specified in "type" above.
 
         Ignored if "type" is a cell instance.
 
-    "num_layers" : int
+    "num_layers": int
         Number of cell layers. Each layer is a cell created as above, with
         the same hyperparameters specified in "kwargs".
 
-    "dropout" : dict
+    "dropout": dict
         Dropout applied to the cell in **each** layer. See
         :tf_main:`DropoutWrapper <contrib/rnn/DropoutWrapper>` for details of
         the hyperparameters. If all "\*_keep_prob" = 1, no dropout is applied.
@@ -155,12 +155,12 @@ def default_rnn_cell_hparams():
                 "input_size": [100, 123, 123]
             }
 
-    "residual" : bool
+    "residual": bool
         If `True`, apply residual connection on the inputs and
         outputs of cell in **each** layer except the first layer. Ignored
         if "num_layers" = 1.
 
-    "highway" : bool
+    "highway": bool
         If True, apply highway connection on the inputs and
         outputs of cell in each layer except the first layer. Ignored if
         "num_layers" = 1.
@@ -523,7 +523,7 @@ def get_layer(hparams):
 
             Here:
 
-            "type" : str or layer class or layer instance
+            "type": str or layer class or layer instance
                 The layer type. This can be
 
                 - The string name or full module path of a layer class. If \
@@ -544,7 +544,7 @@ def get_layer(hparams):
                     "type": Conv1D(filters=10, kernel_size=2) # cell instance
                     "type": MyLayer(...) # cell instance
 
-            "kwargs" : dict
+            "kwargs": dict
                 A dictionary of keyword arguments for constructor of the
                 layer class. Ignored if :attr:`"type"` is a layer instance.
 

@@ -31,3 +31,4 @@ from texar.tf.modules.policies import *
 from texar.tf.modules.qnets import *
 from texar.tf.modules.memory import *
 from texar.tf.modules.regressors import *
+from texar.tf.modules.pretrained import *

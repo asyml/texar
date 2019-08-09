@@ -119,25 +119,25 @@ class HierarchicalRNNEncoder(EncoderBase):
 
         Here:
 
-        "encoder_major_type" : str or class or instance
+        "encoder_major_type": str or class or instance
             The high-level encoder. Can be a RNN encoder class, its name or
             module path, or a class instance.
             Ignored if `encoder_major` is given to the encoder constructor.
 
-        "encoder_major_hparams" : dict
+        "encoder_major_hparams": dict
             The hyperparameters for the high-level encoder. The high-level
             encoder is created with
             :python:`encoder_class(hparams=encoder_major_hparams)`.
             Ignored if `encoder_major` is given to the encoder constructor,
             or if "encoder_major_type" is an encoder instance.
 
-        "encoder_minor_type" : str or class or instance
+        "encoder_minor_type": str or class or instance
             The low-level encoder. Can be a RNN encoder class, its name or
             module path, or a class instance.
             Ignored if `encoder_minor` is given to the encoder constructor,
             or if "config_share" is True.
 
-        "encoder_minor_hparams" : dict
+        "encoder_minor_hparams": dict
             The hyperparameters for the low-level encoder. The high-level
             encoder is created with
             :python:`encoder_class(hparams=encoder_minor_hparams)`.

@@ -85,18 +85,18 @@ class MultiheadAttentionEncoder(EncoderBase):
 
         Here:
 
-        "initializer" : dict, optional
+        "initializer": dict, optional
             Hyperparameters of the default initializer that initializes
             variables created in this module.
             See :func:`~texar.tf.core.get_initializer` for details.
 
-        "num_heads" : int
+        "num_heads": int
             Number of heads for attention calculation.
 
-        "output_dim" : int
+        "output_dim": int
             Output dimension of the returned tensor.
 
-        "num_units" : int
+        "num_units": int
             Hidden dimension of the unsplitted attention space.
             Should be devisible by `num_heads`.
 
@@ -106,7 +106,7 @@ class MultiheadAttentionEncoder(EncoderBase):
         "use_bias": bool
             Use bias when projecting the key, value and query.
 
-        "name" : str
+        "name": str
             Name of the module.
         """
         return {

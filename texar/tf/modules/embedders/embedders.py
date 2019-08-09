@@ -144,17 +144,17 @@ class WordEmbedder(EmbedderBase):
 
         Here:
 
-        "dim" : int or list
+        "dim": int or list
             Embedding dimension. Can be a list of integers to yield embeddings
             with dimensionality > 1.
 
             Ignored if :attr:`init_value` is given to the embedder constructor.
 
-        "dropout_rate" : float
+        "dropout_rate": float
             The dropout rate between 0 and 1. E.g., `dropout_rate=0.1` would
             drop out 10% of the embedding. Set to 0 to disable dropout.
 
-        "dropout_strategy" : str
+        "dropout_strategy": str
             The dropout strategy. Can be one of the following
 
             - :attr:`"element"`: The regular strategy that drops individual \
@@ -169,19 +169,19 @@ class WordEmbedder(EmbedderBase):
             where the word type 'the' is dropped. The dropout will never \
             yield '_ simpler the better' as in the 'item' strategy.
 
-        "trainable" : bool
+        "trainable": bool
             Whether the embedding is trainable.
 
-        "initializer" : dict or None
+        "initializer": dict or None
             Hyperparameters of the initializer for embedding values. See
             :func:`~texar.tf.core.get_initializer` for the details. Ignored if
             :attr:`init_value` is given to the embedder constructor.
 
-        "regularizer" : dict
+        "regularizer": dict
             Hyperparameters of the regularizer for embedding values. See
             :func:`~texar.tf.core.get_regularizer` for the details.
 
-        "name" : str
+        "name": str
             Name of the embedding variable.
         """
         hparams = embedder_utils.default_embedding_hparams()

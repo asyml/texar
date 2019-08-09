@@ -228,7 +228,7 @@ class MultiAlignedData(TextDataBase):
             :meth:`texar.tf.data.MonoTextData.default_hparams`, with several \
             extra hyperparameters:
 
-                "data_type" : str
+                "data_type": str
                     The type of the dataset, one of {"text", "int", "float",
                     "tf_record"}. If set to "int" or "float", the dataset is
                     considered to be a scalar dataset. If set to "tf_record",
@@ -236,7 +236,7 @@ class MultiAlignedData(TextDataBase):
                     If not specified or set to "text", the dataset is
                     considered to be a text dataset.
 
-                "vocab_share_with" : int, optional
+                "vocab_share_with": int, optional
                     Share the vocabulary of a preceding text dataset with the
                     specified index in the list (starting from 0). The
                     specified dataset must be a text dataset, and must have
@@ -256,7 +256,7 @@ class MultiAlignedData(TextDataBase):
                     the current dataset is ignored. Default is `None` which
                     disables the initial value sharing.
 
-                "processing_share_with" : int, optional
+                "processing_share_with": int, optional
                     Share the processing configurations of a preceding text
                     dataset with the specified index in the list (starting
                     from 0).

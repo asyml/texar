@@ -86,56 +86,56 @@ class Seq2seqBase(ModelBase):
 
         Here:
 
-        "source_embedder" : str or class or instance
+        "source_embedder": str or class or instance
             Word embedder for source text. Can be a class, its name or module
             path, or a class instance.
 
-        "source_embedder_hparams" : dict
+        "source_embedder_hparams": dict
             Hyperparameters for constructing the source embedder. E.g.,
             See :meth:`~texar.tf.modules.WordEmbedder.default_hparams` for
             hyperparameters of :class:`~texar.tf.modules.WordEmbedder`. Ignored
             if "source_embedder" is an instance.
 
-        "target_embedder", "target_embedder_hparams" :
+        "target_embedder", "target_embedder_hparams":
             Same as "source_embedder" and "source_embedder_hparams" but for
             target text embedder.
 
-        "embedder_share" : bool
+        "embedder_share": bool
             Whether to share the source and target embedder. If `True`,
             source embedder will be used to embed target text.
 
-        "embedder_hparams_share" : bool
+        "embedder_hparams_share": bool
             Whether to share the embedder configurations. If `True`,
             target embedder will be created with "source_embedder_hparams".
             But the two embedders have different set of trainable variables.
 
-        "encoder", "encoder_hparams" :
+        "encoder", "encoder_hparams":
             Same as "source_embedder" and "source_embedder_hparams" but for
             encoder.
 
-        "decoder", "decoder_hparams" :
+        "decoder", "decoder_hparams":
             Same as "source_embedder" and "source_embedder_hparams" but for
             decoder.
 
-        "decoding_strategy_train" : str
+        "decoding_strategy_train": str
             The decoding strategy in training mode. See
             :meth:`~texar.tf.modules.RNNDecoderBase._build` for details.
 
-        "decoding_strategy_infer" : str
+        "decoding_strategy_infer": str
             The decoding strategy in eval/inference mode.
 
-        "beam_search_width" : int
+        "beam_search_width": int
             Beam width. If > 1, beam search is used in eval/inference mode.
 
-        "connector", "connector_hparams" :
+        "connector", "connector_hparams":
             The connector class and hyperparameters. A connector transforms
             an encoder final state to a decoder initial state.
 
-        "optimization" : dict
+        "optimization": dict
             Hyperparameters of optimizating the model. See
             :func:`~texar.tf.core.default_optimization_hparams` for details.
 
-        "name" : str
+        "name": str
             Name of the model.
         """
         hparams = ModelBase.default_hparams()

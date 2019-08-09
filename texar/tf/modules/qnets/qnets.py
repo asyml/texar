@@ -89,20 +89,20 @@ class QNetBase(ModuleBase):
 
         Here:
 
-        "network_type" : str or class or instance
+        "network_type": str or class or instance
             A network that takes in state and returns outputs for
             generating actions. This can be a class, its name or module path,
             or a class instance. Ignored if `network` is given to the
             constructor.
 
-        "network_hparams" : dict
+        "network_hparams": dict
             Hyperparameters for the network. With the :attr:`network_kwargs`
             argument to the constructor, a network is created with
             :python:`network_class(**network_kwargs, hparams=network_hparams)`.
 
             For example, the default values creates a two-layer dense network.
 
-        "name" : str
+        "name": str
             Name of the Q net.
         """
         return {
@@ -210,12 +210,12 @@ class CategoricalQNet(QNetBase):
 
         Here:
 
-        "action_space" : int
+        "action_space": int
             Upper bound of the action space. The resulting action space is
             all discrete scalar numbers between 0 and the upper bound specified
             here (both inclusive).
 
-        "make_output_layer" : bool
+        "make_output_layer": bool
             Whether to append a dense layer to the network to transform
             features to Q values. If `False`, the final layer
             output of network must match the action space.

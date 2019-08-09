@@ -137,31 +137,31 @@ class ActorCriticAgent(EpisodicAgentBase):
 
         Here:
 
-        "actor_type" : str or class or instance
+        "actor_type": str or class or instance
             Actor. Can be class, its
             name or module path, or a class instance. If class name is given,
             the class must be from module :mod:`texar.tf.agents` or
             :mod:`texar.tf.custom`. Ignored if a `actor` is given to
             the agent constructor.
 
-        "actor_kwargs" : dict, optional
+        "actor_kwargs": dict, optional
             Hyperparameters for the actor class. With the :attr:`actor_kwargs`
             argument to the constructor, an actor is created with
             :python:`actor_class(**actor_kwargs, hparams=actor_hparams)`.
 
-        "critic_type" : str or class or instance
+        "critic_type": str or class or instance
             Critic. Can be class, its
             name or module path, or a class instance. If class name is given,
             the class must be from module :mod:`texar.tf.agents` or
             :mod:`texar.tf.custom`. Ignored if a `critic` is given to
             the agent constructor.
 
-        "critic_kwargs" : dict, optional
+        "critic_kwargs": dict, optional
             Hyperparameters for the critic class. With the :attr:`critic_kwargs`
             argument to the constructor, an critic is created with
             :python:`critic_class(**critic_kwargs, hparams=critic_hparams)`.
 
-        "name" : str
+        "name": str
             Name of the agent.
         """
         return {
