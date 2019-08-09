@@ -365,11 +365,3 @@ Q-Nets
 .. autoclass:: texar.tf.modules.CategoricalQNet
     :members:
     :inherited-members:
-
-Berts
-=========
-
-:hidden:`BertBase`
-~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.tf.modules.BertBase
-    :members:
