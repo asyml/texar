@@ -24,7 +24,7 @@ import numpy as np
 
 import tensorflow as tf
 
-import texar as tx
+import texar.tf as tx
 
 def ptb_iterator(data, batch_size, num_steps):
     """Iterates through the ptb data.

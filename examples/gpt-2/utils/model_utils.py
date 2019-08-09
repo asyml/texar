@@ -5,7 +5,7 @@ import sys
 import json
 import tensorflow as tf
 import numpy as np
-from texar import HParams
+from texar.tf import HParams
 
 def transform_gpt2_to_texar_config(input_json_path):
     """

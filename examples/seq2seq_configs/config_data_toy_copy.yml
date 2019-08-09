@@ -1,4 +1,4 @@
-# NMT data config. See `texar.data.PairedTextData.default_hparams()` for 
+# NMT data config. See `texar.tf.data.PairedTextData.default_hparams()` for
 # hyperparameters of train/eval data. Hyperparameters not specified here will 
 # take the default values. 
 data_hparams_train:

@@ -4,5 +4,5 @@
 Executor
 ********
 
-.. autoclass:: texar.run.Executor
+.. autoclass:: texar.tf.run.Executor
     :members:

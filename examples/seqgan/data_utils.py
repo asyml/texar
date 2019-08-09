@@ -17,7 +17,7 @@ import os
 import argparse
 import importlib
 import tensorflow as tf
-import texar as tx
+import texar.tf as tx
 
 parser = argparse.ArgumentParser(description='prepare data')
 parser.add_argument('--dataset', type=str, default='ptb',

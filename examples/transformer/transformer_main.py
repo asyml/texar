@@ -24,9 +24,9 @@ import os
 import importlib
 import tensorflow as tf
 from torchtext import data
-import texar as tx
-from texar.modules import TransformerEncoder, TransformerDecoder
-from texar.utils import transformer_utils
+import texar.tf as tx
+from texar.tf.modules import TransformerEncoder, TransformerDecoder
+from texar.tf.utils import transformer_utils
 
 from utils import data_utils, utils
 from utils.preprocess import bos_token_id, eos_token_id

@@ -30,7 +30,7 @@ from io import open
 import math
 import importlib
 import tensorflow as tf
-import texar as tx
+import texar.tf as tx
 from rouge import Rouge
 
 flags = tf.flags
