@@ -167,10 +167,13 @@ def main():
 
     def _train_epoch(sess, epoch_no):
         data_iterator.switch_to_train_data(sess)
-        training_log_file = \
-            open(log_dir + 'training_log' + str(epoch_no) + '.txt', 'w',
-                 encoding='utf-8')
+        training_log_file_path = \
+            log_dir + 'training_log' + str(epoch_no) + '.txt'
+        training_log_file = open(training_log_file_path, 'w',
+                                 encoding='utf-8')
 
+        print("The log for each step in epoch {} is recorded in {}".format(
+            epoch_no, training_log_file_path))
         step = 0
         source_buffer, target_buffer = [], []
         random.shuffle(raml_train_data)

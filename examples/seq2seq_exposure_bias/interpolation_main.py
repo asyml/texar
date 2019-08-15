@@ -149,22 +149,26 @@ def main():
 
     train_op, infer_outputs = build_model(batch, training_data, lambdas_ts)
 
-    def _train_epoch(sess, epoch, lambdas):
+    def _train_epoch(sess, epoch_no, lambdas):
         data_iterator.switch_to_train_data(sess)
-        log_file = open(log_dir + 'training_log' + str(epoch) + '.txt', 'w',
-                        encoding='utf-8')
+        training_log_file_path = \
+            log_dir + 'training_log' + str(epoch_no) + '.txt'
+        training_log_file = open(training_log_file_path, 'w',
+                                 encoding='utf-8')
 
+        print("The log for each step in epoch {} is recorded in {}".format(
+            epoch_no, training_log_file_path))
         step = 0
         while True:
             try:
                 loss = sess.run(train_op, feed_dict={
                     lambdas_ts: np.array(lambdas)})
                 print("step={}, loss={:.4f}, lambdas={}".format(
-                    step, loss, lambdas), file=log_file)
+                    step, loss, lambdas), file=training_log_file)
                 if step % config_data.observe_steps == 0:
                     print("step={}, loss={:.4f}, lambdas={}".format(
                         step, loss, lambdas))
-                log_file.flush()
+                training_log_file.flush()
                 step += 1
 
             except tf.errors.OutOfRangeError:

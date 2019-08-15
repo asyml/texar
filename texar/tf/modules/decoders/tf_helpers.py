@@ -349,7 +349,7 @@ class ScheduledEmbeddingTrainingHelper(TrainingHelper):
                 sample_id_sampler.sample(seed=self._seed),
                 gen_array_ops.fill([self.batch_size], -1))
 
-    def next_inputs(self, time, outputs, state, sample_ids, name=None):
+    def next_inputs(self, time, outputs, state, sample_ids, name=None, **unused_kwargs):
         """Gets the outputs for next step."""
         with ops.name_scope(name, "ScheduledEmbeddingTrainingHelperNextInputs",
                             [time, outputs, state, sample_ids]):
@@ -470,7 +470,7 @@ class ScheduledOutputTrainingHelper(TrainingHelper):
             sampler = tfpd.Bernoulli(probs=self._sampling_probability)
             return sampler.sample(sample_shape=self.batch_size, seed=self._seed)
 
-    def next_inputs(self, time, outputs, state, sample_ids, name=None):
+    def next_inputs(self, time, outputs, state, sample_ids, name=None, **unused_kwargs):
         """Gets the next inputs for next step."""
         with ops.name_scope(name, "ScheduledOutputTrainingHelperNextInputs",
                             [time, outputs, state, sample_ids]):
