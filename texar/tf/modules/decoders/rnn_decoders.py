@@ -251,11 +251,14 @@ class BasicRNNDecoder(RNNDecoderBase):
     def initialize(self, name=None):
         return self._helper.initialize() + (self._initial_state,)
 
-    def inputs_to_outputs(self, inputs, state, time):
-        cell_outputs, state = self._cell(inputs, state)
+    def inputs_to_outputs(self, inputs, cache, time):
+        cell_outputs, state = self._cell(inputs, cache)
+        time = tf.Print(time, [time], "time")
         logits = self._output_layer(cell_outputs)
         sample_ids = self._helper.sample(
             time=time, outputs=logits, state=state)
+        logits = tf.Print(logits, [logits], "logits")
+        sample_ids = tf.Print(sample_ids, [sample_ids], "sample_ids")
         outputs = BasicRNNDecoderOutput(logits, sample_ids, cell_outputs)
         return (outputs, sample_ids, logits, state)
 
@@ -268,23 +271,7 @@ class BasicRNNDecoder(RNNDecoderBase):
         return (finished, next_inputs, state)
 
     def step(self, time, inputs, state, name=None):
-        cell_outputs, state = self._cell(inputs, state)
-        logits = self._output_layer(cell_outputs)
-        #(cell_outputs, logits, state) = self.inputs_to_outputs(inputs, state)
-        sample_ids = self._helper.sample(
-            time=time, outputs=logits, state=state)
-        reach_max = tf.equal(time+1, self.max_decoding_length)
-        (finished, next_inputs, next_state) = tf.cond(
-            reach_max,
-            lambda: (tf.cast(tf.ones(tf.shape(sample_ids)[0]), tf.bool),
-                     self._helper.start_inputs,
-                     state),
-            lambda: self._next_inputs(sample_ids, time, logits, state)
-        )
-
-        outputs = BasicRNNDecoderOutput(logits, sample_ids, cell_outputs)
-
-        return (outputs, next_state, next_inputs, finished)
+        pass
 
     def finalize(self, outputs, final_state, sequence_lengths):
         return outputs, final_state
