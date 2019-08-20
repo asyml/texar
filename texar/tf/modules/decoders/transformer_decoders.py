@@ -278,6 +278,14 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         outputs = tf.squeeze(outputs, axis=[1])
         return outputs, cache
 
+    def _next_inputs(self, sample_ids, time, outputs, state):
+        (finished, next_inputs, state) = self._helper.next_inputs(
+            time=time,
+            outputs=outputs,
+            state=state,
+            sample_ids=sample_ids)
+        return (finished, next_inputs, state)
+
     def _input_ids_to_outputs(self, input_ids, step, cache):
         """The function is called in beam-search decoding.
 
@@ -812,9 +820,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             whether the sequence is complete, for each sequence in the batch.
         """
 
-        outputs, state = self._inputs_to_outputs(inputs, state)
+        (logits, state) = self._inputs_to_outputs(inputs, state)
         sample_ids = self._helper.sample(
-            time=time, outputs=outputs, state=state)
+            time=time, outputs=logits, state=state)
         if self.context is not None:
             _times = tf.ones([self.batch_size], dtype=tf.int32) * time
             sample_ids = tf.where(
@@ -823,14 +831,15 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 sample_ids
             )
         reach_max_time = tf.equal(time+1, self.max_decoding_length)
-        finished, next_inputs, next_state = self._helper.next_inputs(
-            time=time,
-            outputs=outputs,
-            state=state,
-            sample_ids=sample_ids,
-            reach_max_time=reach_max_time)
+
+        (finished, next_inputs, next_state) = tf.cond(
+            tf.equal(time+1, self.max_decoding_length),
+            lambda: (tf.ones(tf.shape(sample_ids)[0], dtype=tf.bool),
+                     self._helper.start_inputs, state),
+            lambda: self._next_inputs(sample_ids, time, logits, state)
+        )
         outputs = TransformerDecoderOutput(
-            logits=outputs,
+            logits=logits,
             sample_id=sample_ids)
         return outputs, next_state, next_inputs, finished
 

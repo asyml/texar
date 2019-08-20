@@ -215,7 +215,7 @@ class TrainingHelper(Helper):
 
             self._zero_inputs = nest.map_structure(
                 lambda inp: array_ops.zeros_like(inp[0, :]), inputs)
-
+            self.start_inputs = self._zero_inputs
             self._batch_size = shape_list(sequence_length)[0]
 
     @property
@@ -581,11 +581,11 @@ class GreedyEmbeddingHelper(Helper):
 
         self._embedding_args_cnt = len(get_args(self._embedding_fn))
         if self._embedding_args_cnt == 1:
-            self._start_inputs = self._embedding_fn(self._start_tokens)
+            self.start_inputs = self._embedding_fn(self._start_tokens)
         elif self._embedding_args_cnt == 2:
             # Position index is 0 in the beginning
             times = tf.zeros([self._batch_size], dtype=tf.int32)
-            self._start_inputs = self._embedding_fn(self._start_tokens, times)
+            self.start_inputs = self._embedding_fn(self._start_tokens, times)
         else:
             raise ValueError('`embedding` should expect 1 or 2 arguments.')
 
@@ -603,7 +603,7 @@ class GreedyEmbeddingHelper(Helper):
 
     def initialize(self, name=None):
         finished = array_ops.tile([False], [self._batch_size])
-        return finished, self._start_inputs
+        return finished, self.start_inputs
 
     def sample(self, time, outputs, state, name=None):
         """Gets a sample for one step."""
@@ -615,20 +615,17 @@ class GreedyEmbeddingHelper(Helper):
         sample_ids = math_ops.argmax(outputs, axis=-1, output_type=dtypes.int32)
         return sample_ids
 
-    def next_inputs(self, time, outputs, state, sample_ids, name=None,
-                    reach_max_time=None):
+    def next_inputs(self, time, outputs, state, sample_ids, name=None,):
         """Gets the inputs for next step."""
         finished = math_ops.equal(sample_ids, self._end_token)
         all_finished = math_ops.reduce_all(finished)
-        if reach_max_time is not None:
-            all_finished = tf.logical_or(all_finished, reach_max_time)
 
         if self._embedding_args_cnt == 1:
             del time, outputs  # unused by next_inputs_fn
             next_inputs = control_flow_ops.cond(
                 all_finished,
                 # If we're finished, the next_inputs value doesn't matter
-                lambda: self._start_inputs,
+                lambda: self.start_inputs,
                 lambda: self._embedding_fn(sample_ids))
         elif self._embedding_args_cnt == 2:
             del outputs
@@ -637,7 +634,7 @@ class GreedyEmbeddingHelper(Helper):
             next_inputs = control_flow_ops.cond(
                 all_finished,
                 # If we're finished, the next_inputs value doesn't matter
-                lambda: self._start_inputs,
+                lambda: self.start_inputs,
                 lambda: self._embedding_fn(sample_ids, times))
 
         return finished, next_inputs, state
@@ -730,7 +727,7 @@ class InferenceHelper(Helper):
         self._sample_dtype = sample_dtype
         self._next_inputs_fn = next_inputs_fn
         self._batch_size = array_ops.shape(start_inputs)[0]
-        self._start_inputs = ops.convert_to_tensor(
+        self.start_inputs = ops.convert_to_tensor(
             start_inputs, name="start_inputs")
 
     @property
@@ -747,7 +744,7 @@ class InferenceHelper(Helper):
 
     def initialize(self, name=None):
         finished = array_ops.tile([False], [self._batch_size])
-        return (finished, self._start_inputs)
+        return (finished, self.start_inputs)
 
     def sample(self, time, outputs, state, name=None):
         """Gets a sample for one step."""
