@@ -251,12 +251,15 @@ class BasicRNNDecoder(RNNDecoderBase):
     def initialize(self, name=None):
         return self._helper.initialize() + (self._initial_state,)
 
-    def _inputs_to_outputs(self, inputs, cache):
-        cell_outputs, state = self._cell(inputs, cache)
+    def inputs_to_outputs(self, inputs, state, time):
+        cell_outputs, state = self._cell(inputs, state)
         logits = self._output_layer(cell_outputs)
-        return (cell_outputs, logits, state)
+        sample_ids = self._helper.sample(
+            time=time, outputs=logits, state=state)
+        outputs = BasicRNNDecoderOutput(logits, sample_ids, cell_outputs)
+        return (outputs, sample_ids, logits, state)
 
-    def _next_inputs(self, sample_ids, time, outputs, state):
+    def next_inputs(self, sample_ids, time, outputs, state):
         (finished, next_inputs, state) = self._helper.next_inputs(
             time=time,
             outputs=outputs,
@@ -265,7 +268,9 @@ class BasicRNNDecoder(RNNDecoderBase):
         return (finished, next_inputs, state)
 
     def step(self, time, inputs, state, name=None):
-        (cell_outputs, logits, state) = self._inputs_to_outputs(inputs, state)
+        cell_outputs, state = self._cell(inputs, state)
+        logits = self._output_layer(cell_outputs)
+        #(cell_outputs, logits, state) = self.inputs_to_outputs(inputs, state)
         sample_ids = self._helper.sample(
             time=time, outputs=logits, state=state)
         reach_max = tf.equal(time+1, self.max_decoding_length)
@@ -602,12 +607,19 @@ class AttentionRNNDecoder(RNNDecoderBase):
 
         return [helper_init[0], helper_init[1], initial_state]
 
-    def _inputs_to_outputs(self, inputs, cache):
+    def inputs_to_outputs(self, inputs, cache, time):
         wrapper_outputs, wrapper_state = self._cell(inputs, cache)
         logits = self._output_layer(wrapper_outputs)
-        return (wrapper_outputs, logits, wrapper_state)
+        sample_ids = self._helper.sample(
+            time=time, outputs=logits, state=wrapper_state)
+        attention_scores = wrapper_state.alignments
+        attention_context = wrapper_state.attention
+        outputs = AttentionRNNDecoderOutput(
+            logits, sample_ids, wrapper_outputs,
+            attention_scores, attention_context)
+        return (outputs, sample_ids, logits, wrapper_state)
 
-    def _next_inputs(self, sample_ids, time, outputs, state):
+    def next_inputs(self, sample_ids, time, outputs, state):
         (finished, next_inputs, state) = self._helper.next_inputs(
             time=time,
             outputs=outputs,
@@ -616,23 +628,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
         return (finished, next_inputs, state)
 
     def step(self, time, inputs, state, name=None):
-        (wrapper_outputs, logits, wrapper_state) = \
-            self._inputs_to_outputs(
-                inputs, state)
-        sample_ids = self._helper.sample(
-            time=time, outputs=logits, state=wrapper_state)
-        (finished, next_inputs, next_state) = tf.cond(
-            tf.equal(time+1, self.max_decoding_length),
-            lambda: (tf.cast(tf.ones(tf.shape(sample_ids)[0]), tf.bool),
-                     self._helper.start_inputs, wrapper_state),
-            lambda: self._next_inputs(sample_ids, time, logits, wrapper_state)
-        )
-        attention_scores = wrapper_state.alignments
-        attention_context = wrapper_state.attention
-        outputs = AttentionRNNDecoderOutput(
-            logits, sample_ids, wrapper_outputs,
-            attention_scores, attention_context)
-        return (outputs, next_state, next_inputs, finished)
+        pass
 
     def finalize(self, outputs, final_state, sequence_lengths):
         return outputs, final_state

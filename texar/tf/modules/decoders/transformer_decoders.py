@@ -27,7 +27,7 @@ import collections
 
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import Decoder as TFDecoder
-from tensorflow.contrib.seq2seq import dynamic_decode
+#from tensorflow.contrib.seq2seq import dynamic_decode
 
 from texar.tf.core import layers
 from texar.tf.module_base import ModuleBase
@@ -41,6 +41,7 @@ from texar.tf.modules.decoders import tf_helpers as tx_helper
 from texar.tf.utils import beam_search, transformer_attentions as attn
 from texar.tf.utils.shapes import shape_list
 from texar.tf.utils.mode import is_train_mode
+from texar.tf.utils.dynamic_decode import dynamic_decode
 
 
 __all__ = [
@@ -261,7 +262,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             "name": "transformer_decoder",
         }
 
-    def _inputs_to_outputs(self, inputs, cache):
+    def inputs_to_outputs(self, inputs, state, time):
         """The function is called in dynamic decoding.
 
         `inputs` should be of shape `[batch_size, dim]`.
@@ -269,16 +270,28 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         Returns outputs (i.e. logits) of shape `[batch_size, vocab_size]`
         and updated cache.
         """
-        outputs = self._self_attention_stack(
+        logits = self._self_attention_stack(
             tf.expand_dims(inputs, axis=1),
-            memory=cache.get('memory'),
-            cache=cache,
+            memory=state.get('memory'),
+            cache=state,
         )
-        outputs = self._output_layer(outputs)
-        outputs = tf.squeeze(outputs, axis=[1])
-        return outputs, cache
+        logits = self._output_layer(logits)
+        logits = tf.squeeze(logits, axis=[1])
+        sample_ids = self._helper.sample(
+            time=time, outputs=logits, state=state)
+        if self.context is not None:
+            _times = tf.ones([self.batch_size], dtype=tf.int32) * time
+            sample_ids = tf.where(
+                self.context_sequence_length > _times,
+                self.context[:, time],
+                sample_ids
+            )
+        outputs = TransformerDecoderOutput(
+            logits=logits,
+            sample_id=sample_ids)
+        return (outputs, sample_ids, logits, state)
 
-    def _next_inputs(self, sample_ids, time, outputs, state):
+    def next_inputs(self, sample_ids, time, outputs, state):
         (finished, next_inputs, state) = self._helper.next_inputs(
             time=time,
             outputs=outputs,
@@ -804,44 +817,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         return self._helper.initialize() + (self._cache,)
 
     def step(self, time, inputs, state, name=None):
-        """Called per step of decoding.
-
-        Args:
-            time: Scalar `int32` tensor. Current step number.
-            inputs: Input tensor for this time step.
-            state: State (i.e. cache) from previous time step.
-            name: Name scope for any created operations.
-
-        Returns:
-            `(outputs, next_state, next_inputs, finished)`. `outputs` is an
-            object containing the decoder output, `next_state` is the state
-            (i.e. cache), `next_inputs` is the tensor that should be used
-            as input for the next step, `finished` is a boolean tensor telling
-            whether the sequence is complete, for each sequence in the batch.
-        """
-
-        (logits, state) = self._inputs_to_outputs(inputs, state)
-        sample_ids = self._helper.sample(
-            time=time, outputs=logits, state=state)
-        if self.context is not None:
-            _times = tf.ones([self.batch_size], dtype=tf.int32) * time
-            sample_ids = tf.where(
-                self.context_sequence_length > _times,
-                self.context[:, time],
-                sample_ids
-            )
-        reach_max_time = tf.equal(time+1, self.max_decoding_length)
-
-        (finished, next_inputs, next_state) = tf.cond(
-            tf.equal(time+1, self.max_decoding_length),
-            lambda: (tf.ones(tf.shape(sample_ids)[0], dtype=tf.bool),
-                     self._helper.start_inputs, state),
-            lambda: self._next_inputs(sample_ids, time, logits, state)
-        )
-        outputs = TransformerDecoderOutput(
-            logits=logits,
-            sample_id=sample_ids)
-        return outputs, next_state, next_inputs, finished
+        pass
 
     def finalize(self, outputs, final_state, sequence_lengths):
         return outputs, final_state

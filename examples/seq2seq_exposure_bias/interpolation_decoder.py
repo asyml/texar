@@ -95,28 +95,23 @@ class InterpolationDecoder(AttentionRNNDecoder):
 
         return init
 
-    def step(self, time, inputs, state, name=None):
-        # Basicly the same as in AttentionRNNDecoder except considering
-        # about the different form of 'state'(decoded_ids, rnn_state)
-
+    def inputs_to_outputs(self, inputs, state, time):
         wrapper_outputs, wrapper_state = self._cell(inputs, state[1])
-        decoded_ids = state[0]
-
         logits = self._output_layer(wrapper_outputs)
 
         sample_ids = self._helper.sample(
-            time=time, outputs=logits, state=[decoded_ids, wrapper_state])
-
-        (finished, next_inputs, next_state) = self._helper.next_inputs(
-            time=time,
-            outputs=logits,
-            state=[decoded_ids, wrapper_state],
-            sample_ids=sample_ids)
-
+            time=time, outputs=logits, state=[state[0], wrapper_state])
         attention_scores = wrapper_state.alignments
         attention_context = wrapper_state.attention
         outputs = AttentionRNNDecoderOutput(
             logits, sample_ids, wrapper_outputs,
             attention_scores, attention_context)
+        return (outputs, sample_ids, logits, wrapper_state)
 
-        return (outputs, next_state, next_inputs, finished)
+    def next_inputs(self, sample_ids, time, outputs, state):
+        (finished, next_inputs, next_state) = self._helper.next_inputs(
+            time=time,
+            outputs=logits,
+            state=[state[0], wrapper_state],
+            sample_ids=sample_ids)
+        return (finished, next_inputs, next_state)

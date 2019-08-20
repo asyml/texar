@@ -27,13 +27,14 @@ import copy
 
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import Decoder as TFDecoder
-from tensorflow.contrib.seq2seq import dynamic_decode
+#from tensorflow.contrib.seq2seq import dynamic_decode
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.util import nest
 
 from texar.tf.core import layers
 from texar.tf.utils import utils
 from texar.tf.utils.mode import is_train_mode, is_train_mode_py
+from texar.tf.utils.dynamic_decode import dynamic_decode
 from texar.tf.module_base import ModuleBase
 from texar.tf.modules.decoders import rnn_decoder_helpers
 from texar.tf.utils.dtypes import is_callable
@@ -536,10 +537,10 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         # All RNN decoder classes must implement this
         raise NotImplementedError
 
-    def step(self, time, inputs, state, name=None):
+    '''def step(self, time, inputs, state, name=None):
         # Inherits from TFDecoder
         # All RNN decoder classes must implement this
-        raise NotImplementedError
+        raise NotImplementedError'''
 
     def finalize(self, outputs, final_state, sequence_lengths):
         # Inherits from TFDecoder
