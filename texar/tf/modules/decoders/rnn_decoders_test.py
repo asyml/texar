@@ -10,12 +10,17 @@ from __future__ import unicode_literals
 import numpy as np
 
 import tensorflow as tf
+from tensorflow.contrib.seq2seq import dynamic_decode
+from tensorflow.contrib.seq2seq import BeamSearchDecoder, tile_batch
 
 from texar.tf.modules.decoders.rnn_decoders import BasicRNNDecoderOutput
 from texar.tf.modules.decoders.rnn_decoders import BasicRNNDecoder
 from texar.tf.modules.decoders.rnn_decoders import AttentionRNNDecoderOutput
 from texar.tf.modules.decoders.rnn_decoders import AttentionRNNDecoder
 from texar.tf.modules.decoders.rnn_decoder_helpers import get_helper
+from texar.tf.modules.embedders.embedders import WordEmbedder
+from texar.tf.modules.decoders.beam_search_decode import beam_search_decode
+
 from texar.tf import context
 
 # pylint: disable=no-member, too-many-locals, too-many-instance-attributes
@@ -29,7 +34,7 @@ class BasicRNNDecoderTest(tf.test.TestCase):
     def setUp(self):
         tf.test.TestCase.setUp(self)
         self._vocab_size = 4
-        self._max_time = 8
+        self._max_time = 16
         self._batch_size = 16
         self._emb_dim = 20
         self._inputs = tf.random_uniform(
@@ -229,13 +234,17 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
         self._batch_size = 8
         self._emb_dim = 20
         self._attention_dim = 256
+        self._cell_dim = 256
         self._inputs = tf.random_uniform(
             [self._batch_size, self._max_time, self._emb_dim],
             maxval=1., dtype=tf.float32)
-        self._embedding = tf.random_uniform(
-            [self._vocab_size, self._emb_dim], maxval=1., dtype=tf.float32)
+        '''self._embedding = tf.random_uniform(
+            [self._vocab_size, self._emb_dim], maxval=1., dtype=tf.float32)'''
         self._encoder_output = tf.random_uniform(
             [self._batch_size, self._max_time, 64])
+        #self._embedder = WordEmbedder(init_value=self._embedding)
+        self._embedding = tf.ones(
+            [self._vocab_size, self._emb_dim], dtype=tf.float32)
 
     def test_decode_train(self):
         """Tests decoding in training mode.
@@ -384,6 +393,69 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
         # Test if beam_cell is sharing variables with decoder cell.
         for tvar in beam_cell.trainable_variables:
             self.assertTrue(tvar in decoder.trainable_variables)
+
+    def test_beam_search(self):
+        """Tests beam_search
+        """
+        '''decoder = TransformerDecoder(
+            vocab_size=self._vocab_size,
+            output_layer=self._output_layer
+        )'''
+
+        beam_width = 5
+        end_token = 2
+        seq_length = np.random.randint(
+            self._max_time, size=[self._batch_size]) + 1
+        encoder_values_length = tf.constant(seq_length)
+
+        hparams = {
+            "attention": {
+                "kwargs": {"num_units": self._attention_dim}
+            },
+            "rnn_cell": {
+                "kwargs": {"num_units": self._cell_dim}
+            }
+        }
+        
+        decoder = AttentionRNNDecoder(
+            vocab_size=self._vocab_size,
+            memory=self._encoder_output,
+            memory_sequence_length=encoder_values_length,
+            hparams=hparams)
+
+        tf_initial_state = decoder._get_beam_search_cell(beam_width=beam_width).zero_state(
+                self._batch_size * beam_width, tf.float32)
+        #cell = decoder._get_beam_search_cell(beam_width=beam_width)
+
+        outputs = decoder(
+            embedding=self._embedding,
+            start_tokens=tf.fill([self._batch_size], 1),
+            end_token=2,
+            beam_width=beam_width,
+            max_decoding_length=3)
+
+        #if tf_initial_state is None:
+        '''beam_decoder = BeamSearchDecoder(
+            cell=decoder.cell,
+            embedding=self._embedding,
+            start_tokens=[1]*self._batch_size,
+            end_token=end_token,
+            initial_state=tf_initial_state,
+            beam_width=beam_width,
+            output_layer=decoder.output_layer,
+            reorder_tensor_arrays=True)
+        outputs_1, final_state_1, _ = dynamic_decode(
+            decoder=beam_decoder, maximum_iterations=3, parallel_iterations=1)'''
+
+
+        with self.test_session() as sess:
+            sess.run(tf.global_variables_initializer())
+            '''outputs_, outputs_1_ = sess.run([outputs, outputs_1], feed_dict={context.global_mode():
+                           tf.estimator.ModeKeys.PREDICT})'''
+            outputs_ = sess.run(outputs, feed_dict={context.global_mode():
+                           tf.estimator.ModeKeys.PREDICT})
+
+            print("outputs_", outputs_['sample_id'], outputs_['sample_id'].shape)
 
 if __name__ == "__main__":
     tf.test.main()

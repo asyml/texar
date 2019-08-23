@@ -207,7 +207,7 @@ def dynamic_decode(decoder, output_time_major=False, impute_finished=False,
             next_sequence_lengths)`.
         """
 
-        (next_outputs, sample_ids, logits, state) = decoder.inputs_to_outputs(
+        (next_outputs, sample_ids, logits, state) = decoder.update(
             inputs, state, time)
         reach_max = tf.equal(time+1, decoder.max_decoding_length)
         (decoder_finished, next_inputs, decoder_state) = tf.cond(

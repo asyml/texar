@@ -27,12 +27,11 @@ import copy
 
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import Decoder as TFDecoder
-#from tensorflow.contrib.seq2seq import dynamic_decode
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.util import nest
 
 from texar.tf.core import layers
-from texar.tf.utils import utils
+from texar.tf.utils import utils, beam_search
 from texar.tf.utils.mode import is_train_mode, is_train_mode_py
 from texar.tf.utils.dynamic_decode import dynamic_decode
 from texar.tf.module_base import ModuleBase
@@ -171,6 +170,8 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                input_time_major=False,
                helper=None,
                mode=None,
+               beam_width=None,
+               length_penalty=0.0,
                **kwargs):
         """Performs decoding. This is a shared interface for both
         :class:`~texar.tf.modules.BasicRNNDecoder` and
@@ -416,6 +417,65 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             - **`sequence_lengths`**: is an int Tensor of shape `[batch_size]` \
             containing the length of each sample.
         """
+        # Maximum decoding length
+        max_l = max_decoding_length
+        if max_l is None:
+            max_l_train = self._hparams.max_decoding_length_train
+            if max_l_train is None:
+                max_l_train = utils.MAX_SEQ_LENGTH
+            max_l_infer = self._hparams.max_decoding_length_infer
+            if max_l_infer is None:
+                max_l_infer = utils.MAX_SEQ_LENGTH
+            max_l = tf.cond(is_train_mode(mode),
+                            lambda: max_l_train, lambda: max_l_infer)
+        self.max_decoding_length = max_l
+
+        if callable(embedding):
+            self._embedding_fn = embedding
+        else:
+            self._embedding_fn = (
+                lambda ids: tf.nn.embedding_lookup(embedding, ids))
+        # Beam search decode
+        if beam_width is not None:
+            if helper is not None:
+                raise ValueError("Must not set 'beam_width' and 'helper' "
+                                 "simultaneously.")
+
+            if start_tokens is None:
+                raise ValueError("'start_tokens' must be specified when using"
+                                 "beam search decoding.")
+
+            if end_token is None:
+                raise ValueError("'end_token' must be specified when using"
+                                 "beam search decoding.")
+
+            batch_size = start_tokens.shape[0]
+            self._cell = self._get_beam_search_cell(beam_width=beam_width)
+            states = self._cell.zero_state(batch_size * beam_width, dtype=tf.float32)
+
+            if initial_state is not None:
+                states = states._replace(cell_state=initial_state)
+
+            sample_id, log_prob = self._beam_decode(  # type: ignore
+                start_tokens=start_tokens,
+                end_token=end_token,
+                initial_state=states,
+                beam_width=beam_width,
+                length_penalty=length_penalty,
+                decode_length=max_decoding_length,
+                states_batch_size=batch_size * beam_width)
+
+            # Release memory and memory_sequence_length in AttentionRNNDecoder
+            '''self.memory = None
+            self.memory_sequence_length = None'''
+
+            '''# Release the cached memory in AttentionMechanism
+            for attention_mechanism in self._cell.attention_mechanisms:
+                attention_mechanism.clear_cache()'''
+            self._built = True
+            return {"sample_id": sample_id,
+                    "log_prob": log_prob}
+
         # Helper
         if helper is not None:
             pass
@@ -458,18 +518,6 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
             self._initial_state = self.zero_state(
                 batch_size=self.batch_size, dtype=tf.float32)
 
-        # Maximum decoding length
-        max_l = max_decoding_length
-        if max_l is None:
-            max_l_train = self._hparams.max_decoding_length_train
-            if max_l_train is None:
-                max_l_train = utils.MAX_SEQ_LENGTH
-            max_l_infer = self._hparams.max_decoding_length_infer
-            if max_l_infer is None:
-                max_l_infer = utils.MAX_SEQ_LENGTH
-            max_l = tf.cond(is_train_mode(mode),
-                            lambda: max_l_train, lambda: max_l_infer)
-        self.max_decoding_length = max_l
         # Decode
         outputs, final_state, sequence_lengths = dynamic_decode(
             decoder=self, impute_finished=impute_finished,
@@ -516,6 +564,47 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 output_shape_with_unknown_batch)
             return nest.map_structure(lambda s: s[1:], layer_output_shape)
 
+    def _beam_decode(self, start_tokens, end_token, initial_state,
+                     decode_length, beam_width,length_penalty,
+                     states_batch_size):
+
+        def symbols_to_logits_fn(ids, step, state):
+            batch_size = tf.shape(ids)[0]
+            step = tf.shape(ids)[-1] - 1
+            times = tf.fill((batch_size,), step)
+            inputs = self._embedding_fn(ids[:, -1])
+            '''
+            embed_input_cnt = len(utils.get_args(self._embedding_fn))
+            if embed_input_cnt == 1:
+                inputs = self._embedding_fn(ids[:, -1])
+            elif embed_input_cnt > 1:
+                inputs = self._embedding_fn(ids[:, -1], times)'''
+            wrapper_outputs, wrapper_state = self._cell(
+                inputs=inputs, state=state)
+            #
+            logits = self._output_layer(wrapper_outputs)
+            #
+            return logits, wrapper_state
+
+        assert self._vocab_size is not None
+
+        outputs, log_prob = beam_search.beam_search(
+            symbols_to_logits_fn=symbols_to_logits_fn,
+            initial_ids=start_tokens,
+            beam_size=beam_width,
+            decode_length=decode_length,
+            vocab_size=self._vocab_size,
+            alpha=length_penalty,
+            states=initial_state,
+            states_batch_size=states_batch_size,
+            eos_id=end_token,
+            stop_early=False)
+        # Ignores <BOS>
+        outputs = outputs[:, :, 1:]
+        # shape = [batch_size, seq_length, beam_width]
+        outputs = tf.transpose(outputs, [0, 2, 1])
+        return outputs, log_prob
+    
     @property
     def batch_size(self):
         return self._helper.batch_size

@@ -95,7 +95,7 @@ class InterpolationDecoder(AttentionRNNDecoder):
 
         return init
 
-    def inputs_to_outputs(self, inputs, state, time):
+    def update(self, inputs, state, time):
         wrapper_outputs, wrapper_state = self._cell(inputs, state[1])
         logits = self._output_layer(wrapper_outputs)
 

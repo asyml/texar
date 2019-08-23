@@ -27,7 +27,6 @@ import collections
 
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import Decoder as TFDecoder
-#from tensorflow.contrib.seq2seq import dynamic_decode
 
 from texar.tf.core import layers
 from texar.tf.module_base import ModuleBase
@@ -262,7 +261,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             "name": "transformer_decoder",
         }
 
-    def inputs_to_outputs(self, inputs, state, time):
+    def update(self, inputs, state, time):
         """The function is called in dynamic decoding.
 
         `inputs` should be of shape `[batch_size, dim]`.
@@ -773,7 +772,8 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             self._vocab_size,
             length_penalty,
             eos_id=end_token,
-            states=self._cache)
+            states=self._cache,
+            stop_early=False)
 
         # Ignores <BOS>
         outputs = outputs[:, :, 1:]

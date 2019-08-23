@@ -31,7 +31,7 @@ from tensorflow.python.util import nest
 from tensorflow.contrib.seq2seq import tile_batch
 
 from texar.tf.modules.decoders.rnn_decoder_base import RNNDecoderBase
-from texar.tf.utils import utils
+from texar.tf.utils import utils, beam_search
 
 __all__ = [
     "BasicRNNDecoderOutput",
@@ -251,14 +251,11 @@ class BasicRNNDecoder(RNNDecoderBase):
     def initialize(self, name=None):
         return self._helper.initialize() + (self._initial_state,)
 
-    def inputs_to_outputs(self, inputs, cache, time):
+    def update(self, inputs, cache, time):
         cell_outputs, state = self._cell(inputs, cache)
-        time = tf.Print(time, [time], "time")
         logits = self._output_layer(cell_outputs)
         sample_ids = self._helper.sample(
             time=time, outputs=logits, state=state)
-        logits = tf.Print(logits, [logits], "logits")
-        sample_ids = tf.Print(sample_ids, [sample_ids], "sample_ids")
         outputs = BasicRNNDecoderOutput(logits, sample_ids, cell_outputs)
         return (outputs, sample_ids, logits, state)
 
@@ -594,7 +591,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
 
         return [helper_init[0], helper_init[1], initial_state]
 
-    def inputs_to_outputs(self, inputs, cache, time):
+    def update(self, inputs, cache, time):
         wrapper_outputs, wrapper_state = self._cell(inputs, cache)
         logits = self._output_layer(wrapper_outputs)
         sample_ids = self._helper.sample(

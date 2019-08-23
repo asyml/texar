@@ -41,6 +41,8 @@ def _merge_beam_dim(tensor):
     Returns:
         Reshaped tensor of shape [A*B, ...]
     """
+    if not isinstance(tensor, tf.Tensor) or not tensor.get_shape().as_list():
+        return tensor
     shape = shape_list(tensor)
     shape[0] *= shape[1]    # batch -> batch * beam_size
     shape.pop(1)    # Remove beam dim
@@ -58,6 +60,8 @@ def _unmerge_beam_dim(tensor, batch_size, beam_size):
     Returns:
         Reshaped tensor of shape [batch_size, beam_size, ...]
     """
+    if not isinstance(tensor, tf.Tensor) or not tensor.get_shape().as_list():
+        return tensor
     shape = shape_list(tensor)
     new_shape = [batch_size] + [beam_size] + shape[1:]
     return tf.reshape(tensor, new_shape)
@@ -73,6 +77,8 @@ def _expand_to_beam_size(tensor, beam_size):
     Returns:
         Tiled tensor [batch_size, beam_size, ...]
     """
+    if not isinstance(tensor, tf.Tensor) or not tensor.get_shape().as_list():
+        return tensor
     tensor = tf.expand_dims(tensor, axis=1)
     tile_dims = [1] * tensor.shape.ndims
     tile_dims[1] = beam_size
@@ -173,6 +179,8 @@ def compute_topk_scores_and_seq(sequences, scores, scores_to_gather, flags,
     # operations with tfdbg. Clients can capture these tensors by watching
     # these node names.
     def gather(tensor, name):
+        if not isinstance(tensor, tf.Tensor) or not tensor.get_shape().as_list():
+            return tensor
         return tf.gather_nd(tensor, top_coordinates, name=(prefix + name))
     topk_seq = gather(sequences, "_topk_seq")
     topk_flags = gather(flags, "_topk_flags")
@@ -193,6 +201,7 @@ def beam_search(symbols_to_logits_fn,
                 alpha,
                 eos_id,
                 states=None,
+                states_batch_size=None,
                 stop_early=True):
     """Beam search with length penalties.
 
@@ -255,11 +264,17 @@ def beam_search(symbols_to_logits_fn,
     # Expand each batch and state to beam_size
     alive_seq = _expand_to_beam_size(initial_ids, beam_size)
     alive_seq = tf.expand_dims(alive_seq, axis=2)
+    print("alive_seq", alive_seq)
     #(batch_size, beam_size, 1)
     if states:
-        states = nest.map_structure(
-            lambda state: _expand_to_beam_size(state, beam_size),
-                states)
+        if states_batch_size and states_batch_size == batch_size * beam_size:
+            states = nest.map_structure(
+                lambda state: _unmerge_beam_dim(state, batch_size, beam_size),
+                    states)
+        else:
+            states = nest.map_structure(
+                lambda state: _expand_to_beam_size(state, beam_size),
+                    states)
     else:
         states = {}
 
@@ -379,7 +394,7 @@ def beam_search(symbols_to_logits_fn,
         """
         # Get the logits for all the possible next symbols
         flat_ids = tf.reshape(alive_seq, [batch_size * beam_size, -1])
-
+        flat_ids = tf.Print(flat_ids, [flat_ids], "flat_ids")
         # (batch_size * beam_size, decoded_length)
         if states:
             flat_states = nest.map_structure(_merge_beam_dim, states)
@@ -393,8 +408,7 @@ def beam_search(symbols_to_logits_fn,
         logits = tf.reshape(flat_logits, [batch_size, beam_size, -1])
 
         # Convert logits to normalized log probs
-        candidate_log_probs = log_prob_from_logits(logits)
-
+        candidate_log_probs = tf.nn.log_softmax(logits)
         # Multiply the probabilites by the current probabilites of the
         # beam.
         # (batch_size, beam_size, vocab_size) + (batch_size, beam_size, 1)
@@ -410,8 +424,7 @@ def beam_search(symbols_to_logits_fn,
             [-1, beam_size * vocab_size])
 
         topk_scores, topk_ids = tf.nn.top_k(flat_curr_scores,
-            k=beam_size * 2)
-
+            k=beam_size)###
         # Recovering the log probs because we will need to send them back
         topk_log_probs = topk_scores * length_penalty
 
@@ -423,7 +436,7 @@ def beam_search(symbols_to_logits_fn,
         # to pull out the correct seqences from id's that we need to grow.
         # We will also use the coordinates to gather the booleans of the
         # beam items that survived.
-        batch_pos = compute_batch_indices(batch_size, beam_size * 2)
+        batch_pos = compute_batch_indices(batch_size, beam_size)##
 
         # top beams will give us the actual coordinates to do the gather.
         # stacking will create a tensor of dimension batch * beam * 2,
@@ -435,7 +448,7 @@ def beam_search(symbols_to_logits_fn,
         topk_seq = tf.gather_nd(alive_seq, topk_coordinates)
         if states:
             states = nest.map_structure(
-                lambda state: tf.gather_nd(state, topk_coordinates),
+                lambda state: tf.gather_nd(state, topk_coordinates) if isinstance(state, tf.Tensor) and state.get_shape().as_list() != [] else state,
                     states)
 
         # Append the most probable alive
@@ -582,9 +595,12 @@ def beam_search(symbols_to_logits_fn,
         ],
         parallel_iterations=1,
         back_prop=False)
-
+    '''finished_flags = tf.zeros([batch_size, beam_size], tf.bool)
+    alive_seq = tf.Print(alive_seq, [alive_seq], summarize=1000, message="alive_seq")
+    finished_flags = tf.Print(finished_flags, [finished_flags], summarize=1000, message="finished_flags")
+    finished_seq = tf.Print(finished_seq, [finished_seq, finished_flags], summarize=1000, message="finished_seq")
     alive_seq.set_shape((None, beam_size, None))
-    finished_seq.set_shape((None, beam_size, None))
+    finished_seq.set_shape((None, beam_size, None))'''
 
     # Accounting for corner case: It's possible that no sequence in alive
     # for a particular batch item ever reached EOS. In that case, we
