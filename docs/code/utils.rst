@@ -124,9 +124,26 @@ Shape
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.tf.utils.pad_and_concat
 
+:hidden:`reduce_with_weights`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.tf.utils.reduce_with_weights
+
 :hidden:`flatten`
 ~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.tf.utils.flatten
+
+:hidden:`varlength_concat`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.tf.utils.varlength_concat
+
+:hidden:`varlength_concat_py`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.tf.utils.varlength_concat_py
+
+:hidden:`varlength_roll`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.tf.utils.varlength_roll
+
 
 Dictionary
 ===========
