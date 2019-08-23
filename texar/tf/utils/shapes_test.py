@@ -74,7 +74,7 @@ class ShapesTest(tf.test.TestCase):
             [[1, 1, 0, 0],
              [1, 0, 0, 0],
              [1, 1, 1, 1]], dtype=np.int32)
-        x_length = [2, 1, 4]
+        x_length = np.asarray([2, 1, 4], dtype=np.int32)
         y = np.asarray(
             [[2, 2, 2, 0],
              [2, 2, 2, 2],

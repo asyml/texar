@@ -510,8 +510,8 @@ def varlength_concat(x, y, x_length, dtype=None, tensor_rank=None):
             # out = [[1, 1, 2, 2, 0, 0, 0]
             #        [1, 1, 1, 2, 2, 2, 0]]
     """
-    #x = tf.convert_to_tensor(x)
-    #y = tf.convert_to_tensor(y)
+    x = tf.convert_to_tensor(x)
+    y = tf.convert_to_tensor(y)
     x_length = tf.convert_to_tensor(x_length)
 
     if tensor_rank is None:
@@ -588,7 +588,7 @@ def varlength_concat_py(x, y, x_length, dtype=None):
             y = np.asarray([[2, 2, 0],
                             [2, 2, 2]])
 
-            out = varlength_concat(x, y, x_length)
+            out = varlength_concat_py(x, y, x_length)
             # out = [[1, 1, 2, 2, 0, 0, 0]
             #        [1, 1, 1, 2, 2, 2, 0]]
     """
@@ -662,8 +662,8 @@ def varlength_roll(input, shift, axis=1, dtype=None):
             # out = [[4, 1, 2, 3]
             #        [6, 7, 8, 5]]
     """
-    #x = tf.convert_to_tensor(input)
-    x = input
+    x = tf.convert_to_tensor(input)
+    #x = input
     shift = tf.convert_to_tensor(shift)
 
     batch_size = tf.shape(x)[0]
