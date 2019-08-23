@@ -35,9 +35,13 @@ __all__ = [
     "mask_sequences",
     "_mask_sequences_tensor",
     "_mask_sequences_py",
+    "reduce_with_weights",
     "flatten",
     "shape_list",
-    "pad_and_concat"
+    "pad_and_concat",
+    "varlength_concat",
+    "varlength_concat_py",
+    "varlength_roll"
 ]
 
 
@@ -249,6 +253,90 @@ def _mask_sequences_py(sequence,
     return sequence
 
 
+def reduce_with_weights(tensor,
+                        weights=None,
+                        average_across_batch=True,
+                        average_across_remaining=False,
+                        sum_over_batch=False,
+                        sum_over_remaining=True,
+                        tensor_rank=None):
+    """Weights and reduces tensor.
+
+    Args:
+        tensor: A Tensor to weight and reduce, of shape
+            `[batch_size, ...]`.
+        weights (optional): A Tensor of the same shape and dtype with
+            :attr:`tensor`. For example, this is can be a 0-1 tensor
+            for masking values of :attr:`tensor``.
+        average_across_batch (bool): If set, average the tensor across the
+            batch dimension. Must not set `average_across_batch`'
+            and `sum_over_batch` at the same time.
+        average_across_remaining (bool): If set, average the
+            tensor across the
+            remaining dimensions. Must not set `average_across_remaining`'
+            and `sum_over_remaining` at the same time.
+            If :attr:`weights` is given, this is a weighted average.
+        sum_over_batch (bool): If set, sum the tensor across the
+            batch dimension. Must not set `average_across_batch`
+            and `sum_over_batch` at the same time.
+        sum_over_remaining (bool): If set, sum the tensor
+            across the
+            remaining dimension. Must not set `average_across_remaining`
+            and `sum_over_remaining` at the same time.
+            If :attr:`weights` is given, this is a weighted sum.
+        tensor_rank (int, optional): The number of dimensions of
+            :attr:`tensor`. If not given, inferred from :attr:`tensor`
+            automatically.
+
+    Returns:
+        A Tensor.
+
+    Example:
+        .. code-block:: python
+
+            x = tf.constant([[10, 10, 2, 2],
+                             [20, 2, 2, 2]])
+            mask = tf.constant([[1, 1, 0, 0],
+                                [1, 0, 0, 0]])
+
+            z = reduce_with_weights(x, weights=mask)
+            # z == 20
+            # (all 2 in x are masked)
+    """
+    if tensor_rank is None:
+        tensor_rank = get_rank(tensor)
+    if tensor_rank is None:
+        raise ValueError('Unable to infer the rank of `tensor`. '
+                         'Please set `tensor_rank` explicitly.')
+
+    if weights is not None:
+        tensor = tensor * weights
+
+    if tensor_rank > 1:
+        if average_across_remaining and sum_over_remaining:
+            raise ValueError("Only one of `average_across_remaining` and "
+                             "`sum_over_remaining` can be set.")
+        if average_across_remaining:
+            if weights is None:
+                tensor = tf.reduce_mean(tensor, axis=np.arange(1, tensor_rank))
+            else:
+                tensor = tf.reduce_sum(tensor, axis=np.arange(1, tensor_rank))
+                weights = tf.reduce_sum(weights, axis=np.arange(1, tensor_rank))
+                tensor = tensor / weights
+        elif sum_over_remaining:
+            tensor = tf.reduce_sum(tensor, axis=np.arange(1, tensor_rank))
+
+    if average_across_batch and sum_over_batch:
+        raise ValueError("Only one of `average_across_batch` and "
+                         "`sum_over_batch` can be set.")
+    if sum_over_batch:
+        tensor = tf.reduce_sum(tensor, axis=[0])
+    elif average_across_batch:
+        tensor = tf.reduce_mean(tensor, axis=[0])
+
+    return tensor
+
+
 def flatten(tensor, preserve_dims, flattened_dim=None):
     """Flattens a tensor whiling keeping several leading dimensions.
 
@@ -382,3 +470,220 @@ def pad_and_concat(values, axis, rank=None, pad_axis=None,
             values[i] = _pad_to_size(v, pa, max_dim_size)
 
     return tf.concat(values, axis)
+
+
+def varlength_concat(x, y, x_length, dtype=None, tensor_rank=None):
+    """Concatenates rows of `x` and `y` where each row of
+    `x` has a variable length.
+
+    Both `x` and `y` are of numeric dtypes, such as `tf.int32` and `tf.float32`,
+    with mask value `0`. The two tensors must be of the same dtype.
+
+    Args:
+        x: A tensor of shape `[batch_size, x_dim_2, other_dims]`.
+        y: A tensor of shape `[batch_size, y_dim_2, other_dims]`.
+            All dimensions except the 2nd dimension must be the same
+            with those of `x`.
+        x_length: A 1D int tensor of shape `[batch_size]` containing
+            the length of each `x` row.
+            Elements beyond the respective lengths will be
+            made zero.
+        dtype: Type of :attr:`x`. If `None`, inferred from
+            :attr:`x` automatically.
+        tensor_rank (int, optional): The number of dimensions of
+            :attr:`x`. If not given, inferred from :attr:`x`
+            automatically.
+
+    Returns:
+        A Tensor of shape `[batch_size, x_dim_2 + y_dim_2, other_dims]`.
+
+    Example:
+        .. code-block:: python
+
+            x = tf.constant([[1, 1, 0, 0],
+                             [1, 1, 1, 0]])
+            x_length = [2, 3]
+            y = tf.constant([[2, 2, 0],
+                             [2, 2, 2]])
+
+            out = varlength_concat(x, y, x_length)
+            # out = [[1, 1, 2, 2, 0, 0, 0]
+            #        [1, 1, 1, 2, 2, 2, 0]]
+    """
+    x = tf.convert_to_tensor(x)
+    y = tf.convert_to_tensor(y)
+    x_length = tf.convert_to_tensor(x_length)
+
+    if tensor_rank is None:
+        tensor_rank = get_rank(x) or get_rank(y)
+    if tensor_rank is None:
+        raise ValueError('Unable to infer the rank of `x`. '
+                         'Please set `tensor_rank` explicitly.')
+
+    x_masked = mask_sequences(x, x_length, dtype=dtype, tensor_rank=tensor_rank)
+    zeros_y = tf.zeros_like(y)
+    x_aug = tf.concat([x_masked, zeros_y], axis=1)
+
+    zeros_x = tf.zeros_like(x)
+    y_aug = tf.concat([zeros_x, y], axis=1)
+
+    # Now, x_aug.shape == y_aug.shape
+
+    max_length_x = tf.shape(x)[1]
+    batch_size = tf.shape(x)[0]
+
+    initial_index = tf.constant(0, dtype=tf.int32)
+    initial_outputs_ta = tf.TensorArray(
+        dtype=dtype or x.dtype,
+        size=0,
+        dynamic_size=True)
+
+    def _cond(index, _):
+        return tf.less(index, batch_size)
+
+    def _body(index, outputs_ta):
+        y_aug_i_rolled = tf.roll(
+            input=y_aug[index],
+            shift=x_length[index] - max_length_x, # shift to left
+            axis=0)
+        xy = x_aug[index] + y_aug_i_rolled
+        return [index + 1, outputs_ta.write(index, xy)]
+
+    res = tf.while_loop(_cond, _body, [initial_index, initial_outputs_ta])
+
+    return res[1].stack()
+
+
+def varlength_concat_py(x, y, x_length, dtype=None):
+    """Concatenates rows of `x` and `y` where each row of
+    `x` has a variable length.
+
+    The function has the same semantic as :func:`varlength_concat`,
+    except that this function is for numpy arrays instead of TF tensors.
+
+    Both `x` and `y` are of numeric dtypes, such as `int32` and `float32`,
+    with mask value `0`. The two arrays must be of the same dtype.
+
+    Args:
+        x: A array of shape `[batch_size, x_dim_2, other_dims]`.
+        y: A array of shape `[batch_size, y_dim_2, other_dims]`.
+            All dimensions except the 2nd dimension must be the same
+            with those of `x`.
+        x_length: A 1D int array of shape `[batch_size]` containing
+            the length of each `x` row.
+            Elements beyond the respective lengths will be
+            made zero.
+        dtype: Type of :attr:`x`. If `None`, inferred from
+            :attr:`x` automatically.
+
+    Returns:
+        An array of shape `[batch_size, x_dim_2 + y_dim_2, other_dims]`.
+
+    Example:
+        .. code-block:: python
+
+            x = np.asarray([[1, 1, 0, 0],
+                            [1, 1, 1, 0]])
+            x_length = [2, 3]
+            y = np.asarray([[2, 2, 0],
+                            [2, 2, 2]])
+
+            out = varlength_concat_py(x, y, x_length)
+            # out = [[1, 1, 2, 2, 0, 0, 0]
+            #        [1, 1, 1, 2, 2, 2, 0]]
+    """
+    x = np.asarray(x, dtype=dtype)
+    y = np.asarray(y, dtype=dtype)
+
+    x_masked = mask_sequences(x, x_length, dtype=dtype)
+    zeros_y = np.zeros_like(y)
+    x_aug = np.concatenate([x_masked, zeros_y], axis=1)
+
+    zeros_x = np.zeros_like(x)
+    y_aug = np.concatenate([zeros_x, y], axis=1)
+
+    # Now, x_aug.shape == y_aug.shape
+
+    max_length_x = x.shape[1]
+    batch_size = x.shape[0]
+
+    for index in np.arange(batch_size):
+        y_aug_i_rolled = np.roll(
+            a=y_aug[index],
+            shift=x_length[index] - max_length_x,
+            axis=0)
+        x_aug[index] += y_aug_i_rolled
+
+    return x_aug
+
+
+def varlength_roll(input, shift, axis=1, dtype=None):
+    """Rolls the elements of *each row* of a tensor along an axis for
+    variable steps.
+
+    This is a `tf.while_loop` wrapper of :tf_main:`tf.roll <roll>`. Note the
+    different definition of :attr:`shift` and :attr:`axis` here compared
+    to :tf_main:`tf.roll <roll>`.
+
+    Args:
+        input: A tensor of shape `[batch_size, other_dims]` where
+            `other_dims` can be multiple dimensions.
+        shift: A 1D int tensor of shape `[batch_size]` containing
+            the steps for which each row in the batch are rolled.
+            Positive shifts will roll towards larger indices, while
+            negative shifts will roll towards smaller indices.
+        axis: A scalar int tensor > 0. The dimension that the roll
+            should occur.
+        dtype: Type of :attr:`input`. If `None`, inferred from
+            :attr:`input` automatically.
+
+    Returns:
+        A Tensor of the same shape/dtype as :attr:`input`.
+
+    Example:
+        .. code-block:: python
+
+            x = tf.constant([[0, 0, 1, 0],
+                             [0, 1, 1, 1]])
+            shift = [-2, -1]
+
+            out = varlength_roll(x, shift)
+            # out = [[1, 0, 0, 0]
+            #        [1, 1, 1, 0]]
+
+
+        .. code-block:: python
+
+            x = tf.constant([[1, 2, 3, 4],
+                             [5, 6, 7, 8]])
+            shift = [1, -1]
+
+            out = varlength_roll(x, shift)
+            # out = [[4, 1, 2, 3]
+            #        [6, 7, 8, 5]]
+    """
+    x = tf.convert_to_tensor(input)
+    #x = input
+    shift = tf.convert_to_tensor(shift)
+
+    batch_size = tf.shape(x)[0]
+
+    initial_index = tf.constant(0, dtype=tf.int32)
+    initial_outputs_ta = tf.TensorArray(
+        dtype=dtype or x.dtype,
+        size=0,
+        dynamic_size=True)
+
+    def _cond(index, _):
+        return tf.less(index, batch_size)
+
+    def _body(index, outputs_ta):
+        x_i_rolled = tf.roll(
+            input=x[index],
+            shift=shift[index],
+            axis=axis-1)
+        return [index + 1, outputs_ta.write(index, x_i_rolled)]
+
+    res = tf.while_loop(_cond, _body, [initial_index, initial_outputs_ta])
+
+    return res[1].stack()
