@@ -125,7 +125,7 @@ ACL 2019
 @inproceedings{hu2019texar,
   title={Texar: A Modularized, Versatile, and Extensible Toolkit for Text Generation},
   author={Hu, Zhiting and Shi, Haoran and Tan, Bowen and Wang, Wentao and Yang, Zichao and Zhao, Tiancheng and He, Junxian and Qin, Lianhui and Wang, Di and others},
-  booktitle={ACL 2019, System Demonstrations}
+  booktitle={ACL 2019, System Demonstrations},
   year={2019}
 }
 ```
