@@ -10,13 +10,25 @@ from __future__ import unicode_literals
 
 import tensorflow as tf
 
-from texar.tf.modules.encoders.xlnet_encoders import XLNetEncoder
+from texar.tf.modules.encoders.xlnet_encoder import XLNetEncoder
+from texar.tf.utils.test import pretrained_test
 
 
 class XLNetEncoderTest(tf.test.TestCase):
     """Tests :class:`~texar.tf.modules.XLNetEncoder` class.
     """
 
+    @pretrained_test
+    def test_model_loading(self):
+        r"""Tests model loading functionality."""
+
+        inputs = tf.placeholder(dtype=tf.int32, shape=[None, None])
+
+        for pretrained_model_name in XLNetEncoder.available_checkpoints():
+            encoder = XLNetEncoder(pretrained_model_name=pretrained_model_name)
+            _ = encoder(inputs)
+
+    @pretrained_test
     def test_hparams(self):
         """Tests the priority of the encoder architecture parameter.
         """
@@ -56,10 +68,12 @@ class XLNetEncoderTest(tf.test.TestCase):
         self.assertEqual(len(encoder.attn_layers), 12)
         self.assertEqual(len(encoder.ff_layers), 12)
 
+    @pretrained_test
     def test_trainable_variables(self):
         """Tests the functionality of automatically collecting trainable
         variables.
         """
+
         inputs = tf.placeholder(dtype=tf.int32, shape=[None, None])
 
         # case 1: XLNet with no pre-trained model
@@ -102,7 +116,7 @@ class XLNetEncoderTest(tf.test.TestCase):
         """
         # case 1: XLNet pre-trained
         hparams = {
-            "pretrained_model_name": "xlnet-base-cased",
+            "pretrained_model_name": None,
             "untie_r": False
         }
         encoder = XLNetEncoder(hparams=hparams)
@@ -122,7 +136,7 @@ class XLNetEncoderTest(tf.test.TestCase):
 
         # case 2: XLNet pre-trained, untie_r=True
         hparams = {
-            "pretrained_model_name": "xlnet-base-cased",
+            "pretrained_model_name": None,
             "untie_r": True
         }
 

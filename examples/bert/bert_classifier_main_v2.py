@@ -91,7 +91,7 @@ def main(_):
     hparams = {
         'clas_strategy': 'cls_time'
     }
-    model = tx.modules.BertClassifier(hparams=hparams)
+    model = tx.modules.BERTClassifier(hparams=hparams)
     logits, preds = model(input_ids, input_length, segment_ids)
 
     accu = tx.evals.accuracy(batch['label_ids'], preds)

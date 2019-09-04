@@ -23,66 +23,52 @@ import tensorflow as tf
 
 from texar.tf.utils.mode import is_train_mode
 
-from texar.tf.hyperparams import HParams
-from texar.tf.core import layers
-from texar.tf.modules.pretrained.pretrained_base import PretrainedBase
-from texar.tf.modules.pretrained import xlnet_utils
-from texar.tf.modules.pretrained.xlnet_model_utils import \
+from texar.tf.core.layers import get_initializer, get_layer
+from texar.tf.modules.embedders.embedders import WordEmbedder
+from texar.tf.modules.encoders.encoder_base import EncoderBase
+from texar.tf.modules.pretrained.xlnet import PretrainedXLNetMixin
+from texar.tf.modules.pretrained.xlnet_utils import \
     (PositionWiseFF, RelativePositionalEncoding, RelativeMutiheadAttention)
-from texar.tf.modules.embedders import WordEmbedder
-from texar.tf.modules.encoders import EncoderBase
-
-from texar.tf.utils import dict_fetch
+from texar.tf.utils.utils import dict_fetch
 
 __all__ = [
     "XLNetEncoder"
 ]
 
 
-class XLNetEncoder(PretrainedBase, EncoderBase):
-    r"""XLNet Transformer for encoding sequences.
-
-    This module supports the architecture proposed
-    in `(Zhiling et al.)` XLNet.
+class XLNetEncoder(EncoderBase, PretrainedXLNetMixin):
+    r"""Raw XLNet module for encoding sequences.
 
     Args:
-        pretrained_model_name (optional): a str with the name
-            of a pre-trained model to load. Currently 'xlnet-large-cased'
-            and 'xlnet-base-cased' are supported.
-            If `None`, will use the model name in :attr:`hparams`.
+        pretrained_model_name (optional): a `str`, the name
+            of pre-trained model (e.g., ``xlnet-based-cased``). Please refer to
+            :class:`~texar.tf.modules.PretrainedXLNetMixin` for
+            all supported models.
+            If `None`, the model name in :attr:`hparams` is used.
         cache_dir (optional): the path to a folder in which the
             pre-trained models will be cached. If `None` (default),
-            a default directory will be used.
+            a default directory (``texar_data`` folder under user's home
+            directory) will be used.
         hparams (dict or HParams, optional): Hyperparameters. Missing
             hyperparameter will be set to default values. See
-            :meth:`default_hparams` for the hyperparameter sturcture
+            :meth:`default_hparams` for the hyperparameter structure
             and default values.
-
-    .. document private functions
-    .. automethod:: _build
+        init (optional): whether to initialize `XLNetEncoder`.
     """
-
-    model_name = "XLNet"
 
     def __init__(self,
                  pretrained_model_name=None,
                  cache_dir=None,
                  hparams=None):
-        PretrainedBase.__init__(self, pretrained_model_name, cache_dir, hparams)
+        super(XLNetEncoder, self).__init__(hparams=hparams)
 
-        if self.pretrained_model_dir:
-            self._hparams = HParams(self.pretrained_model_hparams,
-                                    self._hparams.todict())
+        self.load_pretrained_config(pretrained_model_name, cache_dir)
 
         num_layers = self._hparams.num_layers
         use_segments = self._hparams.use_segments
         untie_r = self._hparams.untie_r
 
         with tf.variable_scope(self.variable_scope):
-
-            if self._hparams.initializer:
-                tf.get_variable_scope().set_initializer(
-                    layers.get_initializer(self._hparams.initializer))
 
             if untie_r:
                 self.r_w_bias = tf.get_variable('r_w_bias',
@@ -177,10 +163,16 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
                     "rate": self._hparams.dropout
                 }
             }
-            self.dropout = layers.get_layer(hparams=dropout_hparams)
+            self.dropout = get_layer(hparams=dropout_hparams)
 
             self.mask_embed = tf.get_variable(
                 'mask_emb', [1, 1, self.hparams.hidden_dim], dtype=tf.float32)
+
+    def reset_parameters(self):
+        with tf.variable_scope(self.variable_scope):
+            if self._hparams.initializer:
+                tf.get_variable_scope().set_initializer(
+                    get_initializer(self._hparams.initializer))
 
     @staticmethod
     def default_hparams():
@@ -225,7 +217,7 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
 
 
         "pretrained_model_name": str or None
-             The name of the pretrained bert model. If None, the model
+             The name of the pre-trained bert model. If None, the model
              will be randomly initialized.
 
         "untie_r": bool
@@ -619,8 +611,7 @@ class XLNetEncoder(PretrainedBase, EncoderBase):
             self._built = True
 
             if self.pretrained_model_dir:
-                xlnet_utils.init_xlnet_checkpoint(self.pretrained_model_dir,
-                                                  self.variable_scope.name)
+                self.init_pretrained_weights(self.variable_scope.name)
 
         if cache_len == 0:
             return output, None

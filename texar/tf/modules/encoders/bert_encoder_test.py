@@ -1,6 +1,5 @@
-#
 """
-Unit tests for Bert encoders.
+Unit tests for BERT encoders.
 """
 
 from __future__ import absolute_import
@@ -10,13 +9,25 @@ from __future__ import unicode_literals
 
 import tensorflow as tf
 
-from texar.tf.modules.encoders.bert_encoders import BertEncoder
+from texar.tf.modules.encoders.bert_encoder import BERTEncoder
+from texar.tf.utils.test import pretrained_test
 
 
-class BertEncoderTest(tf.test.TestCase):
-    """Tests :class:`~texar.tf.modules.BertEncoder` class.
+class BERTEncoderTest(tf.test.TestCase):
+    """Tests :class:`~texar.tf.modules.BERTEncoder` class.
     """
 
+    @pretrained_test
+    def test_model_loading(self):
+        r"""Tests model loading functionality."""
+
+        inputs = tf.placeholder(dtype=tf.int32, shape=[None, None])
+
+        for pretrained_model_name in BERTEncoder.available_checkpoints():
+            encoder = BERTEncoder(pretrained_model_name=pretrained_model_name)
+            _, _ = encoder(inputs)
+
+    @pretrained_test
     def test_hparams(self):
         """Tests the priority of the encoder arch parameter.
         """
@@ -27,7 +38,7 @@ class BertEncoderTest(tf.test.TestCase):
         hparams = {
             "pretrained_model_name": "bert-large-uncased",
         }
-        encoder = BertEncoder(pretrained_model_name="bert-base-uncased",
+        encoder = BERTEncoder(pretrained_model_name="bert-base-uncased",
                               hparams=hparams)
         _, _ = encoder(inputs)
         self.assertEqual(encoder.hparams.encoder.num_blocks, 12)
@@ -39,7 +50,7 @@ class BertEncoderTest(tf.test.TestCase):
                 "num_blocks": 6
             }
         }
-        encoder = BertEncoder(hparams=hparams)
+        encoder = BERTEncoder(hparams=hparams)
         _, _ = encoder(inputs)
         self.assertEqual(encoder.hparams.encoder.num_blocks, 24)
 
@@ -50,23 +61,25 @@ class BertEncoderTest(tf.test.TestCase):
                 "num_blocks": 6
             },
         }
-        encoder = BertEncoder(hparams=hparams)
+        encoder = BERTEncoder(hparams=hparams)
         _, _ = encoder(inputs)
         self.assertEqual(encoder.hparams.encoder.num_blocks, 6)
 
         # case 4: using default hparams
-        encoder = BertEncoder()
+        encoder = BERTEncoder()
         _, _ = encoder(inputs)
         self.assertEqual(encoder.hparams.encoder.num_blocks, 12)
 
+    @pretrained_test
     def test_trainable_variables(self):
         """Tests the functionality of automatically collecting trainable
         variables.
         """
+
         inputs = tf.placeholder(dtype=tf.int32, shape=[None, None])
 
         # case 1: bert base
-        encoder = BertEncoder()
+        encoder = BERTEncoder()
         _, _ = encoder(inputs)
         self.assertEqual(len(encoder.trainable_variables), 3+2+12*16+2)
 
@@ -74,7 +87,7 @@ class BertEncoderTest(tf.test.TestCase):
         hparams = {
             "pretrained_model_name": "bert-large-uncased"
         }
-        encoder = BertEncoder(hparams=hparams)
+        encoder = BERTEncoder(hparams=hparams)
         _, _ = encoder(inputs)
         self.assertEqual(len(encoder.trainable_variables), 3+2+24*16+2)
 
@@ -85,7 +98,7 @@ class BertEncoderTest(tf.test.TestCase):
             },
             "pretrained_model_name": None
         }
-        encoder = BertEncoder(hparams=hparams)
+        encoder = BERTEncoder(hparams=hparams)
         _, _ = encoder(inputs)
         self.assertEqual(len(encoder.trainable_variables), 3+2+6*16+2)
 
@@ -93,7 +106,10 @@ class BertEncoderTest(tf.test.TestCase):
         """Tests encoding.
         """
         # case 1: bert base
-        encoder = BertEncoder()
+        hparams = {
+            "pretrained_model_name": None
+        }
+        encoder = BERTEncoder(hparams=hparams)
 
         max_time = 8
         batch_size = 16
@@ -116,7 +132,7 @@ class BertEncoderTest(tf.test.TestCase):
             "hidden_size": 100,
             "pretrained_model_name": None
         }
-        encoder = BertEncoder(hparams=hparams)
+        encoder = BERTEncoder(hparams=hparams)
 
         max_time = 8
         batch_size = 16
@@ -133,8 +149,6 @@ class BertEncoderTest(tf.test.TestCase):
                                               max_time, outputs_dim))
             self.assertEqual(pooled_output_.shape,
                              (batch_size, pooled_output_dim))
-
-
 
 
 if __name__ == "__main__":
