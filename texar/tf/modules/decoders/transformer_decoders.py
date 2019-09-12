@@ -27,7 +27,6 @@ import collections
 
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import Decoder as TFDecoder
-from tensorflow.contrib.seq2seq import dynamic_decode
 
 from texar.tf.core import layers
 from texar.tf.module_base import ModuleBase
@@ -41,6 +40,7 @@ from texar.tf.modules.decoders import tf_helpers as tx_helper
 from texar.tf.utils import beam_search, transformer_attentions as attn
 from texar.tf.utils.shapes import shape_list
 from texar.tf.utils.mode import is_train_mode
+from texar.tf.utils.dynamic_decode import dynamic_decode
 
 
 __all__ = [
@@ -822,17 +822,19 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 self.context[:, time],
                 sample_ids
             )
-        reach_max_time = tf.equal(time+1, self.max_decoding_length)
-        finished, next_inputs, next_state = self._helper.next_inputs(
+
+        wrapper_outputs = TransformerDecoderOutput(
+            logits=outputs,
+            sample_id=sample_ids)
+        return (wrapper_outputs, sample_ids, outputs, state)
+
+    def next_inputs(self, sample_ids, time, outputs, state):
+        (finished, next_inputs, state) = self._helper.next_inputs(
             time=time,
             outputs=outputs,
             state=state,
-            sample_ids=sample_ids,
-            reach_max_time=reach_max_time)
-        outputs = TransformerDecoderOutput(
-            logits=outputs,
-            sample_id=sample_ids)
-        return outputs, next_state, next_inputs, finished
+            sample_ids=sample_ids)
+        return (finished, next_inputs, state)
 
     def finalize(self, outputs, final_state, sequence_lengths):
         return outputs, final_state

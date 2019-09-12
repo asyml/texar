@@ -256,17 +256,16 @@ class BasicRNNDecoder(RNNDecoderBase):
         logits = self._output_layer(cell_outputs)
         sample_ids = self._helper.sample(
             time=time, outputs=logits, state=cell_state)
-        reach_max_time = tf.equal(time+1, self.max_decoding_length)
+        outputs = BasicRNNDecoderOutput(logits, sample_ids, cell_outputs)
+        return outputs, sample_ids, logits, cell_state
 
+    def next_inputs(self, sample_ids, time, logits, state):
         (finished, next_inputs, next_state) = self._helper.next_inputs(
             time=time,
             outputs=logits,
-            state=cell_state,
-            sample_ids=sample_ids,
-            reach_max_time=reach_max_time)
-
-        outputs = BasicRNNDecoderOutput(logits, sample_ids, cell_outputs)
-        return (outputs, next_state, next_inputs, finished)
+            state=state,
+            sample_ids=sample_ids,)
+        return finished, next_inputs, next_state
 
     def finalize(self, outputs, final_state, sequence_lengths):
         return outputs, final_state
@@ -595,14 +594,6 @@ class AttentionRNNDecoder(RNNDecoderBase):
         logits = self._output_layer(wrapper_outputs)
         sample_ids = self._helper.sample(
             time=time, outputs=logits, state=wrapper_state)
-        reach_max_time = tf.equal(time+1, self.max_decoding_length)
-
-        (finished, next_inputs, next_state) = self._helper.next_inputs(
-            time=time,
-            outputs=logits,
-            state=wrapper_state,
-            sample_ids=sample_ids,
-            reach_max_time=reach_max_time)
 
         attention_scores = wrapper_state.alignments
         attention_context = wrapper_state.attention
@@ -610,7 +601,15 @@ class AttentionRNNDecoder(RNNDecoderBase):
             logits, sample_ids, wrapper_outputs,
             attention_scores, attention_context)
 
-        return (outputs, next_state, next_inputs, finished)
+        return (outputs, sample_ids, logits, wrapper_state)
+
+    def next_inputs(self, sample_ids, time, outputs, state):
+        (finished, next_inputs, state) = self._helper.next_inputs(
+            time=time,
+            outputs=outputs,
+            state=state,
+            sample_ids=sample_ids)
+        return (finished, next_inputs, state)
 
     def finalize(self, outputs, final_state, sequence_lengths):
         return outputs, final_state

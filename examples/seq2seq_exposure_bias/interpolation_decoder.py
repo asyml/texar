@@ -107,16 +107,18 @@ class InterpolationDecoder(AttentionRNNDecoder):
         sample_ids = self._helper.sample(
             time=time, outputs=logits, state=[decoded_ids, wrapper_state])
 
-        (finished, next_inputs, next_state) = self._helper.next_inputs(
-            time=time,
-            outputs=logits,
-            state=[decoded_ids, wrapper_state],
-            sample_ids=sample_ids)
-
         attention_scores = wrapper_state.alignments
         attention_context = wrapper_state.attention
         outputs = AttentionRNNDecoderOutput(
             logits, sample_ids, wrapper_outputs,
             attention_scores, attention_context)
 
-        return (outputs, next_state, next_inputs, finished)
+        return (outputs, sample_ids, logits, wrapper_state)
+
+    def next_inputs(self, sample_ids, time, outputs, state):
+        (finished, next_inputs, next_state) = self._helper.next_inputs(
+            time=time,
+            outputs=outputs,
+            state=[state[0], state],
+            sample_ids=sample_ids)
+        return (finished, next_inputs, next_state)
