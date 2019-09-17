@@ -24,6 +24,7 @@ import collections
 import json
 import os
 import re
+
 from abc import ABCMeta
 
 import tensorflow as tf
@@ -166,7 +167,6 @@ class PretrainedBERTMixin(PretrainedMixin):
 
     def _init_from_checkpoint(self, pretrained_model_name,
                               cache_dir, scope_name, **kwargs):
-
         tvars = tf.trainable_variables()
         init_checkpoint = os.path.abspath(os.path.join(cache_dir,
                                                        'bert_model.ckpt'))
@@ -178,10 +178,12 @@ class PretrainedBERTMixin(PretrainedMixin):
 
     def _get_assignment_map_from_checkpoint(self, tvars, init_checkpoint,
                                             scope_name):
-        r"""Provided by Google AI Language Team. Compute the union of the
-        current variables and checkpoint variables. Because the variable scope
-        of the original BERT and Texar implementation, we need to build a
-        assignment map to match the variables.
+        r"""`https://github.com/google-research/bert/blob/master/modeling.py`
+
+        Compute the union of the current variables and checkpoint variables.
+        Because the variable scope of the original BERT and Texar
+        implementation, we need to build a assignment map to match the
+        variables.
         """
         initialized_variable_names = {}
 

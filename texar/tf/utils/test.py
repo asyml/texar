@@ -19,6 +19,10 @@ import os
 
 
 def pretrained_test(func):
+    r"""Tests involving pre-trained checkpoints are skipped using the
+    `@pretrained_test` decorator. They can be tested locally by setting the
+    environment variable `TEST_PRETRAINED=1`.
+    """
     def wrapper(*args, **kwargs):
         if os.environ.get('TEST_PRETRAINED', 0) or \
                 os.environ.get('TEST_ALL', 0):

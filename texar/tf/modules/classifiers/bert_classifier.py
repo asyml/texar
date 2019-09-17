@@ -37,7 +37,9 @@ __all__ = [
 
 
 class BERTClassifier(ClassifierBase, PretrainedBERTMixin):
-    """Classifier based on BERT modules.
+    r"""Classifier based on BERT modules. Please see
+    :class:`~texar.tf.modules.PretrainedBERTMixin` for a brief description
+    of BERT.
 
     This is a combination of the
     :class:`~texar.tf.modules.BertEncoder` with a classification
@@ -63,6 +65,7 @@ class BERTClassifier(ClassifierBase, PretrainedBERTMixin):
             and default values.
 
     .. document private functions
+    .. automethod:: _build
     """
     _ENCODER_CLASS = BERTEncoder
 
@@ -111,7 +114,7 @@ class BERTClassifier(ClassifierBase, PretrainedBERTMixin):
 
     @staticmethod
     def default_hparams():
-        """Returns a dictionary of hyperparameters with default values.
+        r"""Returns a dictionary of hyperparameters with default values.
 
         .. code-block:: python
 
@@ -190,7 +193,7 @@ class BERTClassifier(ClassifierBase, PretrainedBERTMixin):
                segment_ids=None,
                mode=None,
                **kwargs):
-        """Feeds the inputs through the network and makes classification.
+        r"""Feeds the inputs through the network and makes classification.
 
         The arguments are the same as in
         :class:`~texar.tf.modules.BertEncoder`.

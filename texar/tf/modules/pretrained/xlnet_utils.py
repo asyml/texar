@@ -25,8 +25,8 @@ from __future__ import unicode_literals
 import tensorflow as tf
 
 from texar.tf.core import layers
-from texar.tf.utils.mode import is_train_mode
 from texar.tf.module_base import ModuleBase
+from texar.tf.utils.mode import is_train_mode
 
 
 __all__ = [
@@ -90,16 +90,16 @@ class PositionWiseFF(ModuleBase):
 
         Here
 
-        "hidden_dim": int
+        `"hidden_dim"`: int
             Dimension of the layer fed as input to feed forward network
 
-        "ffn_inner_dim": int
+        `"ffn_inner_dim"`: int
             Inner dimension of the feed forward layer
 
-        "dropout": float
+        `"dropout"`: float
             Dropout rate for layers
 
-        "activation": str or callable
+        `"activation"`: str or callable
             Activation function applied to the output of the PositionWise FF.
             See :func:`~texar.tf.core.get_activation_fn` for more details.
         """
@@ -182,10 +182,10 @@ class RelativePositionalEncoding(ModuleBase):
 
         Here
 
-        "dim": int
+        `"dim"`: int
             Dimension size of the positional embedding
 
-        "max_seq_len": int
+        `"max_seq_len"`: int
             Maximum size of the sequence length
         """
         return {

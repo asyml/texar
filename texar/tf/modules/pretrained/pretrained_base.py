@@ -22,6 +22,7 @@ from __future__ import unicode_literals
 
 import os
 import sys
+
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 
@@ -176,8 +177,7 @@ class PretrainedMixin(ModuleBase):
         }
 
     @classmethod
-    def download_checkpoint(cls, pretrained_model_name,
-                            cache_dir=None):
+    def download_checkpoint(cls, pretrained_model_name, cache_dir=None):
         r"""Download the specified pre-trained checkpoint, and return the
         directory in which the checkpoint is cached.
 
@@ -227,8 +227,7 @@ class PretrainedMixin(ModuleBase):
 
     @classmethod
     @abstractmethod
-    def _transform_config(cls, pretrained_model_name,
-                          cache_dir):
+    def _transform_config(cls, pretrained_model_name, cache_dir):
         r"""Load the official configuration file and transform it into
         Texar-style hyperparameters.
 
@@ -242,8 +241,8 @@ class PretrainedMixin(ModuleBase):
         raise NotImplementedError
 
     @abstractmethod
-    def _init_from_checkpoint(self, pretrained_model_name,
-                              cache_dir, scope_name, **kwargs):
+    def _init_from_checkpoint(self, pretrained_model_name, cache_dir,
+                              scope_name, **kwargs):
         r"""Initialize model parameters from weights stored in the pre-trained
         checkpoint.
 

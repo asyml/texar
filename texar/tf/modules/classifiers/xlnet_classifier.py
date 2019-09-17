@@ -38,7 +38,9 @@ __all__ = [
 
 
 class XLNetClassifier(ClassifierBase, PretrainedXLNetMixin):
-    """Classifier based on XLNet modules.
+    """Classifier based on XLNet modules. Please see
+    :class:`~texar.tf.modules.PretrainedXLNetMixin` for a brief description
+    of XLNet.
 
     This is a combination of the :class:`~texar.tf.modules.XLNetEncoder` with a
     classification layer. Both step-wise classification and sequence-level

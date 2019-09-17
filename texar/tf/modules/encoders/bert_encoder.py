@@ -34,7 +34,9 @@ __all__ = [
 
 
 class BERTEncoder(EncoderBase, PretrainedBERTMixin):
-    r"""Raw BERT Transformer for encoding sequences.
+    r"""Raw BERT Transformer for encoding sequences. Please see
+    :class:`~texar.tf.modules.PretrainedBERTMixin` for a brief description
+     of BERT.
 
     This module basically stacks
     :class:`~texar.tf.modules.WordEmbedder`,
@@ -55,6 +57,9 @@ class BERTEncoder(EncoderBase, PretrainedBERTMixin):
             hyperparameter will be set to default values. See
             :meth:`default_hparams` for the hyperparameter structure
             and default values.
+
+    .. document private functions
+    .. automethod:: _build
     """
 
     def __init__(self,
@@ -99,7 +104,7 @@ class BERTEncoder(EncoderBase, PretrainedBERTMixin):
 
     @staticmethod
     def default_hparams():
-        """Returns a dictionary of hyperparameters with default values.
+        r"""Returns a dictionary of hyperparameters with default values.
 
         * The encoder arch is determined by the constructor argument
           :attr:`pretrained_model_name` if it's specified. In this case,
@@ -113,61 +118,61 @@ class BERTEncoder(EncoderBase, PretrainedBERTMixin):
         .. code-block:: python
 
             {
-                'pretrained_model_name': 'bert-base-uncased',
-                'embed': {
-                    'dim': 768,
-                    'name': 'word_embeddings'
+                "pretrained_model_name": "bert-base-uncased",
+                "embed": {
+                    "dim": 768,
+                    "name": "word_embeddings"
                 },
-                'vocab_size': 30522,
-                'segment_embed': {
-                    'dim': 768,
-                    'name': 'token_type_embeddings'
+                "vocab_size": 30522,
+                "segment_embed": {
+                    "dim": 768,
+                    "name": "token_type_embeddings"
                 },
-                'type_vocab_size': 2,
-                'position_embed': {
-                    'dim': 768,
-                    'name': 'position_embeddings'
+                "type_vocab_size": 2,
+                "position_embed": {
+                    "dim": 768,
+                    "name": "position_embeddings"
                 },
-                'position_size': 512,
+                "position_size": 512,
 
-                'encoder': {
-                    'dim': 768,
-                    'embedding_dropout': 0.1,
-                    'multihead_attention': {
-                        'dropout_rate': 0.1,
-                        'name': 'self',
-                        'num_heads': 12,
-                        'num_units': 768,
-                        'output_dim': 768,
-                        'use_bias': True
+                "encoder": {
+                    "dim": 768,
+                    "embedding_dropout": 0.1,
+                    "multihead_attention": {
+                        "dropout_rate": 0.1,
+                        "name": "self",
+                        "num_heads": 12,
+                        "num_units": 768,
+                        "output_dim": 768,
+                        "use_bias": True
                     },
-                    'name': 'encoder',
-                    'num_blocks': 12,
-                    'poswise_feedforward': {
-                        'layers': [
-                            {   'kwargs': {
-                                    'activation': 'gelu',
-                                    'name': 'intermediate',
-                                    'units': 3072,
-                                    'use_bias': True
+                    "name": "encoder",
+                    "num_blocks": 12,
+                    "poswise_feedforward": {
+                        "layers": [
+                            {   "kwargs": {
+                                    "activation": "gelu",
+                                    "name": "intermediate",
+                                    "units": 3072,
+                                    "use_bias": True
                                 },
-                                'type': 'Dense'
+                                "type": "Dense"
                             },
-                            {   'kwargs': {'activation': None,
-                                'name': 'output',
-                                'units': 768,
-                                'use_bias': True
+                            {   "kwargs": {"activation": None,
+                                "name": "output",
+                                "units": 768,
+                                "use_bias": True
                                 },
-                                'type': 'Dense'
+                                "type": "Dense"
                             }
                         ]
                     },
-                    'residual_dropout': 0.1,
-                    'use_bert_config': True
+                    "residual_dropout": 0.1,
+                    "use_bert_config": True
                 },
-                'hidden_size': 768,
-                'initializer': None,
-                'name': 'bert_encoder'
+                "hidden_size": 768,
+                "initializer": None,
+                "name": "bert_encoder"
             }
 
         Here:

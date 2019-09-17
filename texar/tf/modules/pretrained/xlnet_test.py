@@ -16,7 +16,7 @@ from texar.tf.utils.test import pretrained_test
 
 
 class XLNetUtilsTest(tf.test.TestCase):
-    r"""Tests xlnet utils.
+    r"""Tests XLNet utils.
     """
 
     @pretrained_test

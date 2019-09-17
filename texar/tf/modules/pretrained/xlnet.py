@@ -24,6 +24,7 @@ import collections
 import json
 import os
 import re
+
 from abc import ABCMeta
 
 import tensorflow as tf

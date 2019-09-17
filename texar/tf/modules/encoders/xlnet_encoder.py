@@ -37,7 +37,9 @@ __all__ = [
 
 
 class XLNetEncoder(EncoderBase, PretrainedXLNetMixin):
-    r"""Raw XLNet module for encoding sequences.
+    r"""Raw XLNet module for encoding sequences. Please see
+    :class:`~texar.tf.modules.PretrainedXLNetMixin` for a brief description
+    of XLNet.
 
     Args:
         pretrained_model_name (optional): a `str`, the name
@@ -53,7 +55,6 @@ class XLNetEncoder(EncoderBase, PretrainedXLNetMixin):
             hyperparameter will be set to default values. See
             :meth:`default_hparams` for the hyperparameter structure
             and default values.
-        init (optional): whether to initialize `XLNetEncoder`.
     """
 
     def __init__(self,

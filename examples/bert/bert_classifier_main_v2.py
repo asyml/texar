@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Example of building a sentence classifier based on pre-trained BERT
-model.
+"""Example of building a sentence classifier based on pre-trained BERT model.
 """
 
 from __future__ import absolute_import
@@ -34,7 +33,10 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
     "config_downstream", "config_classifier",
-    "Configuration of the downstream part of the model and optmization.")
+    "Configuration of the downstream part of the model.")
+flags.DEFINE_string(
+    "pretrained_model_name", "bert-base-uncased",
+    "Name of the pre-trained checkpoint to load.")
 flags.DEFINE_string(
     "config_data", "config_data",
     "The dataset config.")
@@ -43,7 +45,7 @@ flags.DEFINE_string(
     "The output directory where the model checkpoints will be written.")
 flags.DEFINE_string(
     "checkpoint", None,
-    "Path to a model chceckpoint (including bert modules) to restore from.")
+    "Path to a model checkpoint (including bert modules) to restore from.")
 flags.DEFINE_bool("do_train", False, "Whether to run training.")
 flags.DEFINE_bool("do_eval", False, "Whether to run eval on the dev set.")
 flags.DEFINE_bool("do_test", False, "Whether to run test on the test set.")
@@ -57,7 +59,6 @@ def main(_):
     """
     Builds the model and runs.
     """
-
     if FLAGS.distributed:
         import horovod.tensorflow as hvd
         hvd.init()
@@ -91,7 +92,9 @@ def main(_):
     hparams = {
         'clas_strategy': 'cls_time'
     }
-    model = tx.modules.BERTClassifier(hparams=hparams)
+    model = tx.modules.BERTClassifier(
+        pretrained_model_name=FLAGS.pretrained_model_name,
+        hparams=hparams)
     logits, preds = model(input_ids, input_length, segment_ids)
 
     accu = tx.evals.accuracy(batch['label_ids'], preds)
