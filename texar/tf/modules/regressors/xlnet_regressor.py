@@ -62,6 +62,9 @@ class XLNetRegressor(RegressorBase, PretrainedXLNetMixin):
             hyperparameters will be set to default values. See
             :meth:`default_hparams` for the hyperparameter structure
             and default values.
+
+    .. document private functions
+    .. automethod:: _build
     """
 
     def __init__(self,
