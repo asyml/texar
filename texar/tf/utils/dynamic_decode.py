@@ -182,8 +182,6 @@ def dynamic_decode(decoder,
                         type(decoder))
 
     with tf.variable_scope(scope, "decoder") as varscope:
-        # Determine context types.
-
         if maximum_iterations is not None:
             maximum_iterations = tf.convert_to_tensor(
                 maximum_iterations, dtype=tf.int32, name="maximum_iterations")
@@ -249,14 +247,13 @@ def dynamic_decode(decoder,
             `(time + 1, outputs_ta, next_state, next_inputs, next_finished,
             next_sequence_lengths)`.
         """
-        (next_outputs, sample_ids, logits, state) = decoder.step(
-            time, inputs, state)
-        reach_max = tf.equal(time+1, decoder.max_decoding_length)
+        (next_outputs, state) = decoder.step(time, inputs, state)
+        reach_max = tf.equal(time+1, maximum_iterations)
         (decoder_finished, next_inputs, decoder_state) = tf.cond(
             reach_max,
-            lambda: (tf.cast(tf.ones(tf.shape(sample_ids)[0]), tf.bool),
-                     decoder._helper._start_inputs, state),
-            lambda: decoder.next_inputs(sample_ids, time, logits, state)
+            lambda: (tf.cast(tf.ones_like(finished), tf.bool),
+                     inputs, state),
+            lambda: decoder.next_inputs(time, next_outputs, state)
         )
         if decoder.tracks_own_finished:
             next_finished = decoder_finished

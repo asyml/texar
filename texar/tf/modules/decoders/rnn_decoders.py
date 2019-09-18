@@ -257,14 +257,14 @@ class BasicRNNDecoder(RNNDecoderBase):
         sample_ids = self._helper.sample(
             time=time, outputs=logits, state=cell_state)
         outputs = BasicRNNDecoderOutput(logits, sample_ids, cell_outputs)
-        return outputs, sample_ids, logits, cell_state
+        return outputs, cell_state
 
-    def next_inputs(self, sample_ids, time, logits, state):
+    def next_inputs(self, time, outputs, state):
         (finished, next_inputs, next_state) = self._helper.next_inputs(
             time=time,
-            outputs=logits,
+            outputs=outputs.logits,
             state=state,
-            sample_ids=sample_ids,)
+            sample_ids=outputs.sample_id)
         return finished, next_inputs, next_state
 
     def finalize(self, outputs, final_state, sequence_lengths):
@@ -601,14 +601,14 @@ class AttentionRNNDecoder(RNNDecoderBase):
             logits, sample_ids, wrapper_outputs,
             attention_scores, attention_context)
 
-        return (outputs, sample_ids, logits, wrapper_state)
+        return (outputs, wrapper_state)
 
-    def next_inputs(self, sample_ids, time, outputs, state):
+    def next_inputs(self, time, outputs, state):
         (finished, next_inputs, state) = self._helper.next_inputs(
             time=time,
-            outputs=outputs,
+            outputs=outputs.logits,
             state=state,
-            sample_ids=sample_ids)
+            sample_ids=outputs.sample_id)
         return (finished, next_inputs, state)
 
     def finalize(self, outputs, final_state, sequence_lengths):

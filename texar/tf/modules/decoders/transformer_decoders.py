@@ -826,14 +826,14 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         wrapper_outputs = TransformerDecoderOutput(
             logits=outputs,
             sample_id=sample_ids)
-        return (wrapper_outputs, sample_ids, outputs, state)
+        return (wrapper_outputs, state)
 
-    def next_inputs(self, sample_ids, time, outputs, state):
+    def next_inputs(self, time, outputs, state):
         (finished, next_inputs, state) = self._helper.next_inputs(
             time=time,
-            outputs=outputs,
+            outputs=outputs.logits,
             state=state,
-            sample_ids=sample_ids)
+            sample_ids=outputs.sample_id)
         return (finished, next_inputs, state)
 
     def finalize(self, outputs, final_state, sequence_lengths):

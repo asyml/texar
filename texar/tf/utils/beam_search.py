@@ -16,8 +16,8 @@
 # Modifications copyright (C) 2019 Texar
 # ==============================================================================
 """
-Implemetation of beam seach with penalties.
-Adapted from tensor2tensor repositor.
+Implementation of beam search with penalties.
+Adapted from tensor2tensor repository.
 """
 
 from __future__ import absolute_import
@@ -32,6 +32,7 @@ from texar.tf.utils.shapes import shape_list
 # Default value for INF
 INF = 1. * 1e7
 
+
 def _merge_beam_dim(tensor):
     """Reshapes first two dimensions in to single dimension.
 
@@ -41,6 +42,8 @@ def _merge_beam_dim(tensor):
     Returns:
         Reshaped tensor of shape [A*B, ...]
     """
+    if not isinstance(tensor, tf.Tensor):
+        return tensor
     shape = shape_list(tensor)
     shape[0] *= shape[1]    # batch -> batch * beam_size
     shape.pop(1)    # Remove beam dim
@@ -58,6 +61,8 @@ def _unmerge_beam_dim(tensor, batch_size, beam_size):
     Returns:
         Reshaped tensor of shape [batch_size, beam_size, ...]
     """
+    if not isinstance(tensor, tf.Tensor):
+        return tensor
     shape = shape_list(tensor)
     new_shape = [batch_size] + [beam_size] + shape[1:]
     return tf.reshape(tensor, new_shape)
@@ -73,6 +78,8 @@ def _expand_to_beam_size(tensor, beam_size):
     Returns:
         Tiled tensor [batch_size, beam_size, ...]
     """
+    if not isinstance(tensor, tf.Tensor):
+        return tensor
     tensor = tf.expand_dims(tensor, axis=1)
     tile_dims = [1] * tensor.shape.ndims
     tile_dims[1] = beam_size
@@ -173,6 +180,8 @@ def compute_topk_scores_and_seq(sequences, scores, scores_to_gather, flags,
     # operations with tfdbg. Clients can capture these tensors by watching
     # these node names.
     def gather(tensor, name):
+        if not isinstance(tensor, tf.Tensor):
+            return tensor
         return tf.gather_nd(tensor, top_coordinates, name=(prefix + name))
     topk_seq = gather(sequences, "_topk_seq")
     topk_flags = gather(flags, "_topk_flags")
@@ -196,7 +205,7 @@ def beam_search(symbols_to_logits_fn,
                 stop_early=True):
     """Beam search with length penalties.
 
-    Requires a function that can take the currently decoded sybmols and
+    Requires a function that can take the currently decoded symbols and
     return the logits for the next symbol. The implementation is inspired
     by https://arxiv.org/abs/1609.08144.
 
@@ -255,11 +264,11 @@ def beam_search(symbols_to_logits_fn,
     # Expand each batch and state to beam_size
     alive_seq = _expand_to_beam_size(initial_ids, beam_size)
     alive_seq = tf.expand_dims(alive_seq, axis=2)
-    #(batch_size, beam_size, 1)
+
+    # (batch_size, beam_size, 1)
     if states:
         states = nest.map_structure(
-            lambda state: _expand_to_beam_size(state, beam_size),
-                states)
+            lambda state: _expand_to_beam_size(state, beam_size), states)
     else:
         states = {}
 
@@ -384,7 +393,7 @@ def beam_search(symbols_to_logits_fn,
         if states:
             flat_states = nest.map_structure(_merge_beam_dim, states)
             flat_logits, flat_states = symbols_to_logits_fn(flat_ids, i,
-                flat_states)
+                                                            flat_states)
             states = nest.map_structure(
                 lambda t: _unmerge_beam_dim(t, batch_size, beam_size),
                 flat_states)
@@ -435,20 +444,19 @@ def beam_search(symbols_to_logits_fn,
         topk_seq = tf.gather_nd(alive_seq, topk_coordinates)
         if states:
             states = nest.map_structure(
-                lambda state: tf.gather_nd(state, topk_coordinates),
-                    states)
+                lambda state: tf.gather_nd(state, topk_coordinates), states)
 
         # Append the most probable alive
         topk_seq = tf.concat([topk_seq, tf.expand_dims(topk_ids, axis=2)],
-            axis=2)
+                             axis=2)
 
         topk_finished = tf.equal(topk_ids, eos_id)
 
         return topk_seq, topk_log_probs, topk_scores, topk_finished, states
 
     def inner_loop(i, alive_seq, alive_log_probs, finished_seq,
-            finished_scores, finished_flags, states):
-        """Inner beam seach loop.
+                   finished_scores, finished_flags, states):
+        """Inner beam search loop.
 
         There are three groups of tensors, alive, finished, and topk.
         The alive group contains information about the current alive
