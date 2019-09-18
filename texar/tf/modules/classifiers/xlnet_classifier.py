@@ -20,12 +20,14 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+
 from texar.tf.utils.mode import is_train_mode
-from texar.tf.core import layers
+from texar.tf.core.layers import get_layer, get_initializer
 from texar.tf.modules.classifiers.classifier_base import ClassifierBase
-from texar.tf.modules import XLNetEncoder
-from texar.tf.utils import utils
+from texar.tf.modules.encoders.xlnet_encoder import XLNetEncoder
 from texar.tf.hyperparams import HParams
+from texar.tf.modules.pretrained.xlnet import PretrainedXLNetMixin
+from texar.tf.utils.utils import dict_fetch
 
 # pylint: disable=too-many-arguments, invalid-name, no-member,
 # pylint: disable=too-many-branches, too-many-locals, too-many-statements
@@ -35,8 +37,10 @@ __all__ = [
 ]
 
 
-class XLNetClassifier(ClassifierBase):
-    """Classifier based on XLNet modules.
+class XLNetClassifier(ClassifierBase, PretrainedXLNetMixin):
+    """Classifier based on XLNet modules. Please see
+    :class:`~texar.tf.modules.PretrainedXLNetMixin` for a brief description
+    of XLNet.
 
     This is a combination of the :class:`~texar.tf.modules.XLNetEncoder` with a
     classification layer. Both step-wise classification and sequence-level
@@ -45,14 +49,17 @@ class XLNetClassifier(ClassifierBase):
     Arguments are the same as in :class:`~texar.tf.modules.XLNetEncoder`.
 
     Args:
-        pretrained_model_name (optional): a str with the name
-            of a pre-trained model to load. Currently only 'xlnet-large-cased'
-            is supported. If `None`, will use the model name in :attr:`hparams`.
+        pretrained_model_name (optional): a `str`, the name
+            of pre-trained model (e.g., ``xlnet-based-cased``). Please refer to
+            :class:`~texar.tf.modules.PretrainedXLNetMixin` for
+            all supported models.
+            If `None`, the model name in :attr:`hparams` is used.
         cache_dir (optional): the path to a folder in which the
             pre-trained models will be cached. If `None` (default),
-            a default directory will be used.
+            a default directory (``texar_data`` folder under user's home
+            directory) will be used.
         hparams (dict or HParams, optional): Hyperparameters. Missing
-            hyperparameter will be set to default values. See
+            hyperparameters will be set to default values. See
             :meth:`default_hparams` for the hyperparameter structure
             and default values.
 
@@ -64,13 +71,13 @@ class XLNetClassifier(ClassifierBase):
                  pretrained_model_name=None,
                  cache_dir=None,
                  hparams=None):
-        ClassifierBase.__init__(self, hparams)
+        super(XLNetClassifier, self).__init__(hparams=hparams)
 
         with tf.variable_scope(self.variable_scope):
             tf.get_variable_scope().set_initializer(
-                layers.get_initializer(self._hparams.initializer))
+                get_initializer(self._hparams.initializer))
             # Creates the underlying encoder
-            encoder_hparams = utils.dict_fetch(
+            encoder_hparams = dict_fetch(
                 hparams, XLNetEncoder.default_hparams())
             if encoder_hparams is not None:
                 encoder_hparams['name'] = "encoder"
@@ -79,7 +86,7 @@ class XLNetClassifier(ClassifierBase):
                 cache_dir=cache_dir,
                 hparams=encoder_hparams)
             if self._hparams.use_projection:
-                self.projection = layers.get_layer(hparams={
+                self.projection = get_layer(hparams={
                     "type": "Dense",
                     "kwargs": {
                         "units": self._encoder.output_size
@@ -89,7 +96,7 @@ class XLNetClassifier(ClassifierBase):
             # Creates an dropout layer
             drop_kwargs = {"rate": self._hparams.dropout}
             layer_hparams = {"type": "Dropout", "kwargs": drop_kwargs}
-            self._dropout_layer = layers.get_layer(hparams=layer_hparams)
+            self._dropout_layer = get_layer(hparams=layer_hparams)
 
             # Creates an additional classification layer if needed
             self._num_classes = self._hparams.num_classes
@@ -109,7 +116,7 @@ class XLNetClassifier(ClassifierBase):
                     logit_kwargs['name'] = "logit_layer"
 
                 layer_hparams = {"type": "Dense", "kwargs": logit_kwargs}
-                self._logit_layer = layers.get_layer(hparams=layer_hparams)
+                self._logit_layer = get_layer(hparams=layer_hparams)
 
     @staticmethod
     def default_hparams():

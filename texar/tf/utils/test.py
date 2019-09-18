@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,17 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Modules of texar library classifiers.
+Utils for unit tests.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+import os
 
-# pylint: disable=wildcard-import
 
-from texar.tf.modules.classifiers.conv_classifiers import *
-from texar.tf.modules.classifiers.rnn_classifiers import *
-from texar.tf.modules.classifiers.bert_classifier import *
-from texar.tf.modules.classifiers.xlnet_classifier import *
-
+def pretrained_test(func):
+    r"""Tests involving pre-trained checkpoints are skipped using the
+    `@pretrained_test` decorator. They can be tested locally by setting the
+    environment variable `TEST_PRETRAINED=1`.
+    """
+    def wrapper(*args, **kwargs):
+        if os.environ.get('TEST_PRETRAINED', 0) or \
+                os.environ.get('TEST_ALL', 0):
+            return func(*args, **kwargs)
+    return wrapper

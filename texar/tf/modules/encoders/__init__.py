@@ -22,10 +22,10 @@ from __future__ import print_function
 # pylint: disable=wildcard-import
 
 from texar.tf.modules.encoders.encoder_base import *
-from texar.tf.modules.encoders.rnn_encoders import *
-from texar.tf.modules.encoders.hierarchical_encoders import *
-from texar.tf.modules.encoders.transformer_encoders import *
-from texar.tf.modules.encoders.multihead_attention import *
+from texar.tf.modules.encoders.bert_encoder import *
 from texar.tf.modules.encoders.conv_encoders import *
-from texar.tf.modules.encoders.bert_encoders import *
-from texar.tf.modules.encoders.xlnet_encoders import *
+from texar.tf.modules.encoders.hierarchical_encoders import *
+from texar.tf.modules.encoders.multihead_attention import *
+from texar.tf.modules.encoders.rnn_encoders import *
+from texar.tf.modules.encoders.transformer_encoders import *
+from texar.tf.modules.encoders.xlnet_encoder import *

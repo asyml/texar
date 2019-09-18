@@ -1,4 +1,3 @@
-#
 """
 Unit tests for BERT classifiers.
 """
@@ -9,16 +8,28 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import numpy as np
-
 import tensorflow as tf
 
-from texar.tf.modules.classifiers.bert_classifiers import BertClassifier
+from texar.tf.modules.classifiers.bert_classifier import BERTClassifier
+from texar.tf.utils.test import pretrained_test
 
 # pylint: disable=too-many-locals, no-member
 
-class BertClassifierTest(tf.test.TestCase):
-    """Tests :class:`~texar.tf.modules.BertClassifierTest` class.
+
+class BERTClassifierTest(tf.test.TestCase):
+    """Tests :class:`~texar.tf.modules.BERTClassifier` class.
     """
+
+    @pretrained_test
+    def test_model_loading(self):
+        r"""Tests model loading functionality."""
+
+        inputs = tf.placeholder(dtype=tf.int32, shape=[None, None])
+
+        for pretrained_model_name in BERTClassifier.available_checkpoints():
+            classifier = BERTClassifier(
+                pretrained_model_name=pretrained_model_name)
+            _, _ = classifier(inputs)
 
     def test_trainable_variables(self):
         """Tests the functionality of automatically collecting trainable
@@ -27,24 +38,29 @@ class BertClassifierTest(tf.test.TestCase):
         inputs = tf.placeholder(dtype=tf.int32, shape=[None, None])
 
         # case 1
-        clas = BertClassifier()
+        hparams = {
+            "pretrained_model_name": None,
+        }
+        clas = BERTClassifier(hparams=hparams)
         _, _ = clas(inputs)
         self.assertEqual(len(clas.trainable_variables), 199+2)
 
         # case 2
         hparams = {
+            "pretrained_model_name": None,
             "clas_strategy": "all_time",
             "max_seq_length": 8,
         }
-        clas = BertClassifier(hparams=hparams)
+        clas = BERTClassifier(hparams=hparams)
         _, _ = clas(inputs)
         self.assertEqual(len(clas.trainable_variables), 199+2)
 
         # case 2
         hparams = {
+            "pretrained_model_name": None,
             "clas_strategy": "time_wise",
         }
-        clas = BertClassifier(hparams=hparams)
+        clas = BERTClassifier(hparams=hparams)
         _, _ = clas(inputs)
         self.assertEqual(len(clas.trainable_variables), 199+2)
 
@@ -55,9 +71,11 @@ class BertClassifierTest(tf.test.TestCase):
         batch_size = 16
         inputs = tf.random_uniform([batch_size, max_time],
                                    maxval=30521, dtype=tf.int32)
-
         # case 1
-        clas = BertClassifier()
+        hparams = {
+            "pretrained_model_name": None,
+        }
+        clas = BERTClassifier(hparams=hparams)
         logits, pred = clas(inputs)
 
         with self.test_session() as sess:
@@ -69,10 +87,11 @@ class BertClassifierTest(tf.test.TestCase):
 
         # case 2
         hparams = {
+            "pretrained_model_name": None,
             "num_classes": 10,
             "clas_strategy": "time_wise"
         }
-        clas = BertClassifier(hparams=hparams)
+        clas = BERTClassifier(hparams=hparams)
         logits, pred = clas(inputs)
 
         with self.test_session() as sess:
@@ -84,10 +103,11 @@ class BertClassifierTest(tf.test.TestCase):
 
         # case 3
         hparams = {
+            "pretrained_model_name": None,
             "num_classes": 0,
             "clas_strategy": "time_wise"
         }
-        clas = BertClassifier(hparams=hparams)
+        clas = BERTClassifier(hparams=hparams)
         logits, pred = clas(inputs)
 
         with self.test_session() as sess:
@@ -97,15 +117,15 @@ class BertClassifierTest(tf.test.TestCase):
                              (batch_size, max_time, clas.hparams.encoder.dim))
             self.assertEqual(pred_.shape, (batch_size, max_time))
 
-
         # case 4
         hparams = {
+            "pretrained_model_name": None,
             "num_classes": 10,
             "clas_strategy": "all_time",
             "max_seq_length": max_time
         }
         inputs = tf.placeholder(tf.int32, shape=[batch_size, 6])
-        clas = BertClassifier(hparams=hparams)
+        clas = BERTClassifier(hparams=hparams)
         logits, pred = clas(inputs)
 
         with self.test_session() as sess:
@@ -128,10 +148,11 @@ class BertClassifierTest(tf.test.TestCase):
 
         # case 2
         hparams = {
+            "pretrained_model_name": None,
             "num_classes": 1,
             "clas_strategy": "time_wise"
         }
-        clas = BertClassifier(hparams=hparams)
+        clas = BERTClassifier(hparams=hparams)
         logits, pred = clas(inputs)
 
         with self.test_session() as sess:
@@ -142,12 +163,13 @@ class BertClassifierTest(tf.test.TestCase):
 
         # case 3
         hparams = {
+            "pretrained_model_name": None,
             "num_classes": 1,
             "clas_strategy": "cls_time",
             "max_seq_length": max_time
         }
         inputs = tf.placeholder(tf.int32, shape=[batch_size, 6])
-        clas = BertClassifier(hparams=hparams)
+        clas = BERTClassifier(hparams=hparams)
         logits, pred = clas(inputs)
 
         with self.test_session() as sess:
@@ -161,12 +183,13 @@ class BertClassifierTest(tf.test.TestCase):
 
         # case 4
         hparams = {
+            "pretrained_model_name": None,
             "num_classes": 1,
             "clas_strategy": "all_time",
             "max_seq_length": max_time
         }
         inputs = tf.placeholder(tf.int32, shape=[batch_size, 6])
-        clas = BertClassifier(hparams=hparams)
+        clas = BERTClassifier(hparams=hparams)
         logits, pred = clas(inputs)
 
         with self.test_session() as sess:

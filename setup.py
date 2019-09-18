@@ -27,6 +27,7 @@ setuptools.setup(
 
     install_requires=[
         'numpy<1.17.0',
+        'pathlib>=1.0',
         'pyyaml',
         'requests',
         'funcsigs>=1.0.2',

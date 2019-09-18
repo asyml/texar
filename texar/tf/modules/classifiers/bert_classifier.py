@@ -20,22 +20,26 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from texar.tf.core import layers
+
+from texar.tf.core.layers import get_layer
 from texar.tf.modules.classifiers.classifier_base import ClassifierBase
-from texar.tf.modules import BertEncoder
-from texar.tf.utils import utils
+from texar.tf.modules.encoders.bert_encoder import BERTEncoder
 from texar.tf.hyperparams import HParams
+from texar.tf.modules.pretrained.bert import PretrainedBERTMixin
+from texar.tf.utils.utils import dict_fetch
 
 # pylint: disable=too-many-arguments, invalid-name, no-member,
 # pylint: disable=too-many-branches, too-many-locals, too-many-statements
 
 __all__ = [
-    "BertClassifier"
+    "BERTClassifier"
 ]
 
 
-class BertClassifier(ClassifierBase):
-    """Classifier based on bert modules.
+class BERTClassifier(ClassifierBase, PretrainedBERTMixin):
+    r"""Classifier based on BERT modules. Please see
+    :class:`~texar.tf.modules.PretrainedBERTMixin` for a brief description
+    of BERT.
 
     This is a combination of the
     :class:`~texar.tf.modules.BertEncoder` with a classification
@@ -43,41 +47,42 @@ class BertClassifier(ClassifierBase):
     are supported, specified in :attr:`hparams`.
 
     Arguments are the same as in
-    :class:`~texar.tf.modules.BertEncoder`.
+    :class:`~texar.tf.modules.BERTEncoder`.
 
     Args:
-        pretrained_model_name (optional): a str with the name
-            of a pre-trained model to load selected in the list of:
-            `bert-base-uncased`, `bert-large-uncased`, `bert-base-cased`,
-            `bert-large-cased`, `bert-base-multilingual-uncased`,
-            `bert-base-multilingual-cased`, `bert-base-chinese`.
-            If `None`, will use the model name in :attr:`hparams`.
+        pretrained_model_name (optional): a `str`, the name
+            of pre-trained model (e.g., ``bert-base-uncased``). Please refer to
+            :class:`~texar.tf.modules.PretrainedBERTMixin` for
+            all supported models.
+            If `None`, the model name in :attr:`hparams` is used.
         cache_dir (optional): the path to a folder in which the
             pre-trained models will be cached. If `None` (default),
-            a default directory will be used.
+            a default directory (``texar_data`` folder under user's home
+            directory) will be used.
         hparams (dict or HParams, optional): Hyperparameters. Missing
-            hyperparameter will be set to default values. See
-            :meth:`default_hparams` for the hyperparameter sturcture
+            hyperparameters will be set to default values. See
+            :meth:`default_hparams` for the hyperparameter structure
             and default values.
 
     .. document private functions
     .. automethod:: _build
     """
+    _ENCODER_CLASS = BERTEncoder
 
     def __init__(self,
                  pretrained_model_name=None,
                  cache_dir=None,
                  hparams=None):
 
-        ClassifierBase.__init__(self, hparams)
+        super(BERTClassifier, self).__init__(hparams=hparams)
 
         with tf.variable_scope(self.variable_scope):
             # Creates the underlying encoder
-            encoder_hparams = utils.dict_fetch(
-                hparams, BertEncoder.default_hparams())
+            encoder_hparams = dict_fetch(
+                hparams, BERTEncoder.default_hparams())
             if encoder_hparams is not None:
                 encoder_hparams['name'] = None
-            self._encoder = BertEncoder(
+            self._encoder = BERTEncoder(
                 pretrained_model_name=pretrained_model_name,
                 cache_dir=cache_dir,
                 hparams=encoder_hparams)
@@ -85,7 +90,7 @@ class BertClassifier(ClassifierBase):
             # Creates an dropout layer
             drop_kwargs = {"rate": self._hparams.dropout}
             layer_hparams = {"type": "Dropout", "kwargs": drop_kwargs}
-            self._dropout_layer = layers.get_layer(hparams=layer_hparams)
+            self._dropout_layer = get_layer(hparams=layer_hparams)
 
             # Creates an additional classification layer if needed
             self._num_classes = self._hparams.num_classes
@@ -105,11 +110,11 @@ class BertClassifier(ClassifierBase):
                     logit_kwargs['name'] = "logit_layer"
 
                 layer_hparams = {"type": "Dense", "kwargs": logit_kwargs}
-                self._logit_layer = layers.get_layer(hparams=layer_hparams)
+                self._logit_layer = get_layer(hparams=layer_hparams)
 
     @staticmethod
     def default_hparams():
-        """Returns a dictionary of hyperparameters with default values.
+        r"""Returns a dictionary of hyperparameters with default values.
 
         .. code-block:: python
 
@@ -134,43 +139,44 @@ class BertClassifier(ClassifierBase):
 
         2. Additional hyperparameters:
 
-            "num_classes": int
+            `"num_classes"`: int
                 Number of classes:
 
-                - If **`> 0`**, an additional :tf_main:`Dense <layers/Dense>` \
-                layer is appended to the encoder to compute the logits over \
-                classes.
-                - If **`<= 0`**, no dense layer is appended. The number of \
-                classes is assumed to be the final dense layer size of the \
-                encoder.
+                - If **> 0**, an additional :tf_main:`Dense <layers/Dense>`
+                  layer is appended to the encoder to compute the logits over
+                  classes.
+                - If **<= 0**, no dense layer is appended. The number of
+                  classes is assumed to be the final dense layer size of the
+                  encoder.
 
-            "logit_layer_kwargs": dict
+            `"logit_layer_kwargs"`: dict
                 Keyword arguments for the logit Dense layer constructor,
-                except for argument "units" which is set to "num_classes".
+                except for argument "units" which is set to `num_classes`.
                 Ignored if no extra logit layer is appended.
 
-            "clas_strategy": str
+            `"clas_strategy"`: str
                 The classification strategy, one of:
-                - **"cls_time"**: Sequence-level classification based on the \
-                output of the first time step (which is the "CLS" token). \
-                Each sequence has a class.
-                - **"all_time"**: Sequence-level classification based on \
-                the output of all time steps. Each sequence has a class.
-                - **"time_wise"**: Step-wise classfication, i.e., make \
-                classification for each time step based on its output.
 
-            "max_seq_length": int, optional
+                - **cls_time**: Sequence-level classification based on the
+                  output of the first time step (which is the `CLS` token).
+                  Each sequence has a class.
+                - **all_time**: Sequence-level classification based on
+                  the output of all time steps. Each sequence has a class.
+                - **time_wise**: Step-wise classification, i.e., make
+                  classification for each time step based on its output.
+
+            `"max_seq_length"`: int, optional
                 Maximum possible length of input sequences. Required if
-                "clas_strategy" is "all_time".
+                `clas_strategy` is `all_time`.
 
-            "dropout": float
-                The dropout rate of the bert encoder output.
+            `"dropout"`: float
+                The dropout rate of the BERT encoder output.
 
-            "name": str
+            `"name"`: str
                 Name of the classifier.
         """
 
-        hparams = BertEncoder.default_hparams()
+        hparams = BERTEncoder.default_hparams()
         hparams.update({
             "num_classes": 2,
             "logit_layer_kwargs": None,
@@ -187,7 +193,7 @@ class BertClassifier(ClassifierBase):
                segment_ids=None,
                mode=None,
                **kwargs):
-        """Feeds the inputs through the network and makes classification.
+        r"""Feeds the inputs through the network and makes classification.
 
         The arguments are the same as in
         :class:`~texar.tf.modules.BertEncoder`.

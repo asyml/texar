@@ -9,10 +9,10 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import numpy as np
-
 import tensorflow as tf
 
 from texar.tf.modules.classifiers.xlnet_classifier import XLNetClassifier
+from texar.tf.utils.test import pretrained_test
 
 # pylint: disable=too-many-locals, no-member
 
@@ -21,6 +21,17 @@ class XLNetClassifierTest(tf.test.TestCase):
     """Tests :class:`~texar.tf.modules.XLNetClassifier` class.
     """
 
+    @pretrained_test
+    def test_model_loading(self):
+        r"""Tests model loading functionality."""
+
+        inputs = tf.placeholder(dtype=tf.int32, shape=[None, None])
+
+        for pretrained_model_name in XLNetClassifier.available_checkpoints():
+            classifier = XLNetClassifier(
+                pretrained_model_name=pretrained_model_name)
+            _, _ = classifier(inputs)
+
     def test_trainable_variables(self):
         """Tests the functionality of automatically collecting trainable
         variables.
@@ -28,7 +39,10 @@ class XLNetClassifierTest(tf.test.TestCase):
         inputs = tf.placeholder(dtype=tf.int32, shape=[None, None])
 
         # case 1
-        clas = XLNetClassifier()
+        hparams = {
+            "pretrained_model_name": None,
+        }
+        clas = XLNetClassifier(hparams=hparams)
         clas(inputs)
         n_xlnet_vars = 162
         n_projection_vars = 2
@@ -38,6 +52,7 @@ class XLNetClassifierTest(tf.test.TestCase):
 
         # case 2
         hparams = {
+            "pretrained_model_name": None,
             "clas_strategy": "time_wise"
         }
         clas = XLNetClassifier(hparams=hparams)
@@ -47,6 +62,7 @@ class XLNetClassifierTest(tf.test.TestCase):
 
         # case 3
         hparams = {
+            "pretrained_model_name": None,
             "clas_strategy": "all_time"
         }
         clas = XLNetClassifier(hparams=hparams)

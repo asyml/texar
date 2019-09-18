@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Example of building a sentence classifier based on pre-trained BERT
-model.
+"""Example of building a sentence classifier based on pre-trained BERT model.
 """
 
 from __future__ import absolute_import
@@ -33,16 +32,11 @@ flags = tf.flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
-    "config_bert_pretrain", 'uncased_L-12_H-768_A-12',
-    "The architecture of pre-trained BERT model to use.")
-flags.DEFINE_string(
-    "config_format_bert", "json",
-    "The configuration format. Set to 'json' if the BERT config file is in "
-    "the same format of the official BERT config file. Set to 'texar' if the "
-    "BERT config file is in Texar format.")
-flags.DEFINE_string(
     "config_downstream", "config_classifier",
-    "Configuration of the downstream part of the model and optmization.")
+    "Configuration of the downstream part of the model.")
+flags.DEFINE_string(
+    "pretrained_model_name", "bert-base-uncased",
+    "Name of the pre-trained checkpoint to load.")
 flags.DEFINE_string(
     "config_data", "config_data",
     "The dataset config.")
@@ -60,11 +54,11 @@ flags.DEFINE_bool("distributed", False, "Whether to run in distributed mode.")
 config_data = importlib.import_module(FLAGS.config_data)
 config_downstream = importlib.import_module(FLAGS.config_downstream)
 
+
 def main(_):
     """
     Builds the model and runs.
     """
-
     if FLAGS.distributed:
         import horovod.tensorflow as hvd
         hvd.init()
@@ -73,22 +67,7 @@ def main(_):
 
     tx.utils.maybe_create_dir(FLAGS.output_dir)
 
-    bert_pretrain_dir = ('bert_pretrained_models'
-                         '/%s') % FLAGS.config_bert_pretrain
-    # Loads BERT model configuration
-    if FLAGS.config_format_bert == "json":
-        bert_config = model_utils.transform_bert_to_texar_config(
-            os.path.join(bert_pretrain_dir, 'bert_config.json'))
-    elif FLAGS.config_format_bert == 'texar':
-        bert_config = importlib.import_module(
-            ('bert_config_lib.'
-             'config_model_%s') % FLAGS.config_bert_pretrain)
-    else:
-        raise ValueError('Unknown config_format_bert.')
-
     # Loads data
-
-    num_classes = config_data.num_classes
     num_train_data = config_data.num_train_data
 
     # Configures distribued mode
@@ -110,54 +89,17 @@ def main(_):
     input_length = tf.reduce_sum(1 - tf.cast(tf.equal(input_ids, 0), tf.int32),
                                  axis=1)
     # Builds BERT
-    with tf.variable_scope('bert'):
-        # Word embedding
-        embedder = tx.modules.WordEmbedder(
-            vocab_size=bert_config.vocab_size,
-            hparams=bert_config.embed)
-        word_embeds = embedder(input_ids)
+    hparams = {
+        'clas_strategy': 'cls_time'
+    }
+    model = tx.modules.BERTClassifier(
+        pretrained_model_name=FLAGS.pretrained_model_name,
+        hparams=hparams)
+    logits, preds = model(input_ids, input_length, segment_ids)
 
-        # Segment embedding for each type of tokens
-        segment_embedder = tx.modules.WordEmbedder(
-            vocab_size=bert_config.type_vocab_size,
-            hparams=bert_config.segment_embed)
-        segment_embeds = segment_embedder(segment_ids)
-
-        # Position embedding
-        position_embedder = tx.modules.PositionEmbedder(
-            position_size=bert_config.position_size,
-            hparams=bert_config.position_embed)
-        seq_length = tf.ones([batch_size], tf.int32) * tf.shape(input_ids)[1]
-        pos_embeds = position_embedder(sequence_length=seq_length)
-
-        # Aggregates embeddings
-        input_embeds = word_embeds + segment_embeds + pos_embeds
-
-        # The BERT model (a TransformerEncoder)
-        encoder = tx.modules.TransformerEncoder(hparams=bert_config.encoder)
-        output = encoder(input_embeds, input_length)
-
-        # Builds layers for downstream classification, which is also
-        # initialized with BERT pre-trained checkpoint.
-        with tf.variable_scope("pooler"):
-            # Uses the projection of the 1st-step hidden vector of BERT output
-            # as the representation of the sentence
-            bert_sent_hidden = tf.squeeze(output[:, 0:1, :], axis=1)
-            bert_sent_output = tf.layers.dense(
-                bert_sent_hidden, config_downstream.hidden_dim,
-                activation=tf.tanh)
-            output = tf.layers.dropout(
-                bert_sent_output, rate=0.1, training=tx.global_mode_train())
-
-    # Adds the final classification layer
-    logits = tf.layers.dense(
-        output, num_classes,
-        kernel_initializer=tf.truncated_normal_initializer(stddev=0.02))
-    preds = tf.argmax(logits, axis=-1, output_type=tf.int32)
     accu = tx.evals.accuracy(batch['label_ids'], preds)
 
     # Optimization
-
     loss = tf.losses.sparse_softmax_cross_entropy(
         labels=batch["label_ids"], logits=logits)
     global_step = tf.Variable(0, trainable=False)
@@ -167,7 +109,7 @@ def main(_):
     num_train_steps = int(num_train_data / config_data.train_batch_size
                           * config_data.max_train_epoch)
     num_warmup_steps = int(num_train_steps * config_data.warmup_proportion)
-    lr = model_utils.get_lr(global_step, num_train_steps, # lr is a Tensor
+    lr = model_utils.get_lr(global_step, num_train_steps,  # lr is a Tensor
                             num_warmup_steps, static_lr)
 
     opt = tx.core.get_optimizer(
@@ -190,8 +132,7 @@ def main(_):
     def _is_head():
         if not FLAGS.distributed:
             return True
-        else:
-            return hvd.rank() == 0
+        return hvd.rank() == 0
 
     def _train_epoch(sess):
         """Trains on the training set, and evaluates on the dev set
@@ -217,7 +158,7 @@ def main(_):
 
                 dis_steps = config_data.display_steps
                 if _is_head() and dis_steps > 0 and step % dis_steps == 0:
-                    tf.logging.info('step:%d; loss:%f' % (step, rets['loss']))
+                    tf.logging.info('step:%d; loss:%f;' % (step, rets['loss']))
 
                 eval_steps = config_data.eval_steps
                 if _is_head() and eval_steps > 0 and step % eval_steps == 0:
@@ -277,10 +218,6 @@ def main(_):
         with tf.gfile.GFile(output_file, "w") as writer:
             writer.write('\n'.join(str(p) for p in _all_preds))
 
-    # Loads pretrained BERT model parameters
-    init_checkpoint = os.path.join(bert_pretrain_dir, 'bert_model.ckpt')
-    model_utils.init_bert_checkpoint(init_checkpoint)
-
     # Broadcasts global variables from rank-0 process
     if FLAGS.distributed:
         bcast = hvd.broadcast_global_variables(0)
@@ -314,6 +251,7 @@ def main(_):
 
         if FLAGS.do_test:
             _test_epoch(sess)
+
 
 if __name__ == "__main__":
     tf.app.run()

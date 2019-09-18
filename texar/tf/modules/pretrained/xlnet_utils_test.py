@@ -1,45 +1,88 @@
 """
-Unit tests for xlnet utils.
+Unit tests for xlnet model utils.
 """
-import os
-
 import tensorflow as tf
 
 from texar.tf.modules.pretrained.xlnet_utils import \
-    load_pretrained_xlnet, transform_xlnet_to_texar_config
+    PositionWiseFF, RelativePositionalEncoding, RelativeMutiheadAttention
 
 
-class XLNetUtilsTest(tf.test.TestCase):
-    r"""Tests xlnet utils.
+class XLNetModelUtilsTest(tf.test.TestCase):
+    r"""Tests xlnet model utils.
     """
 
-    def test_load_pretrained_model_AND_transform_xlnet_to_texar_config(self):
+    def test_PositionWiseFF(self):
 
-        pretrained_model_dir = load_pretrained_xlnet(
-            pretrained_model_name="xlnet-base-cased")
+        # Case 1
+        model = PositionWiseFF()
+        inputs = tf.random_uniform(shape=(32, model.hparams.hidden_dim))
+        outputs = model(inputs)
+        self.assertEqual(outputs.shape, [32, model._hparams.hidden_dim])
 
-        info = list(os.walk(pretrained_model_dir))
-        _, _, files = info[0]
-        self.assertIn('spiece.model', files)
-        self.assertIn('xlnet_model.ckpt.meta', files)
-        self.assertIn('xlnet_model.ckpt.data-00000-of-00001', files)
-        self.assertIn('xlnet_model.ckpt.index', files)
-        self.assertIn('xlnet_config.json', files)
-
-        model_config = transform_xlnet_to_texar_config(pretrained_model_dir)
-
-        expected_config = {
-            'head_dim': 64,
-            'ffn_inner_dim': 3072,
-            'hidden_dim': 768,
-            'activation': 'gelu',
-            'num_heads': 12,
-            'num_layers': 12,
-            'vocab_size': 32000,
-            'untie_r': True
+        # Case 2
+        hparams = {
+            "hidden_dim": 16,
+            "ffn_inner_dim": 32,
+            "dropout": 0.1,
+            "activation": 'relu',
         }
+        model = PositionWiseFF(hparams=hparams)
+        inputs = tf.random_uniform(shape=(32, 16))
+        outputs = model(inputs)
+        self.assertEqual(outputs.shape, [32, 16])
 
-        self.assertDictEqual(model_config, expected_config)
+        # Case 3
+        hparams = {
+            "hidden_dim": 16,
+            "ffn_inner_dim": 32,
+            "dropout": 0.1,
+            "activation": 'gelu',
+        }
+        model = PositionWiseFF(hparams=hparams)
+        inputs = tf.random_uniform(shape=(32, 16))
+        outputs = model(inputs)
+        self.assertEqual(outputs.shape, [32, 16])
+
+    def test_RelativeMultiheadAttention(self):
+        num_heads = 12
+        head_dim = 64
+
+        r_r_bias = tf.random_normal(shape=(num_heads, head_dim))
+        r_w_bias = tf.random_normal(shape=(num_heads, head_dim))
+
+        model = RelativeMutiheadAttention(r_r_bias=r_r_bias, r_w_bias=r_w_bias)
+
+        states_h = tf.random_uniform(shape=(16, 32, model._hparams.hidden_dim))
+        pos_embed = tf.random_uniform(shape=(24, 32, model._hparams.hidden_dim))
+
+        output_h, output_g = model(states_h=states_h, pos_embed=pos_embed)
+
+        self.assertEqual(output_h.shape,
+                         [16, 32, model._hparams.hidden_dim])
+        self.assertEqual(output_g, None)
+
+    def test_RelativePositionalEncoding(self):
+
+        batch_size = 16
+        max_time = 8
+        total_len = 32
+
+        # Case 1
+        model = RelativePositionalEncoding()
+        pos_embed = model(batch_size=batch_size,
+                          max_time=max_time,
+                          total_len=total_len)
+        self.assertEqual(pos_embed.shape,
+                         [40, 16, model._hparams.dim])
+
+        # Case 2
+        model = RelativePositionalEncoding()
+        pos_embed = model(batch_size=batch_size,
+                          max_time=max_time,
+                          total_len=total_len,
+                          attn_type='uni')
+        self.assertEqual(pos_embed.shape,
+                         [33, 16, model._hparams.dim])
 
 
 if __name__ == "__main__":

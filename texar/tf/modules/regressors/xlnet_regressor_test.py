@@ -9,10 +9,10 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import numpy as np
-
 import tensorflow as tf
 
 from texar.tf.modules.regressors.xlnet_regressor import XLNetRegressor
+from texar.tf.utils.test import pretrained_test
 
 # pylint: disable=too-many-locals, no-member
 
@@ -21,6 +21,17 @@ class XLNetRegressorTest(tf.test.TestCase):
     """Tests :class:`~texar.tf.modules.XLNetRegressor` class.
     """
 
+    @pretrained_test
+    def test_model_loading(self):
+        r"""Tests model loading functionality."""
+
+        inputs = tf.placeholder(dtype=tf.int32, shape=[None, None])
+
+        for pretrained_model_name in XLNetRegressor.available_checkpoints():
+            regressor = XLNetRegressor(
+                pretrained_model_name=pretrained_model_name)
+            _ = regressor(inputs)
+
     def test_trainable_variables(self):
         """Tests the functionality of automatically collecting trainable
         variables.
@@ -28,7 +39,10 @@ class XLNetRegressorTest(tf.test.TestCase):
         inputs = tf.placeholder(dtype=tf.int32, shape=[None, None])
 
         # case 1
-        regressor = XLNetRegressor()
+        hparams = {
+            "pretrained_model_name": None,
+        }
+        regressor = XLNetRegressor(hparams=hparams)
         regressor(inputs)
         n_xlnet_vars = 162
         n_projection_vars = 2
@@ -38,6 +52,7 @@ class XLNetRegressorTest(tf.test.TestCase):
 
         # case 2
         hparams = {
+            "pretrained_model_name": None,
             "regr_strategy": "all_time"
         }
         regressor = XLNetRegressor(hparams=hparams)
@@ -47,6 +62,7 @@ class XLNetRegressorTest(tf.test.TestCase):
 
         # case 3
         hparams = {
+            "pretrained_model_name": None,
             "regr_strategy": "time_wise"
         }
         regressor = XLNetRegressor(hparams=hparams)
@@ -63,7 +79,10 @@ class XLNetRegressorTest(tf.test.TestCase):
                                    maxval=30521, dtype=tf.int32)
 
         # case 1
-        regressor = XLNetRegressor()
+        hparams = {
+            "pretrained_model_name": None,
+        }
+        regressor = XLNetRegressor(hparams=hparams)
         logits = regressor(inputs)
 
         with self.test_session() as sess:
@@ -73,6 +92,7 @@ class XLNetRegressorTest(tf.test.TestCase):
 
         # case 2
         hparams = {
+            "pretrained_model_name": None,
             "regr_strategy": "cls_time"
         }
         regressor = XLNetRegressor(hparams=hparams)
@@ -85,6 +105,7 @@ class XLNetRegressorTest(tf.test.TestCase):
 
         # case 3
         hparams = {
+            "pretrained_model_name": None,
             "regr_strategy": "time_wise"
         }
         regressor = XLNetRegressor(hparams=hparams)
@@ -98,6 +119,7 @@ class XLNetRegressorTest(tf.test.TestCase):
 
         # case 4
         hparams = {
+            "pretrained_model_name": None,
             "regr_strategy": "all_time",
             "max_seq_len": max_time
         }
@@ -118,6 +140,7 @@ class XLNetRegressorTest(tf.test.TestCase):
         batch_size = 8
 
         hparams = {
+            "pretrained_model_name": None,
             "regr_strategy": "cls_time"
         }
         inputs = tf.placeholder(tf.int32, shape=[batch_size, 6])
