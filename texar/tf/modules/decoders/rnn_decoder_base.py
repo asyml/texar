@@ -33,7 +33,7 @@ from tensorflow.python.util import nest
 from texar.tf.core import layers
 from texar.tf.utils import utils
 from texar.tf.utils.mode import is_train_mode, is_train_mode_py
-from texar.tf.utils.dynamic_decode import dynamic_decode
+from texar.tf.modules.decoders.dynamic_decode import dynamic_decode
 from texar.tf.module_base import ModuleBase
 from texar.tf.modules.decoders import rnn_decoder_helpers
 from texar.tf.utils.dtypes import is_callable

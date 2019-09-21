@@ -40,7 +40,7 @@ from texar.tf.modules.decoders import tf_helpers as tx_helper
 from texar.tf.utils import beam_search, transformer_attentions as attn
 from texar.tf.utils.shapes import shape_list
 from texar.tf.utils.mode import is_train_mode
-from texar.tf.utils.dynamic_decode import dynamic_decode
+from texar.tf.modules.decoders.dynamic_decode import dynamic_decode
 
 
 __all__ = [

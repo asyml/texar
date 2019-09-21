@@ -1,18 +1,22 @@
-# Copyright 2019 The Texar Authors. All Rights Reserved.
+# Copyright 2016 The TensorFlow Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#         http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ==============================================================================
+# Modifications copyright (C) 2019 Texar
+# ==============================================================================
 """
-Utility functions for decoding.
+Utility functions for decoding. This file is modified from
+`tf.contrib.seq2seq.dynamic_decode`.
 """
 
 from __future__ import absolute_import
@@ -248,6 +252,9 @@ def dynamic_decode(decoder,
             next_sequence_lengths)`.
         """
         (next_outputs, state) = decoder.step(time, inputs, state)
+
+        # Check if the maximum iteration is met. If it is met, do not compute
+        # the next inputs.
         reach_max = tf.equal(time+1, maximum_iterations)
         (decoder_finished, next_inputs, decoder_state) = tf.cond(
             reach_max,
