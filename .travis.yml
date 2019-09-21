@@ -1,13 +1,15 @@
 sudo: required
 language: python
+
 python:
-  - "2.7"
   - "3.5"
   - "3.6"
 
 install:
-  - pip install .[tensorflow-cpu]
+  - pip install --upgrade pip
+  - pip install --progress-bar off .[tensorflow-cpu]
   - pip install flake8
+  - pip install pytest
 
 before_script:
   # stop the build if there are Python syntax errors or undefined names
@@ -16,7 +18,7 @@ before_script:
   - flake8 . --count --exit-zero --max-complexity=10 --max-line-length=80 --statistics
 
 script:
-  # units test
+  # Unit tests
   - pytest
 
 notifications:
