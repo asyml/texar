@@ -381,17 +381,13 @@ class SoftmaxEmbeddingHelper(Helper):
         sample_ids = tf.nn.softmax(outputs / self._tau)
         return sample_ids
 
-    def next_inputs(self, time, outputs, state, sample_ids, name=None,
-                    reach_max_time=None):
+    def next_inputs(self, time, outputs, state, sample_ids, name=None):
         if self._use_finish:
             hard_ids = tf.argmax(sample_ids, axis=-1, output_type=tf.int32)
             finished = tf.equal(hard_ids, self._end_token)
         else:
             finished = tf.tile([False], [self._batch_size])
         all_finished = tf.reduce_all(finished)
-
-        if reach_max_time is not None:
-            all_finished = tf.logical_or(all_finished, reach_max_time)
 
         if self._stop_gradient:
             sample_ids = tf.stop_gradient(sample_ids)

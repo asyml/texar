@@ -21,9 +21,9 @@ from __future__ import print_function
 
 # pylint: disable=wildcard-import
 
+from texar.tf.modules.decoders.beam_search_decode import *
 from texar.tf.modules.decoders.rnn_decoder_base import *
 from texar.tf.modules.decoders.rnn_decoders import *
 from texar.tf.modules.decoders.tf_helpers import *
 from texar.tf.modules.decoders.rnn_decoder_helpers import *
 from texar.tf.modules.decoders.transformer_decoders import *
-from texar.tf.modules.decoders.beam_search_decode import *

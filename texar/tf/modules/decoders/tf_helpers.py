@@ -215,7 +215,7 @@ class TrainingHelper(Helper):
 
             self._zero_inputs = nest.map_structure(
                 lambda inp: array_ops.zeros_like(inp[0, :]), inputs)
-
+            self._start_inputs = self._zero_inputs
             self._batch_size = shape_list(sequence_length)[0]
 
     @property
@@ -615,13 +615,10 @@ class GreedyEmbeddingHelper(Helper):
         sample_ids = math_ops.argmax(outputs, axis=-1, output_type=dtypes.int32)
         return sample_ids
 
-    def next_inputs(self, time, outputs, state, sample_ids, name=None,
-                    reach_max_time=None):
+    def next_inputs(self, time, outputs, state, sample_ids, name=None):
         """Gets the inputs for next step."""
         finished = math_ops.equal(sample_ids, self._end_token)
         all_finished = math_ops.reduce_all(finished)
-        if reach_max_time is not None:
-            all_finished = tf.logical_or(all_finished, reach_max_time)
 
         if self._embedding_args_cnt == 1:
             del time, outputs  # unused by next_inputs_fn
