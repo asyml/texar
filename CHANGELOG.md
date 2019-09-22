@@ -1,13 +1,18 @@
 
-## [Unreleased]
+## [v0.2.3](https://github.com/asyml/texar/releases/tag/v0.2.3) (2019-09-22)
 
 ### New features
+
+* Texar Tensorflow now imported by `import texar.tf as tx`. ([#197](https://github.com/asyml/texar/pull/197))
+* Add pretrained modules \[[docs](https://texar.readthedocs.io/en/latest/code/modules.html#pre-trained)\], e.g., BERT, XLNet, etc. ([#206](https://github.com/asyml/texar/pull/206))
+* Add new tensor shape related utils, e.g., [reduce_with_weights](https://texar.readthedocs.io/en/latest/code/utils.html#reduce-with-weights), [varlength\_\*](https://texar.readthedocs.io/en/latest/code/utils.html#varlength-concat). ([#201](https://github.com/asyml/texar/pull/201)) 
 
 ### Feature improvements
 
 ### Fixes
 
 * Fix docstring of connector `_mlp_transform`. ([#192](https://github.com/asyml/texar/pull/192))
+* Fix `dynamic_decode` out-of-range error when max-decoding-length is reached. ([#208](https://github.com/asyml/texar/pull/208))
 
 ## [v0.2.2](https://github.com/asyml/texar/releases/tag/v0.2.2) (2019-08-05)
 
