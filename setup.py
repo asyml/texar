@@ -40,7 +40,7 @@ setuptools.setup(
         ],
         'tensorflow-gpu': [
             'tensorflow-gpu>=1.10.0,<2.0',
-            'tensorflow-probability-gpu>=0.3.0'
+            'tensorflow-probability>=0.3.0'
         ]
     },
     package_data={
