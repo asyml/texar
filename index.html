@@ -1,22 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
-    <meta name="description" content="">
-    <meta name="author" content="">
-    <link rel="icon" href="favicon.ico">
+    <meta name="description" content="" />
+    <meta name="author" content="" />
+    <link rel="icon" href="favicon.ico" />
     <title>Texar - Toolkit for Text Generation and Beyond</title>
-    <link href="css/bootstrap.css" rel="stylesheet">
-    <link href="css/ie10-viewport-bug-workaround.css" rel="stylesheet">
+    <link href="css/bootstrap.css" rel="stylesheet" />
+    <link href="css/ie10-viewport-bug-workaround.css" rel="stylesheet" />
     <script src="js/ie-emulation-modes-warning.js"></script>
-    <link href="css/carousel.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600,700" rel="stylesheet">
-    <link href="css/index.css" rel="stylesheet">
+    <link href="css/carousel.css" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600,700"
+      rel="stylesheet"
+    />
+    <link href="css/index.css" rel="stylesheet" />
   </head>
-<!-- NAVBAR
+  <!-- NAVBAR
 ================================================== -->
   <body>
     <div class="navbar-wrapper">
@@ -24,52 +27,47 @@
         <nav class="navbar navbar-inverse navbar-static-top">
           <div class="container">
             <div class="navbar-header">
-              <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+              <button
+                type="button"
+                class="navbar-toggle collapsed"
+                data-toggle="collapse"
+                data-target="#navbar"
+                aria-expanded="false"
+                aria-controls="navbar"
+              >
                 <span class="sr-only">Toggle navigation</span>
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
               </button>
-              <a class="navbar-brand" href="./index.html"><img class="featurette-image img-responsive center-block" src="assets/logotitle.png" alt="Generic placeholder image" style="width:180px; height:60px;"></a>
             </div>
             <div id="navbar" class="navbar-collapse collapse">
               <ul class="nav navbar-nav">
-                <li><a href="./pages/about.html">About</a></li>
-                <!-- <li><a href="#">News</a></li> -->
-                <!-- <li><a href="pages/blog.html">Blog</a></li> -->
-                <li><a href="./pages/support.html">Support</a></li>
                 <li>
-                    <a href="https://medium.com/@texar">
-                        Blog
-                        <svg width="13px" height="13px" viewbox="0 0 512 512">
-                              <title>Redirect</title>
-                                <path style="fill:currentColor;" d="M 405.34 469.332 L 106.66 469.332 L 106.66 170.668 L 240 170.668 L 240 128 L 106.66 128 C 83.191 128 64 147.197 64 170.668 L 64 469.332 C 64 492.803 83.191 512 106.66 512 L 405.34 512 C 428.809 512 448 492.803 448 469.332 L 448 336 L 405.34 336 L 405.34 469.332 Z M 288 128 L 288 170.668 L 375.474 170.668 L 159.999 386.133 L 189.865 415.999 L 405.341 200.529 L 405.341 288 L 448 288 L 448 128 L 288 128 Z"></path>
-                        </svg>
-                    </a>
+                  <a href="https://texar.readthedocs.io/en/latest">
+                    Resources (TODO: update link)
+                    <svg width="13px" height="13px" viewbox="0 0 512 512">
+                      <title>Redirect</title>
+                      <path
+                        style="fill:currentColor;"
+                        d="M 405.34 469.332 L 106.66 469.332 L 106.66 170.668 L 240 170.668 L 240 128 L 106.66 128 C 83.191 128 64 147.197 64 170.668 L 64 469.332 C 64 492.803 83.191 512 106.66 512 L 405.34 512 C 428.809 512 448 492.803 448 469.332 L 448 336 L 405.34 336 L 405.34 469.332 Z M 288 128 L 288 170.668 L 375.474 170.668 L 159.999 386.133 L 189.865 415.999 L 405.341 200.529 L 405.341 288 L 448 288 L 448 128 L 288 128 Z"
+                      ></path>
+                    </svg>
+                  </a>
                 </li>
+
                 <li>
-                    <a href="https://texar.readthedocs.io/en/latest">
-                        Documentation
-                        <svg width="13px" height="13px" viewbox="0 0 512 512">
-                              <title>Redirect</title>
-                                <path style="fill:currentColor;" d="M 405.34 469.332 L 106.66 469.332 L 106.66 170.668 L 240 170.668 L 240 128 L 106.66 128 C 83.191 128 64 147.197 64 170.668 L 64 469.332 C 64 492.803 83.191 512 106.66 512 L 405.34 512 C 428.809 512 448 492.803 448 469.332 L 448 336 L 405.34 336 L 405.34 469.332 Z M 288 128 L 288 170.668 L 375.474 170.668 L 159.999 386.133 L 189.865 415.999 L 405.341 200.529 L 405.341 288 L 448 288 L 448 128 L 288 128 Z"></path>
-                        </svg>
-                    </a>
+                  <a href="https://medium.com/@texar">
+                    Blog
+                    <svg width="13px" height="13px" viewbox="0 0 512 512">
+                      <title>Redirect</title>
+                      <path
+                        style="fill:currentColor;"
+                        d="M 405.34 469.332 L 106.66 469.332 L 106.66 170.668 L 240 170.668 L 240 128 L 106.66 128 C 83.191 128 64 147.197 64 170.668 L 64 469.332 C 64 492.803 83.191 512 106.66 512 L 405.34 512 C 428.809 512 448 492.803 448 469.332 L 448 336 L 405.34 336 L 405.34 469.332 Z M 288 128 L 288 170.668 L 375.474 170.668 L 159.999 386.133 L 189.865 415.999 L 405.341 200.529 L 405.341 288 L 448 288 L 448 128 L 288 128 Z"
+                      ></path>
+                    </svg>
+                  </a>
                 </li>
-                <li>
-                    <a href="https://github.com/asyml/texar">
-                        Github
-                        <svg width="13px" height="13px" viewbox="0 0 512 512">
-                              <title>Redirect</title>
-                                <path style="fill:currentColor;" d="M 405.34 469.332 L 106.66 469.332 L 106.66 170.668 L 240 170.668 L 240 128 L 106.66 128 C 83.191 128 64 147.197 64 170.668 L 64 469.332 C 64 492.803 83.191 512 106.66 512 L 405.34 512 C 428.809 512 448 492.803 448 469.332 L 448 336 L 405.34 336 L 405.34 469.332 Z M 288 128 L 288 170.668 L 375.474 170.668 L 159.999 386.133 L 189.865 415.999 L 405.341 200.529 L 405.341 288 L 448 288 L 448 128 L 288 128 Z"></path>
-                        </svg>
-                    </a>
-                </li>
-		<!--
-                <li>
-                  <a class="github" href="#github link here" title="Find this project on GitHub"><svg class="icon--github"><use xlink:href="#icon-github"></use></svg></a>
-                </li>
-		-->
               </ul>
             </div>
           </div>
@@ -78,21 +76,32 @@
     </div>
     <svg class="hidden">
       <symbol id="icon-github" viewBox="0 0 32.6 31.8">
-				<title>github</title>
-				<path d="M16.3,0C7.3,0,0,7.3,0,16.3c0,7.2,4.7,13.3,11.1,15.5c0.8,0.1,1.1-0.4,1.1-0.8c0-0.4,0-1.4,0-2.8c-4.5,1-5.5-2.2-5.5-2.2c-0.7-1.9-1.8-2.4-1.8-2.4c-1.5-1,0.1-1,0.1-1c1.6,0.1,2.5,1.7,2.5,1.7c1.5,2.5,3.8,1.8,4.7,1.4c0.1-1.1,0.6-1.8,1-2.2c-3.6-0.4-7.4-1.8-7.4-8.1c0-1.8,0.6-3.2,1.7-4.4C7.4,10.7,6.8,9,7.7,6.8c0,0,1.4-0.4,4.5,1.7c1.3-0.4,2.7-0.5,4.1-0.5c1.4,0,2.8,0.2,4.1,0.5c3.1-2.1,4.5-1.7,4.5-1.7c0.9,2.2,0.3,3.9,0.2,4.3c1,1.1,1.7,2.6,1.7,4.4c0,6.3-3.8,7.6-7.4,8c0.6,0.5,1.1,1.5,1.1,3c0,2.2,0,3.9,0,4.5c0,0.4,0.3,0.9,1.1,0.8c6.5-2.2,11.1-8.3,11.1-15.5C32.6,7.3,25.3,0,16.3,0z"/>
-			</symbol>
+        <title>github</title>
+        <path
+          d="M16.3,0C7.3,0,0,7.3,0,16.3c0,7.2,4.7,13.3,11.1,15.5c0.8,0.1,1.1-0.4,1.1-0.8c0-0.4,0-1.4,0-2.8c-4.5,1-5.5-2.2-5.5-2.2c-0.7-1.9-1.8-2.4-1.8-2.4c-1.5-1,0.1-1,0.1-1c1.6,0.1,2.5,1.7,2.5,1.7c1.5,2.5,3.8,1.8,4.7,1.4c0.1-1.1,0.6-1.8,1-2.2c-3.6-0.4-7.4-1.8-7.4-8.1c0-1.8,0.6-3.2,1.7-4.4C7.4,10.7,6.8,9,7.7,6.8c0,0,1.4-0.4,4.5,1.7c1.3-0.4,2.7-0.5,4.1-0.5c1.4,0,2.8,0.2,4.1,0.5c3.1-2.1,4.5-1.7,4.5-1.7c0.9,2.2,0.3,3.9,0.2,4.3c1,1.1,1.7,2.6,1.7,4.4c0,6.3-3.8,7.6-7.4,8c0.6,0.5,1.1,1.5,1.1,3c0,2.2,0,3.9,0,4.5c0,0.4,0.3,0.9,1.1,0.8c6.5-2.2,11.1-8.3,11.1-15.5C32.6,7.3,25.3,0,16.3,0z"
+        />
+      </symbol>
     </svg>
 
     <!-- Carousel
     ================================================== -->
-	<section class="hero wrap">
-     <div class="container">
-      <div class="inner">    
-        <h1>Toolkit for Text Generation and Beyond</h1>
-        <h2>Assemble Models of Arbitrary Architectures and Learning Paradigms Freely</h2>
-        <p><a class="btn btn-lg btn-primary" href="./pages/about.html" role="button">Learn More</a></p>
+    <section class="hero wrap">
+      <div class="container">
+        <div class="inner">
+          <h1>AsymL</h1>
+          <h2>
+            Machine Learning as Machine Assembly
+          </h2>
+          <p>
+            <a
+              class="btn btn-lg btn-primary"
+              href="https://github.com/asyml"
+              role="button"
+              >Github</a
+            >
+          </p>
+        </div>
       </div>
-     </div>
     </section>
 
     <!-- Marketing messaging and featurettes
@@ -100,87 +109,378 @@
     <!-- Wrap the rest of the page in another container to center all the content. -->
 
     <div class="container marketing">
-
       <!-- Three columns of text below the carousel -->
       <div class="row">
         <div class="col-lg-4">
           <div class="threecard">
-            <img class="img-circle" src="assets/examples.svg" alt="Generic placeholder image" width="120" height="110">
-            <h2>Examples</h2>
-            <p>Explore projects done with Texar</p>
-            <p><a class="btn btn-default" href="https://github.com/asyml/texar/tree/master/examples" role="button">View details &raquo;</a></p>
+            <div class="logo-group">
+              <img
+                class="img-circle"
+                src="assets/texar.png"
+                alt="texar"
+                height="80"
+              />
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <img
+                class="img-circle"
+                src="assets/tensorflow.png"
+                alt="texar"
+                height="80"
+              />
+            </div>
+            <h2>Texar-TF</h2>
+            <p style="margin-bottom: 24px">
+              <a href="#">About</a>
+            </p>
+            <div class="marketing-buttons">
+              <p>
+                <a
+                  class="btn btn-default"
+                  href="https://github.com/asyml/texar/tree/master/examples"
+                  role="button"
+                  >Github &raquo;</a
+                >
+                <a
+                  class="btn btn-default"
+                  href="https://github.com/asyml/texar/tree/master/examples"
+                  role="button"
+                  >Docs &raquo;</a
+                >
+              </p>
+              <p>
+                <a
+                  class="btn btn-default"
+                  href="https://github.com/asyml/texar/tree/master/examples"
+                  role="button"
+                  >Examples &raquo;</a
+                >
+                <a
+                  class="btn btn-default"
+                  href="https://github.com/asyml/texar/tree/master/examples"
+                  role="button"
+                  >Tutorials &raquo;</a
+                >
+              </p>
+            </div>
           </div>
-        </div><!-- /.col-lg-4 -->
-        <div class="col-lg-4">
-          <div class="threecard">
-            <img class="img-circle" src="assets/models.svg" alt="Generic placeholder image" width="120" height="110">
-            <h2>Documentations</h2>
-            <p>Explore more information about Texar</p>
-            <p><a class="btn btn-default" href="https://texar.readthedocs.io/en/latest" role="button">View details &raquo;</a></p>
-          </div>
-        </div><!-- /.col-lg-4 -->
-        <div class="col-lg-4">
-          <div class="threecard">
-            <img class="img-circle" src="assets/tutorials.svg" alt="Generic placeholder image" width="120" height="110">
-            <h2>Tutorials</h2>
-            <p>Learn how to use Texar in your projects</p>
-            <p><a class="btn btn-default" href="./index.html" role="button">Coming soon &raquo;</a></p>
-          </div>
-        </div><!-- /.col-lg-4 -->
-      </div><!-- /.row -->
+        </div>
 
+        <div class="col-lg-4">
+          <div class="threecard">
+            <div class="logo-group">
+              <img
+                class="img-circle"
+                src="assets/texar.png"
+                alt="texar"
+                height="80"
+              />
+              &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;
+              <img
+                class="img-circle"
+                src="assets/pytorch.png"
+                alt="texar"
+                height="80"
+              />
+            </div>
+            <h2>Texar-PyTorch</h2>
+            <p style="margin-bottom: 24px">
+              <a href="#">About</a>
+            </p>
+            <div class="marketing-buttons">
+              <p>
+                <a
+                  class="btn btn-default"
+                  href="https://github.com/asyml/texar/tree/master/examples"
+                  role="button"
+                  >Github &raquo;</a
+                >
+                <a
+                  class="btn btn-default"
+                  href="https://github.com/asyml/texar/tree/master/examples"
+                  role="button"
+                  >Docs &raquo;</a
+                >
+              </p>
+              <p>
+                <a
+                  class="btn btn-default"
+                  href="https://github.com/asyml/texar/tree/master/examples"
+                  role="button"
+                  >Examples &raquo;</a
+                >
+                <a
+                  class="btn btn-default"
+                  href="https://github.com/asyml/texar/tree/master/examples"
+                  role="button"
+                  >Tutorials &raquo;</a
+                >
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <div class="threecard">
+            <div class="logo-group">
+              <img
+                class="img-circle"
+                src="assets/forte.png"
+                alt="texar"
+                height="80"
+              />
+            </div>
+            <h2>Forte</h2>
+            <p style="margin-bottom: 24px">
+              <a href="#">About</a>
+            </p>
+            <div class="marketing-buttons">
+              <p>
+                <a
+                  class="btn btn-default"
+                  href="https://github.com/asyml/texar/tree/master/examples"
+                  role="button"
+                  >Github &raquo;</a
+                >
+                <a
+                  class="btn btn-default"
+                  href="https://github.com/asyml/texar/tree/master/examples"
+                  role="button"
+                  >Docs &raquo;</a
+                >
+              </p>
+              <p>
+                <a
+                  class="btn btn-default"
+                  href="https://github.com/asyml/texar/tree/master/examples"
+                  role="button"
+                  >Examples &raquo;</a
+                >
+                <a
+                  class="btn btn-default"
+                  href="https://github.com/asyml/texar/tree/master/examples"
+                  role="button"
+                  >Tutorials &raquo;</a
+                >
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- /.row -->
 
       <!-- START THE FEATURETTES -->
 
-      <hr class="featurette-divider">
+      <hr class="featurette-divider" />
 
       <div class="row featurette">
         <div class="col-md-7">
-          <h2 class="featurette-heading">Get Started <span class="text-muted"></span></h2>
-          <p class="lead">Click to copy the install command</p>
-          <code class="getstarted" id="startcode">pip install git+https://github.com/asyml/texar#egg=texar</code><button type="button" id="change" onclick="copyToClipboard('#startcode');change();" class="startbutton">Copy</button>
+          <h2 class="featurette-heading">
+            Get Started <span class="text-muted"></span>
+          </h2>
+
+          <div class="install-selector">
+            <div class="line">
+              <div class="line-name">Tool</div>
+              <div class="line-options">
+                <div
+                  class="selected line-option"
+                  data-option-name="texar-tf"
+                  data-option-type="tool"
+                >
+                  Texar-TF
+                </div>
+                <div
+                  class="line-option"
+                  data-option-name="texar-pytorch"
+                  data-option-type="tool"
+                >
+                  Texar-PyTorch
+                </div>
+                <div
+                  class="line-option"
+                  data-option-name="forte"
+                  data-option-type="tool"
+                >
+                  Forte
+                </div>
+              </div>
+            </div>
+            <div class="line">
+              <div class="line-name">Build</div>
+              <div class="line-options">
+                <div
+                  class="selected line-option"
+                  data-option-name="stable"
+                  data-option-type="build"
+                >
+                  Stable
+                </div>
+                <div
+                  class="line-option"
+                  data-option-name="nightly"
+                  data-option-type="build"
+                >
+                  Nightly
+                </div>
+              </div>
+            </div>
+            <div class="line">
+              <div class="line-name">Package</div>
+              <div class="line-options">
+                <div
+                  class="selected line-option"
+                  data-option-name="pip"
+                  data-option-type="package"
+                >
+                  pip
+                </div>
+                <div
+                  class="line-option"
+                  data-option-name="conda"
+                  data-option-type="package"
+                >
+                  conda
+                </div>
+                <div
+                  class="line-option"
+                  data-option-name="source"
+                  data-option-type="package"
+                >
+                  source
+                </div>
+              </div>
+            </div>
+            <div class="line">
+              <div class="line-name">Language</div>
+              <div class="line-options">
+                <div
+                  class="selected line-option"
+                  data-option-name="python3.6"
+                  data-option-type="language"
+                >
+                  Python3.6
+                </div>
+                <div
+                  class="line-option"
+                  data-option-name="python3.7"
+                  data-option-type="language"
+                >
+                  Python3.7
+                </div>
+              </div>
+            </div>
+            <div class="line">
+              <div class="line-name">Run this command</div>
+              <div class="line-options">
+                <div class="line-run-command">
+                  pip install git+https://github.com/asyml/texar#egg=texar
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- <p class="lead">Click to copy the install command</p>
+          <code class="getstarted" id="startcode"
+            >pip install git+https://github.com/asyml/texar#egg=texar</code
+          ><button
+            type="button"
+            id="change"
+            onclick="copyToClipboard('#startcode');change();"
+            class="startbutton"
+          >
+            Copy
+          </button> -->
         </div>
         <div class="col-md-5">
-          <img class="featurette-image img-responsive center-block" src="assets/started.gif" alt="Generic placeholder image" style="width:400px; height:300px;">
+          <img
+            class="featurette-image img-responsive center-block"
+            src="assets/started.gif"
+            alt="Generic placeholder image"
+            style="width:400px; height:300px;"
+          />
         </div>
       </div>
 
-      <hr class="featurette-divider">
+      <hr class="featurette-divider" />
 
       <div class="row featurette">
         <div class="col-md-7 col-md-push-5">
-          <h2 class="featurette-heading">About <span class="text-muted"></span></h2>
-          <p class="lead" align="justify">Texar is a highly modularized, versatile, and extensible toolkit designed to support the broad set of machine learning applications, especially text generation such as machine translation, dialog, summarization, text manipulation, etc. Texar extacts the common patterns underlying the diverse tasks and methodologies, creates a library of highly reusable modules and functionalities, and enables arbitrary model architectures and algorithmic paradigms like maximum likelihood learning, adversarial learning, reinforcement learning, etc. Texar emphasizes heavily on extensibility and modularized system design, so that components can be freely plugged in or swapped out.</p>
-          <p><a class="btn btn-default" href="./pages/about.html" role="button">Learn More &raquo;</a></p>
+          <h2 class="featurette-heading">
+            About <span class="text-muted"></span>
+          </h2>
+          <p class="lead" align="justify">
+            Texar is a highly modularized, versatile, and extensible toolkit
+            designed to support the broad set of machine learning applications,
+            especially text generation such as machine translation, dialog,
+            summarization, text manipulation, etc. Texar extacts the common
+            patterns underlying the diverse tasks and methodologies, creates a
+            library of highly reusable modules and functionalities, and enables
+            arbitrary model architectures and algorithmic paradigms like maximum
+            likelihood learning, adversarial learning, reinforcement learning,
+            etc. Texar emphasizes heavily on extensibility and modularized
+            system design, so that components can be freely plugged in or
+            swapped out.
+          </p>
+          <p>
+            <a class="btn btn-default" href="./pages/about.html" role="button"
+              >Learn More &raquo;</a
+            >
+          </p>
         </div>
         <div class="col-md-5 col-md-pull-7">
-          <img class="featurette-image img-responsive center-block" src="assets/about.gif" alt="Generic placeholder image" style="width:400px; height:300px;">
+          <img
+            class="featurette-image img-responsive center-block"
+            src="assets/about.gif"
+            alt="Generic placeholder image"
+            style="width:400px; height:300px;"
+          />
         </div>
       </div>
 
-      <hr class="featurette-divider">
+      <hr class="featurette-divider" />
 
       <div class="row featurette">
         <div class="col-md-7">
-          <h2 class="featurette-heading">Companies and Universities Using Texar<span class="text-muted"></span></h2>
-	    <div class="row-img">
-	      <div class="col-img">
-                <a href="https://www.cmu.edu"><img class="featurette-image img-responsive center-block" src="assets/institutions/cmu.png" alt="Generic placeholder image" style="width:401; height:114px;"></a>
-              </div>
-	      <div class="col-img">
-          <a href="http://www.petuum.com"><img class="featurette-image img-responsive center-block" src="assets/institutions/petuum.svg" alt="Generic placeholder image" style="width:187px; height:72px;"></a>
-              </div>
-            </div> <!-- end of row-img -->
+          <h2 class="featurette-heading">
+            Companies and Universities Using Texar<span
+              class="text-muted"
+            ></span>
+          </h2>
+          <div class="row-img">
+            <div class="col-img">
+              <a href="https://www.cmu.edu"
+                ><img
+                  class="featurette-image img-responsive center-block"
+                  src="assets/institutions/cmu.png"
+                  alt="Generic placeholder image"
+                  style="width:401; height:114px;"
+              /></a>
+            </div>
+            <div class="col-img">
+              <a href="http://www.petuum.com"
+                ><img
+                  class="featurette-image img-responsive center-block"
+                  src="assets/institutions/petuum.svg"
+                  alt="Generic placeholder image"
+                  style="width:187px; height:72px;"
+              /></a>
+            </div>
+          </div>
+          <!-- end of row-img -->
         </div>
         <div class="col-md-5">
-          <img class="featurette-image img-responsive center-block" src="assets/company.gif" alt="Generic placeholder image" style="width:400px; height:300px;">
+          <img
+            class="featurette-image img-responsive center-block"
+            src="assets/company.gif"
+            alt="Generic placeholder image"
+            style="width:400px; height:300px;"
+          />
         </div>
       </div>
 
-      <hr class="featurette-divider">
+      <hr class="featurette-divider" />
 
       <!-- /END THE FEATURETTES -->
-
 
       <!-- FOOTER -->
       <footer>
@@ -188,46 +488,89 @@
         <!-- <p>&copy; 2018 Texar. &middot; <a href="#">Privacy</a> &middot; <a href="#">Terms</a> &middot; <a href="http://wang-chenyu.github.io" target="blank"></a></p> -->
         <p>&copy; 2018 Texar.</p>
       </footer>
-
-    </div><!-- /.container -->
-
+    </div>
+    <!-- /.container -->
 
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- copy text js -->
     <script>
       function copyToClipboard(element) {
-        var $temp = $("<input>");
-        $("body").append($temp);
+        var $temp = $('<input>');
+        $('body').append($temp);
         $temp.val($(element).text()).select();
-        document.execCommand("copy");
+        document.execCommand('copy');
         $temp.remove();
       }
     </script>
     <!-- click to change the text on the button -->
     <script>
-      function change(){
-        var lable = $("#change").text().trim();
-         if(lable == "Hide") {
-           $("#glyphicons_halflingsregular").text("Copy");
-         }
-         else {
-           $("#change").text("Copied");
-            }
+      function change() {
+        var lable = $('#change')
+          .text()
+          .trim();
+        if (lable == 'Hide') {
+          $('#glyphicons_halflingsregular').text('Copy');
+        } else {
+          $('#change').text('Copied');
         }
+      }
     </script>
 
     <!-- Placed at the end of the document so the pages load faster -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-    <script>window.jQuery || document.write('<script src="js/vendor/jquery.min.js"><\/script>')</script>
+    <script>
+      window.jQuery ||
+        document.write('<script src="js/vendor/jquery.min.js"><\/script>');
+    </script>
     <script src="js/bootstrap.min.js"></script>
-    <!-- Just to make our placeholder images work. Don't actually copy the next line! -->
-    <script src="js/vendor/holder.min.js"></script>
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
     <script src="js/ie10-viewport-bug-workaround.js"></script>
     <!--
     <script>$(function(){$(".typed").typed({strings: ["Text Generation Toolkit", "Flexibility", "Modular", "Dialog System", "Machine Translation", "Question Answering"],typeSpeed: 60,loop: true  });});</script>
     -->
     <script src="js/typed.min.js"></script>
+
+    <!-- installer options -->
+    <script>
+      const availableInstallOptions = {
+        'texar-tf,stable,pip,python3.6':
+          'pip install git+https://github.com/asyml/texar#egg=texar',
+        'texar-tf,stable,pip,python3.7':
+          'pip install git+https://github.com/asyml/texar#egg=texar',
+        'texar-pytorch,stable,pip,python3.6':
+          'pip install git+https://github.com/asyml/texar#egg=texar-pytorch',
+        'texar-pytorch,stable,pip,python3.7':
+          'pip install git+https://github.com/asyml/texar#egg=texar-pytorch'
+      };
+
+      function getAllInstallOptions() {
+        const options = {};
+        $('[data-option-name].selected').each(function() {
+          const optionName = $(this).data('option-name');
+          const optionType = $(this).data('option-type');
+          options[optionType] = optionName;
+        });
+
+        return options;
+      }
+
+      $('[data-option-name]').on('click', function(e) {
+        const optionName = $(this).data('option-name');
+        const optionType = $(this).data('option-type');
+        $(`[data-option-type="${optionType}"]`).removeClass('selected');
+        $(this).addClass('selected');
+
+        const options = getAllInstallOptions();
+        const installOptionKey = `${options.tool},${options.build},${options.package},${options.language}`;
+        const installCmd = availableInstallOptions[installOptionKey];
+
+        if (installCmd) {
+          $('.line-run-command').text(installCmd);
+        } else {
+          $('.line-run-command').text('Not Available');
+        }
+      });
+    </script>
   </body>
 </html>
