@@ -155,7 +155,7 @@ class XLNetRegressor(RegressorBase, PretrainedXLNetMixin):
                 Ignored if no extra logit layer is appended.
 
             `"use_projection"`: bool
-                If `True`, an additional :torch_nn:`Linear` layer is added after
+                If `True`, an additional dense layer is added after
                 the summary step.
 
             `"name"`: str

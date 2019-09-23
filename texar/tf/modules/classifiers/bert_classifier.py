@@ -222,18 +222,18 @@ class BERTClassifier(ClassifierBase, PretrainedBERTMixin):
             - If "clas_strategy"=="cls_time" or "all_time"
 
                 - If "num_classes"==1, `logits` and `pred` are of both \
-                shape `[batch_size]`
+                  shape `[batch_size]`
                 - If "num_classes">1, `logits` is of shape \
-                `[batch_size, num_classes]` and `pred` is of shape \
-                `[batch_size]`.
+                  `[batch_size, num_classes]` and `pred` is of shape \
+                  `[batch_size]`.
 
             - If "clas_strategy"=="time_wise",
 
                 - If "num_classes"==1, `logits` and `pred` are of both \
-                shape `[batch_size, max_time]`
+                  shape `[batch_size, max_time]`
                 - If "num_classes">1, `logits` is of shape \
-                `[batch_size, max_time, num_classes]` and `pred` is of shape \
-                `[batch_size, max_time]`.
+                  `[batch_size, max_time, num_classes]` and `pred` is of shape \
+                  `[batch_size, max_time]`.
         """
 
         enc_outputs, pooled_output = self._encoder(inputs, sequence_length,
