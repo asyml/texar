@@ -158,6 +158,15 @@
   border-radius: 24px;
   background: #6700ff;
   text-decoration: none;
+  display: inline-block;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-button {
+  display: inline-block;
 }
 
 .card-button a:hover,
@@ -167,4 +176,22 @@
 
 .featurette-heading {
   margin: 30px 0;
+}
+
+.card-button:hover .card-description {
+  display: block;
+}
+
+.card-description {
+  text-align: left;
+  position: absolute;
+  left: 15px;
+  top: 0;
+  width: calc(100% - 30px);
+  height: 100%;
+  font-size: 16px;
+  line-height: 20px;
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.9);
+  display: none;
 }
