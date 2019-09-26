@@ -15,7 +15,7 @@ interfaces.
 
 setuptools.setup(
     name="texar",
-    version="0.2.2",
+    version="0.2.3",
     url="https://github.com/asyml/texar",
 
     description="Toolkit for Machine Learning and Text Generation",
