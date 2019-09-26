@@ -34,10 +34,11 @@
 }
 .hero h1 {
   color: #fff;
-  font-size: 40px;
+  font-size: 60px;
   letter-spacing: -0.01em;
   line-height: 1.22em;
   margin-bottom: 30px;
+  font-family: monospace;
 }
 .hero h2 {
   color: #fff;
@@ -77,7 +78,13 @@
 }
 
 .marketing-buttons a {
-  width: 100px;
+  width: 120px;
+  text-align: left;
+}
+.marketing-buttons a img {
+  height: 20px;
+  margin-right: 4px;
+  vertical-align: bottom;
 }
 
 .install-selector {
@@ -127,4 +134,37 @@
   padding: 24px 16px;
   background: #f8f8f8;
   flex: 1;
+}
+
+.texar-subcategory-img {
+  position: absolute;
+  top: 16px;
+  right: 36px;
+  height: 45px;
+}
+
+.card-button {
+  margin: 20px 0;
+}
+
+.card-button a {
+  font-weight: 600;
+  font-size: 18px;
+  height: 48px;
+  line-height: 46px;
+  padding: 10px 45px;
+  border: 2px solid #fff;
+  color: #fff;
+  border-radius: 24px;
+  background: #6700ff;
+  text-decoration: none;
+}
+
+.card-button a:hover,
+.card-button a:active {
+  color: white;
+}
+
+.featurette-heading {
+  margin: 30px 0;
 }
