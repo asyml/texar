@@ -62,9 +62,9 @@ Encoders
 .. autoclass:: texar.tf.modules.TransformerEncoder
     :members:
 
-:hidden:`BertEncoder`
+:hidden:`BERTEncoder`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.tf.modules.BertEncoder
+.. autoclass:: texar.tf.modules.BERTEncoder
     :members:
 
 :hidden:`Conv1DEncoder`
@@ -265,9 +265,9 @@ Classifiers
     :members:
     :inherited-members:
 
-:hidden:`BertClassifier`
+:hidden:`BERTClassifier`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.tf.modules.BertClassifier
+.. autoclass:: texar.tf.modules.BERTClassifier
     :members:
     :inherited-members:
 
@@ -300,12 +300,21 @@ Networks
 Pre-trained
 ===========
 
-.. spelling::
-    pooler
-
-:hidden:`PretrainedBase`
+:hidden:`PretrainedMixin`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.tf.modules.PretrainedBase
+.. autoclass:: texar.tf.modules.PretrainedMixin
+    :members:
+    :private-members:
+    :exclude-members: _name_to_variable
+
+:hidden:`PretrainedBERTMixin`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.tf.modules.PretrainedBERTMixin
+    :members:
+
+:hidden:`PretrainedXLNetMixin`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.tf.modules.PretrainedXLNetMixin
     :members:
 
 Regressor

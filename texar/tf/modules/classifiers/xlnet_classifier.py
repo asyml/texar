@@ -156,15 +156,14 @@ class XLNetClassifier(ClassifierBase, PretrainedXLNetMixin):
                   classification for each time step based on its output.
 
             `"use_projection"`: bool
-                If `True`, an additional `Linear` layer is added after the
+                If `True`, an additional `Dense` layer is added after the
                 summary step.
 
             `"num_classes"`: int
                 Number of classes:
 
-                - If **> 0**, an additional :torch_nn:`Linear`
-                  layer is appended to the encoder to compute the logits over
-                  classes.
+                - If **> 0**, an additional dense layer is appended to the
+                  encoder to compute the logits over classes.
                 - If **<= 0**, no dense layer is appended. The number of
                   classes is assumed to be the final dense layer size of the
                   encoder.
