@@ -111,6 +111,8 @@ cd texar
 pip install .
 ```
 
+**Note**: Texar>0.2.3 requires Python 3.6 or 3.7. To use with older Python versions, please use Texar<=0.2.3
+
 ### Getting Started
 * [Examples](./examples)
 * [Documentation](https://texar.readthedocs.io)

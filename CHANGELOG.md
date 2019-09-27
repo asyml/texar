@@ -2,7 +2,7 @@
 
 ### New features
 
-* Only support Python 3.6 and 3.7
+* Support only Python 3.6 and 3.7. Drop support of older Python versions.
 
 ### Feature improvements
 
