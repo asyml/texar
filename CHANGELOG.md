@@ -1,3 +1,12 @@
+## Unreleased
+
+### New features
+
+* Support only Python 3.6 and 3.7. Drop support of older Python versions.
+
+### Feature improvements
+
+### Fixes
 
 ## [v0.2.3](https://github.com/asyml/texar/releases/tag/v0.2.3) (2019-09-22)
 
