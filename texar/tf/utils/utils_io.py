@@ -29,7 +29,6 @@ import importlib
 import yaml
 
 import tensorflow as tf
-from tensorflow import gfile
 
 as_text = tf.compat.as_text
 
@@ -73,7 +72,7 @@ def _load_config_python(fname):
     return config
 
 def _load_config_yaml(fname):
-    with gfile.GFile(fname) as config_file:
+    with tf.gfile.GFile(fname) as config_file:
         config = yaml.load(config_file)
     return config
 
@@ -131,10 +130,10 @@ def load_config(config_path, config=None):
     fnames = []
     if isinstance(config_path, (list, tuple)):
         fnames = list(config_path)
-    elif gfile.IsDirectory(config_path):
-        for fname in gfile.ListDirectory(config_path):
+    elif tf.gfile.IsDirectory(config_path):
+        for fname in tf.gfile.ListDirectory(config_path):
             fname = os.path.join(config_path, fname)
-            if not gfile.IsDirectory(fname):
+            if not tf.gfile.IsDirectory(fname):
                 fnames.append(fname)
     else:
         for fname in config_path.split(","):

@@ -228,7 +228,7 @@ Classifiers
 
 :hidden:`BertClassifier`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.tf.modules.BertClassifier
+.. autoclass:: texar.tf.modules.BERTClassifier
     :members:
     :inherited-members:
 
@@ -249,9 +249,6 @@ Regressor
 
 Pre-trained
 ===========
-
-.. spelling::
-    pooler
 
 :hidden:`PretrainedMixin`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
