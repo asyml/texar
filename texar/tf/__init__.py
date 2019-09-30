@@ -36,15 +36,15 @@ else:
 
 from texar.tf.version import VERSION as __version__
 
+from texar.tf import agents
+from texar.tf import core
+from texar.tf import data
+from texar.tf import evals
+from texar.tf import losses
+from texar.tf import models
+from texar.tf import modules
+from texar.tf import run
+from texar.tf import utils
 from texar.tf.module_base import *
 from texar.tf.hyperparams import *
 from texar.tf.context import *
-from texar.tf import modules
-from texar.tf import core
-from texar.tf import losses
-from texar.tf import models
-from texar.tf import data
-from texar.tf import evals
-from texar.tf import agents
-from texar.tf import run
-from texar.tf import utils

@@ -22,6 +22,8 @@ from __future__ import division
 # pylint: disable=invalid-name, no-member, no-name-in-module, protected-access
 # pylint: disable=redefined-outer-name, too-many-arguments
 
+from typing import List, Union
+
 import inspect
 import funcsigs
 from pydoc import locate
@@ -73,7 +75,8 @@ __all__ = [
     "default_str",
     "uniquify_str",
     "ceildiv",
-    "straight_through"
+    "straight_through",
+    "truncate_seq_pair",
 ]
 
 
@@ -973,3 +976,36 @@ def straight_through(fw_tensor, bw_tensor):
         direct gradient to bw_tensor.
     """
     return tf.stop_gradient(fw_tensor) + bw_tensor - tf.stop_gradient(bw_tensor)
+
+
+def truncate_seq_pair(tokens_a: Union[List[int], List[str]],
+                      tokens_b: Union[List[int], List[str]],
+                      max_length: int):
+    r"""Truncates a sequence pair in place to the maximum length.
+
+    This is a simple heuristic which will always truncate the longer sequence
+    one token at a time. This makes more sense than truncating an equal
+    percent of tokens from each, since if one sequence is very short then
+    each token that's truncated likely contains more information than a
+    longer sequence.
+
+    Example:
+        tokens_a = [1, 2, 3, 4, 5]
+        tokens_b = [6, 7]
+        truncate_seq_pair(tokens_a, tokens_b, 5)
+        tokens_a  # [1, 2, 3]
+        tokens_b  # [6, 7]
+
+    Args:
+        tokens_a: A list of tokens or token ids.
+        tokens_b: A list of tokens or token ids.
+        max_length: maximum sequence length.
+    """
+    while True:
+        total_length = len(tokens_a) + len(tokens_b)
+        if total_length <= max_length:
+            break
+        if len(tokens_a) > len(tokens_b):
+            tokens_a.pop()
+        else:
+            tokens_b.pop()
