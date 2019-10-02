@@ -94,6 +94,9 @@ agent = tx.agents.SeqPGAgent(samples=outputs.sample_id,
 Many more examples are available [here](./examples)
   
 ### Installation
+
+**(Note: Texar>0.2.3 requires Python 3.6 or 3.7. To use with older Python versions, please use Texar<=0.2.3)**
+
 Texar requires:
 
 * `tensorflow >= 1.10.0 (but <= 2.0)`. Follow the [tensorflow official instructions](https://www.tensorflow.org/install) to install the appropriate version
@@ -110,8 +113,6 @@ git clone https://github.com/asyml/texar.git
 cd texar
 pip install .
 ```
-
-**Note**: Texar>0.2.3 requires Python 3.6 or 3.7. To use with older Python versions, please use Texar<=0.2.3
 
 ### Getting Started
 * [Examples](./examples)
