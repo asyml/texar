@@ -78,8 +78,8 @@ class ModuleBase(object):
             # As a sanity check, we require `hparams` to be `None` in this case.
             if hparams is not None:
                 raise ValueError(
-                    "`self._hparams` is already assigned, but `hparams` "
-                    "argument is not None.")
+                    "`self._hparams` already exists. Argument `hparams` "
+                    "must be set to `None` in this case.")
         self._template = tf.make_template(self._hparams.name, self._build,
                                           create_scope_now_=True)
         self._unique_name = self.variable_scope.name.split("/")[-1]

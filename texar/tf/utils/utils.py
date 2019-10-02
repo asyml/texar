@@ -990,6 +990,9 @@ def truncate_seq_pair(tokens_a: Union[List[int], List[str]],
     longer sequence.
 
     Example:
+
+    .. code-block:: python
+
         tokens_a = [1, 2, 3, 4, 5]
         tokens_b = [6, 7]
         truncate_seq_pair(tokens_a, tokens_b, 5)

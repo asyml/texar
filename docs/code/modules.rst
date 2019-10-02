@@ -238,7 +238,7 @@ Classifiers
     :members:
 
 
-Regressor
+Regressors
 ==========
 
 :hidden:`XLNetRegressor`

@@ -4,7 +4,7 @@
 Data
 *******
 
-Tokenizer
+Tokenizers
 ==========
 
 :hidden:`TokenizerBase`
