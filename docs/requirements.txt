@@ -13,4 +13,4 @@ funcsigs
 packaging
 
 tensorflow >= 1.10.0, < 2.0.0
-tensorflow_probability >= 0.3.0
+tensorflow-probability >= 0.3.0, < 0.8.0
