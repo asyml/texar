@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,19 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Modules of texar library data.
+Tokenizer modules of Texar library.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-# pylint: disable=wildcard-import
-
-from texar.tf.data.data import *
-from texar.tf.data.tokenizers import *
-from texar.tf.data.data_utils import *
-from texar.tf.data.data_decoders import *
-from texar.tf.data.vocabulary import *
-from texar.tf.data.embedding import *
-
+from texar.tf.data.tokenizers.bert_tokenizer import *
+from texar.tf.data.tokenizers.tokenizer_base import *
+from texar.tf.data.tokenizers.xlnet_tokenizer import *

@@ -26,21 +26,23 @@ setuptools.setup(
     platforms='any',
 
     install_requires=[
+        'regex>=2018.01.10',
         'numpy<1.17.0',
         'pathlib>=1.0',
         'pyyaml',
         'requests',
         'funcsigs>=1.0.2',
+        'sentencepiece>=0.1.8',
         'packaging'
     ],
     extras_require={
         'tensorflow-cpu': [
             'tensorflow>=1.10.0,<2.0',
-            'tensorflow-probability>=0.3.0'
+            'tensorflow-probability>=0.3.0,<0.8.0'
         ],
         'tensorflow-gpu': [
             'tensorflow-gpu>=1.10.0,<2.0',
-            'tensorflow-probability>=0.3.0'
+            'tensorflow-probability>=0.3.0,<0.8.0'
         ]
     },
     package_data={

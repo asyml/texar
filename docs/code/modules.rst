@@ -92,6 +92,7 @@ Encoders
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.tf.modules.default_transformer_poswise_net_hparams
 
+
 Decoders
 ========
 
@@ -210,6 +211,63 @@ Decoders
 .. autofunction:: texar.tf.modules.get_helper
 
 
+Classifiers
+============
+
+:hidden:`Conv1DClassifier`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.tf.modules.Conv1DClassifier
+    :members:
+    :inherited-members:
+
+:hidden:`UnidirectionalRNNClassifier`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.tf.modules.UnidirectionalRNNClassifier
+    :members:
+    :inherited-members:
+
+:hidden:`BertClassifier`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.tf.modules.BERTClassifier
+    :members:
+    :inherited-members:
+
+:hidden:`XLNetClassifier`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.tf.modules.XLNetClassifier
+    :members:
+
+
+Regressors
+==========
+
+:hidden:`XLNetRegressor`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.tf.modules.XLNetRegressor
+    :members:
+
+
+Pre-trained
+===========
+
+:hidden:`PretrainedMixin`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.tf.modules.PretrainedMixin
+    :members:
+    :private-members:
+    :exclude-members: _name_to_variable
+
+:hidden:`PretrainedBERTMixin`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.tf.modules.PretrainedBERTMixin
+    :members:
+
+:hidden:`PretrainedXLNetMixin`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.tf.modules.PretrainedXLNetMixin
+    :members:
+
+
 Connectors
 ==========
 
@@ -250,32 +308,6 @@ Connectors
     :inherited-members:
 
 
-Classifiers
-============
-
-:hidden:`Conv1DClassifier`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.tf.modules.Conv1DClassifier
-    :members:
-    :inherited-members:
-
-:hidden:`UnidirectionalRNNClassifier`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.tf.modules.UnidirectionalRNNClassifier
-    :members:
-    :inherited-members:
-
-:hidden:`BERTClassifier`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.tf.modules.BERTClassifier
-    :members:
-    :inherited-members:
-
-:hidden:`XLNetClassifier`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.tf.modules.XLNetClassifier
-    :members:
-
 Networks
 ========
 
@@ -297,33 +329,6 @@ Networks
     :members:
     :inherited-members:
 
-Pre-trained
-===========
-
-:hidden:`PretrainedMixin`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.tf.modules.PretrainedMixin
-    :members:
-    :private-members:
-    :exclude-members: _name_to_variable
-
-:hidden:`PretrainedBERTMixin`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.tf.modules.PretrainedBERTMixin
-    :members:
-
-:hidden:`PretrainedXLNetMixin`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.tf.modules.PretrainedXLNetMixin
-    :members:
-
-Regressor
-==========
-
-:hidden:`XLNetRegressor`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: texar.tf.modules.XLNetRegressor
-    :members:
 
 Memory
 ======

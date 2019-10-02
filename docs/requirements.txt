@@ -3,8 +3,14 @@ sphinx-rtd-theme >= 0.2.4
 sphinxcontrib-napoleon >= 0.6.1
 Pygments >= 2.1.1
 recommonmark
-tensorflow >= 1.10.0
-tensorflow_probability >= 0.3.0
+
+# Tokenizer module dependency
+regex >= 2018.01.10
+sentencepiece >= 0.1.8
+
 pyyaml
 funcsigs
 packaging
+
+tensorflow >= 1.10.0, < 2.0.0
+tensorflow-probability >= 0.3.0, < 0.8.0

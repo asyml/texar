@@ -4,6 +4,24 @@
 Data
 *******
 
+Tokenizers
+==========
+
+:hidden:`TokenizerBase`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.tf.data.TokenizerBase
+    :members:
+
+:hidden:`BERTTokenizer`
+~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.tf.data.BERTTokenizer
+    :members:
+
+:hidden:`XLNetTokenizer`
+~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.tf.data.XLNetTokenizer
+    :members:
+
 Vocabulary
 ==========
 

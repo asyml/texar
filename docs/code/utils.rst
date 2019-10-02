@@ -294,6 +294,9 @@ Misc
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.tf.utils.straight_through
 
+:hidden:`truncate_seq_pair`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: texar.tf.utils.truncate_seq_pair
 
 AverageRecorder
 ==========================
