@@ -15,14 +15,17 @@
 Utils of GPT2 Modules.
 """
 
+import collections
 import json
 import os
-import sys
+import re
 import warnings
+
 from abc import ABC
 from typing import Any, Dict
 
-import torch
+import tensorflow as tf
+import numpy as np
 
 from texar.tf.modules.pretrained.pretrained_base import PretrainedMixin
 
@@ -120,10 +123,9 @@ class PretrainedGPT2Mixin(PretrainedMixin, ABC):
                 "dim": hidden_dim
             }
         }
-        configs.update({
+        configs.update({'encoder': {
             "dim": hidden_dim,
             "num_blocks": config_gpt["n_layer"],
-            "use_gpt_config": True,
             "embedding_dropout": 0,
             "residual_dropout": 0,
             "multihead_attention": {
@@ -135,36 +137,149 @@ class PretrainedGPT2Mixin(PretrainedMixin, ABC):
             "initializer": {
                 "type": "variance_scaling_initializer",
                 "kwargs": {
-                    "factor": 1.0,
-                    "mode": "FAN_AVG",
-                    "uniform": True,
+                        'factor': 1.0,
+                        'mode': 'FAN_AVG',
+                        'uniform': True
                 },
             },
             "poswise_feedforward": {
                 "layers": [
                     {
-                        "type": "Linear",
+                        "type": "Dense",
                         "kwargs": {
-                            "in_features": hidden_dim,
-                            "out_features": hidden_dim * 4,
-                            "bias": True,
+                            'name': 'intermediate',
+                            'activation': 'gelu',
+                            "units": hidden_dim * 4,
+                            "use_bias": True,
                         }
                     },
                     {
-                        "type": "GPTGELU",
-                        "kwargs": {}
-                    },
-                    {
-                        "type": "Linear",
+                        "type": "Dense",
                         "kwargs": {
-                            "in_features": hidden_dim * 4,
-                            "out_features": hidden_dim,
-                            "bias": True,
+                            'activation': None,
+                            'name': 'output',
+                            "units": hidden_dim,
+                            "use_bias": True,
                         }
                     }
                 ],
-                "name": "ffn",
             },
-        })
+        }})
         return configs
 
+    def _init_from_checkpoint(self, pretrained_model_name, cache_dir,
+                              scope_name, load_output_layer=True, **kwargs):
+        r"""Initialize model parameters from weights stored in the pre-trained
+        checkpoint.
+
+        Args:
+            pretrained_model_name (str): Name of the pre-trained model.
+            cache_dir (str): Path to the cache directory.
+            scope_name (str): Scope name of the model.
+            load_output_layer (bool): If `False`, will not load weights of the
+                output layer. Set this argument to `False` when loading weights
+                into a GPT2 encoder. Defaults to `True`.
+        """
+        init_checkpoint = os.path.abspath(os.path.join(cache_dir,
+                                                       'model.ckpt'))
+        ckpt = tf.train.load_checkpoint(init_checkpoint)
+        ckpt_params = {key: ckpt.get_tensor(key) for key in
+                       ckpt.get_variable_to_shape_map().keys()}
+
+        tvars = tf.trainable_variables()
+        name_to_variable = collections.OrderedDict()
+        for var in tvars:
+            name = var.name
+            m = re.match("^(.*):\\d+$", name)
+            if m is not None:
+                name = m.group(1)
+            name_to_variable[name] = var
+
+        global_tensor_map = {
+            'model/wte': scope_name + '/word_embeddings/w',
+            'model/wpe': scope_name + '/position_embeddings/w',
+            'model/ln_f/b': scope_name + '/encoder/LayerNorm/beta',
+            'model/ln_f/g': scope_name + '/encoder/LayerNorm/gamma',
+        }
+
+        layer_tensor_map = {
+            "ln_1/b": scope_name + '/encoder/layer_{}/output/LayerNorm/beta',
+            "ln_1/g": scope_name + '/encoder/layer_{}/output/LayerNorm/gamma',
+            "ln_2/b": scope_name + '/encoder/layer_{}/LayerNorm/beta',
+            "ln_2/g": scope_name + '/encoder/layer_{}/LayerNorm/gamma',
+            "mlp/c_fc/b": scope_name + '/encoder/layer_{}'
+                                       '/ffn/intermediate/bias',
+            "mlp/c_fc/w": scope_name + '/encoder/layer_{}'
+                                       '/ffn/intermediate/kernel',
+            "mlp/c_proj/b": scope_name + '/encoder/layer_{}/ffn/output/bias',
+            "mlp/c_proj/w": scope_name + '/encoder/layer_{}/ffn/output/kernel',
+            "attn/c_attn/b": None,
+            "attn/c_attn/w": None,
+            "attn/c_proj/b": scope_name + '/encoder/layer_{}'
+                                           '/attention/self/output/bias',
+            "attn/c_proj/w": scope_name + '/encoder/layer_{}'
+                                           '/attention/self/output/kernel',
+        }
+
+        for name, array in ckpt_params.items():
+            if name in global_tensor_map:
+                v_name = global_tensor_map[name]
+                pointer = name_to_variable[v_name]
+                pointer._initializer_op = tf.assign(pointer._variable, array)
+            else:
+                name_tmp = name.split("/")
+                layer_no = name_tmp[1][1:]
+                name = "/".join(name_tmp[2:])
+
+                if name in layer_tensor_map:
+                    if name == "attn/c_attn/b":
+                        K = name_to_variable[
+                            scope_name + '/encoder/layer_' + layer_no +
+                            '/attention/self/key/bias']
+                        Q = name_to_variable[
+                            scope_name + '/encoder/layer_' + layer_no +
+                            '/attention/self/query/bias']
+                        V = name_to_variable[
+                            scope_name + '/encoder/layer_' + layer_no +
+                            '/attention/self/value/bias']
+
+                        index_d = array.shape[-1] // 3
+
+                        Q_w = array[:index_d]
+                        K_w = array[index_d: 2 * index_d]
+                        V_w = array[2 * index_d:]
+
+                        K._initializer_op = tf.assign(K._variable, K_w)
+                        Q._initializer_op = tf.assign(Q._variable, Q_w)
+                        V._initializer_op = tf.assign(V._variable, V_w)
+                    elif name == "attn/c_attn/w":
+                        K = name_to_variable[
+                            scope_name + '/encoder/layer_' + layer_no +
+                            '/attention/self/key/kernel']
+                        Q = name_to_variable[
+                            scope_name + '/encoder/layer_' + layer_no +
+                            '/attention/self/query/kernel']
+                        V = name_to_variable[
+                            scope_name + '/encoder/layer_' + layer_no +
+                            '/attention/self/value/kernel']
+
+                        index_d = array.shape[-1] // 3
+
+                        Q_w = np.transpose(array[0, :, :index_d])
+                        K_w = np.transpose(array[0, :, index_d: 2 * index_d])
+                        V_w = np.transpose(array[0, :, 2 * index_d:])
+
+                        K._initializer_op = tf.assign(K._variable, K_w)
+                        Q._initializer_op = tf.assign(Q._variable, Q_w)
+                        V._initializer_op = tf.assign(V._variable, V_w)
+                    elif (name == "attn/c_proj/w" or name == "mlp/c_fc/w" or
+                          name == "mlp/c_proj/w"):
+                        v_name = layer_tensor_map[name]
+                        pointer = name_to_variable[v_name.format(layer_no)]
+                        pointer._initializer_op = tf.assign(pointer._variable,
+                                                            array[0])
+                    else:
+                        v_name = layer_tensor_map[name]
+                        pointer = name_to_variable[v_name.format(layer_no)]
+                        pointer._initializer_op = tf.assign(pointer._variable,
+                                                            array)

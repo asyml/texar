@@ -44,50 +44,47 @@ class GPT2UtilsTest(tf.test.TestCase):
                 'dim': 768
             },
 
-            'dim': 768,
-            'num_blocks': 12,
-            'use_gpt_config': True,
-            'embedding_dropout': 0,
-            'residual_dropout': 0,
-            'multihead_attention': {
-                'use_bias': True,
-                'num_units': 768,
-                'num_heads': 12,
-                'output_dim': 768
-            },
-            'initializer': {
-                'type': 'variance_scaling_initializer',
-                'kwargs': {
-                    'factor': 1.0,
-                    'mode': 'FAN_AVG',
-                    'uniform': True
-                }
-            },
-            'poswise_feedforward': {
-                'layers':
-                    [
+            'encoder': {
+                'dim': 768,
+                'num_blocks': 12,
+                'embedding_dropout': 0,
+                'residual_dropout': 0,
+                'multihead_attention': {
+                    'use_bias': True,
+                    'num_units': 768,
+                    'num_heads': 12,
+                    'output_dim': 768
+                },
+                'initializer': {
+                    'type': 'variance_scaling_initializer',
+                    'kwargs': {
+                        'factor': 1.0,
+                        'mode': 'FAN_AVG',
+                        'uniform': True
+                    }
+                },
+                'poswise_feedforward': {
+                    'layers': [
                         {
-                            'type': 'Linear',
-                            'kwargs': {
-                                'in_features': 768,
-                                'out_features': 3072,
-                                'bias': True
+                            "type": "Dense",
+                            "kwargs": {
+                                'name': 'intermediate',
+                                'activation': 'gelu',
+                                "units": 3072,
+                                "use_bias": True,
                             }
                         },
                         {
-                            'type': 'GPTGELU',
-                            'kwargs': {}
-                        },
-                        {
-                            'type': 'Linear',
-                            'kwargs': {
-                                'in_features': 3072,
-                                'out_features': 768,
-                                'bias': True
+                            "type": "Dense",
+                            "kwargs": {
+                                'activation': None,
+                                'name': 'output',
+                                "units": 768,
+                                "use_bias": True,
                             }
                         }
-                    ],
-                'name': 'ffn'
+                    ]
+                }
             }
         }
 
