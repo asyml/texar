@@ -216,9 +216,9 @@ class PretrainedGPT2Mixin(PretrainedMixin, ABC):
             "attn/c_attn/b": None,
             "attn/c_attn/w": None,
             "attn/c_proj/b": scope_name + '/encoder/layer_{}'
-                                           '/attention/self/output/bias',
+                                          '/attention/self/output/bias',
             "attn/c_proj/w": scope_name + '/encoder/layer_{}'
-                                           '/attention/self/output/kernel',
+                                          '/attention/self/output/kernel',
         }
 
         for name, array in ckpt_params.items():

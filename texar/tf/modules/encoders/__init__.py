@@ -23,6 +23,7 @@ from __future__ import print_function
 
 from texar.tf.modules.encoders.encoder_base import *
 from texar.tf.modules.encoders.bert_encoder import *
+from texar.tf.modules.encoders.gpt2_encoder import *
 from texar.tf.modules.encoders.conv_encoders import *
 from texar.tf.modules.encoders.hierarchical_encoders import *
 from texar.tf.modules.encoders.multihead_attention import *
