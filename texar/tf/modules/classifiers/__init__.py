@@ -24,5 +24,6 @@ from __future__ import print_function
 from texar.tf.modules.classifiers.conv_classifiers import *
 from texar.tf.modules.classifiers.rnn_classifiers import *
 from texar.tf.modules.classifiers.bert_classifier import *
+from texar.tf.modules.classifiers.gpt2_classifier import *
 from texar.tf.modules.classifiers.xlnet_classifier import *
 

@@ -411,8 +411,8 @@ def get_initializer(hparams=None):
     try:
         initializer = utils.check_or_get_instance(hparams["type"], kwargs,
                                                   modules)
-    except TypeError:
-        modules += ['tensorflow.contrib.layers']
+    except (TypeError, ValueError):
+        modules = ['tensorflow.contrib.layers'] + modules
         initializer_fn = utils.get_function(hparams["type"], modules)
         initializer = initializer_fn(**kwargs)
 
