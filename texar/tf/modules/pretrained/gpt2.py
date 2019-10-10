@@ -65,6 +65,7 @@ class PretrainedGPT2Mixin(PretrainedMixin, ABC):
     .. _`Language Models are Unsupervised Multitask Learners`:
         https://openai.com/blog/better-language-models/
     """
+    _IS_DECODE = False
     _MODEL_NAME = "GPT2"
     _MODEL2URL = {
         'gpt2-small': [_GPT2_PATH + f"124M/{file}"
@@ -96,8 +97,7 @@ class PretrainedGPT2Mixin(PretrainedMixin, ABC):
     _MODEL2URL.update(_DEPRECATED_MODEL2URL)
     _MODEL2URL = MyDict(_MODEL2URL)  # type: ignore
 
-    @classmethod
-    def _transform_config(cls, pretrained_model_name: str,
+    def _transform_config(self, pretrained_model_name: str,
                           cache_dir: str) -> Dict[str, Any]:
         info = list(os.walk(cache_dir))
         root, _, files = info[0]
@@ -123,7 +123,9 @@ class PretrainedGPT2Mixin(PretrainedMixin, ABC):
                 "dim": hidden_dim
             }
         }
-        configs.update({'encoder': {
+
+        module_name = "decoder" if self._IS_DECODE else "encoder"
+        configs.update({module_name: {
             "dim": hidden_dim,
             "num_blocks": config_gpt["n_layer"],
             "embedding_dropout": 0,
@@ -195,31 +197,66 @@ class PretrainedGPT2Mixin(PretrainedMixin, ABC):
                 name = m.group(1)
             name_to_variable[name] = var
 
-        global_tensor_map = {
-            'model/wte': scope_name + '/word_embeddings/w',
-            'model/wpe': scope_name + '/position_embeddings/w',
-            'model/ln_f/b': scope_name + '/encoder/LayerNorm/beta',
-            'model/ln_f/g': scope_name + '/encoder/LayerNorm/gamma',
-        }
+        if load_output_layer:
+            global_tensor_map = {
+                'model/wte': scope_name + '/word_embeddings/w',
+                'model/wpe': scope_name + '/position_embeddings/w',
+                'model/ln_f/b': scope_name + '/decoder/beta',
+                'model/ln_f/g': scope_name + '/decoder/gamma',
+            }
 
-        layer_tensor_map = {
-            "ln_1/b": scope_name + '/encoder/layer_{}/output/LayerNorm/beta',
-            "ln_1/g": scope_name + '/encoder/layer_{}/output/LayerNorm/gamma',
-            "ln_2/b": scope_name + '/encoder/layer_{}/LayerNorm/beta',
-            "ln_2/g": scope_name + '/encoder/layer_{}/LayerNorm/gamma',
-            "mlp/c_fc/b": scope_name + '/encoder/layer_{}'
-                                       '/ffn/intermediate/bias',
-            "mlp/c_fc/w": scope_name + '/encoder/layer_{}'
-                                       '/ffn/intermediate/kernel',
-            "mlp/c_proj/b": scope_name + '/encoder/layer_{}/ffn/output/bias',
-            "mlp/c_proj/w": scope_name + '/encoder/layer_{}/ffn/output/kernel',
-            "attn/c_attn/b": None,
-            "attn/c_attn/w": None,
-            "attn/c_proj/b": scope_name + '/encoder/layer_{}'
-                                          '/attention/self/output/bias',
-            "attn/c_proj/w": scope_name + '/encoder/layer_{}'
-                                          '/attention/self/output/kernel',
-        }
+            layer_tensor_map = {
+                "ln_1/b": scope_name + '/layer_{}/beta',
+                "ln_1/g": scope_name + '/layer_{}/gamma',
+                "ln_2/b": scope_name + '/layer_{}/past_poswise_ln/beta',
+                "ln_2/g": scope_name + '/layer_{}/past_poswise_ln/gamma',
+                "mlp/c_fc/b": scope_name + '/decoder/layer_{}'
+                                           '/ffn/intermediate/bias',
+                "mlp/c_fc/w": scope_name + '/decoder/layer_{}'
+                                           '/ffn/intermediate/kernel',
+                "mlp/c_proj/b": scope_name + '/decoder/layer_{}/ffn/output/'
+                                             'bias',
+                "mlp/c_proj/w": scope_name + '/decoder/layer_{}/ffn/output/'
+                                             'kernel',
+                "attn/c_attn/b": None,
+                "attn/c_attn/w": None,
+                "attn/c_proj/b": scope_name + '/decoder/layer_{}'
+                                              '/self_attention/self/output/'
+                                              'bias',
+                "attn/c_proj/w": scope_name + '/decoder/layer_{}'
+                                              '/self_attention/self/output/'
+                                              'kernel',
+            }
+        else:
+            global_tensor_map = {
+                'model/wte': scope_name + '/word_embeddings/w',
+                'model/wpe': scope_name + '/position_embeddings/w',
+                'model/ln_f/b': scope_name + '/encoder/LayerNorm/beta',
+                'model/ln_f/g': scope_name + '/encoder/LayerNorm/gamma',
+            }
+
+            layer_tensor_map = {
+                "ln_1/b": scope_name + '/encoder/layer_{}/LayerNorm/beta',
+                "ln_1/g": scope_name + '/encoder/layer_{}/LayerNorm/gamma',
+                "ln_2/b": scope_name + '/encoder/layer_{}/output/'
+                                       'LayerNorm/beta',
+                "ln_2/g": scope_name + '/encoder/layer_{}/output/'
+                                       'LayerNorm/gamma',
+                "mlp/c_fc/b": scope_name + '/encoder/layer_{}'
+                                           '/ffn/intermediate/bias',
+                "mlp/c_fc/w": scope_name + '/encoder/layer_{}'
+                                           '/ffn/intermediate/kernel',
+                "mlp/c_proj/b": scope_name + '/encoder/layer_{}/ffn/output/'
+                                             'bias',
+                "mlp/c_proj/w": scope_name + '/encoder/layer_{}/ffn/output/'
+                                             'kernel',
+                "attn/c_attn/b": None,
+                "attn/c_attn/w": None,
+                "attn/c_proj/b": scope_name + '/encoder/layer_{}'
+                                              '/attention/self/output/bias',
+                "attn/c_proj/w": scope_name + '/encoder/layer_{}'
+                                              '/attention/self/output/kernel',
+            }
 
         for name, array in ckpt_params.items():
             if name in global_tensor_map:
@@ -233,15 +270,26 @@ class PretrainedGPT2Mixin(PretrainedMixin, ABC):
 
                 if name in layer_tensor_map:
                     if name == "attn/c_attn/b":
-                        K = name_to_variable[
-                            scope_name + '/encoder/layer_' + layer_no +
-                            '/attention/self/key/bias']
-                        Q = name_to_variable[
-                            scope_name + '/encoder/layer_' + layer_no +
-                            '/attention/self/query/bias']
-                        V = name_to_variable[
-                            scope_name + '/encoder/layer_' + layer_no +
-                            '/attention/self/value/bias']
+                        if load_output_layer:
+                            K = name_to_variable[
+                                scope_name + '/decoder/layer_' + layer_no +
+                                '/self_attention/self/key/bias']
+                            Q = name_to_variable[
+                                scope_name + '/decoder/layer_' + layer_no +
+                                '/self_attention/self/query/bias']
+                            V = name_to_variable[
+                                scope_name + '/decoder/layer_' + layer_no +
+                                '/self_attention/self/value/bias']
+                        else:
+                            K = name_to_variable[
+                                scope_name + '/encoder/layer_' + layer_no +
+                                '/attention/self/key/bias']
+                            Q = name_to_variable[
+                                scope_name + '/encoder/layer_' + layer_no +
+                                '/attention/self/query/bias']
+                            V = name_to_variable[
+                                scope_name + '/encoder/layer_' + layer_no +
+                                '/attention/self/value/bias']
 
                         index_d = array.shape[-1] // 3
 
@@ -253,15 +301,26 @@ class PretrainedGPT2Mixin(PretrainedMixin, ABC):
                         Q._initializer_op = tf.assign(Q._variable, Q_w)
                         V._initializer_op = tf.assign(V._variable, V_w)
                     elif name == "attn/c_attn/w":
-                        K = name_to_variable[
-                            scope_name + '/encoder/layer_' + layer_no +
-                            '/attention/self/key/kernel']
-                        Q = name_to_variable[
-                            scope_name + '/encoder/layer_' + layer_no +
-                            '/attention/self/query/kernel']
-                        V = name_to_variable[
-                            scope_name + '/encoder/layer_' + layer_no +
-                            '/attention/self/value/kernel']
+                        if load_output_layer:
+                            K = name_to_variable[
+                                scope_name + '/decoder/layer_' + layer_no +
+                                '/self_attention/self/key/kernel']
+                            Q = name_to_variable[
+                                scope_name + '/decoder/layer_' + layer_no +
+                                '/self_attention/self/query/kernel']
+                            V = name_to_variable[
+                                scope_name + '/decoder/layer_' + layer_no +
+                                '/self_attention/self/value/kernel']
+                        else:
+                            K = name_to_variable[
+                                scope_name + '/encoder/layer_' + layer_no +
+                                '/attention/self/key/kernel']
+                            Q = name_to_variable[
+                                scope_name + '/encoder/layer_' + layer_no +
+                                '/attention/self/query/kernel']
+                            V = name_to_variable[
+                                scope_name + '/encoder/layer_' + layer_no +
+                                '/attention/self/value/kernel']
 
                         index_d = array.shape[-1] // 3
 
