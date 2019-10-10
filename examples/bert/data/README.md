@@ -1,6 +1,6 @@
 This gives the explanation on data preparation.
 
-When you run `data/download_glue_data.py` in the parent directory, by default, all datasets in GLEU will be stored here. For more information on GLUE, please refer to 
+When you run `data/download_glue_data.py` in the parent directory, by default, all datasets in the General Language Understanding Evaluation (GLUE) will be stored here. For more information on GLUE, please refer to 
 [gluebenchmark](https://gluebenchmark.com/tasks)
 
 Here we show the data format of the SSN-2 dataset.
@@ -26,4 +26,4 @@ index	sentence
 * The test data is in a different format: the first column is a unique index for each test example, the second column is the space-seperated string.
 
 
-In [`bert/utils/data_utils.py`](https://github.com/asyml/texar/blob/master/examples/bert/utils/data_utils.py), there are 5 types of `Data Processor` Implemented. You can run `python bert_classifier_main.py` and specify `--task` to run on different datasets.
+In [`bert/utils/data_utils.py`](https://github.com/asyml/texar/blob/master/examples/bert/utils/data_utils.py), there are 5 types of `Data Processor` implemented. You can run `python bert_classifier_main.py` and specify `--task` to run on different datasets.
