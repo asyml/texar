@@ -36,11 +36,8 @@ flags.DEFINE_string(
     "{'COLA', 'MNLI', 'MRPC', 'XNLI', 'SST'}.")
 flags.DEFINE_string(
     "pretrained_model_name", 'bert-base-uncased',
-    "The name of a pre-trained model to load selected in the list of: "
-    "`bert-base-uncased`, `bert-large-uncased`, "
-    "`bert-base-cased`, `bert-large-cased`, "
-    "`bert-base-multilingual-uncased`, `bert-base-multilingual-cased`, "
-    "and `bert-base-chinese`.")
+    "The name of pre-trained BERT model. See the doc of "
+    "`texar.tf.modules.PretrainedBERTMixin for all supported models.`")
 flags.DEFINE_integer(
     "max_seq_length", 128,
     "The maximum length of sequence, longer sequence will be trimmed.")
@@ -53,7 +50,7 @@ flags.DEFINE_string(
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
-def modify_config_data(max_seq_length, num_train_data, num_classes):
+def _modify_config_data(max_seq_length, num_train_data, num_classes):
     # Modify the data configuration file
     config_data_exists = os.path.isfile('./config_data.py')
     if config_data_exists:
@@ -141,7 +138,8 @@ def main():
         data_dir=data_dir,
         max_seq_length=FLAGS.max_seq_length,
         output_dir=tfrecord_output_dir)
-    modify_config_data(FLAGS.max_seq_length, num_train_data, num_classes)
+
+    _modify_config_data(FLAGS.max_seq_length, num_train_data, num_classes)
 
 
 if __name__ == "__main__":
