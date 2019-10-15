@@ -10,68 +10,204 @@
 
 .hero .inner,
 .logos img,
-.apps .app-row .app-cell>div,
+.apps .app-row .app-cell > div,
 .apps .app-row .btn {
-    position: relative;
-    top: 50%;
-    -webkit-transform: translateY(-50%);
-    -ms-transform: translateY(-50%);
-    transform: translateY(-50%)
+  position: relative;
+  top: 50%;
+  -webkit-transform: translateY(-50%);
+  -ms-transform: translateY(-50%);
+  transform: translateY(-50%);
 }
 .hero {
-    background-image: url(../assets/1.jpg);
-    background-repeat: no-repeat;
-    background-size: cover;
-    background-position: center;
-    background-color: #333;
-    height: 500px;
-    position: relative;
-    margin-bottom: 50px;
+  background-image: url(../assets/1.jpg);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  background-color: #333;
+  height: 500px;
+  position: relative;
+  margin-bottom: 50px;
 }
 .hero .container {
-    height: 100%;
-    text-align: center
+  height: 100%;
+  text-align: center;
 }
 .hero h1 {
-    color: #fff;
-    font-size: 40px;
-    letter-spacing: -0.01em;
-    line-height: 1.22em;
-    margin-bottom: 30px
+  color: #fff;
+  font-size: 120px;
+  letter-spacing: 0.05em;
+  line-height: 1.22em;
+  margin-bottom: 30px;
+  font-family: Garamond;
+  font-weight:bold;
+  /*font-family: monospace;*/
 }
 .hero h2 {
-    color: #fff;
-    font-size: 18px;
-    line-height: 1.55em;
-    letter-spacing: 0em;
-    margin-bottom: 25px
+  color: #fff;
+  font-size: 18px;
+  line-height: 1.55em;
+  letter-spacing: 0em;
+  margin-bottom: 25px;
 }
 @media screen and (max-width: 400px) {
-    .hero h1 {
-        font-size: 30px
-    }
-    .hero h2 {
-        font-size: 15px
-    }
-    .hero .btn {
-        font-size: 13px
-    }
+  .hero h1 {
+    font-size: 30px;
+  }
+  .hero h2 {
+    font-size: 15px;
+  }
+  .hero .btn {
+    font-size: 13px;
+  }
 }
 .hero .btn {
-    font-weight: 600;
-    font-size: 18px;
-    height: 48px;
-    line-height: 46px;
-    padding: 0 45px;
-    border: 2px solid #fff;
-    margin-top: 10px;
-    color: #fff;
-    -webkit-border-radius: 24px;
-    -moz-border-radius: 24px;
-    -ms-border-radius: 24px;
-    border-radius: 24px
+  font-weight: 600;
+  font-size: 18px;
+  height: 48px;
+  line-height: 46px;
+  padding: 0 45px;
+  border: 2px solid #fff;
+  margin-top: 10px;
+  color: #fff;
+  -webkit-border-radius: 24px;
+  -moz-border-radius: 24px;
+  -ms-border-radius: 24px;
+  border-radius: 24px;
 }
 .hero .btn:hover {
-    background-color: #fff;
-    color: #672FFF 
+  background-color: #fff;
+  color: #672fff;
+}
+
+.marketing-buttons a {
+  width: 120px;
+  text-align: left;
+}
+.marketing-buttons a img {
+  height: 25px;
+  margin-right: 4px;
+  vertical-align: bottom;
+}
+
+.install-selector {
+  padding-top: 4px;
+}
+
+.install-selector .line {
+  display: flex;
+  padding-bottom: 4px;
+}
+
+.install-selector .line-name {
+  display: flex;
+  width: 130px;
+  padding: 8px;
+  align-items: center;
+  color: #555;
+}
+
+.install-selector .line-options {
+  display: flex;
+  flex: 1;
+}
+
+.install-selector .line-option {
+  display: inline-block;
+  padding: 8px 16px;
+  flex: 1;
+  background: #f8f8f8;
+  margin-right: 4px;
+}
+
+.install-selector .line-option.selected {
+  background: #6700ff;
+  color: white;
+}
+
+.install-selector .line-option:hover {
+  background: #6700ff;
+  color: white;
+  cursor: pointer;
+}
+
+.install-selector .line-run-command {
+  display: flex;
+  align-items: center;
+  padding: 24px 16px;
+  background: #f8f8f8;
+  flex: 1;
+}
+
+.texar-subcategory-img {
+  position: absolute;
+  top: 26px;
+  right: 56px;
+  height: 45px;
+}
+
+.card-button {
+  margin-top: 5px;
+  margin-bottom: 30px;
+}
+
+.card-button a {
+  font-weight: 600;
+  font-size: 16px;
+  height: 48px;
+  width: 180px;
+  line-height: 46px;
+  padding: 10px 5px;
+  /* border: 2px solid #fff; */
+  border: 2px solid #4169E1/*#6700ff*/;
+  /* color: #fff; */
+  color: black;
+  border-radius: 24px;
+  /* background: #6700ff; */
+  background: #fff;
+  text-decoration: none;
+  display: inline-block;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-button {
+  display: inline-block;
+}
+
+.card-button a:hover,
+.card-button a:active {
+  color: white;
+}
+
+.featurette-heading {
+  margin: 30px 0;
+}
+
+.short-description {
+  padding-top: 10px;
+}
+
+.coming-soon-description {
+  padding-top: 10px;
+  padding-bottom: 36px;
+}
+
+.card-button:hover .card-description {
+  display: block;
+}
+
+.card-description {
+  text-align: left;
+  position: absolute;
+  left: 15px;
+  top: 0;
+  width: calc(100% - 30px);
+  height: 100%;
+  font-size: 16px;
+  line-height: 20px;
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.9);
+  display: none;
 }

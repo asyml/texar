@@ -114,7 +114,7 @@ body {
 .threecard {
   box-shadow: 0 0 2px 0 rgba(0,0,0,0.14), 0 2px 2px 0 rgba(0,0,0,0.12), 0 1px 3px 0 rgba(0,0,0,0.20);
   padding-top: 30px;
-  padding-bottom: 60px;
+  padding-bottom: 10px;
   border-radius: 5px;
 }
 
