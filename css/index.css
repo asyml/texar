@@ -39,7 +39,7 @@
   line-height: 1.22em;
   margin-bottom: 30px;
   font-family: Garamond;
-  font-weight:bold;
+  font-weight: bold;
   /*font-family: monospace;*/
 }
 .hero h2 {
@@ -132,10 +132,11 @@
 
 .install-selector .line-run-command {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   padding: 24px 16px;
   background: #f8f8f8;
   flex: 1;
+  flex-direction: column;
 }
 
 .texar-subcategory-img {
@@ -152,13 +153,13 @@
 
 .card-button a {
   font-weight: 600;
-  font-size: 16px;
+  font-size: 14px;
   height: 48px;
-  width: 180px;
+  width: 160px;
   line-height: 46px;
   padding: 10px 5px;
   /* border: 2px solid #fff; */
-  border: 2px solid #4169E1/*#6700ff*/;
+  border: 2px solid #4169e1 /*#6700ff*/;
   /* color: #fff; */
   color: black;
   border-radius: 24px;
@@ -176,11 +177,6 @@
   display: inline-block;
 }
 
-.card-button a:hover,
-.card-button a:active {
-  color: white;
-}
-
 .featurette-heading {
   margin: 30px 0;
 }
@@ -194,7 +190,7 @@
   padding-bottom: 36px;
 }
 
-.card-button:hover .card-description {
+.card-button.show-desc .card-description {
   display: block;
 }
 
@@ -208,6 +204,51 @@
   font-size: 16px;
   line-height: 20px;
   padding: 30px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgb(255, 255, 255);
   display: none;
+}
+
+.card-desc-close {
+  font-size: 25px;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  height: 30px;
+  width: 30px;
+  display: flex;
+  cursor: pointer;
+  border-radius: 15px;
+  justify-content: center;
+  align-items: center;
+}
+
+.card-desc-close:hover {
+  background: #eee;
+}
+
+.line-options {
+  position: relative;
+}
+
+.copy-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  border: 0;
+  font-size: 12px;
+  background: none;
+  padding: 4px 8px;
+  outline: none;
+}
+
+.copy-button:hover {
+  background: #eee;
+}
+
+.copy-button svg {
+  width: 15px;
+  height: 15px;
+  margin-right: 4px;
 }

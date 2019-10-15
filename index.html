@@ -8,7 +8,7 @@
     <meta name="description" content="" />
     <meta name="author" content="" />
     <link rel="icon" href="favicon.ico" />
-    <title>Texar - Toolkit for Text Generation and Beyond</title>
+    <title>ASYML - Machine Learning as Machine Assembly</title>
     <link href="css/bootstrap.css" rel="stylesheet" />
     <link href="css/ie10-viewport-bug-workaround.css" rel="stylesheet" />
     <script src="js/ie-emulation-modes-warning.js"></script>
@@ -50,7 +50,7 @@
                 </li>
 
                 <li>
-                  <a href="https://medium.com/@texar">
+                  <a href="https://medium.com/@texar" target="_blank">
                     Blog
                     <svg width="13px" height="13px" viewbox="0 0 512 512">
                       <title>Redirect</title>
@@ -136,6 +136,7 @@
                 Texar-TF: About
               </a>
               <div class="card-description">
+                <span class="card-desc-close">&times;</span>
                 Texar is a highly modularized and customizable toolkit to support a broad set of machine
                 learning (ML), especially natural language processing (NLP) and text generation tasks.</br></br>
 
@@ -216,6 +217,7 @@
                 Texar-PyTorch: About
               </a>
               <div class="card-description">
+                <span class="card-desc-close">&times;</span>
                   Texar-PyTorch is the PyTorch equivalence of Texar-TF, with mostly the <b>same</b> 
                   interfaces. </br></br> 
                   
@@ -292,6 +294,7 @@
                 Forte: About
               </a>
               <div class="card-description">
+                <span class="card-desc-close">&times;</span>
                   Forte is a high-level and customizable toolkit for building arbitrary complex NLP pipelines. 
                   With Forte, you can:
                   <ul>
@@ -461,6 +464,10 @@
                 <div class="line-run-command">
                   pip3 install texar 
                 </div>
+                <button class="copy-button">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M10 19h10v1h-10v-1zm14-13v18h-18v-6h-6v-18h18v6h6zm-18 0h10v-4h-14v14h4v-10zm16 2h-1.93c-.669 0-1.293.334-1.664.891l-1.406 2.109h-3.93l-1.406-2.109c-.371-.557-.995-.891-1.664-.891h-2v14h14v-14zm-12 6h10v-1h-10v1zm0 3h10v-1h-10v1z"/></svg>
+                  <span>Copy</span>
+                </button>
               </div>
             </div>
           </div>
@@ -584,7 +591,7 @@
     <!-- installer options -->
     <script>
       const availableInstallOptions = {
-        <!-- tf, stable -->
+        // tf, stable
         'texar-tf,stable,pip,python3.6':
           'pip3 install texar',
         'texar-tf,stable,pip,python3.7':
@@ -594,10 +601,10 @@
         'texar-tf,stable,conda,python3.7':
           'Coming soon ...',
         'texar-tf,stable,source,python3.6':
-          '# Download from https://github.com/asyml/texar/releases',
+          '# Download from <a href="https://github.com/asyml/texar/releases">https://github.com/asyml/texar/releases</a>',
         'texar-tf,stable,source,python3.7':
-          '# Download from https://github.com/asyml/texar/releases',
-        <!-- tf, nightly -->
+          '# Download from <a href="https://github.com/asyml/texar/releases">https://github.com/asyml/texar/releases</a>',
+        // tf, nightly
         'texar-tf,nightly,pip,python3.6':
           'pip3 install git+https://github.com/asyml/texar#egg=texar',
         'texar-tf,nightly,pip,python3.7':
@@ -607,10 +614,10 @@
         'texar-tf,nightly,conda,python3.7':
           'Coming soon ...',
         'texar-tf,nightly,source,python3.6':
-          '# Follow instructions at this URL: https://github.com/asyml/texar#installation',
+          '# Follow instructions at this URL: <a href="https://github.com/asyml/texar#installation">https://github.com/asyml/texar#installation</a>',
         'texar-tf,nightly,source,python3.7':
-          '# Follow instructions at this URL: https://github.com/asyml/texar#installation',
-        <!-- pytorch, stable -->
+          '# Follow instructions at this URL: <a href="https://github.com/asyml/texar#installation">https://github.com/asyml/texar#installation</a>',
+        // pytorch, stable
         'texar-pytorch,stable,pip,python3.6':
           'Coming soon ...',
         'texar-pytorch,stable,pip,python3.7':
@@ -620,10 +627,10 @@
         'texar-pytorch,stable,conda,python3.7':
           'Coming soon ...',
         'texar-pytorch,stable,source,python3.6':
-          '# Download from https://github.com/asyml/texar-pytorch/releases',
+          '# Download from <a href="https://github.com/asyml/texar-pytorch/releases">https://github.com/asyml/texar-pytorch/releases</a>',
         'texar-pytorch,stable,source,python3.7':
-          '# Download from https://github.com/asyml/texar-pytorch/releases',
-        <!-- pytorch, nightly -->
+          '# Download from <a href="https://github.com/asyml/texar-pytorch/releases">https://github.com/asyml/texar-pytorch/releases</a>',
+        // pytorch, nightly
         'texar-pytorch,nightly,pip,python3.6':
           'pip3 install git+https://github.com/asyml/texar-pytorch#egg=texar',
         'texar-pytorch,nightly,pip,python3.7':
@@ -631,12 +638,12 @@
         'texar-pytorch,nightly,conda,python3.6':
           'Coming soon ...',
         'texar-pytorch,nightly,conda,python3.7':
-          'Coming soon ...',
+          'Coming soon ...', 
         'texar-pytorch,nightly,source,python3.6':
-          '# Follow instructions at this URL: https://github.com/asyml/texar-pytorch#installation',
+          '# Follow instructions at this URL: <a href="https://github.com/asyml/texar-pytorch#installation">https://github.com/asyml/texar-pytorch#installation</a>',
         'texar-pytorch,nightly,source,python3.7':
-          '# Follow instructions at this URL: https://github.com/asyml/texar-pytorch#installation',
-        <!-- forte, stable -->
+          '# Follow instructions at this URL: <a href="https://github.com/asyml/texar-pytorch#installation">https://github.com/asyml/texar-pytorch#installation</a>',
+        // forte, stable
         'forte,stable,pip,python3.6':
           'Coming soon ...',
         'forte,stable,pip,python3.7':
@@ -649,7 +656,7 @@
           'Coming soon ...',
         'forte,stable,source,python3.7':
           'Coming soon ...',
-        <!-- forte, nightly -->
+        // forte, nightly
         'forte,nightly,pip,python3.6':
           'Coming soon ...',
         'forte,nightly,pip,python3.7':
@@ -686,10 +693,30 @@
         const installCmd = availableInstallOptions[installOptionKey];
 
         if (installCmd) {
-          $('.line-run-command').text(installCmd);
+          $('.line-run-command').html(installCmd);
         } else {
           $('.line-run-command').text('Not Available');
         }
+      });
+
+      $('.copy-button').on('click', function() {
+        const cmd = $('.line-run-command').text().trim();
+        navigator.clipboard.writeText(cmd).then(function() {
+          $('.copy-button span').text('Copied!')
+          setTimeout(() => {
+            $('.copy-button span').text('Copy')
+          }, 2000)
+        }, function() {
+          console.error('failed to copy to clipboard')
+        });
+      })
+
+      $('.card-button [href="#"]').on('click', function(e) {
+        e.preventDefault();
+        $(this).closest('.card-button').addClass('show-desc')
+      })
+      $('.card-desc-close').on('click', function(e) {
+        $(this).closest('.card-button').removeClass('show-desc')
       });
     </script>
   </body>
