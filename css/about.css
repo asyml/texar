@@ -14,3 +14,11 @@
     font-size: 15px;
     margin-bottom: 5px;
 }
+
+.paperlist ul {
+  padding: 20px;
+  font-size: 16px;
+}
+.paperlist li {
+  margin: 10px;
+}

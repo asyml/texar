@@ -34,11 +34,13 @@
 }
 .hero h1 {
   color: #fff;
-  font-size: 60px;
-  letter-spacing: -0.01em;
+  font-size: 120px;
+  letter-spacing: 0.05em;
   line-height: 1.22em;
   margin-bottom: 30px;
-  font-family: monospace;
+  font-family: Garamond;
+  font-weight:bold;
+  /*font-family: monospace;*/
 }
 .hero h2 {
   color: #fff;
@@ -82,7 +84,7 @@
   text-align: left;
 }
 .marketing-buttons a img {
-  height: 20px;
+  height: 25px;
   margin-right: 4px;
   vertical-align: bottom;
 }
@@ -138,25 +140,30 @@
 
 .texar-subcategory-img {
   position: absolute;
-  top: 16px;
-  right: 36px;
+  top: 26px;
+  right: 56px;
   height: 45px;
 }
 
 .card-button {
-  margin: 20px 0;
+  margin-top: 5px;
+  margin-bottom: 30px;
 }
 
 .card-button a {
   font-weight: 600;
-  font-size: 18px;
+  font-size: 16px;
   height: 48px;
+  width: 180px;
   line-height: 46px;
-  padding: 10px 45px;
-  border: 2px solid #fff;
-  color: #fff;
+  padding: 10px 5px;
+  /* border: 2px solid #fff; */
+  border: 2px solid #4169E1/*#6700ff*/;
+  /* color: #fff; */
+  color: black;
   border-radius: 24px;
-  background: #6700ff;
+  /* background: #6700ff; */
+  background: #fff;
   text-decoration: none;
   display: inline-block;
 
@@ -176,6 +183,15 @@
 
 .featurette-heading {
   margin: 30px 0;
+}
+
+.short-description {
+  padding-top: 10px;
+}
+
+.coming-soon-description {
+  padding-top: 10px;
+  padding-bottom: 36px;
 }
 
 .card-button:hover .card-description {
