@@ -36,13 +36,13 @@ Run the following command to this end:
 ```
     python prepare_data.py --task=MRPC
     [--max_seq_length=128]
-    [--vocab_file=bert_pretrained_models/uncased_L-12_H-768_A-12/vocab.txt]
+    [--pretrained_model_name=bert-base-uncased]
     [--tfrecord_output_dir=data/MRPC] 
 ```
 
 - `--task`: Specifies the dataset name to preprocess. BERT provides default support for `{'CoLA', 'MNLI', 'MRPC', 'XNLI', 'SST'}` data.
 - `--max_seq_length`: The maxium length of sequence. This includes BERT special tokens that will be automatically added. Longer sequence will be trimmed. 
-- `--vocab_file`: Path to a vocabary file used for tokenization.
+- `--pretrained_model_name`: The name of pre-trained BERT model. See the [doc](https://texar.readthedocs.io/en/latest/code/modules.html#texar.tf.modules.PretrainedBERTMixin) for all supported models.
 - `--tfrecord_output_dir`: The output path where the resulting TFRecord files will be put in. Be default, it is set to `data/{task}` where `{task}` is the (upper-cased) dataset name specified in `--task` above. So in the above cmd, the TFRecord files are output to `data/MRPC`.
 
 **Outcome of the Preprocessing**:
@@ -75,7 +75,7 @@ Here:
 - `config_downstream`: Configuration of the downstream part. In this example, [`config_classifier`](./config_classifier.py) configures the classification layer and the optimization method.
 - `config_data`: The data configuration. See the default [`config_data.py`](./config_data.py) for example. Make sure to specify `num_classes`, `num_train_data`, `max_seq_length`, and `tfrecord_data_dir` as used or output in the above [data preparation](#prepare-data) step.
 - `output_dir`: The output path where checkpoints and TensorBoard summaries are saved.
-- `pretrained_model_name`: The name of a pre-trained model to load selected in the list of: `bert-base-uncased`, `bert-large-uncased`, `bert-base-cased`, `bert-large-cased`, `bert-base-multilingual-uncased`, `bert-base-multilingual-cased`, and `bert-base-chinese`. 
+- `pretrained_model_name`: The name of pre-trained BERT model. See the [doc](https://texar.readthedocs.io/en/latest/code/modules.html#texar.tf.modules.PretrainedBERTMixin) for all supported models.
 
 
 For **Multi-GPU training** on one or multiple machines, you may first install the prerequisite OpenMPI and Hovorod packages, as detailed in the [distributed_gpu](https://github.com/asyml/texar/tree/master/examples/distributed_gpu) example. 
