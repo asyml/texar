@@ -15,10 +15,6 @@
 Various position embedders.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import math
 
 import tensorflow as tf
@@ -38,27 +34,27 @@ __all__ = [
 
 
 class PositionEmbedder(EmbedderBase):
-    """Simple position embedder that maps position indexes into embeddings
+    r"""Simple position embedder that maps position indexes into embeddings
     via lookup.
 
     Either :attr:`init_value` or :attr:`position_size` is required. If both are
-    given, there must be `init_value.shape[0]==position_size`.
+    given, there must be ``init_value.shape[0]==position_size``.
 
     Args:
-        init_value (optional): A `Tensor` or numpy array that contains the
+        init_value (optional): A Tensor or numpy array that contains the
             initial value of embeddings. It is typically of shape
-            `[position_size, embedding dim]`
+            ``[position_size, embedding dim]``
 
             If `None`, embedding is initialized as specified in
-            :attr:`hparams["initializer"]`. Otherwise, the
-            :attr:`"initializer"` and :attr:`"dim"`
+            ``hparams["initializer"]``. Otherwise, the
+            ``"initializer"`` and ``"dim"``
             hyperparameters in :attr:`hparams` are ignored.
         position_size (int, optional): The number of possible positions, e.g.,
             the maximum sequence length. Required if :attr:`init_value` is
             not given.
         hparams (dict, optional): Embedder hyperparameters. If it is not
             specified, the default hyperparameter setting is used. See
-            :attr:`default_hparams` for the sturcture and default values.
+            :attr:`default_hparams` for the structure and default values.
 
 
     .. document private functions
@@ -90,7 +86,7 @@ class PositionEmbedder(EmbedderBase):
 
     @staticmethod
     def default_hparams():
-        """Returns a dictionary of hyperparameters with default values.
+        r"""Returns a dictionary of hyperparameters with default values.
 
         .. code-block:: python
 
@@ -124,23 +120,22 @@ class PositionEmbedder(EmbedderBase):
         return hparams
 
     def _build(self, positions=None, sequence_length=None, mode=None, **kwargs):
-        """Embeds the positions.
+        r"""Embeds the positions.
 
         Either :attr:`positions` or :attr:`sequence_length` is required:
 
-            - If both are given, :attr:`sequence_length` is used to mask out \
-            embeddings of those time steps beyond the respective sequence \
-            lengths.
-            - If only :attr:`sequence_length` is given, then positions \
-            from `0` to `sequence_length-1` are embedded.
+            - If both are given, :attr:`sequence_length` is used to mask out
+              embeddings of those time steps beyond the respective sequence
+              lengths.
+            - If only :attr:`sequence_length` is given, then positions
+              from 0 to ``sequence_length-1`` are embedded.
 
         Args:
             positions (optional): An integer tensor containing the position
                 ids to embed.
             sequence_length (optional): An integer tensor of shape
-                `[batch_size]`. Time steps beyond
-                the respective sequence lengths will have zero-valued
-                embeddings.
+                ``[batch_size]``. Time steps beyond the respective sequence
+                lengths will have zero-valued embeddings.
             mode (optional): A tensor taking value in
                 :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`, including
                 `TRAIN`, `EVAL`, and `PREDICT`. If `None`, dropout will be
@@ -218,25 +213,25 @@ class PositionEmbedder(EmbedderBase):
 
     @property
     def embedding(self):
-        """The embedding tensor.
+        r"""The embedding tensor.
         """
         return self._embedding
 
     @property
     def dim(self):
-        """The embedding dimension.
+        r"""The embedding dimension.
         """
         return self._dim
 
     @property
     def position_size(self):
-        """The position size, i.e., maximum number of positions.
+        r"""The position size, i.e., maximum number of positions.
         """
         return self._position_size
 
 
 class SinusoidsPositionEmbedder(EmbedderBase):
-    """Sinusoid position embedder that maps position indexes into embeddings
+    r"""Sinusoid position embedder that maps position indexes into embeddings
     via sinusoid calculation. This module does not have trainable parameters.
     Used in, e.g., Transformer models
     `(Vaswani et al.) "Attention Is All You Need"`.
@@ -247,19 +242,19 @@ class SinusoidsPositionEmbedder(EmbedderBase):
 
     Timing signals should be added to some precursors of both the query
     and the memory inputs to attention.
-    The use of relative position is possible because sin(x+y) and
-    cos(x+y) can be experessed in terms of y, sin(x) and cos(x).
+    The use of relative position is possible because `sin(x+y)` and
+    `cos(x+y)` can be expressed in terms of `y`, `sin(x)`, and `cos(x)`.
     In particular, we use a geometric sequence of timescales starting with
     min_timescale and ending with max_timescale.  The number of different
-    timescales is equal to dim / 2. For each timescale, we
-    generate the two sinusoidal signals sin(timestep/timescale) and
-    cos(timestep/timescale).  All of these sinusoids are concatenated in
+    timescales is equal to ``dim / 2``. For each timescale, we
+    generate the two sinusoidal signals `sin(timestep/timescale)` and
+    `cos(timestep/timescale)`.  All of these sinusoids are concatenated in
     the dim dimension.
 
     Args:
         position_size (int): The number of possible positions, e.g., the maximum
-            sequence length. Set `position_size=None` and
-            `hparams['cache_embeddings']=False` to enable infinite large or
+            sequence length. Set ``position_size=None`` and
+            ``hparams['cache_embeddings']=False`` to enable infinite large or
             negative position indexes.
 
     .. document private functions
@@ -299,10 +294,10 @@ class SinusoidsPositionEmbedder(EmbedderBase):
 
     @staticmethod
     def default_hparams():
-        """Returns a dictionary of hyperparameters with default values
+        r"""Returns a dictionary of hyperparameters with default values
         We use a geometric sequence of timescales starting with
         min_timescale and ending with max_timescale. The number of different
-        timescales is equal to dim/2.
+        timescales is equal to ``dim/2``.
 
         .. code-block:: python
 
@@ -347,27 +342,26 @@ class SinusoidsPositionEmbedder(EmbedderBase):
         return signal
 
     def _build(self, positions=None, sequence_length=None):
-        """Embeds.
+        r"""Embeds.
         Either :attr:`positions` or :attr:`sequence_length` is required:
 
-            - If both are given, :attr:`sequence_length` is used to mask out \
-            embeddings of those time steps beyond the respective sequence \
-            lengths.
-            - If only :attr:`sequence_length` is given, then positions \
-            from `0` to `sequence_length-1` are embedded.
+        - If both are given, :attr:`sequence_length` is used to mask out
+          embeddings of those time steps beyond the respective sequence \
+          lengths.
+        - If only :attr:`sequence_length` is given, then positions
+          from `0` to `sequence_length-1` are embedded.
 
         Args:
             positions (optional): An integer tensor containing the position
                 ids to embed.
             sequence_length (optional): An integer tensor of shape
-                `[batch_size]`. Time steps beyond
+                ``[batch_size]``. Time steps beyond
                 the respective sequence lengths will have zero-valued
                 embeddings.
 
         Returns:
-            A `Tensor` of shape `[batch_size, max_time, dim]`.
+            A Tensor of shape ``[batch_size, max_time, dim]``.
         """
-
         if positions is None:
             if sequence_length is None:
                 raise ValueError(

@@ -367,16 +367,18 @@ def flatten(tensor, preserve_dims, flattened_dim=None):
 
 
 def shape_list(x):
-    """Returns **static** shape of the input Tensor whenever possible.
+    r"""Returns **static** shape of the input Tensor whenever possible.
 
     Args:
         x: A Tensor.
 
     Returns:
-        - If the rank of :attr:`x` is unknown, returns the dynamic shape: \
-        `tf.shape(x)`
-        - Otherwise, returns a list of dims, each of which is either an `int` \
-        whenever it can be statically determined, or a scalar Tensor otherwise.
+        - If the rank of `x` is unknown, returns the dynamic shape
+          ``tf.shape(x)``
+
+        - Otherwise, returns a list of dims, each of which is either an `int`
+          whenever it can be statically determined, or a scalar Tensor
+          otherwise.
     """
     x = tf.convert_to_tensor(x)
     # If unknown rank, return dynamic shape
