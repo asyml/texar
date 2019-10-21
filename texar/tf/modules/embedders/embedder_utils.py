@@ -14,10 +14,6 @@
 """Utils of embedder.
 """
 
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
-
 import tensorflow as tf
 
 from texar.tf.hyperparams import HParams
@@ -29,8 +25,9 @@ __all__ = [
     "soft_embedding_lookup"
 ]
 
+
 def default_embedding_hparams():
-    """Returns a `dict` of hyperparameters and default values of a embedder.
+    r"""Returns a ``dict`` of hyperparameters and default values of a embedder.
 
      See :meth:`~texar.tf.modules.WordEmbedder.default_hparams` for details.
 
@@ -54,14 +51,14 @@ def default_embedding_hparams():
 
         Here:
 
-        "name": str
+        `"name"`: str
             Name of the embedding variable.
 
-        "dim": int or list
+        `"dim"`: int or list
             Embedding dimension. Can be a list of integers to yield embeddings
             with dimensionality > 1.
 
-        "initializer": dict or None
+        `"initializer"`: dict or None
             Hyperparameters of the initializer for the embedding values. An
             example is as
 
@@ -79,37 +76,37 @@ def default_embedding_hparams():
             which corresponds to :tf_main:`tf.random_uniform_initializer
             <random_uniform_initializer>`, and includes:
 
-            "type": str or initializer instance
+            `"type"`: str or initializer instance
                 Name, full path, or instance of the initializer class; Or name
                 or full path to a function that returns the initializer class.
                 The class or function can be
 
-                - Built-in initializer defined in \
-                  :tf_main:`tf.initializers <initializers>`, e.g., \
-                  :tf_main:`random_uniform <random_uniform_initializer>` \
-                  (a.k.a :class:`tf.random_uniform_initializer`), or \
-                  in :mod:`tf`, e.g., :tf_main:`glorot_uniform_initializer \
-                  <glorot_uniform_initializer>`, or in \
+                - Built-in initializer defined in
+                  :tf_main:`tf.initializers <initializers>`, e.g.,
+                  :tf_main:`random_uniform <random_uniform_initializer>`
+                  (a.k.a :class:`tf.random_uniform_initializer`), or
+                  in :mod:`tf`, e.g., :tf_main:`glorot_uniform_initializer
+                  <glorot_uniform_initializer>`, or in
                   :tf_main:`tf.keras.initializers <keras/initializers>`.
                 - User-defined initializer in :mod:`texar.tf.custom`.
-                - External initializer. Must provide the full path, \
+                - External initializer. Must provide the full path,
                   e.g., :attr:`"my_module.MyInitializer"`, or the instance.
 
-            "kwargs": dict
+            `"kwargs"`: dict
                 A dictionary of arguments for constructor of the
                 initializer class or for the function. An initializer is
-                created by `initialzier = initializer_class_or_fn(**kwargs)`
+                created by ``initialzier = initializer_class_or_fn(**kwargs)``
                 where :attr:`initializer_class_or_fn` is specified in
                 :attr:`"type"`.
                 Ignored if :attr:`"type"` is an initializer instance.
 
-        "regularizer": dict
+        `"regularizer"`: dict
             Hyperparameters of the regularizer for the embedding values. The
             regularizer must be an instance of
             the base :tf_main:`Regularizer <keras/regularizers/Regularizer>`
             class. The hyperparameters include:
 
-            "type": str or Regularizer instance
+            `"type"`: str or regularizer instance
                 Name, full path, or instance of the regularizer class. The
                 class can be
 
@@ -119,38 +116,39 @@ def default_embedding_hparams():
                 - User-defined regularizer in :mod:`texar.tf.custom`. The
                   regularizer class should inherit the base class
                   :tf_main:`Regularizer <keras/regularizers/Regularizer>`.
-                - External regularizer. Must provide the full path, \
+                - External regularizer. Must provide the full path,
                   e.g., :attr:`"my_module.MyRegularizer"`, or the instance.
 
-            "kwargs": dict
+            `"kwargs"`: dict
                 A dictionary of arguments for constructor of the
                 regularizer class. A regularizer is created by
                 calling `regularizer_class(**kwargs)` where
                 :attr:`regularizer_class` is specified in :attr:`"type"`.
-                Ignored if :attr:`"type"` is a Regularizer instance.
+                Ignored if :attr:`"type"` is a regularizer instance.
 
             The default value corresponds to
             :tf_main:`L1L2 <keras/regularizers/L1L2>` with `(l1=0, l2=0)`,
             which disables regularization.
 
-        "dropout_rate": float
+        `"dropout_rate"`: float
             The dropout rate between 0 and 1. E.g., `dropout_rate=0.1` would
             drop out 10% of the embedding.
 
-        "dropout_strategy": str
+        `"dropout_strategy"`: str
             The dropout strategy. Can be one of the following
 
-            - 'element': The regular strategy that drops individual elements \
+            - ``"element"``: The regular strategy that drops individual elements
               in the embedding vectors.
-            - 'item': Drops individual items (e.g., words) entirely. E.g., for \
-              the word sequence 'the simpler the better', the strategy can \
-              yield '_ simpler the better', where the first `the` is dropped.
-            - 'item_type': Drops item types (e.g., word types). E.g., for the \
-              above sequence, the strategy can yield '_ simpler _ better', \
-              where the word type 'the' is dropped. The dropout will never \
-              yield '_ simpler the better' as in the 'item' strategy.
+            - ``"item"``: Drops individual items (e.g., words) entirely. For
+              example, for the word sequence "the simpler the better", the
+              strategy can yield "_ simpler the better", where the first "the"
+              is dropped.
+            - ``"item_type"``: Drops item types (e.g., word types). For example,
+              for the above sequence, the strategy can yield "_ simpler _
+              better", where the word type "the" is dropped. The dropout will
+              never yield "_ simpler the better" as in the ``"item"`` strategy.
 
-        "trainable": bool
+        `"trainable"`: bool
             Whether the embedding is trainable.
     """
     return {
@@ -169,7 +167,7 @@ def get_embedding(hparams=None,
                   init_value=None,
                   num_embeds=None,
                   variable_scope='Embedding'):
-    """Creates embedding variable if not exists.
+    r"""Creates embedding variable if not exists.
 
     Args:
         hparams (dict or HParams, optional): Embedding hyperparameters. Missing
@@ -190,8 +188,7 @@ def get_embedding(hparams=None,
 
     Returns:
         Variable or Tensor: A 2D `Variable` or `Tensor` of the same shape with
-        :attr:`init_value` or of the shape
-        :attr:`[num_embeds, hparams["dim"]]`.
+        :attr:`init_value` or of the shape ``[num_embeds, hparams["dim"]]``.
     """
     with tf.variable_scope(variable_scope):
         if hparams is None or isinstance(hparams, dict):
@@ -216,23 +213,24 @@ def get_embedding(hparams=None,
 
         return embedding
 
+
 def soft_embedding_lookup(embedding, soft_ids):
-    """Transforms soft ids (e.g., probability distribution over ids) into
+    r"""Transforms soft ids (e.g., probability distribution over ids) into
     embeddings, by mixing the embedding vectors with the soft weights.
 
     Args:
-        embedding: A Tensor of shape `[num_classes] + embedding-dim` containing
-            the embedding vectors. Embedding can have dimensionality > 1, i.e.,
-            :attr:`embedding` can be of shape
-            `[num_classes, emb_dim_1, emb_dim_2, ...]`
+        embedding: A Tensor of shape ``[num_classes] + embedding-dim``
+            containing the embedding vectors. Embedding can have
+            dimensionality > 1, i.e., :attr:`embedding` can be of shape
+            ``[num_classes, emb_dim_1, emb_dim_2, ...]``
         soft_ids: A Tensor of weights (probabilities) used to mix the
             embedding vectors.
 
     Returns:
-        A Tensor of shape `shape(soft_ids)[:-1] + shape(embedding)[1:]`. For
-        example, if `shape(soft_ids) = [batch_size, max_time, vocab_size]`
-        and `shape(embedding) = [vocab_size, emb_dim]`, then the return tensor
-        has shape `[batch_size, max_time, emb_dim]`.
+        A Tensor of shape ``shape(soft_ids)[:-1] + shape(embedding)[1:]``. For
+        example, if ``shape(soft_ids) = [batch_size, max_time, vocab_size]``
+        and ``shape(embedding) = [vocab_size, emb_dim]``, then the return tensor
+        has shape ``[batch_size, max_time, emb_dim]``.
 
     Example::
 
