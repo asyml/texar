@@ -19,6 +19,7 @@ import tensorflow as tf
 
 from texar.tf.module_base import ModuleBase
 from texar.tf.modules.embedders import embedder_utils
+from texar.tf.utils.shapes import shape_list
 
 # pylint: disable=invalid-name
 
@@ -51,9 +52,9 @@ class EmbedderBase(ModuleBase):
         if hparams.trainable:
             self._add_trainable_variable(self._embedding)
 
-        self._num_embeds = self._embedding.get_shape().as_list()[0]
+        self._num_embeds = shape_list(self._embedding)[0]
 
-        self._dim = self._embedding.get_shape().as_list()[1:]
+        self._dim = shape_list(self._embedding)[1:]
         self._dim_rank = len(self._dim)
         if self._dim_rank == 1:
             self._dim = self._dim[0]
@@ -74,7 +75,7 @@ class EmbedderBase(ModuleBase):
             elif st == 'item':
                 assert dropout_input is not None
                 assert ids_rank is not None
-                noise_shape = (dropout_input.get_shape().as_list()[:ids_rank]
+                noise_shape = (shape_list(dropout_input)[:ids_rank]
                                + [1] * self._dim_rank)
             elif st == 'item_type':
                 noise_shape = [None] + [1] * self._dim_rank  # type: ignore
