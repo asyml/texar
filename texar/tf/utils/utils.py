@@ -41,12 +41,12 @@ from texar.tf.utils.dtypes import is_str, is_callable, compat_as_text, \
 
 MAX_SEQ_LENGTH = np.iinfo(np.int32).max
 
-## Some modules cannot be imported directly,
-## e.g., `import tensorflow.train` fails.
-## Such modules are treated in a special way in utils like `get_class` as below.
-#_unimportable_modules = {
+# Some modules cannot be imported directly,
+# e.g., `import tensorflow.train` fails.
+# Such modules are treated in a special way in utils like `get_class` as below.
+# _unimportable_modules = {
 #    'tensorflow.train', 'tensorflow.keras.regularizers'
-#}
+# }
 
 __all__ = [
     "_inspect_getargspec",
@@ -89,6 +89,7 @@ def _expand_name(name):
     """
     return name
 
+
 def _inspect_getargspec(fn):
     """Returns `inspect.getargspec(fn)` for Py2 and `inspect.getfullargspec(fn)`
     for Py3
@@ -100,6 +101,7 @@ def _inspect_getargspec(fn):
             return inspect.getargspec(fn)
         except TypeError:
             return inspect.getargspec(fn.__call__)
+
 
 def get_args(fn):
     """Gets the arguments of a function.
@@ -120,6 +122,7 @@ def get_args(fn):
         args = list(args)
 
     return args
+
 
 def get_default_arg_values(fn):
     """Gets the arguments and respective default values of a function.
@@ -171,6 +174,7 @@ def check_or_get_class(class_or_name, module_path=None, superclass=None):
                     superclass, class_))
     return class_
 
+
 def get_class(class_name, module_paths=None):
     """Returns the class based on class name.
 
@@ -191,13 +195,13 @@ def get_class(class_name, module_paths=None):
     class_ = locate(class_name)
     if (class_ is None) and (module_paths is not None):
         for module_path in module_paths:
-            #if module_path in _unimportable_modules:
+            # if module_path in _unimportable_modules:
             # Special treatment for unimportable modules by directly
             # accessing the class
             class_ = locate('.'.join([module_path, class_name]))
             if class_ is not None:
                 break
-            #else:
+            # else:
             #    module = importlib.import_module(module_path)
             #    if class_name in dir(module):
             #        class_ = getattr(module, class_name)
@@ -208,6 +212,7 @@ def get_class(class_name, module_paths=None):
             "Class not found in {}: {}".format(module_paths, class_name))
 
     return class_
+
 
 def check_or_get_instance(ins_or_class_or_name, kwargs, module_paths=None,
                           classtype=None):
@@ -247,6 +252,7 @@ def check_or_get_instance(ins_or_class_or_name, kwargs, module_paths=None,
                 "An instance of {} is expected. Got: {}".format(classtype, ret))
     return ret
 
+
 def get_instance(class_or_name, kwargs, module_paths=None):
     """Creates a class instance.
 
@@ -285,6 +291,7 @@ def get_instance(class_or_name, kwargs, module_paths=None):
                 (class_.__module__, class_.__name__, key, list(class_args)))
 
     return class_(**kwargs)
+
 
 def check_or_get_instance_with_redundant_kwargs(
         ins_or_class_or_name, kwargs, module_paths=None, classtype=None):
@@ -326,6 +333,7 @@ def check_or_get_instance_with_redundant_kwargs(
                 "An instance of {} is expected. Got: {}".format(classtype, ret))
     return ret
 
+
 def get_instance_with_redundant_kwargs(
         class_name, kwargs, module_paths=None):
     """Creates a class instance.
@@ -363,6 +371,7 @@ def get_instance_with_redundant_kwargs(
 
     return class_(**selected_kwargs)
 
+
 def get_function(fn_or_name, module_paths=None):
     """Returns the function of specified name and module.
 
@@ -383,12 +392,12 @@ def get_function(fn_or_name, module_paths=None):
     fn = locate(fn_or_name)
     if (fn is None) and (module_paths is not None):
         for module_path in module_paths:
-            #if module_path in _unimportable_modules:
+            # if module_path in _unimportable_modules:
             fn = locate('.'.join([module_path, fn_or_name]))
             if fn is not None:
                 break
-            #module = importlib.import_module(module_path)
-            #if fn_name in dir(module):
+            # module = importlib.import_module(module_path)
+            # if fn_name in dir(module):
             #    fn = getattr(module, fn_name)
             #    break
 
@@ -457,6 +466,7 @@ def get_instance_kwargs(kwargs, hparams):
     kwargs_.update(kwargs or {})
     return kwargs_
 
+
 def dict_patch(tgt_dict, src_dict):
     """Recursively patch :attr:`tgt_dict` by adding items from :attr:`src_dict`
     that do not exist in :attr:`tgt_dict`.
@@ -481,6 +491,7 @@ def dict_patch(tgt_dict, src_dict):
             tgt_dict[key] = dict_patch(tgt_dict[key], value)
     return tgt_dict
 
+
 def dict_lookup(dict_, keys, default=None):
     """Looks up :attr:`keys` in the dict, returns the corresponding values.
 
@@ -500,6 +511,7 @@ def dict_lookup(dict_, keys, default=None):
         TypeError: If key is not in :attr:`dict_` and :attr:`default` is `None`.
     """
     return np.vectorize(lambda x: dict_.get(x, default))(keys)
+
 
 def dict_fetch(src_dict, tgt_dict_or_keys):
     """Fetches a sub dict of :attr:`src_dict` with the keys in
@@ -529,6 +541,7 @@ def dict_fetch(src_dict, tgt_dict_or_keys):
 
     return {k: src_dict[k] for k in keys if k in src_dict}
 
+
 def dict_pop(dict_, pop_keys, default=None):
     """Removes keys from a dict and returns their values.
 
@@ -546,6 +559,7 @@ def dict_pop(dict_, pop_keys, default=None):
         pop_keys = [pop_keys]
     ret_dict = {key: dict_.pop(key, default) for key in pop_keys}
     return ret_dict
+
 
 def flatten_dict(dict_, parent_key="", sep="."):
     """Flattens a nested dictionary. Namedtuples within the dictionary are
@@ -576,6 +590,7 @@ def flatten_dict(dict_, parent_key="", sep="."):
             items.append((key_, value))
     return dict(items)
 
+
 def default_str(str_, default_str):
     """Returns :attr:`str_` if it is not `None` or empty, otherwise returns
     :attr:`default_str`.
@@ -591,6 +606,7 @@ def default_str(str_, default_str):
         return str_
     else:
         return default_str
+
 
 def uniquify_str(str_, str_set):
     """Uniquifies :attr:`str_` if :attr:`str_` is included in :attr:`str_set`.
@@ -619,7 +635,7 @@ def uniquify_str(str_, str_set):
     if str_ not in str_set:
         return str_
     else:
-        for i in range(1, len(str_set)+1):
+        for i in range(1, len(str_set) + 1):
             unique_str = str_ + "_%d" % i
             if unique_str not in str_set:
                 return unique_str
@@ -646,7 +662,7 @@ def strip_token(str_, token, is_token_list=False, compat=True):
     :attr:`str_` are separated with whitespace character.
 
     Args:
-        str\_: A `str`, or an `n`-D numpy array or (possibly nested)
+        str_: A `str`, or an `n`-D numpy array or (possibly nested)
             list of `str`.
         token (str): The token to strip, e.g., the '<PAD>' token defined in
             :class:`~texar.tf.data.SpecialTokens`.PAD
@@ -677,7 +693,7 @@ def strip_token(str_, token, is_token_list=False, compat=True):
                 return ' '.join(s.strip().split())
             else:
                 return ' '.join(s.strip().split()).\
-                    replace(' '+token, '').replace(token+' ', '')
+                    replace(' ' + token, '').replace(token + ' ', '')
         else:
             s_ = [_recur_strip(si) for si in s]
             return _maybe_list_to_array(s_, s)
@@ -697,6 +713,7 @@ def strip_token(str_, token, is_token_list=False, compat=True):
 
     return strp_str
 
+
 def strip_eos(str_, eos_token='<EOS>', is_token_list=False, compat=True):
     """Remove the EOS token and all subsequent tokens.
 
@@ -704,7 +721,7 @@ def strip_eos(str_, eos_token='<EOS>', is_token_list=False, compat=True):
     :attr:`str_` are separated with whitespace character.
 
     Args:
-        str\_: A `str`, or an `n`-D numpy array or (possibly nested)
+        str_: A `str`, or an `n`-D numpy array or (possibly nested)
             list of `str`.
         eos_token (str): The EOS token. Default is '<EOS>' as defined in
             :class:`~texar.tf.data.SpecialTokens`.EOS
@@ -742,7 +759,10 @@ def strip_eos(str_, eos_token='<EOS>', is_token_list=False, compat=True):
         strp_str = _recur_split(strp_str, str_)
 
     return strp_str
+
+
 _strip_eos_ = strip_eos
+
 
 def strip_bos(str_, bos_token='<BOS>', is_token_list=False, compat=True):
     """Remove all leading BOS tokens.
@@ -754,7 +774,7 @@ def strip_bos(str_, bos_token='<BOS>', is_token_list=False, compat=True):
     :attr:`str_` are separated with whitespace character.
 
     Args:
-        str\_: A `str`, or an `n`-D numpy array or (possibly nested)
+        str_: A `str`, or an `n`-D numpy array or (possibly nested)
             list of `str`.
         bos_token (str): The BOS token. Default is '<BOS>' as defined in
             :class:`~texar.tf.data.SpecialTokens`.BOS
@@ -772,7 +792,7 @@ def strip_bos(str_, bos_token='<BOS>', is_token_list=False, compat=True):
             if bos_token == '':
                 return ' '.join(s.strip().split())
             else:
-                return ' '.join(s.strip().split()).replace(bos_token+' ', '')
+                return ' '.join(s.strip().split()).replace(bos_token + ' ', '')
         else:
             s_ = [_recur_strip(si) for si in s]
             return _maybe_list_to_array(s_, s)
@@ -791,7 +811,10 @@ def strip_bos(str_, bos_token='<BOS>', is_token_list=False, compat=True):
         strp_str = _recur_split(strp_str, str_)
 
     return strp_str
+
+
 _strip_bos_ = strip_bos
+
 
 def strip_special_tokens(str_, strip_pad='<PAD>', strip_bos='<BOS>',
                          strip_eos='<EOS>', is_token_list=False, compat=True):
@@ -808,7 +831,7 @@ def strip_special_tokens(str_, strip_pad='<PAD>', strip_bos='<BOS>',
     :func:`strip_bos`
 
     Args:
-        str\_: A `str`, or an `n`-D numpy array or (possibly nested)
+        str_: A `str`, or an `n`-D numpy array or (possibly nested)
             list of `str`.
         strip_pad (str): The PAD token to strip from the strings (i.e., remove
             the leading and trailing PAD tokens of the strings). Default
@@ -856,6 +879,7 @@ def strip_special_tokens(str_, strip_pad='<PAD>', strip_bos='<BOS>',
 
     return s
 
+
 def str_join(tokens, sep=' ', compat=True):
     """Concats :attr:`tokens` along the last dimension with intervening
     occurrences of :attr:`sep`.
@@ -884,6 +908,7 @@ def str_join(tokens, sep=' ', compat=True):
     str_ = _recur_join(tokens)
 
     return str_
+
 
 def map_ids_to_strs(ids, vocab, join=True, strip_pad='<PAD>',
                     strip_bos='<BOS>', strip_eos='<EOS>', compat=True):
@@ -949,6 +974,7 @@ def map_ids_to_strs(ids, vocab, join=True, strip_pad='<PAD>',
     else:
         return _recur_split(str_, ids)
 
+
 def ceildiv(a, b):
     """Divides with ceil.
 
@@ -962,6 +988,7 @@ def ceildiv(a, b):
         int: Ceil quotient.
     """
     return -(-a // b)
+
 
 def straight_through(fw_tensor, bw_tensor):
     """Use a tensor in forward pass while backpropagating gradient to another.

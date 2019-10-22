@@ -24,9 +24,9 @@ __all__ = [
     "TexarError"
 ]
 
+
 class TexarError(Exception):
     """
     Texar error.
     """
     pass
-
