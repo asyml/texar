@@ -32,6 +32,7 @@ __all__ = [
     "DataBase"
 ]
 
+
 class DataBase(object):
     """Base class inheritted by all data classes.
     """
@@ -177,10 +178,10 @@ class DataBase(object):
                     "Dataset size (%d) <= shuffle_buffer_size (%d). Set "
                     "shuffle_and_shard to `False`." %
                     (dataset_size, shuffle_buffer_size))
-            #TODO(zhiting): Use a different seed?
+            # TODO(zhiting): Use a different seed?
             dataset = dataset.apply(dsutils.random_shard_dataset(
                 dataset_size, shuffle_buffer_size, hparams["seed"]))
-            dataset = dataset.shuffle(shuffle_buffer_size + 16, # add a margin
+            dataset = dataset.shuffle(shuffle_buffer_size + 16,  # add a margin
                                       seed=hparams["seed"])
         elif hparams["shuffle"]:
             if shuffle_buffer_size is None:
@@ -214,4 +215,3 @@ class DataBase(object):
         """Name of the module.
         """
         return self._hparams.name
-

@@ -21,6 +21,7 @@ from texar.tf.data import SpecialTokens
 # pylint: disable=too-many-locals, too-many-branches, protected-access
 # pylint: disable=invalid-name
 
+
 class PairedTextDataTest(tf.test.TestCase):
     """Tests paired text data class.
     """
@@ -147,7 +148,7 @@ class PairedTextDataTest(tf.test.TestCase):
     def test_other_transformations(self):
         """Tests use of other transformations
         """
-        def _transform(x, data_specs): # pylint: disable=invalid-name
+        def _transform(x, data_specs):  # pylint: disable=invalid-name
             x[data_specs.decoder.length_tensor_name] += 1
             return x
 
@@ -167,7 +168,7 @@ class PairedTextDataTest(tf.test.TestCase):
              "length_filter_mode": "discard"})
         self._run_and_test(hparams, discard_src=True)
 
-    #def test_sequence_length(self):
+    # def test_sequence_length(self):
     #    hparams = {
     #        "batch_size": 64,
     #        "num_epochs": 1,
@@ -206,6 +207,7 @@ class PairedTextDataTest(tf.test.TestCase):
     #                self.assertEqual(tgt.shape[1], np.max(tgt_len))
     #            except tf.errors.OutOfRangeError:
     #                break
+
 
 if __name__ == "__main__":
     tf.test.main()

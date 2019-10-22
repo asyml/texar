@@ -33,6 +33,7 @@ __all__ = [
     "Embedding"
 ]
 
+
 def load_word2vec(filename, vocab, word_vecs):
     """Loads embeddings in the word2vec binary format which has a header line
     containing the number of vectors and their dimensionality (two integers),
@@ -72,6 +73,7 @@ def load_word2vec(filename, vocab, word_vecs):
             else:
                 fin.read(binary_len)
     return word_vecs
+
 
 def load_glove(filename, vocab, word_vecs):
     """Loads embeddings in the glove text format in which each line is

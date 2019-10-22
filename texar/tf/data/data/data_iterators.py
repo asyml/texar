@@ -33,6 +33,7 @@ __all__ = [
     "TrainTestFeedableDataIterator"
 ]
 
+
 class DataIteratorBase(object):
     """Base class for all data iterator classes to inherit. A data iterator
     is a wrapper of :tf_main:`tf.data.Iterator <data/Iterator>`, and can
@@ -65,7 +66,7 @@ class DataIteratorBase(object):
                 raise ValueError("Names of datasets must be unique.")
 
         _datasets = {}
-        for k, v in datasets.items(): # pylint: disable=invalid-name
+        for k, v in datasets.items():  # pylint: disable=invalid-name
             _datasets[k] = v if isinstance(v, tf.data.Dataset) else v.dataset
         self._datasets = _datasets
 
@@ -166,6 +167,7 @@ class DataIterator(DataIteratorBase):
         """
         return self._iterator.get_next()
 
+
 class TrainTestDataIterator(DataIterator):
     """Data iterator that alternatives between train, val, and test datasets.
 
@@ -225,7 +227,6 @@ class TrainTestDataIterator(DataIterator):
 
         DataIterator.__init__(self, dataset_dict)
 
-
     def switch_to_train_data(self, sess):
         """Starts to iterate through training data (from the beginning).
 
@@ -255,6 +256,7 @@ class TrainTestDataIterator(DataIterator):
         if self._test_name not in self._datasets:
             raise ValueError("Test data not provided.")
         self.switch_to_dataset(sess, self._test_name)
+
 
 class FeedableDataIterator(DataIteratorBase):
     """Data iterator that iterates through **multiple** datasets and switches
@@ -406,6 +408,7 @@ class FeedableDataIterator(DataIteratorBase):
         fetch data from the dataset.
         """
         return self._handle
+
 
 class TrainTestFeedableDataIterator(FeedableDataIterator):
     """Feedable data iterator that alternatives between train, val, and test

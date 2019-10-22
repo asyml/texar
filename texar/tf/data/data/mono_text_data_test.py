@@ -20,6 +20,7 @@ import texar.tf as tx
 # pylint: disable=too-many-locals, protected-access, too-many-branches
 # pylint: disable=invalid-name
 
+
 class MonoTextDataTest(tf.test.TestCase):
     """Tests text data class.
     """
@@ -199,7 +200,7 @@ class MonoTextDataTest(tf.test.TestCase):
     def test_other_transformations(self):
         """Tests use of other transformations
         """
-        def _transform(x, data_specs): # pylint: disable=invalid-name
+        def _transform(x, data_specs):  # pylint: disable=invalid-name
             x[data_specs.decoder.length_tensor_name] += 1
             return x
 
@@ -266,11 +267,11 @@ class VarUttMonoTextDataTest(tf.test.TestCase):
 
         text = [
             'This is a dialog 1 sentence . ||| This is a dialog 1 sentence . '
-            '||| This is yet another dialog 1 sentence .', #//
+            '||| This is yet another dialog 1 sentence .',  # //
             'This is a dialog 2 sentence . ||| '
-            'This is also a dialog 2 sentence . ', #//
-            '词 词 词 ||| word', #//
-            'This This', #//
+            'This is also a dialog 2 sentence . ',  # //
+            '词 词 词 ||| word',  # //
+            'This This',  # //
             '1 1 1 ||| 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 ||| 1 1 1 ||| 2'
         ]
         text_file = tempfile.NamedTemporaryFile()
@@ -348,6 +349,7 @@ class VarUttMonoTextDataTest(tf.test.TestCase):
                                    "length_filter_mode": "truncate",
                                    "pad_to_max_seq_length": True})
         self._run_and_test(hparams)
+
 
 if __name__ == "__main__":
     tf.test.main()

@@ -20,6 +20,7 @@ import texar.tf as tx
 
 # pylint: disable=too-many-locals, too-many-branches, protected-access
 
+
 class MultiAlignedDataTest(tf.test.TestCase):
     """Tests multi aligned text data class.
     """
@@ -95,31 +96,31 @@ class MultiAlignedDataTest(tf.test.TestCase):
             "num_epochs": 123,
             "batch_size": 23,
             "datasets": [
-                { # dataset 0
+                {  # dataset 0
                     "files": [self._text_0_file.name],
                     "vocab_file": self._vocab_file.name,
                     "bos_token": "",
                     "data_name": "0"
                 },
-                { # dataset 1
+                {  # dataset 1
                     "files": [self._text_1_file.name],
                     "vocab_share_with": 0,
                     "eos_token": "<TARGET_EOS>",
                     "data_name": "1"
                 },
-                { # dataset 2
+                {  # dataset 2
                     "files": [self._text_2_file.name],
                     "vocab_file": self._vocab_file.name,
                     "processing_share_with": 0,
                     "variable_utterance": True,
                     "data_name": "2"
                 },
-                { # dataset 3
+                {  # dataset 3
                     "files": self._int_3_file.name,
                     "data_type": "int",
                     "data_name": "label"
                 },
-                { # dataset 4
+                {  # dataset 4
                     "files": self._tfrecord_file.name,
                     "feature_original_types": {
                         'number1': ['tf.int64', 'FixedLenFeature'],
@@ -172,8 +173,8 @@ class MultiAlignedDataTest(tf.test.TestCase):
 
                     # pylint: disable=invalid-name
                     for t0, t1, t2, i3, n1, n2, t4 in zip(
-                        text_0, text_1, text_2, int_3, 
-                        number_1, number_2, text_3):
+                        text_0, text_1, text_2, int_3,
+                            number_1, number_2, text_3):
 
                         np.testing.assert_array_equal(
                             t0[:2], t1[1:3])
@@ -229,7 +230,6 @@ class MultiAlignedDataTest(tf.test.TestCase):
             {"max_seq_length": 2,
              "length_filter_mode": "truncate"})
         self._run_and_test(hparams, discard_did=0)
-
 
 
 if __name__ == "__main__":

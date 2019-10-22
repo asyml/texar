@@ -47,7 +47,8 @@ __all__ = [
     "MultiAlignedData"
 ]
 
-class _DataTypes(object): # pylint: disable=no-init, too-few-public-methods
+
+class _DataTypes(object):  # pylint: disable=no-init, too-few-public-methods
     """Enumeration of data types.
     """
     TEXT = "text"
@@ -55,12 +56,18 @@ class _DataTypes(object): # pylint: disable=no-init, too-few-public-methods
     FLOAT = "float"
     TF_RECORD = "tf_record"
 
+
 def _is_text_data(data_type):
     return data_type == _DataTypes.TEXT
+
+
 def _is_scalar_data(data_type):
     return data_type == _DataTypes.INT or data_type == _DataTypes.FLOAT
+
+
 def _is_tfrecord_data(data_type):
     return data_type == _DataTypes.TF_RECORD
+
 
 def _default_dataset_hparams(data_type=None):
     """Returns hyperparameters of a dataset with default values.
@@ -83,6 +90,7 @@ def _default_dataset_hparams(data_type=None):
             "data_type": _DataTypes.TF_RECORD,
         })
     return hparams
+
 
 class MultiAlignedData(TextDataBase):
     """Data consisting of multiple aligned parts.
@@ -125,7 +133,6 @@ class MultiAlignedData(TextDataBase):
             #    'y_length': [5],
             #    'z': [1000],
             # }
-            
             ...
 
             hparams={
@@ -396,8 +403,8 @@ class MultiAlignedData(TextDataBase):
                 raise ValueError("Unknown data type: %s" % hparams_i.data_type)
         return tf.data.Dataset.zip(tuple(datasets))
 
-    #@staticmethod
-    #def _get_name_prefix(dataset_hparams):
+    # @staticmethod
+    # def _get_name_prefix(dataset_hparams):
     #    def _dtype_conflict(dtype_1, dtype_2):
     #        conflict = ((dtype_1 == dtype_2) or
     #                    (dtype_1 in {_DataTypes.INT, _DataTypes.FLOAT} and
@@ -424,7 +431,7 @@ class MultiAlignedData(TextDataBase):
     def _get_name_prefix(dataset_hparams):
         name_prefix = [hpms["data_name"] for hpms in dataset_hparams]
         for i in range(1, len(name_prefix)):
-            if name_prefix[i] in name_prefix[:i-1]:
+            if name_prefix[i] in name_prefix[:i - 1]:
                 raise ValueError("Data name duplicated: %s" % name_prefix[i])
         return name_prefix
 
@@ -484,7 +491,7 @@ class MultiAlignedData(TextDataBase):
     def _process_dataset(self, dataset, hparams, data_spec):
         name_prefix = self._get_name_prefix(hparams["datasets"])
         # pylint: disable=attribute-defined-outside-init
-        self._name_to_id = {v:k for k, v in enumerate(name_prefix)}
+        self._name_to_id = {v: k for k, v in enumerate(name_prefix)}
 
         tran_fn, data_spec = self._make_processor(
             hparams["datasets"], data_spec, name_prefix)
@@ -577,7 +584,6 @@ class MultiAlignedData(TextDataBase):
             dataset = dataset.prefetch(self._hparams.prefetch_buffer_size)
 
         self._dataset = dataset
-
 
     def list_items(self):
         """Returns the list of item names that the data can produce.

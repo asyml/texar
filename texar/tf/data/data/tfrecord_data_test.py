@@ -75,6 +75,7 @@ class TFRecordDataTest(tf.test.TestCase):
         }
         _image_options = {}
         self._unconvert_features = ['height', 'width', 'label']
+
         def _image_example(image_string, image_shape, label):
             """Create data example with image
             """
@@ -101,8 +102,8 @@ class TFRecordDataTest(tf.test.TestCase):
             'variable2': [],
         }
         _toy_image_labels_valid = {
-            cat_in_snow : 0,
-            williamsburg_bridge : 1,
+            cat_in_snow: 0,
+            williamsburg_bridge: 1,
         }
         _toy_image_shapes = {
             cat_in_snow: (213, 320, 3),
@@ -122,7 +123,7 @@ class TFRecordDataTest(tf.test.TestCase):
                 tf_example = _image_example(image_data, image_shape, label)
                 writer.write(tf_example.SerializeToString())
 
-                #_construct_dataset_valid("", shape, label)
+                # _construct_dataset_valid("", shape, label)
                 single_data = {
                     'height': image_shape[0],
                     'width': image_shape[1],
@@ -164,6 +165,7 @@ class TFRecordDataTest(tf.test.TestCase):
             sess.run(tf.tables_initializer())
             sess.run(iterator.initializer)
             i = 0
+
             def _prod(lst):
                 res = 1
                 for i in lst:
@@ -241,6 +243,7 @@ class TFRecordDataTest(tf.test.TestCase):
         }
         hparams["dataset"].update({"image_options": _image_options})
         self._run_and_test(hparams)
+
 
 if __name__ == "__main__":
     tf.test.main()

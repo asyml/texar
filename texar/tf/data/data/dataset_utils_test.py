@@ -30,8 +30,10 @@ class TransformationTest(tf.test.TestCase):
 
         def _tran_a(data):
             return data + 100
+
         def _tran_b(data):
             return data + 1000
+
         def _tran_c(data):
             return data + 10000
 
@@ -52,6 +54,6 @@ class TransformationTest(tf.test.TestCase):
             data_ = [elem_ - 11100 for elem_ in data_]
             self.assertEqual(data_, original_data.tolist())
 
+
 if __name__ == "__main__":
     tf.test.main()
-

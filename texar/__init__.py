@@ -40,7 +40,6 @@ else:
     ]
     __import_star_modules__ = ["module_base", "hyperparams", "context"]
 
-
     def _import_all():
         import warnings
 
@@ -71,7 +70,6 @@ else:
             module = importlib.import_module("." + module_name, package="texar.tf")
             globals()[module_name] = module
 
-
     class _DummyTexarBaseModule:
         # Credit: https://stackoverflow.com/a/7668273/4909228
         def __getattr__(self, name):
@@ -91,7 +89,6 @@ else:
             sys.modules[__name__] = __module__
             _import_all()
             return globals()[name]
-
 
     # Save `texar` module as `__module__`, ans replace the system-wide
     # registered module with our dummy module.
