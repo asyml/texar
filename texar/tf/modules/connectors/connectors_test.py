@@ -21,6 +21,7 @@ from texar.tf.modules.connectors.connectors import _assert_same_size
 
 # pylint: disable=too-many-locals, invalid-name
 
+
 class TestConnectors(tf.test.TestCase):
     """Tests various connectors.
     """
@@ -103,7 +104,7 @@ class TestConnectors(tf.test.TestCase):
             gauss_ds_vec, num_samples=sample_num)
 
         # test when :attr:`transform` is False
-        #sample_test_no_transform = gauss_connector(gauss_ds, transform=False)
+        # sample_test_no_transform = gauss_connector(gauss_ds, transform=False)
 
         test_list = [output_1, output_2, sample_ts, sample_test_num]
 
@@ -128,10 +129,10 @@ class TestConnectors(tf.test.TestCase):
             # # pylint: disable=no-member
             # sample_var = np.var(sample_outputs, axis=0)
 
-            ## check if the value is approximated N(0, 1)
+            # check if the value is approximated N(0, 1)
             # for i in range(variable_size):
-               # self.assertAlmostEqual(0, sample_mu[i], delta=0.2)
-               # self.assertAlmostEqual(1, sample_var[i], delta=0.2)
+            #     self.assertAlmostEqual(0, sample_mu[i], delta=0.2)
+            #     self.assertAlmostEqual(1, sample_var[i], delta=0.2)
 
     def test_stochastic_connector(self):
         """Tests the logic of
@@ -163,7 +164,7 @@ class TestConnectors(tf.test.TestCase):
             self.assertEqual(out2.shape, state_size_ts)
             self.assertEqual(out2.shape, sample2.shape)
 
-    #def test_concat_connector(self): # pylint: disable=too-many-locals
+    # def test_concat_connector(self): # pylint: disable=too-many-locals
     #    """Tests the logic of
     #    :class:`~texar.tf.modules.connectors.ConcatConnector`.
     #    """
@@ -206,6 +207,7 @@ class TestConnectors(tf.test.TestCase):
     #        # check the same size
     #        self.assertEqual(output1.shape[1], decoder_size1)
     #        self.assertEqual(output2[1].shape[1], decoder_size2[1])
+
 
 if __name__ == "__main__":
     tf.test.main()

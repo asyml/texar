@@ -44,6 +44,7 @@ __all__ = [
 
 Py3 = sys.version_info[0] == 3
 
+
 def maybe_download(urls, path, filenames=None, extract=False):
     """Downloads a set of files.
 
@@ -104,6 +105,7 @@ def maybe_download(urls, path, filenames=None, extract=False):
 
     return result
 
+
 def _download(url, filename, path):
     def _progress(count, block_size, total_size):
         percent = float(count * block_size) / float(total_size) * 100.
@@ -121,11 +123,13 @@ def _download(url, filename, path):
 
     return filepath
 
+
 def _extract_google_drive_file_id(url):
     # id is between `/d/` and '/'
-    url_suffix = url[url.find('/d/')+3:]
+    url_suffix = url[url.find('/d/') + 3:]
     file_id = url_suffix[:url_suffix.find('/')]
     return file_id
+
 
 def _download_from_google_drive(url, filename, path):
     """Adapted from `https://github.com/saurabhshri/gdrive-downloader`
@@ -157,6 +161,7 @@ def _download_from_google_drive(url, filename, path):
     print('Successfully downloaded {}.'.format(filename))
 
     return filepath
+
 
 def read_words(filename, newline_token=None):
     """Reads word from a file.
@@ -259,4 +264,3 @@ def count_file_lines(filenames):
         filenames = [filenames]
     num_lines = np.sum([_count_lines(fn) for fn in filenames])
     return num_lines
-

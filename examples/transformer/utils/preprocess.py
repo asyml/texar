@@ -24,7 +24,7 @@ import numpy as np
 import pickle
 import argparse
 from io import open
-#pylint:disable=invalid-name
+# pylint:disable=invalid-name
 
 split_pattern = re.compile(r'([.,!?"\':;)(])')
 digit_pattern = re.compile(r'\d')
@@ -32,6 +32,7 @@ digit_pattern = re.compile(r'\d')
 # Refer to https://texar.readthedocs.io/en/latest/_modules/texar/data/vocabulary.html#SpecialTokens
 # these tokens will by default have token ids 0, 1, 2, 3 respectively
 pad_token_id, bos_token_id, eos_token_id, unk_token_id = 0, 1, 2, 3
+
 
 def split_sentence(s, tok=False):
     """split sentence with some segmentation rules."""
@@ -53,6 +54,7 @@ def open_file(path):
     """more robust open function"""
     return open(path, encoding='utf-8')
 
+
 def read_file(path, tok=False):
     """a generator to generate each line of file."""
     with open_file(path) as f:
@@ -71,10 +73,12 @@ def count_words(path, max_vocab_size=40000, tok=False):
     vocab = [word for (word, _) in counts.most_common(max_vocab_size)]
     return vocab
 
+
 def make_array(word_id, words):
     """generate id numpy array from plain text words."""
     ids = [word_id.get(word, unk_token_id) for word in words]
     return np.array(ids, 'i')
+
 
 def make_dataset(path, w2id, tok=False):
     """generate dataset."""
@@ -87,13 +91,15 @@ def make_dataset(path, w2id, tok=False):
         token_count += array.size
         unknown_count += (array == unk_token_id).sum()
     print('# of tokens:{}'.format(token_count))
-    print('# of unknown {} {:.2}'.format(unknown_count,\
-        100. * unknown_count / token_count))
+    print('# of unknown {} {:.2}'.format(unknown_count,
+                                         100. * unknown_count / token_count))
     return dataset, npy_dataset
+
 
 def get_preprocess_args():
     """Data preprocessing options."""
-    class Config(): pass
+    class Config():
+        pass
     config = Config()
     parser = argparse.ArgumentParser(description='Preprocessing Options')
     parser.add_argument('--source_vocab', type=int, default=40000,
@@ -107,29 +113,30 @@ def get_preprocess_args():
     parser.add_argument('--pre_encoding', type=str, default='spm')
     parser.add_argument('--src', type=str, default='en')
     parser.add_argument('--tgt', type=str, default='vi')
-    parser.add_argument('--input_dir', '-i', type=str, \
-        default='./data/en_vi/data/', help='Input directory')
-    parser.add_argument('--save_data', type=str, default='preprocess', \
-        help='Output file for the prepared data')
+    parser.add_argument('--input_dir', '-i', type=str,
+                        default='./data/en_vi/data/', help='Input directory')
+    parser.add_argument('--save_data', type=str, default='preprocess',
+                        help='Output file for the prepared data')
     parser.parse_args(namespace=config)
 
-    #keep consistent with original implementation
-    #pylint:disable=attribute-defined-outside-init
+    # keep consistent with original implementation
+    # pylint:disable=attribute-defined-outside-init
     config.input = config.input_dir
     config.source_train = 'train.' + config.src
     config.target_train = 'train.' + config.tgt
     config.source_valid = 'valid.' + config.src
     config.target_valid = 'valid.' + config.tgt
-    config.source_test = 'test.'+ config.src
+    config.source_test = 'test.' + config.src
     config.target_test = 'test.' + config.tgt
     return config
+
 
 if __name__ == "__main__":
     args = get_preprocess_args()
 
     print(json.dumps(args.__dict__, indent=4))
 
-    #pylint:disable=no-member
+    # pylint:disable=no-member
     # Vocab Construction
     source_path = os.path.join(args.input_dir, args.source_train)
     target_path = os.path.join(args.input_dir, args.target_train)
@@ -185,23 +192,23 @@ if __name__ == "__main__":
     test_data = [(s, t) for s, t in zip(source_data, target_data)
                  if s and t]
     test_npy = [(s, t) for s, t in zip(source_npy, target_npy)
-                if len(s)>0 and len(t)>0]
+                if len(s) > 0 and len(t) > 0]
     print('Original test data size: %d' % len(source_data))
     print('Filtered test data size: %d' % len(test_data))
     id2w = {i: w for w, i in w2id.items()}
     # Save the dataset to numpy files
-    train_src_output = os.path.join(args.input_dir, \
-        args.save_data + 'train.' + args.src+ '.txt')
-    train_tgt_output = os.path.join(args.input_dir, \
-        args.save_data + 'train.' + args.tgt + '.txt')
-    dev_src_output = os.path.join(args.input_dir, \
-        args.save_data + 'dev.' + args.src+ '.txt')
-    dev_tgt_output = os.path.join(args.input_dir, \
-        args.save_data + 'dev.' + args.tgt+ '.txt')
-    test_src_output = os.path.join(args.input_dir, \
-        args.save_data + 'test.' + args.src+ '.txt')
-    test_tgt_output = os.path.join(args.input_dir, \
-        args.save_data + 'test.' + args.tgt + '.txt')
+    train_src_output = os.path.join(
+        args.input_dir, args.save_data + 'train.' + args.src + '.txt')
+    train_tgt_output = os.path.join(
+        args.input_dir, args.save_data + 'train.' + args.tgt + '.txt')
+    dev_src_output = os.path.join(args.input_dir,
+                                  args.save_data + 'dev.' + args.src + '.txt')
+    dev_tgt_output = os.path.join(args.input_dir,
+                                  args.save_data + 'dev.' + args.tgt + '.txt')
+    test_src_output = os.path.join(args.input_dir,
+                                   args.save_data + 'test.' + args.src + '.txt')
+    test_tgt_output = os.path.join(args.input_dir,
+                                   args.save_data + 'test.' + args.tgt + '.txt')
 
     np.save(os.path.join(args.input, args.save_data + 'train.npy'),
             train_npy)
@@ -228,8 +235,9 @@ if __name__ == "__main__":
         for words in test_data:
             fsrc.write('{}\n'.format(' '.join(words[0])))
             ftgt.write('{}\n'.format(' '.join(words[1])))
-    with open(os.path.join(args.input_dir, \
-            args.save_data + args.pre_encoding + '.vocab.text'), 'w+', encoding='utf-8') as f:
+    with open(os.path.join(args.input_dir,
+                           args.save_data + args.pre_encoding + '.vocab.text'),
+              'w+', encoding='utf-8') as f:
         max_size = len(id2w)
         for idx in range(4, max_size):
             f.write('{}\n'.format(id2w[idx]))

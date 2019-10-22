@@ -34,6 +34,7 @@ __all__ = [
     "TFRecordData"
 ]
 
+
 def _default_tfrecord_dataset_hparams():
     """Returns hyperparameters of a TFRecord dataset with default values.
 
@@ -56,6 +57,7 @@ def _default_tfrecord_dataset_hparams():
             "image_options"
         ],
     }
+
 
 class TFRecordData(DataBase):
     """TFRecord data which loads and processes TFRecord files.
@@ -368,7 +370,7 @@ class TFRecordData(DataBase):
         dataset, data_spec = self._process_dataset(dataset, self._hparams,
                                                    data_spec)
         self._data_spec = data_spec
-        self._decoder = data_spec.decoder # pylint: disable=no-member
+        self._decoder = data_spec.decoder  # pylint: disable=no-member
         # Batching
         dataset = self._make_batch(dataset, self._hparams)
         # Prefetching
@@ -391,4 +393,3 @@ class TFRecordData(DataBase):
         """A list of feature names.
         """
         return self.list_items()
-

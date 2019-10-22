@@ -152,9 +152,10 @@ class UnicodeRegex(object):
         self.symbol_re = re.compile("([" + self.property_chars("S") + "])")
 
     def property_chars(self, prefix):
-        #pylint:disable=no-self-use
-        return "".join(six.unichr(x) for x in range(sys.maxunicode) \
-            if unicodedata.category(six.unichr(x)).startswith(prefix))
+        # pylint:disable=no-self-use
+        return "".join(six.unichr(x) for x in range(sys.maxunicode)
+                       if unicodedata.category(
+            six.unichr(x)).startswith(prefix))
 
 
 uregex = UnicodeRegex()

@@ -69,6 +69,7 @@ __all__ = [
     "layer_normalize",
 ]
 
+
 def default_rnn_cell_hparams():
     """Returns a `dict` of RNN cell hyperparameters and their default values.
 
@@ -132,7 +133,7 @@ def default_rnn_cell_hparams():
     "dropout": dict
         Dropout applied to the cell in **each** layer. See
         :tf_main:`DropoutWrapper <contrib/rnn/DropoutWrapper>` for details of
-        the hyperparameters. If all "\*_keep_prob" = 1, no dropout is applied.
+        the hyperparameters. If all "*_keep_prob" = 1, no dropout is applied.
 
         Specifically, if "variational_recurrent" = `True`,
         the same dropout mask is applied across all time steps per run call.
@@ -185,6 +186,7 @@ def default_rnn_cell_hparams():
         "highway": False,
         "@no_typecheck": ["type"]
     }
+
 
 def get_rnn_cell(hparams=None, mode=None):
     """Creates an RNN cell.
@@ -276,6 +278,7 @@ def get_rnn_cell(hparams=None, mode=None):
 
     return cell
 
+
 def get_rnn_cell_trainable_variables(cell):
     """Returns the list of trainable variables of an RNN cell.
 
@@ -290,10 +293,11 @@ def get_rnn_cell_trainable_variables(cell):
         try:
             return cell_.trainable_variables
         except AttributeError:
-        # Cell wrappers (e.g., `DropoutWrapper`) cannot directly access to
-        # `trainable_variables` as they don't initialize superclass
-        # (tf==v1.3). So try to access through the cell in the wrapper.
+            # Cell wrappers (e.g., `DropoutWrapper`) cannot directly access to
+            # `trainable_variables` as they don't initialize superclass
+            # (tf==v1.3). So try to access through the cell in the wrapper.
             cell_ = cell._cell  # pylint: disable=protected-access
+
 
 def default_regularizer_hparams():
     """Returns the hyperparameters and their default values of a variable
@@ -319,6 +323,7 @@ def default_regularizer_hparams():
             "l2": 0.
         }
     }
+
 
 def get_regularizer(hparams=None):
     """Returns a variable regularizer instance.
@@ -362,6 +367,7 @@ def get_regularizer(hparams=None):
         return None
 
     return rgl
+
 
 def get_initializer(hparams=None):
     """Returns an initializer instance.
@@ -418,6 +424,7 @@ def get_initializer(hparams=None):
 
     return initializer
 
+
 def get_activation_fn(fn_name="identity", kwargs=None):
     """Returns an activation function `fn` with the signature
     `output = fn(input)`.
@@ -458,6 +465,7 @@ def get_activation_fn(fn_name="identity", kwargs=None):
     if kwargs is not None:
         if isinstance(kwargs, HParams):
             kwargs = kwargs.todict()
+
         def _partial_fn(features):
             return activation_fn_(features, **kwargs)
         activation_fn = _partial_fn
@@ -501,6 +509,7 @@ def get_constraint_fn(fn_name="NonNeg"):
                   'tensorflow.nn', 'texar.tf.custom']
     constraint_fn = utils.get_function(fn_name, fn_modules)
     return constraint_fn
+
 
 def get_layer(hparams):
     """Makes a layer instance.
@@ -548,15 +557,14 @@ def get_layer(hparams):
                 A dictionary of keyword arguments for constructor of the
                 layer class. Ignored if :attr:`"type"` is a layer instance.
 
-                - Arguments named "activation" can be a callable, \
-                or a `str` of \
-                the name or module path to the activation function.
-                - Arguments named "\*_regularizer" and "\*_initializer" \
-                can be a class instance, or a `dict` of \
-                hyperparameters of \
-                respective regularizers and initializers. See
-                - Arguments named "\*_constraint" can be a callable, or a \
-                `str` of the name or full path to the constraint function.
+                - Arguments named "activation" can be a callable,
+                  or a `str` of the name or module path to the activation
+                  function.
+                - Arguments named "*_regularizer" and "*_initializer"
+                  can be a class instance, or a `dict` of hyperparameters of
+                  respective regularizers and initializers. See
+                - Arguments named "*_constraint" can be a callable, or a
+                  `str` of the name or full path to the constraint function.
 
     Returns:
         A layer instance. If hparams["type"] is a layer instance, returns it
@@ -628,6 +636,7 @@ def _compute_concat_output_shape(input_shape, axis):
     output_shape[axis] = concat_axis_size
     return output_shape
 
+
 class _ReducePooling1D(tf.layers.Layer):
     """Pooling layer for arbitrary reduce functions for 1D inputs.
 
@@ -658,6 +667,7 @@ class _ReducePooling1D(tf.layers.Layer):
         else:
             return self._reduce_function(inputs, axis=2)
 
+
 class MaxReducePooling1D(_ReducePooling1D):
     """A subclass of :tf_main:`tf.layers.Layer <layers/Layer>`.
     Max Pooling layer for 1D inputs. The same as
@@ -667,6 +677,7 @@ class MaxReducePooling1D(_ReducePooling1D):
     def __init__(self, data_format='channels_last', name=None, **kwargs):
         super(MaxReducePooling1D, self).__init__(
             tf.reduce_max, data_format=data_format, name=name, **kwargs)
+
 
 class AverageReducePooling1D(_ReducePooling1D):
     """A subclass of :tf_main:`tf.layers.Layer <layers/Layer>`.
@@ -678,12 +689,14 @@ class AverageReducePooling1D(_ReducePooling1D):
         super(AverageReducePooling1D, self).__init__(
             tf.reduce_mean, data_format=data_format, name=name, **kwargs)
 
+
 _POOLING_TO_REDUCE = {
     "MaxPooling1D": "MaxReducePooling1D",
     "AveragePooling1D": "AverageReducePooling1D",
     tf.layers.MaxPooling1D: MaxReducePooling1D,
     tf.layers.AveragePooling1D: AverageReducePooling1D
 }
+
 
 def get_pooling_layer_hparams(hparams):
     """Creates pooling layer hparams `dict` usable for :func:`get_layer`.
@@ -707,6 +720,7 @@ def get_pooling_layer_hparams(hparams):
         kwargs.pop('padding', None)
 
     return new_hparams
+
 
 class MergeLayer(tf.layers.Layer):
     """A subclass of :tf_main:`tf.layers.Layer <layers/Layer>`.
@@ -957,7 +971,7 @@ class SequentialLayer(tf.layers.Layer):
     def non_trainable_weights(self):
         return self._non_trainable_weights
 
-    def call(self, inputs, mode=None): # pylint: disable=arguments-differ
+    def call(self, inputs, mode=None):  # pylint: disable=arguments-differ
         training = is_train_mode(mode)
 
         outputs = inputs
@@ -1005,6 +1019,7 @@ def _common_default_conv_dense_kwargs():
         "trainable": True,
         "name": None
     }
+
 
 def default_conv1d_kwargs():
     """Returns the default keyword argument values of the constructor
@@ -1061,22 +1076,30 @@ def default_conv1d_kwargs():
     })
     return kwargs
 
+
 def default_conv2d_kwargs():
     """TODO
     """
     return {}
+
+
 def default_conv3d_kwargs():
     """TODO
     """
     return {}
+
+
 def default_conv2d_transpose_kwargs():
     """TODO
     """
     return {}
+
+
 def default_conv3d_transpose_kwargs():
     """TODO
     """
     return {}
+
 
 def default_dense_kwargs():
     """Returns the default keyword argument values of the constructor
@@ -1123,55 +1146,76 @@ def default_dense_kwargs():
     })
     return kwargs
 
+
 def default_dropout_kwargs():
     """TODO
     """
     return {}
-    #raise NotImplementedError
+    # raise NotImplementedError
+
+
 def default_flatten_kwargs():
     """TODO
     """
     return {}
+
+
 def default_max_pooling1d_kwargs():
     """TODO
     """
     return {}
-    #raise NotImplementedError
+    # raise NotImplementedError
+
+
 def default_max_pooling2d_kwargs():
     """TODO
     """
     return {}
-    #raise NotImplementedError
+    # raise NotImplementedError
+
+
 def default_max_pooling3d_kwargs():
     """TODO
     """
     return {}
-    #raise NotImplementedError
+    # raise NotImplementedError
+
+
 def default_separable_conv2d_kwargs():
     """TODO
     """
     return {}
-    #raise NotImplementedError
+    # raise NotImplementedError
+
+
 def default_batch_normalization_kwargs():
     """TODO
     """
     return {}
-    #raise NotImplementedError
+    # raise NotImplementedError
+
+
 def default_average_pooling1d_kwargs():
     """TODO
     """
     return {}
-    #raise NotImplementedError
+    # raise NotImplementedError
+
+
 def default_average_pooling2d_kwargs():
     """TODO
     """
     return {}
-    #raise NotImplementedError
+    # raise NotImplementedError
+
+
 def default_average_pooling3d_kwargs():
     """TODO
     """
     return {}
-    #raise NotImplementedError
+    # raise NotImplementedError
+
+
 _layer_class_to_default_kwargs_map = {
     tf.layers.Conv1D: default_conv1d_kwargs(),
     tf.layers.Conv2D: default_conv2d_kwargs(),
@@ -1190,6 +1234,7 @@ _layer_class_to_default_kwargs_map = {
     tf.layers.AveragePooling2D: default_average_pooling2d_kwargs(),
     tf.layers.AveragePooling3D: default_average_pooling3d_kwargs(),
 }
+
 
 def layer_normalize(inputs,
                     scope=None,

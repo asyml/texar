@@ -42,8 +42,10 @@ __all__ = [
     "TFRecordDataDecoder",
 ]
 
+
 def _append_token(token):
     return token is not None and token != ""
+
 
 class ScalarDataDecoder(data_decoder.DataDecoder):
     """A data decoder that decodes a scalar, e.g., int label or float number.
@@ -101,6 +103,7 @@ class ScalarDataDecoder(data_decoder.DataDecoder):
         """The name of the data tensor.
         """
         return self._data_name
+
 
 class TextDataDecoder(data_decoder.DataDecoder):
     """A text data decoder that decodes raw text data.
@@ -252,6 +255,7 @@ class TextDataDecoder(data_decoder.DataDecoder):
         """
         return self._added_length
 
+
 class VarUttTextDataDecoder(data_decoder.DataDecoder):
     """A text data decoder that decodes raw text data. Each data is considered
     to be multiple sentences concatenated by a delimiter.
@@ -324,7 +328,7 @@ class VarUttTextDataDecoder(data_decoder.DataDecoder):
         outputs = self.decode(data, self.list_items())
         return dict(zip(self.list_items(), outputs))
 
-    def decode(self, data, items): # pylint: disable=too-many-locals
+    def decode(self, data, items):  # pylint: disable=too-many-locals
         """Decodes the data to return the tensors specified by the list of
         items.
 
@@ -377,7 +381,7 @@ class VarUttTextDataDecoder(data_decoder.DataDecoder):
                 s = np.append([self._bos_token], s)
             if _append_token(self._eos_token):
                 s = np.append(s, [self._eos_token])
-            s = np.append(s, [pad_token]*(max_length-s.size))
+            s = np.append(s, [pad_token] * (max_length - s.size))
             return s
 
         # Split each sentence to tokens, and pad them to a same length.
@@ -464,6 +468,7 @@ class VarUttTextDataDecoder(data_decoder.DataDecoder):
         """The added text length due to appended bos and eos tokens.
         """
         return self._added_length
+
 
 class TFRecordDataDecoder(data_decoder.DataDecoder):
     """A data decoder that decodes a TFRecord file, e.g., the
@@ -591,7 +596,7 @@ class TFRecordDataDecoder(data_decoder.DataDecoder):
         """
         # pylint: disable=too-many-branches
         feature_description = dict()
-        for key, value in  self._feature_original_types.items():
+        for key, value in self._feature_original_types.items():
             shape = []
             if len(value) == 3:
                 if isinstance(value[-1], int):

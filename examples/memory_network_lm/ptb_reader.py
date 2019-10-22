@@ -26,13 +26,14 @@ import tensorflow as tf
 
 import texar.tf as tx
 
+
 def ptb_iterator(data, batch_size, num_steps):
     """Iterates through the ptb data.
     """
     data_length = len(data)
     batch_length = data_length // batch_size
 
-    data = np.asarray(data[:batch_size*batch_length])
+    data = np.asarray(data[:batch_size * batch_length])
     data = data.reshape([batch_size, batch_length])
 
     epoch_size = (batch_length - 1) // num_steps
@@ -40,9 +41,10 @@ def ptb_iterator(data, batch_size, num_steps):
         raise ValueError("epoch_size == 0, decrease batch_size or num_steps")
 
     for i in range(epoch_size):
-        x = data[:, i * num_steps : (i+1) * num_steps]
-        y = data[:, i * num_steps + 1 : (i+1) * num_steps + 1]
+        x = data[:, i * num_steps: (i + 1) * num_steps]
+        y = data[:, i * num_steps + 1: (i + 1) * num_steps + 1]
         yield (x, y)
+
 
 def ptb_iterator_memnet(data, batch_size, memory_size):
     """Iterates through the ptb data.
@@ -58,10 +60,11 @@ def ptb_iterator_memnet(data, batch_size, memory_size):
         x, y = [], []
         for j in range(i, min(i + batch_size, length)):
             idx = order[j]
-            x.append(data[idx : idx + memory_size])
+            x.append(data[idx: idx + memory_size])
             y.append(data[idx + memory_size])
         x, y = np.asarray(x), np.asarray(y)
         yield (x, y)
+
 
 def prepare_data(data_path):
     """Preprocess PTB data.

@@ -42,6 +42,7 @@ __all__ = [
     "PairedTextData"
 ]
 
+
 def _default_paired_text_dataset_hparams():
     """Returns hyperparameters of a paired text dataset with default values.
 
@@ -63,6 +64,7 @@ def _default_paired_text_dataset_hparams():
         "source_dataset": source_hparams,
         "target_dataset": target_hparams
     }
+
 
 # pylint: disable=too-many-instance-attributes, too-many-public-methods
 class PairedTextData(TextDataBase):
@@ -273,7 +275,6 @@ class PairedTextData(TextDataBase):
                               eos_token=tgt_eos_token)
 
         return src_vocab, tgt_vocab
-
 
     @staticmethod
     def make_embedding(src_emb_hparams, src_token_to_id_map,

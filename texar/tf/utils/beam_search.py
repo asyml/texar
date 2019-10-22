@@ -543,8 +543,7 @@ def beam_search(symbols_to_logits_fn,
         if not stop_early:
             return tf.less(i, decode_length)
         max_length_penalty = tf.pow(
-            ((5. + tf.cast(decode_length, tf.float32)) \
-            / 6.), alpha)
+            ((5. + tf.cast(decode_length, tf.float32)) / 6.), alpha)
         # The best possible score of the most likley alive sequence
         lower_bound_alive_scores = alive_log_probs[:, 0] /\
             max_length_penalty

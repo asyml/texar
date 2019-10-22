@@ -35,6 +35,7 @@ __all__ = [
     "reduce_dimensions"
 ]
 
+
 def mask_and_reduce(sequence,
                     sequence_length,
                     rank=2,
@@ -194,7 +195,7 @@ def reduce_dimensions(tensor, average_axes=None, sum_axes=None, keepdims=None):
             reduced_axes.update(sum_axes)
 
             if average_axes is not None:
-                if len(reduced_axes) != len(average_axes)+len(sum_axes):
+                if len(reduced_axes) != len(average_axes) + len(sum_axes):
                     raise ValueError('`average_axes` and `sum_axes` must not '
                                      'have overlapped elements.')
     if not keepdims:

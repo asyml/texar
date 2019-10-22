@@ -28,6 +28,7 @@ __all__ = [
     "FeedForwardNetwork"
 ]
 
+
 class FeedForwardNetwork(FeedForwardNetworkBase):
     """Feed-forward neural network that consists of a sequence of layers.
 
@@ -91,4 +92,3 @@ class FeedForwardNetwork(FeedForwardNetworkBase):
             "layers": [],
             "name": "NN"
         }
-

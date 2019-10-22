@@ -34,6 +34,7 @@ __all__ = [
     "EnvConfig"
 ]
 
+
 class Space(object):
     """Observation and action spaces. Describes valid actions and observations.
     Similar to :gym:`gym.Space <#spaces>`.
@@ -137,6 +138,7 @@ class Space(object):
         """Data type of the element.
         """
         return self._dtype
+
 
 class EnvConfig(object):
     """Configurations of an environment.

@@ -260,10 +260,8 @@ def main():
                         '{}: {}'.format(key, value), file=scores_file)
                 print_stdout_and_file('=' * 110, file=scores_file)
 
-
             scores_file.flush()
 
 
 if __name__ == '__main__':
     main()
-

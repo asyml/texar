@@ -36,6 +36,7 @@ __all__ = [
     "ScalarData"
 ]
 
+
 def _default_scalar_dataset_hparams():
     """Returns hyperparameters of a scalar dataset with default values.
 
@@ -49,6 +50,7 @@ def _default_scalar_dataset_hparams():
         "other_transformations": [],
         "@no_typecheck": ["files"]
     }
+
 
 class ScalarData(DataBase):
     """Scalar data where each line of the files is a scalar (int or float),
@@ -217,7 +219,7 @@ class ScalarData(DataBase):
         dataset, data_spec = self._process_dataset(dataset, self._hparams,
                                                    data_spec)
         self._data_spec = data_spec
-        self._decoder = data_spec.decoder # pylint: disable=no-member
+        self._decoder = data_spec.decoder  # pylint: disable=no-member
 
         # Batching
         dataset = self._make_batch(dataset, self._hparams)
@@ -260,4 +262,3 @@ class ScalarData(DataBase):
         :attr:`hparams`.
         """
         return self._decoder.data_tensor_name
-

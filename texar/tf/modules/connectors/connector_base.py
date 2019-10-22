@@ -25,6 +25,7 @@ __all__ = [
     "ConnectorBase"
 ]
 
+
 class ConnectorBase(ModuleBase):
     """Base class inherited by all connector classes. A connector is to
     transform inputs into outputs with any specified structure and shape.

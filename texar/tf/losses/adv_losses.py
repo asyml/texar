@@ -20,6 +20,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
+
 def binary_adversarial_losses(real_data,
                               fake_data,
                               discriminator_fn,

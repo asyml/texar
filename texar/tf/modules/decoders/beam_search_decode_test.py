@@ -20,6 +20,7 @@ from texar.tf import context
 # pylint: disable=no-member, too-many-instance-attributes, invalid-name
 # pylint: disable=too-many-locals, too-many-arguments
 
+
 class BeamSearchDecodeTest(tf.test.TestCase):
     """Tests
     :func:`texar.tf.modules.decoders.beam_search_decode.beam_search_decode`.
@@ -49,7 +50,7 @@ class BeamSearchDecodeTest(tf.test.TestCase):
         outputs, final_state, _ = beam_search_decode(
             decoder_or_cell=decoder,
             embedding=self._embedding,
-            start_tokens=[1]*self._batch_size,
+            start_tokens=[1] * self._batch_size,
             end_token=2,
             beam_width=beam_width_1,
             max_decoding_length=20)
@@ -63,7 +64,7 @@ class BeamSearchDecodeTest(tf.test.TestCase):
         _ = decoder(
             decoding_strategy='infer_greedy',
             embedding=self._embedding,
-            start_tokens=[1]*self._batch_size,
+            start_tokens=[1] * self._batch_size,
             end_token=2,
             max_decoding_length=20)
         self.assertEqual(num_trainable_variables, len(tf.trainable_variables()))
@@ -74,7 +75,7 @@ class BeamSearchDecodeTest(tf.test.TestCase):
         beam_decoder = BeamSearchDecoder(
             cell=decoder.cell,
             embedding=self._embedding,
-            start_tokens=[1]*self._batch_size,
+            start_tokens=[1] * self._batch_size,
             end_token=2,
             initial_state=tf_initial_state,
             beam_width=beam_width_1,
@@ -83,11 +84,11 @@ class BeamSearchDecodeTest(tf.test.TestCase):
         outputs_1, final_state_1, _ = dynamic_decode(
             decoder=beam_decoder, maximum_iterations=20)
 
-        ## Tests time major
+        # Tests time major
         outputs_2, _, _ = beam_search_decode(
             decoder_or_cell=decoder,
             embedding=self._embedding,
-            start_tokens=[1]*self._batch_size,
+            start_tokens=[1] * self._batch_size,
             end_token=2,
             beam_width=self._beam_width,
             initial_state=initial_state,
@@ -96,14 +97,13 @@ class BeamSearchDecodeTest(tf.test.TestCase):
         outputs_3, _, _ = beam_search_decode(
             decoder_or_cell=decoder,
             embedding=self._embedding,
-            start_tokens=[1]*self._batch_size,
+            start_tokens=[1] * self._batch_size,
             end_token=2,
             beam_width=self._beam_width,
             initial_state=initial_state,
             tiled_initial_state=tiled_initial_state,
             max_decoding_length=21,
             output_time_major=True)
-
 
         with self.test_session() as sess:
             if not initiated:

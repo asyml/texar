@@ -53,17 +53,17 @@ class ShapesTest(tf.test.TestCase):
         c = tf.ones([5, 1, 4])
 
         t = shapes.pad_and_concat([a, b, c], 0)
-        self.assertEqual(t.shape, [3+4+5, 20, 4])
+        self.assertEqual(t.shape, [3 + 4 + 5, 20, 4])
         t = shapes.pad_and_concat([a, b, c], 1)
-        self.assertEqual(t.shape, [5, 10+20+1, 4])
+        self.assertEqual(t.shape, [5, 10 + 20 + 1, 4])
         t = shapes.pad_and_concat([a, b, c], 2)
-        self.assertEqual(t.shape, [5, 20, 2+3+4])
+        self.assertEqual(t.shape, [5, 20, 2 + 3 + 4])
 
         d = tf.placeholder(dtype=tf.float32, shape=[6, None, 1])
         t = shapes.pad_and_concat([a, b, c, d], 0)
         with self.test_session() as sess:
             t_ = sess.run(t, feed_dict={d: np.ones([6, 2, 1])})
-            self.assertEqual(list(t_.shape), [3+4+5+6, 20, 4])
+            self.assertEqual(list(t_.shape), [3 + 4 + 5 + 6, 20, 4])
 
     def test_varlength_concat(self):
         """
@@ -85,11 +85,11 @@ class ShapesTest(tf.test.TestCase):
              [1, 2, 2, 2, 2, 0, 0, 0],
              [1, 1, 1, 1, 2, 2, 0, 0]], dtype=np.int32)
 
-        ## py
+        # py
         z = shapes.varlength_concat_py(x, y, x_length)
         np.testing.assert_array_equal(z, z_true)
 
-        ## tf
+        # tf
         z = shapes.varlength_concat(x, y, x_length)
         with self.test_session() as sess:
             z_ = sess.run(z)
@@ -110,11 +110,11 @@ class ShapesTest(tf.test.TestCase):
              [[1], [2], [2], [2], [2], [0], [0], [0]],
              [[1], [1], [1], [1], [2], [2], [0], [0]]], dtype=np.int32)
 
-        ## py
+        # py
         z = shapes.varlength_concat_py(x, y, x_length)
         np.testing.assert_array_equal(z, z_true)
 
-        ## tf
+        # tf
         z = shapes.varlength_concat(x, y, x_length)
         with self.test_session() as sess:
             z_ = sess.run(z)
@@ -163,4 +163,3 @@ class ShapesTest(tf.test.TestCase):
 
 if __name__ == "__main__":
     tf.test.main()
-

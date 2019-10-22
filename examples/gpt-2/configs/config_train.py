@@ -8,15 +8,15 @@ max_decoding_length = max_seq_length
 
 train_batch_size = 32
 max_train_epoch = 100
-display_steps = 10 # Print training loss every display_steps; -1 to disable
+display_steps = 10  # Print training loss every display_steps; -1 to disable
 eval_steps = -1    # Eval on the dev set every eval_steps; -1 to disable
-checkpoint_steps = -1 # Checkpoint model parameters every checkpoint_steps;
-                      # -1 to disable
+# Checkpoint model parameters every checkpoint_steps; -1 to disable
+checkpoint_steps = -1
 
 eval_batch_size = 8
 test_batch_size = 8
 
-## Optimization configs
+# Optimization configs
 
 opt = {
     'optimizer': {
@@ -27,7 +27,7 @@ opt = {
     }
 }
 
-## Data configs
+# Data configs
 
 feature_original_types = {
     # Reading features from TFRecord data file.

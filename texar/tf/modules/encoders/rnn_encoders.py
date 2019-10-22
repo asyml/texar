@@ -41,6 +41,7 @@ __all__ = [
     "BidirectionalRNNEncoder"
 ]
 
+
 def _default_output_layer_hparams():
     return {
         "num_layers": 0,
@@ -54,6 +55,7 @@ def _default_output_layer_hparams():
         "@no_typecheck": ["activation", "final_layer_activation",
                           "layer_size", "dropout_layer_ids"]
     }
+
 
 def _build_dense_output_layer(hparams):
     nlayers = hparams.num_layers
@@ -80,7 +82,7 @@ def _build_dense_output_layer(hparams):
 
         kwargs_i = {"units": layer_size[i],
                     "activation": activation,
-                    "name": "dense_%d" % (i+1)}
+                    "name": "dense_%d" % (i + 1)}
         kwargs_i.update(other_kwargs)
 
         layer_hparams = {"type": "Dense", "kwargs": kwargs_i}
@@ -90,6 +92,7 @@ def _build_dense_output_layer(hparams):
         dense_layers = dense_layers[0]
 
     return dense_layers
+
 
 def _forward_single_output_layer(inputs, input_size, output_layer):
     """Forwards the input through a single output layer.
@@ -112,6 +115,7 @@ def _forward_single_output_layer(inputs, input_size, output_layer):
     output = tf.reshape(output_flat, output_shape)
     return output, output_size
 
+
 def _apply_dropout(inputs, time_major, hparams, training):
     """Applies dropout to the inputs.
 
@@ -127,6 +131,7 @@ def _apply_dropout(inputs, time_major, hparams, training):
             noise_shape = [None, 1, None]
     return tf.layers.dropout(inputs, rate=hparams.dropout_rate,
                              noise_shape=noise_shape, training=training)
+
 
 def _forward_output_layers(inputs, input_size, output_layer, time_major,
                            hparams, mode, sequence_length=None):
@@ -179,6 +184,7 @@ def _forward_output_layers(inputs, input_size, output_layer, time_major,
             output, sequence_length, time_major=time_major, tensor_rank=3)
 
     return output, output_size
+
 
 def _apply_rnn_encoder_output_layer(output_layer, time_major, hparams, mode,
                                     cell_outputs, cell_output_size):
@@ -548,6 +554,7 @@ class UnidirectionalRNNEncoder(RNNEncoderBase):
         """
         return self._output_layer
 
+
 class BidirectionalRNNEncoder(RNNEncoderBase):
     """Bidirectional forward-backward RNN encoder.
 
@@ -641,7 +648,6 @@ class BidirectionalRNNEncoder(RNNEncoderBase):
                 self._output_layer_bw = _build_dense_output_layer(
                     self._hparams.output_layer_bw)
                 self._output_layer_hparams_bw = self._hparams.output_layer_bw
-
 
     @staticmethod
     def default_hparams():

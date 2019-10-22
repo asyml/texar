@@ -43,7 +43,7 @@ class BERTClassifierTest(tf.test.TestCase):
         }
         clas = BERTClassifier(hparams=hparams)
         _, _ = clas(inputs)
-        self.assertEqual(len(clas.trainable_variables), 199+2)
+        self.assertEqual(len(clas.trainable_variables), 199 + 2)
 
         # case 2
         hparams = {
@@ -53,7 +53,7 @@ class BERTClassifierTest(tf.test.TestCase):
         }
         clas = BERTClassifier(hparams=hparams)
         _, _ = clas(inputs)
-        self.assertEqual(len(clas.trainable_variables), 199+2)
+        self.assertEqual(len(clas.trainable_variables), 199 + 2)
 
         # case 2
         hparams = {
@@ -62,7 +62,7 @@ class BERTClassifierTest(tf.test.TestCase):
         }
         clas = BERTClassifier(hparams=hparams)
         _, _ = clas(inputs)
-        self.assertEqual(len(clas.trainable_variables), 199+2)
+        self.assertEqual(len(clas.trainable_variables), 199 + 2)
 
     def test_encode(self):
         """Tests encoding.

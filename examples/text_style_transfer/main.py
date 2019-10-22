@@ -48,6 +48,7 @@ FLAGS = flags.FLAGS
 
 config = importlib.import_module(FLAGS.config)
 
+
 def _main(_):
     # Data
     train_data = tx.data.MultiAlignedData(config.train_data)
@@ -137,7 +138,7 @@ def _main(_):
                 # Writes samples
                 tx.utils.write_paired_text(
                     refs.squeeze(), hyps,
-                    os.path.join(config.sample_path, 'val.%d'%epoch),
+                    os.path.join(config.sample_path, 'val.%d' % epoch),
                     append=True, mode='v')
 
             except tf.errors.OutOfRangeError:
@@ -165,7 +166,7 @@ def _main(_):
 
         gamma_ = 1.
         lambda_g_ = 0.
-        for epoch in range(1, config.max_nepochs+1):
+        for epoch in range(1, config.max_nepochs + 1):
             if epoch > config.pretrain_nepochs:
                 # Anneals the gumbel-softmax temperature
                 gamma_ = max(0.001, gamma_ * config.gamma_decay)
@@ -186,6 +187,7 @@ def _main(_):
             # Test
             iterator.restart_dataset(sess, 'test')
             _eval_epoch(sess, gamma_, lambda_g_, epoch, 'test')
+
 
 if __name__ == '__main__':
     tf.app.run(main=_main)

@@ -14,6 +14,7 @@ from texar.tf.modules.encoders.hierarchical_encoders import HierarchicalRNNEncod
 
 # pylint: disable=too-many-locals
 
+
 class HierarchicalRNNEncoderTest(tf.test.TestCase):
     """Tests HierarchicalRNNEncoder
     """
@@ -30,7 +31,7 @@ class HierarchicalRNNEncoderTest(tf.test.TestCase):
 
         self.assertEqual(
             len(encoder.trainable_variables),
-            len(encoder.encoder_major.trainable_variables) + \
+            len(encoder.encoder_major.trainable_variables) +
             len(encoder.encoder_minor.trainable_variables))
 
     def test_encode(self):
@@ -143,6 +144,7 @@ class HierarchicalRNNEncoderTest(tf.test.TestCase):
 
         outputs, _ = encoder(inputs)
         self.assertEqual(list(outputs.shape), [16, 8, 200])
+
 
 if __name__ == "__main__":
     tf.test.main()

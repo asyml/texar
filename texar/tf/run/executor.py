@@ -28,6 +28,7 @@ __all__ = [
     "Executor"
 ]
 
+
 class Executor(object):
     """Class that executes training, evaluation, prediction, export, and other
     actions of :tf_main:`Estimator <estimator/Estimator>`.
@@ -172,4 +173,3 @@ class Executor(object):
         train_spec = self._get_train_spec(max_steps=max_train_steps)
         eval_spec = self._get_eval_spec(steps=eval_steps)
         tf.estimator.train_and_evaluate(self._estimator, train_spec, eval_spec)
-

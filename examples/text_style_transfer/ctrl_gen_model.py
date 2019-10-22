@@ -48,7 +48,7 @@ class CtrlGenModel(object):
         # text_ids for encoder, with BOS token removed
         enc_text_ids = inputs['text_ids'][:, 1:]
         enc_outputs, final_state = encoder(embedder(enc_text_ids),
-                                           sequence_length=inputs['length']-1)
+                                           sequence_length=inputs['length'] - 1)
         z = final_state[:, self._hparams.dim_c:]
 
         # Encodes label
@@ -64,7 +64,7 @@ class CtrlGenModel(object):
         # Teacher-force decoding and the auto-encoding loss for G
         decoder = AttentionRNNDecoder(
             memory=enc_outputs,
-            memory_sequence_length=inputs['length']-1,
+            memory_sequence_length=inputs['length'] - 1,
             cell_input_fn=lambda inputs, attention: inputs,
             vocab_size=vocab.size,
             hparams=self._hparams.decoder)
@@ -73,12 +73,12 @@ class CtrlGenModel(object):
 
         g_outputs, _, _ = decoder(
             initial_state=connector(h), inputs=inputs['text_ids'],
-            embedding=embedder, sequence_length=inputs['length']-1)
+            embedding=embedder, sequence_length=inputs['length'] - 1)
 
         loss_g_ae = tx.losses.sequence_sparse_softmax_cross_entropy(
             labels=inputs['text_ids'][:, 1:],
             logits=g_outputs.logits,
-            sequence_length=inputs['length']-1,
+            sequence_length=inputs['length'] - 1,
             average_across_timesteps=True,
             sum_over_timesteps=False)
 
@@ -104,7 +104,7 @@ class CtrlGenModel(object):
         # Classification loss for the classifier
         clas_logits, clas_preds = classifier(
             inputs=clas_embedder(ids=inputs['text_ids'][:, 1:]),
-            sequence_length=inputs['length']-1)
+            sequence_length=inputs['length'] - 1)
         loss_d_clas = tf.nn.sigmoid_cross_entropy_with_logits(
             labels=tf.cast(inputs['labels'], tf.float32), logits=clas_logits)
         loss_d_clas = tf.reduce_mean(loss_d_clas)
@@ -115,18 +115,20 @@ class CtrlGenModel(object):
             inputs=clas_embedder(soft_ids=soft_outputs_.sample_id),
             sequence_length=soft_length_)
         loss_g_clas = tf.nn.sigmoid_cross_entropy_with_logits(
-            labels=tf.cast(1-inputs['labels'], tf.float32), logits=soft_logits)
+            labels=tf.cast(1 - inputs['labels'], tf.float32),
+            logits=soft_logits)
         loss_g_clas = tf.reduce_mean(loss_g_clas)
 
         # Accuracy on soft samples, for training progress monitoring
-        accu_g = tx.evals.accuracy(labels=1-inputs['labels'], preds=soft_preds)
+        accu_g = tx.evals.accuracy(labels=1 - inputs['labels'],
+                                   preds=soft_preds)
 
         # Accuracy on greedy-decoded samples, for training progress monitoring
         _, gdy_preds = classifier(
             inputs=clas_embedder(ids=outputs_.sample_id),
             sequence_length=length_)
         accu_g_gdy = tx.evals.accuracy(
-            labels=1-inputs['labels'], preds=gdy_preds)
+            labels=1 - inputs['labels'], preds=gdy_preds)
 
         # Aggregates losses
         loss_g = loss_g_ae + lambda_g * loss_g_clas
@@ -182,4 +184,3 @@ class CtrlGenModel(object):
         fetches_eval.update(self.metrics)
         fetches_eval.update(self.samples)
         self.fetches_eval = fetches_eval
-

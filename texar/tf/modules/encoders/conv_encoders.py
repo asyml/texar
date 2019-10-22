@@ -26,6 +26,7 @@ __all__ = [
     "Conv1DEncoder"
 ]
 
+
 class Conv1DEncoder(Conv1DNetwork, EncoderBase):
     """Simple Conv-1D encoder which consists of a sequence of conv layers
     followed with a sequence of dense layers.
@@ -35,7 +36,7 @@ class Conv1DEncoder(Conv1DNetwork, EncoderBase):
     with :class:`~texar.tf.modules.Conv1DNetwork`.
     """
 
-    def __init__(self, hparams=None): # pylint: disable=super-init-not-called
+    def __init__(self, hparams=None):  # pylint: disable=super-init-not-called
         Conv1DNetwork.__init__(self, hparams)
 
     @staticmethod
@@ -49,4 +50,3 @@ class Conv1DEncoder(Conv1DNetwork, EncoderBase):
         hparams = Conv1DNetwork.default_hparams()
         hparams['name'] = 'conv_encoder'
         return hparams
-

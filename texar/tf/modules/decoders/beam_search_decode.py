@@ -32,6 +32,7 @@ __all__ = [
     "beam_search_decode"
 ]
 
+
 def _get_initial_state(initial_state,
                        tiled_initial_state,
                        cell,

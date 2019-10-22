@@ -19,6 +19,7 @@ import argparse
 import tensorflow as tf
 import texar.tf as tx
 
+
 def prepare_data(data_name):
     """Prepare datasets.
     Args:
@@ -52,6 +53,7 @@ def prepare_data(data_name):
                                    extract=True)
     else:
         raise ValueError('Unknown data: {}'.format(data_name))
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='prepare data')

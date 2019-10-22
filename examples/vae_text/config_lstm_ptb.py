@@ -64,7 +64,7 @@ enc_emb_hparams = {
     'name': 'lookup_table',
     "dim": embed_dim,
     "dropout_rate": enc_dropout_in,
-    'initializer' : {
+    'initializer': {
         'type': 'random_normal_initializer',
         'kwargs': {
             'mean': 0.0,
@@ -77,7 +77,7 @@ dec_emb_hparams = {
     'name': 'lookup_table',
     "dim": embed_dim,
     "dropout_rate": dec_dropout_in,
-    'initializer' : {
+    'initializer': {
         'type': 'random_normal_initializer',
         'kwargs': {
             'mean': 0.0,
@@ -87,7 +87,7 @@ dec_emb_hparams = {
 }
 
 # KL annealing
-kl_anneal_hparams={
+kl_anneal_hparams = {
     "warm_up": 10,
     "start": 0.1
 }

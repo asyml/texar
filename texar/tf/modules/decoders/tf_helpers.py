@@ -376,7 +376,8 @@ class ScheduledEmbeddingTrainingHelper(TrainingHelper):
                         sample_ids_sampling)
                 elif self._embedding_args_cnt == 2:
                     # Prepare the position embedding of the next step
-                    times = tf.ones(self._batch_size, dtype=tf.int32) * (time+1)
+                    times = tf.ones(self._batch_size,
+                                    dtype=tf.int32) * (time + 1)
                     sampled_next_inputs = self._embedding_fn(
                         sample_ids_sampling, times)
                 base_shape = array_ops.shape(base_next_inputs)
@@ -630,7 +631,7 @@ class GreedyEmbeddingHelper(Helper):
         elif self._embedding_args_cnt == 2:
             del outputs
             # Prepare the position embedding of the next step
-            times = tf.ones(self._batch_size, dtype=tf.int32) * (time+1)
+            times = tf.ones(self._batch_size, dtype=tf.int32) * (time + 1)
             next_inputs = control_flow_ops.cond(
                 all_finished,
                 # If we're finished, the next_inputs value doesn't matter

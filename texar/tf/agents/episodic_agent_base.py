@@ -24,6 +24,7 @@ from texar.tf.agents.agent_base import AgentBase
 
 # pylint: disable=too-many-instance-attributes
 
+
 class EpisodicAgentBase(AgentBase):
     """Base class inherited by episodic RL agents.
 

@@ -23,7 +23,7 @@ def sample_from_model(args):
     sample_file = args.sample_file
     output = args.output
 
-    tgt_sent_pattern = re.compile('^\[(\d+)\] (.*?)$')
+    tgt_sent_pattern = re.compile(r"^\[(\d+)\] (.*?)$")
     para_data = [l.strip().split(' ||| ') for l in open(para_data)]
 
     f_out = open(output, 'w')
@@ -39,7 +39,7 @@ def sample_from_model(args):
         tgt_sent2 = line[len('target:'):]
         assert tgt_sent == tgt_sent2
 
-        line = f.readline().strip() # samples
+        line = f.readline().strip()  # samples
 
         tgt_sent = ' '.join(tgt_sent.split(' ')[1:-1])
         tgt_samples = set()
@@ -121,14 +121,14 @@ def sample_ngram(args):
         tgt_samples_distort_rates.append(0)
 
         for sid in range(args.sample_size - 1):
-            n = np.random.randint(1, min(tgt_len, args.max_ngram_size + 1)) # we do not replace the last token: it must be a period!
+            n = np.random.randint(1, min(tgt_len, args.max_ngram_size + 1))  # we do not replace the last token: it must be a period!
 
             idx = np.random.randint(tgt_len - n)
-            ngram = tgt_sent[idx: idx+n]
+            ngram = tgt_sent[idx: idx + n]
             new_ngram = get_new_ngram(ngram, n, tgt_vocab)
 
             sampled_tgt_sent = list(tgt_sent)
-            sampled_tgt_sent[idx: idx+n] = new_ngram
+            sampled_tgt_sent[idx: idx + n] = new_ngram
 
             # compute the probability of this sample
             # prob = 1. / args.max_ngram_size * 1. / (tgt_len - 1 + n) * 1 / (len(tgt_vocab) ** n)
@@ -190,7 +190,7 @@ def sample_ngram_adapt(args):
             bias_n = int(max_n * tgt_len / max_len) + 1
             assert 1 <= bias_n <= 4, 'bias_n={}, not in [1,4], max_n={}, tgt_len={}, max_len={}'.format(bias_n, max_n, tgt_len, max_len)
 
-            p = [1.0/(max_n + 5)] * max_n
+            p = [1.0 / (max_n + 5)] * max_n
             p[bias_n - 1] = 1 - p[0] * (max_n - 1)
             assert abs(sum(p) - 1) < 1e-10, 'sum(p) != 1'
 
@@ -198,11 +198,11 @@ def sample_ngram_adapt(args):
             assert n < tgt_len, 'n={}, tgt_len={}'.format(n, tgt_len)
 
             idx = np.random.randint(tgt_len - n)
-            ngram = tgt_sent[idx: idx+n]
+            ngram = tgt_sent[idx: idx + n]
             new_ngram = get_new_ngram(ngram, n, tgt_vocab)
 
             sampled_tgt_sent = list(tgt_sent)
-            sampled_tgt_sent[idx: idx+n] = new_ngram
+            sampled_tgt_sent[idx: idx + n] = new_ngram
 
             tgt_samples.append(sampled_tgt_sent)
 

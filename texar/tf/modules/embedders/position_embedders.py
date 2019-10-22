@@ -285,9 +285,7 @@ class SinusoidsPositionEmbedder(EmbedderBase):
             if position_size is None:
                 raise ValueError(
                     "'position_size' must not be None when "
-                    "'cache_embeddings' is set to True"
-                )
-            
+                    "'cache_embeddings' is set to True")
             positions = tf.range(position_size, dtype=tf.float32)
             signal = self._compute_embeddings(positions)
             self.signal = signal

@@ -14,6 +14,7 @@ from texar.tf import context
 # pylint: disable=no-member, too-many-locals, too-many-instance-attributes
 # pylint: disable=too-many-arguments, protected-access
 
+
 class MemNetRNNLikeTest(tf.test.TestCase):
     """Tests :class:`~texar.tf.modules.memory.memory_network.MemNetRNNLike`.
     """
@@ -60,7 +61,6 @@ class MemNetRNNLikeTest(tf.test.TestCase):
             "B": embed_hparams,
             "use_B": use_B,
         }
-        
         memnet = MemNetRNNLike(raw_memory_dim=raw_memory_dim,
                                hparams=memnet_hparams)
         kwargs = {}
@@ -94,6 +94,7 @@ class MemNetRNNLikeTest(tf.test.TestCase):
                     for soft_query in ([False, True] if use_B else [False]):
                         self._test_memory_dim(combine_mode, soft_memory,
                                               soft_query, use_B)
+
 
 if __name__ == "__main__":
     tf.test.main()

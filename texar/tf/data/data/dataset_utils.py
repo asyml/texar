@@ -40,6 +40,7 @@ __all__ = [
     "random_shard_dataset",
 ]
 
+
 class _DataSpec(object):
     """Dataset specification. Used to pass necessary info to
     user-defined tranformation functions.
@@ -93,6 +94,7 @@ class _DataSpec(object):
                 v_[i] = v
                 self.__dict__[k] = v_
 
+
 def _make_length_filter_fn(length_name, max_length):
     """Returns a predicate function which takes in data sample
     and returns a bool indicating whether to filter by length.
@@ -100,6 +102,7 @@ def _make_length_filter_fn(length_name, max_length):
     def _filter_fn(data):
         return data[length_name] <= max_length
     return _filter_fn
+
 
 def _make_smaller_batch_filter_fn(batch_size):
     """Returns a predicate function which takes in a batched data
@@ -114,6 +117,7 @@ def _make_smaller_batch_filter_fn(batch_size):
             return tf.equal(tf.shape(data)[0], batch_size)
 
     return _filter_fn
+
 
 def _make_combined_filter_fn(filter_fns, mode="and"):
     """Returns a new predicate function that combines multiple
@@ -142,12 +146,14 @@ def _make_combined_filter_fn(filter_fns, mode="and"):
             raise ValueError("Unknown mode: {}".format(mode))
     return _combined_fn
 
+
 def _connect_name(lhs_name, rhs_name):
     if not lhs_name:
         return rhs_name
     if not rhs_name:
         return lhs_name
     return "{}_{}".format(lhs_name, rhs_name)
+
 
 def maybe_tuple(data):
     """Returns `tuple(data)` if :attr:`data` contains more than 1 elements.
@@ -158,6 +164,7 @@ def maybe_tuple(data):
     data = data if len(data) > 1 else data[0]
     return data
 
+
 def make_partial(fn, *args, **kwargs):
     """Returns a new function with single argument by freezing other arguments
     of :attr:`fn`.
@@ -165,6 +172,7 @@ def make_partial(fn, *args, **kwargs):
     def _new_fn(data):
         return fn(data, *args, **kwargs)
     return _new_fn
+
 
 def name_prefix_fn(name_prefix):
     """Returns a function that append a prefix to field names.
@@ -177,6 +185,7 @@ def name_prefix_fn(name_prefix):
         return transformed_data
 
     return _prefix_fn
+
 
 def make_chained_transformation(tran_fns, *args, **kwargs):
     """Returns a dataset transformation function that applies a list of
@@ -198,6 +207,7 @@ def make_chained_transformation(tran_fns, *args, **kwargs):
         return data
 
     return _chained_fn
+
 
 def make_combined_transformation(tran_fns, name_prefix=None, *args, **kwargs):
     """Returns a dataset transformation function that applies
@@ -247,13 +257,14 @@ def make_combined_transformation(tran_fns, name_prefix=None, *args, **kwargs):
 
     return _combined_fn
 
+
 def random_shard_dataset(dataset_size, shard_size, seed=None):
     """Returns a dataset transformation function that randomly shards a
     dataset.
     """
     num_shards = utils.ceildiv(dataset_size, shard_size)
     boundaries = np.linspace(0, dataset_size, num=num_shards, endpoint=False,
-                             dtype=np.int64) #pylint: disable=no-member
+                             dtype=np.int64)  # pylint: disable=no-member
 
     def _shard_fn(dataset):
         sharded_dataset = (
@@ -263,4 +274,3 @@ def random_shard_dataset(dataset_size, shard_size, seed=None):
         return sharded_dataset
 
     return _shard_fn
-

@@ -7,6 +7,7 @@ import tensorflow as tf
 import numpy as np
 from texar.tf import HParams
 
+
 def transform_gpt2_to_texar_config(input_json_path):
     """
     Remap the config file
@@ -47,7 +48,7 @@ def transform_gpt2_to_texar_config(input_json_path):
                     "type": "Dense",
                     "kwargs": {
                         "name": "conv1",
-                        "units": hidden_dim*4,
+                        "units": hidden_dim * 4,
                         "activation": "gelu",
                         "use_bias": True,
                     }
@@ -65,7 +66,6 @@ def transform_gpt2_to_texar_config(input_json_path):
         },
     }
     return HParams(configs, default_hparams=None)
-
 
 
 def _map_tensor_names(original_tensor_name):
@@ -107,7 +107,6 @@ def _map_tensor_names(original_tensor_name):
         return tensor_name_
     else:
         return original_tensor_name
-
 
 
 # pylint: disable=too-many-locals
@@ -187,6 +186,7 @@ def _get_assignment_map_from_checkpoint(sess, all_variables, init_checkpoint):
             assignment_map[ckpt_tensor_name] = local_tensor
 
     return assignment_map
+
 
 def init_gpt2_checkpoint(sess, init_checkpoint):
     """

@@ -38,7 +38,7 @@ __all__ = [
     "UnidirectionalRNNClassifier"
 ]
 
-#def RNNClassifierBase(ClassifierBase):
+# def RNNClassifierBase(ClassifierBase):
 #    """Base class inherited by all RNN classifiers.
 #    """
 #
@@ -115,7 +115,6 @@ class UnidirectionalRNNClassifier(ClassifierBase):
 
                 layer_hparams = {"type": "Dense", "kwargs": logit_kwargs}
                 self._logit_layer = layers.get_layer(hparams=layer_hparams)
-
 
     @staticmethod
     def default_hparams():

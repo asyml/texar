@@ -17,6 +17,7 @@ import tensorflow as tf
 
 import texar.tf as tx
 
+
 class ScalarDataTest(tf.test.TestCase):
     """Tests scalar data class.
     """
@@ -54,7 +55,6 @@ class ScalarDataTest(tf.test.TestCase):
                 "data_name": "feat"
             }
         }
-
 
     def _run_and_test(self, hparams):
         # Construct database
@@ -133,6 +133,7 @@ class ScalarDataTest(tf.test.TestCase):
                     break
             self.assertEqual(len(vals), len(vals_sfl))
             self.assertSetEqual(set(vals), set(vals_sfl))
+
 
 if __name__ == "__main__":
     tf.test.main()

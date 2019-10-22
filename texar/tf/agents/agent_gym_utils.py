@@ -25,6 +25,7 @@ __all__ = [
     "get_gym_env_config"
 ]
 
+
 def convert_gym_space(spc):
     """Converts a :gym:`gym.Space <#spaces>` instance to a
     :class:`~texar.tf.agents.Space` instance.
@@ -42,6 +43,7 @@ def convert_gym_space(spc):
         return Space(
             shape=spc.shape, low=spc.low, high=spc.high, dtype=spc.dtype)
 
+
 def get_gym_env_config(env):
     """Creates an instance of :class:`~texar.tf.agents.EnvConfig`
     from a :gym:`gym env <#environments>`.
@@ -57,4 +59,3 @@ def get_gym_env_config(env):
         action_space=env.action_space,
         observ_space=env.observation_space,
         reward_range=env.reward_range)
-

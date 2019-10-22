@@ -27,8 +27,10 @@ __all__ = [
     "HParams"
 ]
 
+
 def _type_name(value):
     return type(value).__name__
+
 
 class HParams(object):
     """A class that maintains hyperparameters for configing Texar modules.
@@ -158,7 +160,7 @@ class HParams(object):
         super(HParams, self).__setattr__('_hparams', parsed_hparams)
 
     @staticmethod
-    def _parse(hparams, # pylint: disable=too-many-branches, too-many-statements
+    def _parse(hparams,
                default_hparams,
                allow_new_hparam=False):
         """Parses hyperparameters.
@@ -367,4 +369,3 @@ class HParams(object):
             if isinstance(value, HParams):
                 dict_[name] = value.todict()
         return dict_
-

@@ -28,6 +28,7 @@ from tensorflow_probability import distributions as tfpd
 
 # pylint: disable=invalid-name, too-many-arguments, too-many-locals
 
+
 class PadRemover(object):
     """Helper to remove padding from a tensor before sending to the experts.
     The padding is computed for one reference tensor containing the padding mask
@@ -88,7 +89,7 @@ class PadRemover(object):
                 x,
                 indices=self.nonpad_ids,
             )
-            #if not context.in_eager_mode():
+            # if not context.in_eager_mode():
             # This is a hack but for some reason, gather_nd return a tensor of
             # undefined shape, so the shape is set up manually
             x.set_shape([None] + x_shape[1:])
@@ -113,6 +114,7 @@ class PadRemover(object):
             )
         return x
 
+
 def embedding_to_padding(emb):
     """Calculates the padding mask based on which embeddings are all zero.
     We have hacked symbol_modality to return all-zero embeddings
@@ -126,6 +128,7 @@ def embedding_to_padding(emb):
     """
     emb_sum = tf.reduce_sum(tf.abs(emb), axis=-1)
     return tf.cast(tf.equal(emb_sum, 0.0), tf.float32)
+
 
 def smoothing_cross_entropy(logits,
                             labels,
@@ -164,8 +167,7 @@ def smoothing_cross_entropy(logits,
             labels = tf.cast(labels, tf.float32)
             normal_dist = tfpd.Normal(loc=labels, scale=confidence)
             soft_targets = normal_dist.prob(
-                tf.cast(tf.range(vocab_size), tf.float32)\
-                    [:, None, None])
+                tf.cast(tf.range(vocab_size), tf.float32)[:, None, None])
             # Reordering soft_targets from [vocab_size, batch_size, ?]
             # to match logits: [batch_size, ?, vocab_size]
             soft_targets = tf.transpose(soft_targets, perm=[1, 2, 0])
@@ -177,8 +179,8 @@ def smoothing_cross_entropy(logits,
                 off_value=low_confidence,
                 dtype=logits.dtype)
         if zero_pad:
-            soft_targets = tf.concat([tf.expand_dims(\
-                tf.zeros_like(labels, dtype=tf.float32), 2),\
+            soft_targets = tf.concat([tf.expand_dims(
+                tf.zeros_like(labels, dtype=tf.float32), 2),
                 soft_targets[:, :, 1:]], -1)
 
         if hasattr(tf.nn, 'softmax_cross_entropy_with_logits_v2'):
@@ -188,4 +190,3 @@ def smoothing_cross_entropy(logits,
 
     return cross_entropy_fn(
         logits=logits, labels=tf.stop_gradient(soft_targets))
-

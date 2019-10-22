@@ -16,6 +16,7 @@ from texar.tf.hyperparams import HParams
 
 # pylint: disable=no-member
 
+
 class HParamsTest(tf.test.TestCase):
     """Tests hyperparameter related operations.
     """
@@ -95,12 +96,12 @@ class HParamsTest(tf.test.TestCase):
             hparams_loaded = pickle.load(hparams_file)
         self.assertEqual(hparams_loaded.todict(), hparams_.todict())
 
-
     def test_typecheck(self):
         """Tests type-check functionality.
         """
         def _foo():
             pass
+
         def _bar():
             pass
 
@@ -114,7 +115,6 @@ class HParamsTest(tf.test.TestCase):
         }
         hparams_ = HParams(hparams, default_hparams)
         self.assertEqual(hparams_.fn, default_hparams["fn"])
-
 
     def test_type_kwargs(self):
         """The the special cases involving "type" and "kwargs"
