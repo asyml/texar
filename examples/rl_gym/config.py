@@ -17,7 +17,7 @@ Cartpole config.
 
 # pylint: disable=invalid-name
 
-policy_hparams = None # Use default hyperparameters
+policy_hparams = None  # Use default hyperparameters
 
 pg_agent_hparams = {
     "policy_hparams": policy_hparams,

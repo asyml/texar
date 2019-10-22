@@ -88,7 +88,7 @@ emb_inputs = embedder(inputs)
 char_size = len(char_vecs)
 char_embedder = tx.modules.WordEmbedder(vocab_size=char_size, init_value=char_vecs, hparams=config.char_emb)
 emb_chars = char_embedder(chars)
-char_shape = tf.shape(emb_chars) # [batch, length, char_length, char_dim]
+char_shape = tf.shape(emb_chars)  # [batch, length, char_length, char_dim]
 emb_chars = tf.reshape(emb_chars, (-1, char_shape[2], CHAR_DIM))
 char_encoder = tx.modules.Conv1DEncoder(config.conv)
 char_outputs = char_encoder(emb_chars)
@@ -128,6 +128,7 @@ train_op = tx.core.get_train_op(
     hparams=config.opt)
 
 # Training/eval processes
+
 
 def _train_epoch(sess, epoch):
     start_time = time.time()

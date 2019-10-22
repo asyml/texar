@@ -131,7 +131,7 @@ class SSTProcessor(DataProcessor):
                 text_a = tx.utils.compat_as_text(line[1])
                 # Single sentence classification, text_b doesn't exist
                 text_b = None
-                label = '0' # arbitrary set as 0
+                label = '0'  # arbitrary set as 0
                 examples.append(InputExample(guid=guid, text_a=text_a,
                                              text_b=text_b, label=label))
         return examples

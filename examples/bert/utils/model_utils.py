@@ -32,7 +32,7 @@ def get_lr(global_step, num_train_steps, num_warmup_steps, static_lr):
         warmup_learning_rate = static_lr * warmup_percent_done
 
         is_warmup = tf.cast(global_steps_int < warmup_steps_int, tf.float32)
-        learning_rate = ((1.0 - is_warmup) * learning_rate\
-            +is_warmup * warmup_learning_rate)
+        learning_rate = ((1.0 - is_warmup) * learning_rate
+                         + is_warmup * warmup_learning_rate)
 
     return learning_rate

@@ -25,10 +25,12 @@ import logging
 import numpy as np
 import tensorflow as tf
 
+
 def set_random_seed(myseed):
     tf.set_random_seed(myseed)
     np.random.seed(myseed)
     random.seed(myseed)
+
 
 def batch_size_fn(new, count, size_so_far):
     max_src_in_batch, max_tgt_in_batch = 0, 0
@@ -38,6 +40,7 @@ def batch_size_fn(new, count, size_so_far):
     tgt_elements = count * max_tgt_in_batch
     return max(src_elements, tgt_elements)
 
+
 def get_lr(fstep, opt_config):
     if opt_config['learning_rate_schedule'] == 'static':
         lr = opt_config['static_lr']
@@ -46,6 +49,7 @@ def get_lr(fstep, opt_config):
             * min(1.0, (fstep / opt_config['warmup_steps'])) \
             * (1 / math.sqrt(max(fstep, opt_config['warmup_steps'])))
     return lr
+
 
 def get_logger(log_path):
     """Returns a logger.
@@ -62,6 +66,7 @@ def get_logger(log_path):
     logger.addHandler(fh)
     return logger
 
+
 def list_strip_eos(list_, eos_token):
     """Strips EOS token from a list of lists of tokens.
     """
@@ -71,4 +76,3 @@ def list_strip_eos(list_, eos_token):
             elem = elem[:elem.index(eos_token)]
         list_strip.append(elem)
     return list_strip
-

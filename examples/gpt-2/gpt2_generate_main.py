@@ -70,6 +70,7 @@ flags.DEFINE_string("config_model", "configs.config_model_117M",
                     "For '--config_type=texar', set the texar config file "
                     "like: '--config_model configs.config_model_117M'.")
 
+
 def main(_):
     """
     Builds the model and runs
@@ -171,7 +172,7 @@ def main(_):
                     context: [context_tokens for _ in range(batch_size)],
                     context_length:
                         [len(context_tokens) for _ in range(batch_size)],
-                    tx.context.global_mode():tf.estimator.ModeKeys.PREDICT
+                    tx.context.global_mode(): tf.estimator.ModeKeys.PREDICT
                 }
                 generated = 0
                 for _ in range(nsamples // batch_size):
@@ -220,6 +221,7 @@ def main(_):
                     print("=" * 40 +
                           " SAMPLE " + str(generated) + " " + "=" * 40)
                     print(text)
+
 
 if __name__ == "__main__":
     tf.app.run()

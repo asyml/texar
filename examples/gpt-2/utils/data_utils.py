@@ -123,4 +123,3 @@ def prepare_TFRecord_data(data_dir, max_seq_length, encoder, output_dir):
         test_file = os.path.join(output_dir, "test.tf_record")
         file_based_convert_examples_to_features(
             test_examples, max_seq_length, encoder, test_file, EOS_token=None)
-

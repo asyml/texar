@@ -28,6 +28,7 @@ from config_data import data_root
 
 wnd_sz = 10
 
+
 class Dataset(object):
     """Data preprocessor.
     """
@@ -45,7 +46,7 @@ class Dataset(object):
                 for utts in context:
                     p = utts.find(':')
                     dialog.append((
-                        (utts[p-1] == 'A') * 2 - 1, utts[p + 2:-1], 0))
+                        (utts[p - 1] == 'A') * 2 - 1, utts[p + 2:-1], 0))
 
                 if dialog[0][1][-1] == '>':
                     dialog = dialog[1:]
@@ -83,9 +84,9 @@ class Dataset(object):
                                  for speaker, sentence, _ in utts])
 
                 lst = [(idx, start, start + wnd_sz)
-                       for start in range(0, len(utts)-wnd_sz)] + \
+                       for start in range(0, len(utts) - wnd_sz)] + \
                       [(idx, 0, end)
-                       for end in range(2, min(wnd_sz+1, len(utts)))]
+                       for end in range(2, min(wnd_sz + 1, len(utts)))]
 
                 self.lst += lst
 
@@ -113,11 +114,12 @@ class Dataset(object):
 
     def get(self, idx):
         idx, start, end = self.lst[idx]
-        source = self.raw[idx][start:end-1]
-        target = self.raw[idx][end-1]
+        source = self.raw[idx][start:end - 1]
+        target = self.raw[idx][end - 1]
         source = ' '.join([b for a, b, c in source])
-        cct = self.raw[idx][end-2][0] == self.raw[idx][end-1][0]
+        cct = self.raw[idx][end - 2][0] == self.raw[idx][end - 1][0]
         return self.topics[idx], cct, source, target
+
 
 def sw1c2r(data_root):
     dts_train = Dataset(os.path.join(data_root, 'train.jsonl'))
@@ -129,6 +131,7 @@ def sw1c2r(data_root):
         'test': dts_test
     }
     return datasets
+
 
 def generate_reference_for_test_dialog(dataset, data_root):
     vocab = {}
@@ -190,6 +193,7 @@ def generate_reference_for_test_dialog(dataset, data_root):
 
         dts_test.refs.append(refs)
 
+
 def download_and_process(data_root):
     if not os.path.isdir(data_root):
         os.makedirs(data_root)
@@ -232,6 +236,7 @@ def download_and_process(data_root):
 
             with open(os.path.join(data_root, '{}-target-refs.txt'.format(stage)), 'w') as f:
                 f.write('\n'.join(['|||'.join(v) for v in dts.refs]))
+
 
 if __name__ == '__main__':
     download_and_process(data_root)

@@ -1,7 +1,7 @@
 
 import tensorflow as tf
 
-num_samples = 10 # Number of samples generated for each test data instance
+num_samples = 10  # Number of samples generated for each test data instance
 beam_width = num_samples
 
 encoder_hparams = {

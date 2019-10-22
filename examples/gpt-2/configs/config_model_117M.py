@@ -36,7 +36,7 @@ decoder = {
                 "type": "Dense",
                 "kwargs": {
                     "name": "conv1",
-                    "units": dim*4,
+                    "units": dim * 4,
                     "activation": "gelu",
                     "use_bias": True,
                 }

@@ -1,7 +1,7 @@
 
 import tensorflow as tf
 
-num_samples = 10 # Number of samples generated for each test data instance
+num_samples = 10  # Number of samples generated for each test data instance
 beam_width = num_samples
 
 encoder_hparams = {
@@ -52,9 +52,9 @@ opt_hparams = {
             "learning_rate": 0.001,
         }
     },
-    ## (It looks gradient clip does not affect the results a lot)
-    #"gradient_clip": {
+    # (It looks gradient clip does not affect the results a lot)
+    # "gradient_clip": {
     #    "type": "clip_by_global_norm",
     #    "kwargs": {"clip_norm": 5.}
-    #},
+    # },
 }

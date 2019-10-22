@@ -99,8 +99,8 @@ def _main(_):
     save_path = os.path.join(save_dir, suffix)
 
     # KL term annealing rate
-    anneal_r = 1.0 / (config.kl_anneal_hparams["warm_up"] * \
-        (train_data.dataset_size() / config.batch_size))
+    anneal_r = 1.0 / (config.kl_anneal_hparams["warm_up"] *
+                      (train_data.dataset_size() / config.batch_size))
 
     # Model architecture
     encoder_w_embedder = tx.modules.WordEmbedder(
@@ -148,7 +148,7 @@ def _main(_):
     connector_stoch = tx.modules.ReparameterizedStochasticConnector(
         decoder_initial_state_size)
 
-    ## encoder -> connector -> decoder
+    # encoder -> connector -> decoder
 
     _, ecdr_states = encoder(
         input_embed,
@@ -175,7 +175,7 @@ def _main(_):
             initial_state=dcdr_states,
             decoding_strategy="train_greedy",
             inputs=output_embed,
-            sequence_length=data_batch["length"]-1)
+            sequence_length=data_batch["length"] - 1)
     else:
         outputs = decoder(
             inputs=output_embed,
@@ -189,7 +189,7 @@ def _main(_):
     rc_loss = tx.losses.sequence_sparse_softmax_cross_entropy(
         labels=data_batch["text_ids"][:, 1:],
         logits=logits,
-        sequence_length=data_batch["length"]-1)
+        sequence_length=data_batch["length"] - 1)
 
     # KL annealing
     kl_weight = tf.placeholder(tf.float32, shape=())
@@ -249,9 +249,9 @@ def _main(_):
                 rc_loss_ += fetches_["rc_loss"] * batch_size_
 
                 if step % display == 0 and mode_string == 'train':
-                    print('%s: epoch %d, step %d, nll %.4f, klw: %.4f, ' \
-                           'KL %.4f,  rc %.4f, log_ppl %.4f, ppl %.4f, ' \
-                           'time elapsed: %.1fs' % \
+                    print('%s: epoch %d, step %d, nll %.4f, klw: %.4f, '
+                          'KL %.4f,  rc %.4f, log_ppl %.4f, ppl %.4f, '
+                          'time elapsed: %.1fs' %
                           (mode_string, epoch, step, nll_ / num_sents,
                            opt_vars["kl_weight"], kl_loss_ / num_sents,
                            rc_loss_ / num_sents, nll_ / num_words,
@@ -262,7 +262,7 @@ def _main(_):
                 step += 1
 
             except tf.errors.OutOfRangeError:
-                print('\n%s: epoch %d, nll %.4f, KL %.4f, rc %.4f, ' \
+                print('\n%s: epoch %d, nll %.4f, KL %.4f, rc %.4f, '
                       'log_ppl %.4f, ppl %.4f\n' %
                       (mode_string, epoch, nll_ / num_sents,
                        kl_loss_ / num_sents, rc_loss_ / num_sents,
@@ -334,7 +334,7 @@ def _main(_):
             end_id = len(sent)
             if vocab.eos_token in sent:
                 end_id = sent.index(vocab.eos_token)
-            fh.write(' '.join(sent[:end_id+1]) + '\n')
+            fh.write(' '.join(sent[:end_id + 1]) + '\n')
 
         print('Output done')
         fh.close()
@@ -353,7 +353,7 @@ def _main(_):
         # Counts trainable parameters
         total_parameters = 0
         for variable in tf.trainable_variables():
-            shape = variable.get_shape() # shape is an array of tf.Dimension
+            shape = variable.get_shape()  # shape is an array of tf.Dimension
             variable_parameters = 1
             for dim in shape:
                 variable_parameters *= dim.value
