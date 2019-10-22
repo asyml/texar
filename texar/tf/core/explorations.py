@@ -28,6 +28,7 @@ __all__ = [
     "EpsilonLinearDecayExploration"
 ]
 
+
 class ExplorationBase(object):
     """Base class inherited by all exploration classes.
 
@@ -123,4 +124,3 @@ class EpsilonLinearDecayExploration(ExplorationBase):
                 r * self._hparams.final_epsilon
 
         return epsilon
-

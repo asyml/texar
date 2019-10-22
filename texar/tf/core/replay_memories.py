@@ -29,6 +29,7 @@ __all__ = [
     "DequeReplayMemory"
 ]
 
+
 class ReplayMemoryBase(object):
     """Base class of replay memory inheritted by all replay memory classes.
 
@@ -120,7 +121,7 @@ class DequeReplayMemory(ReplayMemoryBase):
         if len(self.deque) > self.capacity:
             self.deque.popleft()
 
-    #TODO(zhiting): is it okay to have stand alone random generator ?
+    # TODO(zhiting): is it okay to have stand alone random generator ?
     def get(self, size):
         """Randomly samples :attr:`size` entries from the memory. Returns
         a list.

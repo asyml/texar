@@ -58,8 +58,7 @@ class OptimizationTest(tf.test.TestCase):
         momentum_optimizer, _ = opt.get_optimizer_fn(hparams)
         self.assertIsInstance(momentum_optimizer, tf.train.MomentumOptimizer)
 
-
-    def test_get_learning_rate_decay_fn(self): # pylint: disable=too-many-locals
+    def test_get_learning_rate_decay_fn(self):
         """Tests get_learning_rate_decay_fn.
         """
         default_lr_decay_fn = opt.get_learning_rate_decay_fn(
@@ -83,7 +82,7 @@ class OptimizationTest(tf.test.TestCase):
         global_step = 1
         pc_lr = pc_lr_decay_fn(learning_rate=1., global_step=global_step)
         pc_lr_true = tf.train.piecewise_constant(
-            global_step-hparams["start_decay_step"], boundaries, values)
+            global_step - hparams["start_decay_step"], boundaries, values)
 
         hparams["type"] = "natural_exp_decay"
         hparams["kwargs"] = {
@@ -93,7 +92,7 @@ class OptimizationTest(tf.test.TestCase):
         ned_lr_decay_fn = opt.get_learning_rate_decay_fn(hparams)
         ned_lr = ned_lr_decay_fn(learning_rate=1., global_step=global_step)
         ned_lr_true = tf.train.natural_exp_decay(
-            1., global_step-hparams["start_decay_step"],
+            1., global_step - hparams["start_decay_step"],
             hparams["kwargs"]["decay_steps"], hparams["kwargs"]["decay_rate"])
 
         with self.test_session() as sess:
@@ -153,6 +152,7 @@ class OptimizationTest(tf.test.TestCase):
         loss = tf.nn.l2_loss(var)
         train_op = opt.get_train_op(loss)
         self.assertTrue(tf.contrib.framework.is_tensor(train_op))
+
 
 if __name__ == "__main__":
     tf.test.main()

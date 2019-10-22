@@ -21,6 +21,7 @@ from texar.tf.core import layers
 # pylint: disable=no-member, protected-access, invalid-name
 # pylint: disable=redefined-variable-type
 
+
 class GetRNNCellTest(tf.test.TestCase):
     """Tests RNN cell creator.
     """
@@ -90,7 +91,6 @@ class GetRNNCellTest(tf.test.TestCase):
                 self.assertEqual(state_.shape[0], batch_size)
                 self.assertEqual(state_.shape[1],
                                  hparams_.kwargs.num_units)
-
 
     def test_switch_dropout(self):
         """Tests dropout mode.
@@ -240,6 +240,7 @@ class ReducePoolingLayerTest(tf.test.TestCase):
             output_, output_reduce_ = sess.run([output, output_reduce])
             np.testing.assert_array_equal(output_, output_reduce_)
 
+
 class MergeLayerTest(tf.test.TestCase):
     """Tests MergeLayer.
     """
@@ -300,6 +301,7 @@ class MergeLayerTest(tf.test.TestCase):
 
         num_vars = sum([len(layer.trainable_variables) for layer in layers_])
         self.assertEqual(num_vars, len(m_layer.trainable_variables))
+
 
 class SequentialLayerTest(tf.test.TestCase):
     """Tests sequential layer.

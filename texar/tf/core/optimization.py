@@ -37,6 +37,7 @@ __all__ = [
     "AdamWeightDecayOptimizer",
 ]
 
+
 def default_optimization_hparams():
     """Returns a `dict` of default hyperparameters of training op
     and their default values
@@ -170,6 +171,7 @@ def default_optimization_hparams():
         "name": None
     }
 
+
 def get_optimizer_fn(hparams=None):
     """Returns a function `optimizer_fn` of making optimizer instance, along
     with the optimizer class.
@@ -227,6 +229,7 @@ def get_optimizer_fn(hparams=None):
         return opt_class(**opt_kwargs)
 
     return _get_opt, opt_class
+
 
 def get_learning_rate_decay_fn(hparams=None):
     """Creates learning rate decay function based on the hyperparameters.
@@ -351,6 +354,7 @@ def get_gradient_clip_fn(hparams=None):
 
     return grad_clip_fn
 
+
 def _get_static_lr(learning_rate=None, optimizer_class=None, hparams=None):
     """Return the base static learning_rate.
         A helper function for creating the optimization function.
@@ -365,6 +369,7 @@ def _get_static_lr(learning_rate=None, optimizer_class=None, hparams=None):
         opt_argspec = utils.get_default_arg_values(optimizer_class.__init__)
         learning_rate = opt_argspec.get("learning_rate", None)
     return learning_rate
+
 
 def get_optimizer(learning_rate=None, global_step=None, hparams=None):
 
@@ -408,6 +413,7 @@ def get_optimizer(learning_rate=None, global_step=None, hparams=None):
     optimizer = optimizer_fn(learning_rate=learning_rate)
 
     return optimizer
+
 
 def get_train_op(loss, variables=None,
                  optimizer=None, learning_rate=None,
@@ -481,6 +487,7 @@ def get_train_op(loss, variables=None,
 
     return train_op
 
+
 class AdamWeightDecayOptimizer(tf.train.Optimizer):
     """
     A basic Adam optimizer that includes "correct" L2 weight decay.
@@ -533,12 +540,11 @@ class AdamWeightDecayOptimizer(tf.train.Optimizer):
                     initializer=tf.zeros_initializer())
 
                 # Standard Adam update.
-                next_m = (tf.multiply(self.beta_1, m)\
+                next_m = (tf.multiply(self.beta_1, m)
                           + tf.multiply(1.0 - self.beta_1,
                                         grad))
-                next_v = (tf.multiply(self.beta_2, v)\
-                          + tf.multiply(1.0 - self.beta_2,
-                                        tf.square(grad)))
+                next_v = (tf.multiply(self.beta_2, v)
+                          + tf.multiply(1.0 - self.beta_2, tf.square(grad)))
 
                 update = next_m / (tf.sqrt(next_v) + self.epsilon)
 
