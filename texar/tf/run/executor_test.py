@@ -17,6 +17,7 @@ import tensorflow as tf
 from texar.tf.run.executor import Executor
 from texar.tf.models.seq2seq.basic_seq2seq import BasicSeq2seq
 
+
 class ExecutorTest(tf.test.TestCase):
     """Tests :class:`texar.tf.run.executor.Executor`
     """
@@ -78,6 +79,7 @@ class ExecutorTest(tf.test.TestCase):
         exor.evaluate(steps=5)
 
         shutil.rmtree(model_dir)
+
 
 if __name__ == "__main__":
     tf.test.main()

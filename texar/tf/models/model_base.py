@@ -80,4 +80,3 @@ class ModelBase(object):
         of the module.
         """
         return self._hparams
-
