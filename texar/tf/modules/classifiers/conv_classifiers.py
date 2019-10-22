@@ -33,6 +33,7 @@ __all__ = [
     "Conv1DClassifier"
 ]
 
+
 class Conv1DClassifier(ClassifierBase):
     """Simple Conv-1D classifier.
     This is a combination of the
@@ -135,7 +136,7 @@ class Conv1DClassifier(ClassifierBase):
         hparams = Conv1DEncoder.default_hparams()
         hparams.update({
             "name": "conv1d_classifier",
-            "num_classes": 2, #set to <=0 to avoid appending output layer
+            "num_classes": 2,  # set to <=0 to avoid appending output layer
             "logit_layer_kwargs": {"use_bias": False}
         })
         return hparams
@@ -213,7 +214,7 @@ class Conv1DClassifier(ClassifierBase):
         return self._num_classes
 
     @property
-    def nn(self): # pylint: disable=invalid-name
+    def nn(self):  # pylint: disable=invalid-name
         """The classifier neural network.
         """
         return self._encoder

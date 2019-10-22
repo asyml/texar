@@ -25,6 +25,7 @@ __all__ = [
     "ClassifierBase"
 ]
 
+
 class ClassifierBase(ModuleBase):
     """Base class inherited by all classifier classes.
     """
@@ -52,4 +53,3 @@ class ClassifierBase(ModuleBase):
           Classification results.
         """
         raise NotImplementedError
-

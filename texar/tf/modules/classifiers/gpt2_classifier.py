@@ -281,4 +281,3 @@ class GPT2Classifier(ClassifierBase, PretrainedGPT2Mixin):
             self._built = True
 
         return logits, pred
-
