@@ -37,6 +37,7 @@ __all__ = [
     "TransformerEncoder"
 ]
 
+
 def default_transformer_poswise_net_hparams(output_dim=512):
     """Returns default hyperparameters of a
     :class:`~texar.tf.modules.FeedForwardNetwork` as a pos-wise network used
@@ -85,7 +86,7 @@ def default_transformer_poswise_net_hparams(output_dim=512):
                 "type": "Dense",
                 "kwargs": {
                     "name": "conv1",
-                    "units": output_dim*4,
+                    "units": output_dim * 4,
                     "activation": "relu",
                     "use_bias": True,
                 }
@@ -364,9 +365,9 @@ class TransformerEncoder(EncoderBase):
                         training=is_train_mode(mode)
                     )
                     if pad_remover:
-                        sub_output = tf.reshape(pad_remover.restore(tf.squeeze(\
-                            sub_output, axis=0)), original_shape \
-                        )
+                        sub_output = tf.reshape(
+                            pad_remover.restore(tf.squeeze(sub_output, axis=0)),
+                            original_shape)
                     else:
                         sub_output = tf.reshape(sub_output, original_shape)
 

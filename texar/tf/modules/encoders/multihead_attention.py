@@ -34,6 +34,7 @@ __all__ = [
     "MultiheadAttentionEncoder"
 ]
 
+
 class MultiheadAttentionEncoder(EncoderBase):
     """Multihead Attention Encoder
 
@@ -67,6 +68,7 @@ class MultiheadAttentionEncoder(EncoderBase):
             self.O_dense = tf.layers.Dense(self._hparams.output_dim,
                                            use_bias=use_bias,
                                            name='output')
+
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
@@ -145,8 +147,8 @@ class MultiheadAttentionEncoder(EncoderBase):
             num_units = self._hparams.num_units
             if num_units % num_heads:
                 raise ValueError("Value depth (%d) must be divisible by "
-                                 "the number of attention heads (%d)." %(\
-                                 num_units, num_heads))
+                                 "the number of attention heads (%d)."
+                                 % (num_units, num_heads))
 
             def _update_and_return(layer, key):
                 if memory is None:
@@ -202,7 +204,7 @@ class MultiheadAttentionEncoder(EncoderBase):
             Q_ = self._split_heads(Q)
             K_ = self._split_heads(K)
             V_ = self._split_heads(V)
-            #[batch_size, num_heads, seq_length, memory_depth]
+            # [batch_size, num_heads, seq_length, memory_depth]
             key_depth_per_head = num_units // num_heads
             Q_ *= key_depth_per_head**-0.5
 
@@ -217,7 +219,7 @@ class MultiheadAttentionEncoder(EncoderBase):
 
             outputs = self._combine_heads(outputs)
             outputs = self.O_dense(outputs)
-            #(batch_size, length_query, output_dim)
+            # (batch_size, length_query, output_dim)
 
         if not self._built:
             self._add_internal_trainable_variables()
@@ -232,8 +234,9 @@ class MultiheadAttentionEncoder(EncoderBase):
         Must ensure `x.shape[-1]` can be deviced by num_heads
         """
         depth = shape_list(x)[-1]
-        splitted_x = tf.reshape(x, [tf.shape(x)[0], tf.shape(x)[1], \
-            self._hparams.num_heads, depth // self._hparams.num_heads])
+        splitted_x = tf.reshape(x, [tf.shape(x)[0], tf.shape(x)[1],
+                                    self._hparams.num_heads,
+                                    depth // self._hparams.num_heads])
         return tf.transpose(splitted_x, [0, 2, 1, 3])
 
     def _combine_heads(self, x):
@@ -244,7 +247,7 @@ class MultiheadAttentionEncoder(EncoderBase):
         Returns:
             A Tensor of shape `[batch, seq_len, num_heads * dim]`
         """
-        t = tf.transpose(x, [0, 2, 1, 3]) #[batch, seq_len, num_heads, dim]
+        t = tf.transpose(x, [0, 2, 1, 3])  # [batch, seq_len, num_heads, dim]
         num_heads, dim = shape_list(t)[-2:]
         assert num_heads == self._hparams.num_heads
-        return tf.reshape(t, [tf.shape(t)[0], tf.shape(t)[1], num_heads*dim])
+        return tf.reshape(t, [tf.shape(t)[0], tf.shape(t)[1], num_heads * dim])

@@ -12,10 +12,10 @@ import tensorflow as tf
 
 from texar.tf.modules.encoders.rnn_encoders import UnidirectionalRNNEncoder
 from texar.tf.modules.encoders.rnn_encoders import BidirectionalRNNEncoder
-#from texar.tf.modules.encoders.rnn_encoders import HierarchicalForwardRNNEncoder
 from texar.tf.modules.embedders.embedders import WordEmbedder
 
 # pylint: disable=too-many-locals
+
 
 class UnidirectionalRNNEncoderTest(tf.test.TestCase):
     """Tests :class:`~texar.tf.modules.UnidirectionalRNNEncoder` class.
@@ -57,9 +57,9 @@ class UnidirectionalRNNEncoderTest(tf.test.TestCase):
         }
         encoder = UnidirectionalRNNEncoder(hparams=hparams)
         _, _ = encoder(inputs)
-        self.assertEqual(len(encoder.trainable_variables), 2+2+2)
+        self.assertEqual(len(encoder.trainable_variables), 2 + 2 + 2)
         _, _ = encoder(inputs)
-        self.assertEqual(len(encoder.trainable_variables), 2+2+2)
+        self.assertEqual(len(encoder.trainable_variables), 2 + 2 + 2)
 
     def test_encode(self):
         """Tests encoding.
@@ -109,7 +109,6 @@ class UnidirectionalRNNEncoderTest(tf.test.TestCase):
             outputs_ = sess.run(outputs)
             self.assertEqual(outputs_.shape, (batch_size, max_time, out_dim))
 
-
     def test_encode_with_embedder(self):
         """Tests encoding companioned with :mod:`texar.tf.modules.embedders`.
         """
@@ -125,6 +124,7 @@ class UnidirectionalRNNEncoderTest(tf.test.TestCase):
             outputs_, state_ = sess.run([outputs, state])
             self.assertEqual(outputs_.shape, (64, 16, cell_dim))
             self.assertEqual(state_[0].shape, (64, cell_dim))
+
 
 class BidirectionalRNNEncoderTest(tf.test.TestCase):
     """Tests :class:`~texar.tf.modules.BidirectionalRNNEncoder` class.
@@ -171,9 +171,9 @@ class BidirectionalRNNEncoderTest(tf.test.TestCase):
         }
         encoder = BidirectionalRNNEncoder(hparams=hparams)
         _, _ = encoder(inputs)
-        self.assertEqual(len(encoder.trainable_variables), 4+4+3)
+        self.assertEqual(len(encoder.trainable_variables), 4 + 4 + 3)
         _, _ = encoder(inputs)
-        self.assertEqual(len(encoder.trainable_variables), 4+4+3)
+        self.assertEqual(len(encoder.trainable_variables), 4 + 4 + 3)
 
     def test_encode(self):
         """Tests encoding.
@@ -228,7 +228,7 @@ class BidirectionalRNNEncoderTest(tf.test.TestCase):
             self.assertEqual(outputs_[1].shape, (batch_size, max_time, out_dim))
 
 # TODO(zhiting): not completed yet
-#class HierarchicalForwardRNNEncoderTest(tf.test.TestCase):
+# class HierarchicalForwardRNNEncoderTest(tf.test.TestCase):
 #    """Tests HierarchicalForwardRNNEncoder class.
 #    """
 #
@@ -261,6 +261,7 @@ class BidirectionalRNNEncoderTest(tf.test.TestCase):
 #            outputs_, state_ = sess.run([outputs, state])
 #            self.assertEqual(outputs_.shape, (batch_size, max_major_time, cell_dim))
 #            self.assertEqual(state_[0].shape, (batch_size, cell_dim))
+
 
 if __name__ == "__main__":
     tf.test.main()

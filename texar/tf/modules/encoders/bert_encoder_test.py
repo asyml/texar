@@ -81,7 +81,7 @@ class BERTEncoderTest(tf.test.TestCase):
         # case 1: bert base
         encoder = BERTEncoder()
         _, _ = encoder(inputs)
-        self.assertEqual(len(encoder.trainable_variables), 3+2+12*16+2)
+        self.assertEqual(len(encoder.trainable_variables), 3 + 2 + 12 * 16 + 2)
 
         # case 2: bert large
         hparams = {
@@ -89,7 +89,7 @@ class BERTEncoderTest(tf.test.TestCase):
         }
         encoder = BERTEncoder(hparams=hparams)
         _, _ = encoder(inputs)
-        self.assertEqual(len(encoder.trainable_variables), 3+2+24*16+2)
+        self.assertEqual(len(encoder.trainable_variables), 3 + 2 + 24 * 16 + 2)
 
         # case 3: self-designed bert
         hparams = {
@@ -100,7 +100,7 @@ class BERTEncoderTest(tf.test.TestCase):
         }
         encoder = BERTEncoder(hparams=hparams)
         _, _ = encoder(inputs)
-        self.assertEqual(len(encoder.trainable_variables), 3+2+6*16+2)
+        self.assertEqual(len(encoder.trainable_variables), 3 + 2 + 6 * 16 + 2)
 
     def test_encode(self):
         """Tests encoding.

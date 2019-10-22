@@ -34,6 +34,7 @@ __all__ = [
     "HierarchicalRNNEncoder"
 ]
 
+
 class HierarchicalRNNEncoder(EncoderBase):
     """A hierarchical encoder that stacks basic RNN encoders into two layers.
     Can be used to encode long, structured sequences, e.g. paragraphs, dialog

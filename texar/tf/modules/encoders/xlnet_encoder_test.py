@@ -92,7 +92,8 @@ class XLNetEncoderTest(tf.test.TestCase):
         n_layers = encoder.hparams.num_layers
         n_trainable_variables = \
             n_word_embed_vars + n_segment_embed_vars + n_mask_embed_vars + \
-            n_layers*(n_rel_multi_head_vars + n_pos_wise_ff_vars) + n_bias_vars
+            n_layers * (n_rel_multi_head_vars + n_pos_wise_ff_vars) + \
+            n_bias_vars
         self.assertEqual(len(encoder.trainable_variables),
                          n_trainable_variables)
 
