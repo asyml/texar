@@ -16,6 +16,7 @@ import tensorflow as tf
 
 from texar.tf.agents.agent_utils import Space
 
+
 class SpaceTest(tf.test.TestCase):
     """Tests the Space class.
     """
