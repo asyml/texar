@@ -255,7 +255,7 @@ def dynamic_decode(decoder,
 
         # Check if the maximum iteration is met. If it is met, do not compute
         # the next inputs.
-        reach_max = tf.equal(time+1, maximum_iterations)
+        reach_max = tf.equal(time + 1, maximum_iterations)
         (decoder_finished, next_inputs, decoder_state) = tf.cond(
             reach_max,
             lambda: (tf.cast(tf.ones_like(finished), tf.bool),

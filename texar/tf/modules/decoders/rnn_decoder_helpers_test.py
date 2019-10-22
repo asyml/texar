@@ -19,6 +19,7 @@ from texar.tf.modules.embedders.position_embedders import PositionEmbedder
 # pylint: disable=no-member, too-many-locals, too-many-instance-attributes
 # pylint: disable=too-many-arguments, protected-access, redefined-variable-type
 
+
 class HelpersTest(tf.test.TestCase):
     """Tests :class:`~texar.tf.modules.decoders.rnn_decoders.BasicRNNDecoder`.
     """
@@ -27,8 +28,8 @@ class HelpersTest(tf.test.TestCase):
         tf.test.TestCase.setUp(self)
         self._batch_size = 16
         self._vocab_size = 4
-        self._start_tokens = [self._vocab_size-2]*self._batch_size
-        self._end_token = self._vocab_size-1
+        self._start_tokens = [self._vocab_size - 2] * self._batch_size
+        self._end_token = self._vocab_size - 1
         self._max_time = 8
         self._emb_dim = 100
         self._inputs = tf.random_uniform(
@@ -45,8 +46,8 @@ class HelpersTest(tf.test.TestCase):
         def _test_fn(helper):
             _, next_inputs, _ = helper.next_inputs(
                 time=1,
-                outputs=tf.ones([self._batch_size, self._vocab_size]),# Not used
-                state=None, # Not used
+                outputs=tf.ones([self._batch_size, self._vocab_size]),
+                state=None,
                 sample_ids=tf.ones([self._batch_size, self._vocab_size]))
 
             self.assertEqual(helper.sample_ids_shape,
@@ -108,7 +109,6 @@ class HelpersTest(tf.test.TestCase):
             self._embedding, self._start_tokens, self._end_token, 0.7)
         _test_fn(helper)
 
-
     def test_infer_helpers(self):
         """Tests inference helpers.
         """
@@ -116,8 +116,8 @@ class HelpersTest(tf.test.TestCase):
         def _test_fn(helper):
             _, next_inputs, _ = helper.next_inputs(
                 time=1,
-                outputs=tf.ones([self._batch_size, self._vocab_size]),# Not used
-                state=None, # Not used
+                outputs=tf.ones([self._batch_size, self._vocab_size]),
+                state=None,
                 sample_ids=tf.ones([self._batch_size], dtype=tf.int32))
 
             self.assertEqual(helper.sample_ids_shape,

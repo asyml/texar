@@ -69,6 +69,7 @@ class BasicRNNDecoderOutput(
     """
     pass
 
+
 class AttentionRNNDecoderOutput(
         collections.namedtuple(
             "AttentionRNNDecoderOutput",
@@ -372,7 +373,7 @@ class AttentionRNNDecoder(RNNDecoderBase):
                  cell_dropout_mode=None,
                  vocab_size=None,
                  output_layer=None,
-                 #attention_layer=None, # TODO(zhiting): only valid for tf>=1.0
+                 # attention_layer=None, # TODO(zhiting): only valid for tf>=1.0
                  cell_input_fn=None,
                  hparams=None):
         RNNDecoderBase.__init__(
@@ -412,13 +413,13 @@ class AttentionRNNDecoder(RNNDecoderBase):
         # Use variable_scope to ensure all trainable variables created in
         # AttentionWrapper are collected
         with tf.variable_scope(self.variable_scope):
-            #if attention_layer is not None:
+            # if attention_layer is not None:
             #    self._attn_cell_kwargs["attention_layer_size"] = None
             attn_cell = AttentionWrapper(
                 self._cell,
                 attention_mechanism,
                 cell_input_fn=self._cell_input_fn,
-                #attention_layer=attention_layer,
+                # attention_layer=attention_layer,
                 **self._attn_cell_kwargs)
             self._cell = attn_cell
 
