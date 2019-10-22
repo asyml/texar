@@ -32,6 +32,7 @@ __all__ = [
     'CategoricalQNet'
 ]
 
+
 class QNetBase(ModuleBase):
     """Base class inheritted by all Q net classes. A Q net takes in states
     and outputs Q value of actions.
@@ -134,7 +135,7 @@ class QNetBase(ModuleBase):
                 kwargs,
                 module_paths=['texar.tf.modules', 'texar.tf.custom'])
 
-    def _build(self, inputs, mode=None): # pylint: disable=arguments-differ
+    def _build(self, inputs, mode=None):  # pylint: disable=arguments-differ
         raise NotImplementedError
 
     @property

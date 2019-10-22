@@ -35,6 +35,7 @@ __all__ = [
     'MemNetRNNLike',
 ]
 
+
 class MemNetSingleLayer(ModuleBase):
     """An A-C layer for memory network.
 
@@ -87,15 +88,15 @@ class MemNetSingleLayer(ModuleBase):
         p = tf.matmul(m, tf.expand_dims(u, axis=2))
         p = tf.transpose(p, perm=[0, 2, 1])
 
-        p = tf.nn.softmax(p) # equ. (1)
+        p = tf.nn.softmax(p)  # equ. (1)
 
         # Output memory representation
-        o = tf.matmul(p, c) # equ. (2)
+        o = tf.matmul(p, c)  # equ. (2)
         o = tf.squeeze(o, axis=[1])
 
         if self._H:
-            u = tf.matmul(u, self._H) # RNN-like style
-        u_ = tf.add(u, o) # u^{k+1} = H u^k + o^k
+            u = tf.matmul(u, self._H)  # RNN-like style
+        u_ = tf.add(u, o)  # u^{k+1} = H u^k + o^k
 
         if not self._built:
             self._add_internal_trainable_variables()
@@ -104,6 +105,7 @@ class MemNetSingleLayer(ModuleBase):
             self._built = True
 
         return u_
+
 
 class MemNetBase(ModuleBase):
     """Base class inherited by all memory network classes.
@@ -202,7 +204,6 @@ class MemNetBase(ModuleBase):
             memory_dim = mdim_B
 
         return A, C, B, memory_dim
-
 
     def get_default_embed_fn(self, memory_size, embed_fn_hparams):
         """Creates a default embedding function. Can be used for A, C, or B
@@ -580,12 +581,13 @@ class MemNetRNNLike(MemNetBase):
         self._m = self._A(memory, soft_memory, mode=mode)
         self._c = self._C(memory, soft_memory, mode=mode)
 
-        keep_prob = switch_dropout(1-self.hparams.dropout_rate, mode=mode)
+        keep_prob = switch_dropout(1 - self.hparams.dropout_rate, mode=mode)
         if self.hparams.variational:
             with tf.variable_scope("variational_dropout"):
                 noise = tf.random_uniform(tf.shape(self._u[-1]))
                 random_tensor = keep_prob + noise
                 binary_tensor = tf.floor(random_tensor)
+
             def _variational_dropout(val):
                 return tf.math.div(val, keep_prob) * binary_tensor
 
@@ -597,7 +599,7 @@ class MemNetRNNLike(MemNetBase):
                 u_ = tf.nn.relu(u_)
             elif 0 < self._relu_dim < self._memory_dim:
                 linear_part = u_[:, : self._memory_dim - self._relu_dim]
-                relu_part = u_[:, self._memory_dim - self._relu_dim :]
+                relu_part = u_[:, self._memory_dim - self._relu_dim:]
                 relued_part = tf.nn.relu(relu_part)
                 u_ = tf.concat(axis=1, values=[linear_part, relued_part])
             else:

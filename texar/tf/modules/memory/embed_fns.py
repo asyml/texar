@@ -26,6 +26,7 @@ __all__ = [
     'default_memnet_embed_fn_hparams',
 ]
 
+
 def default_memnet_embed_fn_hparams():
     """Returns a dictionary of hyperparameters with default hparams for
     :func:`~texar.tf.modules.memory.default_embed_fn`
@@ -71,4 +72,3 @@ def default_memnet_embed_fn_hparams():
         },
         "combine_mode": "add"
     }
-

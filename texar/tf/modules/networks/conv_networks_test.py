@@ -53,7 +53,7 @@ class Conv1DNetworkTest(tf.test.TestCase):
         }
         network_2 = Conv1DNetwork(hparams)
         # nlayers = nconv-pool + nconv + npool + ndense + ndropout + flatten
-        self.assertEqual(len(network_2.layers), 1+1+1+3+4+1)
+        self.assertEqual(len(network_2.layers), 1 + 1 + 1 + 3 + 4 + 1)
         self.assertTrue(isinstance(network_2.layer_by_name("conv_pool_1"),
                                    tx.core.MergeLayer))
         for layer in network_2.layers[1].layers:
@@ -86,7 +86,7 @@ class Conv1DNetworkTest(tf.test.TestCase):
         }
         network = Conv1DNetwork(hparams)
         # nlayers = nconv-pool + nconv + npool + ndense + ndropout + flatten
-        self.assertEqual(len(network.layers), 1+1+1+1+1+1)
+        self.assertEqual(len(network.layers), 1 + 1 + 1 + 1 + 1 + 1)
         self.assertTrue(isinstance(network.layer_by_name('pool_2'),
                                    tx.core.AverageReducePooling1D))
 

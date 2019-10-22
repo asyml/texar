@@ -12,6 +12,7 @@ from texar.tf.modules.networks.networks import FeedForwardNetwork
 
 # pylint: disable=no-member, invalid-name
 
+
 class FeedForwardNetworkTest(tf.test.TestCase):
     """Tests the class
     :class:`~texar.tf.modules.networks.networks.FeedForwardNetwork`.
@@ -38,6 +39,7 @@ class FeedForwardNetworkTest(tf.test.TestCase):
         self.assertEqual(len(nn.trainable_variables),
                          len(hparams["layers"]) * 2)
         self.assertEqual(len(nn.layer_outputs), len(hparams["layers"]))
+
 
 if __name__ == "__main__":
     tf.test.main()
