@@ -31,6 +31,7 @@ __all__ = [
     "pg_loss_with_log_probs"
 ]
 
+
 def pg_loss_with_logits(actions,
                         logits,
                         advantages,
@@ -132,6 +133,7 @@ def pg_loss_with_logits(actions,
         sum_over_timesteps=sum_over_timesteps,
         sum_over_remaining=sum_over_remaining,
         time_major=time_major)
+
 
 def pg_loss_with_log_probs(log_probs,
                            advantages,

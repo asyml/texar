@@ -11,6 +11,7 @@ import tensorflow as tf
 
 from texar.tf.losses.adv_losses import binary_adversarial_losses
 
+
 class AdvLossesTest(tf.test.TestCase):
     """Tests adversarial losses.
     """

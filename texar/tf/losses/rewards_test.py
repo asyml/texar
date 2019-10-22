@@ -18,6 +18,7 @@ from texar.tf.losses.rewards import \
         _discount_reward_py_1d, _discount_reward_py_2d, \
         discount_reward
 
+
 class RewardTest(tf.test.TestCase):
     """Tests reward related functions.
     """
@@ -100,10 +101,10 @@ class RewardTest(tf.test.TestCase):
         r = discounted_reward_2
         for i in range(5):
             if i < 3:
-                self.assertAlmostEqual(r[0, i], 0.1**(2-i))
+                self.assertAlmostEqual(r[0, i], 0.1**(2 - i))
             else:
                 self.assertAlmostEqual(r[0, i], 0)
-            self.assertAlmostEqual(r[1, i], 0.1**(4-i))
+            self.assertAlmostEqual(r[1, i], 0.1**(4 - i))
 
     def test_discount_reward_tensor_1d(self):
         """Tests :func:`texar.tf.losses.rewards._discount_reward_tensor_1d`
@@ -131,10 +132,10 @@ class RewardTest(tf.test.TestCase):
             r = sess.run(discounted_reward_2)
             for i in range(5):
                 if i < 3:
-                    self.assertAlmostEqual(r[0, i], 0.1**(2-i))
+                    self.assertAlmostEqual(r[0, i], 0.1**(2 - i))
                 else:
                     self.assertAlmostEqual(r[0, i], 0)
-                self.assertAlmostEqual(r[1, i], 0.1**(4-i))
+                self.assertAlmostEqual(r[1, i], 0.1**(4 - i))
 
     def test_discount_reward_py_2d(self):
         """Tests :func:`texar.tf.losses.rewards._discount_reward_py_2d`
@@ -159,10 +160,10 @@ class RewardTest(tf.test.TestCase):
         r = discounted_reward_2
         for i in range(10):
             if i < 5:
-                self.assertEqual(r[0, i], int(11111./10**i) / 10**(4-i))
+                self.assertEqual(r[0, i], int(11111. / 10**i) / 10**(4 - i))
             else:
                 self.assertEqual(r[0, i], 0)
-            self.assertEqual(r[1, i], int(1111111111./10**i) / 10**(9-i))
+            self.assertEqual(r[1, i], int(1111111111. / 10**i) / 10**(9 - i))
 
     def test_discount_reward_tensor_2d(self):
         """Tests :func:`texar.tf.losses.rewards._discount_reward_tensor_2d`
@@ -190,10 +191,13 @@ class RewardTest(tf.test.TestCase):
             r = sess.run(discounted_reward_2)
             for i in range(10):
                 if i < 5:
-                    self.assertEqual(r[0, i], int(11111./10**i) / 10**(4-i))
+                    self.assertEqual(r[0, i],
+                                     int(11111. / 10**i) / 10**(4 - i))
                 else:
                     self.assertEqual(r[0, i], 0)
-                self.assertEqual(r[1, i], int(1111111111./10**i) / 10**(9-i))
+                self.assertEqual(r[1, i],
+                                 int(1111111111. / 10**i) / 10**(9 - i))
+
 
 if __name__ == "__main__":
     tf.test.main()

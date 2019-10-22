@@ -14,6 +14,7 @@ __all__ = [
     "binary_clas_accuracy"
 ]
 
+
 def accuracy(labels, preds):
     """Calculates the accuracy of predictions.
 
@@ -27,6 +28,7 @@ def accuracy(labels, preds):
     """
     labels = tf.cast(labels, preds.dtype)
     return tf.reduce_mean(tf.cast(tf.equal(preds, labels), tf.float32))
+
 
 def binary_clas_accuracy(pos_preds=None, neg_preds=None):
     """Calculates the accuracy of binary predictions.

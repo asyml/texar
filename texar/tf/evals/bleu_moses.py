@@ -22,7 +22,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import os
-from io import open # pylint: disable=redefined-builtin
+from io import open  # pylint: disable=redefined-builtin
 import shutil
 import re
 import subprocess
@@ -40,10 +40,12 @@ __all__ = [
     "corpus_bleu_moses"
 ]
 
+
 def _maybe_list_to_str(list_or_str):
     if isinstance(list_or_str, (tuple, list, np.ndarray)):
         return ' '.join(list_or_str)
     return list_or_str
+
 
 def _parse_multi_bleu_ret(bleu_str, return_all=False):
     bleu_score = re.search(r"BLEU = (.+?),", bleu_str).group(1)
@@ -56,6 +58,7 @@ def _parse_multi_bleu_ret(bleu_str, return_all=False):
         bleu_score = [bleu_score] + bleus
 
     return bleu_score
+
 
 def sentence_bleu_moses(references, hypothesis, lowercase=False,
                         return_all=False):
@@ -82,6 +85,7 @@ def sentence_bleu_moses(references, hypothesis, lowercase=False,
     """
     return corpus_bleu_moses(
         [references], [hypothesis], lowercase=lowercase, return_all=return_all)
+
 
 def corpus_bleu_moses(list_of_references, hypotheses, lowercase=False,
                       return_all=False):
@@ -131,7 +135,7 @@ def corpus_bleu_moses(list_of_references, hypotheses, lowercase=False,
     max_nrefs = max([len(refs) for refs in list_of_references])
     rfile_path = os.path.join(result_path, 'ref')
     for rid in range(max_nrefs):
-        with open(rfile_path + '%d'%rid, 'w', encoding='utf-8') as rfile:
+        with open(rfile_path + '%d' % rid, 'w', encoding='utf-8') as rfile:
             for refs in list_of_references:
                 if rid < len(refs):
                     ref = _maybe_list_to_str(refs[rid])

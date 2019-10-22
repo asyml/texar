@@ -34,6 +34,7 @@ __all__ = [
     "_discount_reward_tensor_2d"
 ]
 
+
 def discount_reward(reward,
                     sequence_length=None,
                     discount=1.,
@@ -119,6 +120,7 @@ def discount_reward(reward,
 
     return disc_reward
 
+
 def _discount_reward_py_1d(reward, sequence_length, discount=1., dtype=None):
     if sequence_length is None:
         raise ValueError('sequence_length must not be `None` for 1D reward.')
@@ -134,17 +136,18 @@ def _discount_reward_py_1d(reward, sequence_length, discount=1., dtype=None):
         dmat = np.ones([batch_size, max_seq_length], dtype=dtype)
     else:
         steps = np.tile(np.arange(max_seq_length), [batch_size, 1])
-        mask = np.asarray(steps < (sequence_length-1)[:, None], dtype=dtype)
+        mask = np.asarray(steps < (sequence_length - 1)[:, None], dtype=dtype)
         # Make each row = [discount, ..., discount, 1, ..., 1]
         dmat = mask * discount + (1 - mask)
         dmat = np.cumprod(dmat[:, ::-1], axis=1)[:, ::-1]
 
     disc_reward = dmat * reward[:, None]
     disc_reward = mask_sequences(disc_reward, sequence_length, dtype=dtype)
-    #mask = np.asarray(steps < sequence_length[:, None], dtype=dtype)
-    #disc_reward = mask * disc_reward
+    # mask = np.asarray(steps < sequence_length[:, None], dtype=dtype)
+    # disc_reward = mask * disc_reward
 
     return disc_reward
+
 
 def _discount_reward_tensor_1d(reward, sequence_length,
                                discount=1., dtype=None):
@@ -171,6 +174,7 @@ def _discount_reward_tensor_1d(reward, sequence_length,
 
     return disc_reward
 
+
 def _discount_reward_py_2d(reward, sequence_length=None,
                            discount=1., dtype=None):
     if sequence_length is not None:
@@ -183,10 +187,11 @@ def _discount_reward_py_2d(reward, sequence_length=None,
             reward[:, ::-1], axis=1, dtype=dtype)[:, ::-1]
     else:
         disc_reward = np.copy(reward)
-        for i in range(reward.shape[1]-2, -1, -1):
-            disc_reward[:, i] += disc_reward[:, i+1] * discount
+        for i in range(reward.shape[1] - 2, -1, -1):
+            disc_reward[:, i] += disc_reward[:, i + 1] * discount
 
     return disc_reward
+
 
 def _discount_reward_tensor_2d(reward, sequence_length=None,
                                discount=1., dtype=None):
