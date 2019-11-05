@@ -127,6 +127,11 @@ Decoders
 .. autoclass:: texar.tf.modules.AttentionRNNDecoderOutput
     :members:
 
+:hidden:`GPT2Decoder`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: texar.tf.modules.GPT2Decoder
+    :members:
+
 :hidden:`beam_search_decode`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.tf.modules.beam_search_decode
