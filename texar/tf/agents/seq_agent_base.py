@@ -22,6 +22,7 @@ from texar.tf.agents.agent_base import AgentBase
 
 # pylint: disable=too-many-instance-attributes
 
+
 class SeqAgentBase(AgentBase):
     """
     Base class inherited by sequence prediction RL agents.
@@ -32,7 +33,6 @@ class SeqAgentBase(AgentBase):
     def __init__(self, hparams=None):
         AgentBase.__init__(self, hparams)
 
-
     @staticmethod
     def default_hparams():
         """Returns a dictionary of hyperparameters with default values.
@@ -42,4 +42,3 @@ class SeqAgentBase(AgentBase):
         return {
             'name': 'agent'
         }
-

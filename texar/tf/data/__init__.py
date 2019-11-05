@@ -27,4 +27,3 @@ from texar.tf.data.data_utils import *
 from texar.tf.data.data_decoders import *
 from texar.tf.data.vocabulary import *
 from texar.tf.data.embedding import *
-

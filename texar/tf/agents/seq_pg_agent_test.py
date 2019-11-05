@@ -26,6 +26,7 @@ from texar.tf.modules.decoders.rnn_decoders import BasicRNNDecoder
 from texar.tf.agents import SeqPGAgent
 from texar.tf import context
 
+
 class SeqPGAgentTest(tf.test.TestCase):
     """Tests :class:`texar.tf.agents.SeqPGAgent`
     """
@@ -50,7 +51,7 @@ class SeqPGAgentTest(tf.test.TestCase):
             decoding_strategy="infer_greedy",
             max_decoding_length=10,
             embedding=self._embedding,
-            start_tokens=[1]*self._batch_size,
+            start_tokens=[1] * self._batch_size,
             end_token=2)
 
         agent = SeqPGAgent(
@@ -67,11 +68,12 @@ class SeqPGAgentTest(tf.test.TestCase):
                 vals = agent.get_samples(feed_dict=feed_dict)
                 self.assertEqual(vals['samples'].shape[0], self._batch_size)
 
-                loss_1 = agent.observe([1.]*self._batch_size)
+                loss_1 = agent.observe([1.] * self._batch_size)
                 loss_2 = agent.observe(
-                    [1.]*self._batch_size, train_policy=False)
+                    [1.] * self._batch_size, train_policy=False)
                 self.assertEqual(loss_1.shape, ())
                 self.assertEqual(loss_2.shape, ())
+
 
 if __name__ == "__main__":
     tf.test.main()

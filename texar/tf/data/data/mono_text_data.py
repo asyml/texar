@@ -39,11 +39,13 @@ __all__ = [
     "MonoTextData"
 ]
 
-class _LengthFilterMode(object): # pylint: disable=no-init, too-few-public-methods
+
+class _LengthFilterMode(object):
     """Options of length filter mode.
     """
     TRUNC = "truncate"
     DISCARD = "discard"
+
 
 def _default_mono_text_dataset_hparams():
     """Returns hyperparameters of a mono text dataset with default values.
@@ -68,6 +70,7 @@ def _default_mono_text_dataset_hparams():
         "data_name": None,
         "@no_typecheck": ["files"]
     }
+
 
 class MonoTextData(TextDataBase):
     """Text data processor that reads single set of text files. This can be
@@ -382,7 +385,7 @@ class MonoTextData(TextDataBase):
                 max_seq_length=max_seq_length,
                 token_to_id_map=data_spec.vocab.token_to_id_map)
         else:
-            decoder = VarUttTextDataDecoder( # pylint: disable=redefined-variable-type
+            decoder = VarUttTextDataDecoder(
                 sentence_delimiter=dataset_hparams["utterance_delimiter"],
                 delimiter=dataset_hparams["delimiter"],
                 bos_token=dataset_hparams["bos_token"],
@@ -612,4 +615,3 @@ class MonoTextData(TextDataBase):
             self._data_spec.name_prefix,
             self._data_spec.decoder.utterance_cnt_tensor_name)
         return name
-

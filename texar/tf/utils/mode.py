@@ -34,6 +34,7 @@ __all__ = [
     "switch_dropout"
 ]
 
+
 def maybe_global_mode(mode):
     """Returns :func:`texar.tf.global_mode` if :attr:`mode` is `None`,
     otherwise returns :attr:`mode` as-is.
@@ -42,6 +43,7 @@ def maybe_global_mode(mode):
         return context.global_mode()
     else:
         return mode
+
 
 def is_train_mode(mode):
     """Returns a bool Tensor indicating whether the global mode is TRAIN.
@@ -53,6 +55,7 @@ def is_train_mode(mode):
     else:
         return tf.equal(mode, tf.estimator.ModeKeys.TRAIN)
 
+
 def is_eval_mode(mode):
     """Returns a bool Tensor indicating whether the global mode is EVAL.
     If :attr:`mode` is `None`, the mode is determined by
@@ -63,6 +66,7 @@ def is_eval_mode(mode):
     else:
         return tf.equal(mode, tf.estimator.ModeKeys.EVAL)
 
+
 def is_predict_mode(mode):
     """Returns a bool Tensor indicating whether the global mode is PREDICT.
     If :attr:`mode` is `None`, the mode is determined by
@@ -72,6 +76,7 @@ def is_predict_mode(mode):
         return context.global_mode_predict()
     else:
         return tf.equal(mode, tf.estimator.ModeKeys.PREDICT)
+
 
 def is_train_mode_py(mode, default=True):
     """Returns a python boolean indicating whether the mode is TRAIN.
@@ -92,6 +97,7 @@ def is_train_mode_py(mode, default=True):
         raise ValueError('Unknown mode: {}'.format(mode))
     return mode == tf.estimator.ModeKeys.TRAIN
 
+
 def is_eval_mode_py(mode, default=False):
     """Returns a python boolean indicating whether the mode is EVAL.
 
@@ -111,6 +117,7 @@ def is_eval_mode_py(mode, default=False):
         raise ValueError('Unknown mode: {}'.format(mode))
     return mode == tf.estimator.ModeKeys.EVAL
 
+
 def is_predict_mode_py(mode, default=False):
     """Returns a python boolean indicating whether the mode is PREDICT.
 
@@ -129,6 +136,7 @@ def is_predict_mode_py(mode, default=False):
     if mode not in context.valid_modes():
         raise ValueError('Unknown mode: {}'.format(mode))
     return mode == tf.estimator.ModeKeys.PREDICT
+
 
 def switch_dropout(dropout_keep_prob, mode=None):
     """Turns off dropout when not in training mode.

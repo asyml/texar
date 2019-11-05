@@ -12,12 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Modules of texar library embedders.
+Modules of Texar library embedders.
 """
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 # pylint: disable=wildcard-import
 

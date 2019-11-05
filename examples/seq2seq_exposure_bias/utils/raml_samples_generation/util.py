@@ -1,6 +1,7 @@
 from collections import defaultdict
 import numpy as np
 
+
 def read_corpus(file_path, source):
     data = []
     for line in open(file_path):
@@ -42,7 +43,8 @@ def data_iter(data, batch_size, shuffle=True):
     batched_data = []
     for src_len in buckets:
         tuples = buckets[src_len]
-        if shuffle: np.random.shuffle(tuples)
+        if shuffle:
+            np.random.shuffle(tuples)
         batched_data.extend(list(batch_slice(tuples, batch_size)))
 
     if shuffle:

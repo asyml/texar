@@ -23,7 +23,7 @@ import tensorflow as tf
 import texar.tf as tx
 
 # pylint: disable=no-name-in-module
-from utils import data_utils, tokenization
+from utils import data_utils
 
 # pylint: disable=invalid-name, too-many-locals, too-many-statements
 
@@ -35,73 +35,22 @@ flags.DEFINE_string(
     "The task to run experiment on. One of "
     "{'COLA', 'MNLI', 'MRPC', 'XNLI', 'SST'}.")
 flags.DEFINE_string(
-    "vocab_file", 'bert_pretrained_models/uncased_L-12_H-768_A-12/vocab.txt',
-    "The one-wordpiece-per-line vocabary file directory.")
+    "pretrained_model_name", 'bert-base-uncased',
+    "The name of pre-trained BERT model. See the doc of "
+    "`texar.tf.modules.PretrainedBERTMixin for all supported models.`")
 flags.DEFINE_integer(
     "max_seq_length", 128,
-    "The maxium length of sequence, longer sequence will be trimmed.")
+    "The maximum length of sequence, longer sequence will be trimmed.")
 flags.DEFINE_string(
     "tfrecord_output_dir", None,
     "The output directory where the TFRecord files will be generated. "
     "By default it will be set to 'data/{task}'. E.g.: if "
     "task is 'MRPC', it will be set as 'data/MRPC'")
-flags.DEFINE_bool(
-    "do_lower_case", True,
-    "Whether to lower case the input text. Should be True for uncased "
-    "models and False for cased models.")
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
-def prepare_data():
-    """Prepares data.
-    """
-    # Loads data
-    tf.logging.info("Loading data")
-
-    task_datasets_rename = {
-        "COLA": "CoLA",
-        "SST": "SST-2",
-    }
-
-    data_dir = 'data/{}'.format(FLAGS.task)
-    if FLAGS.task.upper() in task_datasets_rename:
-        data_dir = 'data/{}'.format(
-            task_datasets_rename[FLAGS.task])
-
-    if FLAGS.tfrecord_output_dir is None:
-        tfrecord_output_dir = data_dir
-    else:
-        tfrecord_output_dir = FLAGS.tfrecord_output_dir
-    tx.utils.maybe_create_dir(tfrecord_output_dir)
-
-    processors = {
-        "COLA": data_utils.ColaProcessor,
-        "MNLI": data_utils.MnliProcessor,
-        "MRPC": data_utils.MrpcProcessor,
-        "XNLI": data_utils.XnliProcessor,
-        'SST': data_utils.SSTProcessor
-    }
-    processor = processors[FLAGS.task]()
-
-    num_classes = len(processor.get_labels())
-    num_train_data = len(processor.get_train_examples(data_dir))
-    tf.logging.info(
-        'num_classes:%d; num_train_data:%d' % (num_classes, num_train_data))
-    tokenizer = tokenization.FullTokenizer(
-        vocab_file=FLAGS.vocab_file,
-        do_lower_case=FLAGS.do_lower_case)
-
-    # Produces TFRecord files
-    data_utils.prepare_TFRecord_data(
-        processor=processor,
-        tokenizer=tokenizer,
-        data_dir=data_dir,
-        max_seq_length=FLAGS.max_seq_length,
-        output_dir=tfrecord_output_dir)
-    modify_config_data(FLAGS.max_seq_length, num_train_data, num_classes)
-
-def modify_config_data(max_seq_length, num_train_data, num_classes):
+def _modify_config_data(max_seq_length, num_train_data, num_classes):
     # Modify the data configuration file
     config_data_exists = os.path.isfile('./config_data.py')
     if config_data_exists:
@@ -142,10 +91,56 @@ def modify_config_data(max_seq_length, num_train_data, num_classes):
 
     tf.logging.info("Data preparation finished")
 
+
 def main():
-    """ Starts the data preparation
+    """Prepares data.
     """
-    prepare_data()
+    # Loads data
+    tf.logging.info("Loading data")
+
+    task_datasets_rename = {
+        "COLA": "CoLA",
+        "SST": "SST-2",
+    }
+
+    data_dir = 'data/{}'.format(FLAGS.task)
+    if FLAGS.task.upper() in task_datasets_rename:
+        data_dir = 'data/{}'.format(
+            task_datasets_rename[FLAGS.task])
+
+    if FLAGS.tfrecord_output_dir is None:
+        tfrecord_output_dir = data_dir
+    else:
+        tfrecord_output_dir = FLAGS.tfrecord_output_dir
+    tx.utils.maybe_create_dir(tfrecord_output_dir)
+
+    processors = {
+        "COLA": data_utils.ColaProcessor,
+        "MNLI": data_utils.MnliProcessor,
+        "MRPC": data_utils.MrpcProcessor,
+        "XNLI": data_utils.XnliProcessor,
+        'SST': data_utils.SSTProcessor
+    }
+    processor = processors[FLAGS.task]()
+
+    num_classes = len(processor.get_labels())
+    num_train_data = len(processor.get_train_examples(data_dir))
+    tf.logging.info(
+        'num_classes:%d; num_train_data:%d' % (num_classes, num_train_data))
+
+    tokenizer = tx.data.BERTTokenizer(
+        pretrained_model_name=FLAGS.pretrained_model_name)
+
+    # Produces TFRecord files
+    data_utils.prepare_TFRecord_data(
+        processor=processor,
+        tokenizer=tokenizer,
+        data_dir=data_dir,
+        max_seq_length=FLAGS.max_seq_length,
+        output_dir=tfrecord_output_dir)
+
+    _modify_config_data(FLAGS.max_seq_length, num_train_data, num_classes)
+
 
 if __name__ == "__main__":
     main()

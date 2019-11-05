@@ -131,7 +131,7 @@ def get_helper(helper_type,
     module_paths = [
         'texar.tf.modules.decoders.rnn_decoder_helpers',
         'texar.tf.modules.decoders.tf_helpers',
-        #'tensorflow.contrib.seq2seq',
+        # 'tensorflow.contrib.seq2seq',
         'texar.tf.custom']
     class_kwargs = {"inputs": inputs,
                     "sequence_length": sequence_length,
@@ -143,7 +143,7 @@ def get_helper(helper_type,
         helper_type, class_kwargs, module_paths)
 
 
-def _get_training_helper( #pylint: disable=invalid-name
+def _get_training_helper(  # pylint: disable=invalid-name
         inputs, sequence_length, embedding=None, time_major=False, name=None):
     """Returns an instance of :tf_main:`TrainingHelper
     <contrib/seq2seq/TrainingHelper>` given embeddings.
@@ -401,7 +401,7 @@ class SoftmaxEmbeddingHelper(Helper):
                 lambda: self._embedding_fn(soft_ids=sample_ids))
         elif self._embedding_args_cnt == 2:
             # Prepare the position embedding of the next step
-            times = tf.ones(self._batch_size, dtype=tf.int32) * (time+1)
+            times = tf.ones(self._batch_size, dtype=tf.int32) * (time + 1)
             next_inputs = tf.cond(
                 all_finished,
                 # If we're finished, the next_inputs value doesn't matter

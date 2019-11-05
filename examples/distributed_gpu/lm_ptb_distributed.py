@@ -69,11 +69,12 @@ FLAGS = flags.FLAGS
 
 config = importlib.import_module(FLAGS.config)
 
+
 def _main(_):
     # Data
     tf.logging.set_verbosity(tf.logging.INFO)
 
-    ## 1. initialize the horovod
+    # 1. initialize the horovod
     hvd.init()
 
     batch_size = config.batch_size
@@ -158,7 +159,6 @@ def _main(_):
                 if is_train
                 else tf.estimator.ModeKeys.EVAL)
 
-
         for step, (x, y) in enumerate(data_iter):
             if step == 0:
                 state = sess.run(initial_state,
@@ -179,10 +179,11 @@ def _main(_):
 
             ppl = np.exp(loss / iters)
             if verbose and is_train and hvd.rank() == 0 \
-                and (step+1) % (epoch_size // 10) == 0:
+                and (step + 1) % (epoch_size // 10) == 0:
                 tf.logging.info("%.3f perplexity: %.3f speed: %.0f wps" %
-                      ((step+1) * 1.0 / epoch_size, ppl,
-                       iters * batch_size / (time.time() - start_time)))
+                                ((step + 1) * 1.0 / epoch_size, ppl,
+                                 iters * batch_size / (
+                                         time.time() - start_time)))
         _elapsed_time = time.time() - start_time
         tf.logging.info("epoch time elapsed: %f" % (_elapsed_time))
         ppl = np.exp(loss / iters)
@@ -230,6 +231,7 @@ def _main(_):
                 data["test_text_id"], batch_size, num_steps)
             test_ppl, _ = _run_epoch(sess, test_data_iter, 0)
             tf.logging.info("Test Perplexity: %.3f" % (test_ppl))
+
 
 if __name__ == '__main__':
     tf.app.run(main=_main)

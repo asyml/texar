@@ -337,7 +337,6 @@ def _main(_):
     log.close()
     bleu_log.close()
 
+
 if __name__ == '__main__':
     tf.app.run(main=_main)
-
-

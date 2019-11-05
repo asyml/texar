@@ -60,7 +60,7 @@ class BasicRNNDecoderTest(tf.test.TestCase):
                     outputs_.sample_id.shape,
                     (self._batch_size, self._max_time))
                 np.testing.assert_array_equal(
-                    sequence_lengths_, [self._max_time]*self._batch_size)
+                    sequence_lengths_, [self._max_time] * self._batch_size)
             self.assertEqual(final_state_[0].shape,
                              (self._batch_size, cell_dim))
 
@@ -79,7 +79,6 @@ class BasicRNNDecoderTest(tf.test.TestCase):
         self.assertIsInstance(decoder, BasicRNNDecoder)
         self.assertEqual(decoder.vocab_size, self._vocab_size)
 
-
     def test_decode_train(self):
         """Tests decoding in training mode.
         """
@@ -90,26 +89,26 @@ class BasicRNNDecoderTest(tf.test.TestCase):
         helper_train = get_helper(
             decoder.hparams.helper_train.type,
             inputs=self._inputs,
-            sequence_length=[self._max_time]*self._batch_size,
+            sequence_length=[self._max_time] * self._batch_size,
             **decoder.hparams.helper_train.kwargs.todict())
         outputs, final_state, sequence_lengths = decoder(helper=helper_train)
         self._test_outputs(decoder, outputs, final_state, sequence_lengths)
 
         outputs, final_state, sequence_lengths = decoder(
             inputs=self._inputs,
-            sequence_length=[self._max_time]*self._batch_size)
+            sequence_length=[self._max_time] * self._batch_size)
         self._test_outputs(decoder, outputs, final_state, sequence_lengths)
 
         outputs, final_state, sequence_lengths = decoder(
             decoding_strategy=None,
             inputs=self._inputs,
-            sequence_length=[self._max_time]*self._batch_size)
+            sequence_length=[self._max_time] * self._batch_size)
         self._test_outputs(decoder, outputs, final_state, sequence_lengths)
 
         outputs, final_state, sequence_lengths = decoder(
             decoding_strategy=None,
             embedding=self._embedding,
-            start_tokens=[1]*self._batch_size,
+            start_tokens=[1] * self._batch_size,
             end_token=2,
             mode=tf.estimator.ModeKeys.EVAL)
         self._test_outputs(decoder, outputs, final_state, sequence_lengths,
@@ -132,13 +131,13 @@ class BasicRNNDecoderTest(tf.test.TestCase):
         helper_train = get_helper(
             decoder.hparams.helper_train.type,
             inputs=inputs,
-            sequence_length=[self._max_time]*self._batch_size,
+            sequence_length=[self._max_time] * self._batch_size,
             **decoder.hparams.helper_train.kwargs.todict())
 
         outputs, final_state, sequence_lengths = decoder(helper=helper_train)
 
         tf_helper = tf.contrib.seq2seq.TrainingHelper(
-            inputs, [self._max_time]*self._batch_size)
+            inputs, [self._max_time] * self._batch_size)
 
         tf_decoder = tf.contrib.seq2seq.BasicDecoder(
             decoder.cell,
@@ -190,8 +189,8 @@ class BasicRNNDecoderTest(tf.test.TestCase):
         helper_infer = get_helper(
             decoder.hparams.helper_infer.type,
             embedding=self._embedding,
-            start_tokens=[self._vocab_size-2]*self._batch_size,
-            end_token=self._vocab_size-1,
+            start_tokens=[self._vocab_size - 2] * self._batch_size,
+            end_token=self._vocab_size - 1,
             **decoder.hparams.helper_train.kwargs.todict())
 
         outputs, final_state, sequence_lengths = decoder(helper=helper_infer)
@@ -249,7 +248,7 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
                     "num_units": self._attention_dim,
                     # Note: to use sparsemax in TF-CPU, it looks
                     # `memory_sequence_length` must equal max_time.
-                    #"probability_fn": "sparsemax"
+                    # "probability_fn": "sparsemax"
                 }
             }
         }
@@ -262,7 +261,7 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
         helper_train = get_helper(
             decoder.hparams.helper_train.type,
             inputs=self._inputs,
-            sequence_length=[self._max_time]*self._batch_size,
+            sequence_length=[self._max_time] * self._batch_size,
             **decoder.hparams.helper_train.kwargs.todict())
 
         outputs, final_state, sequence_lengths = decoder(helper=helper_train)
@@ -287,8 +286,7 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
             self.assertEqual(final_state_.cell_state[0].shape,
                              (self._batch_size, cell_dim))
             np.testing.assert_array_equal(
-                sequence_lengths_, [self._max_time]*self._batch_size)
-
+                sequence_lengths_, [self._max_time] * self._batch_size)
 
     def test_decode_infer(self):
         """Tests decoding in inference mode.
@@ -312,7 +310,7 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
         helper_infer = get_helper(
             decoder.hparams.helper_infer.type,
             embedding=self._embedding,
-            start_tokens=[1]*self._batch_size,
+            start_tokens=[1] * self._batch_size,
             end_token=2,
             **decoder.hparams.helper_train.kwargs.todict())
 
@@ -363,15 +361,15 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
         helper_train = get_helper(
             decoder.hparams.helper_train.type,
             inputs=self._inputs,
-            sequence_length=[self._max_time]*self._batch_size,
+            sequence_length=[self._max_time] * self._batch_size,
             **decoder.hparams.helper_train.kwargs.todict())
 
         _, _, _ = decoder(helper=helper_train)
 
-        ## 4+1 trainable variables: cell-kernel, cell-bias,
-        ## fc-weight, fc-bias, and
-        ## memory_layer: For LuongAttention, we only transform the memory layer;
-        ## thus num_units *must* match the expected query depth.
+        # 4+1 trainable variables: cell-kernel, cell-bias,
+        # fc-weight, fc-bias, and
+        # memory_layer: For LuongAttention, we only transform the memory layer;
+        # thus num_units *must* match the expected query depth.
         self.assertEqual(len(decoder.trainable_variables), 5)
 
         beam_width = 3
@@ -384,6 +382,7 @@ class AttentionRNNDecoderTest(tf.test.TestCase):
         # Test if beam_cell is sharing variables with decoder cell.
         for tvar in beam_cell.trainable_variables:
             self.assertTrue(tvar in decoder.trainable_variables)
+
 
 if __name__ == "__main__":
     tf.test.main()

@@ -37,6 +37,7 @@ FLAGS = flags.FLAGS
 
 config = importlib.import_module(FLAGS.config)
 
+
 def _main(_):
     # Data
     train_data = tx.data.MultiAlignedData(config.train_data)
@@ -103,7 +104,7 @@ def _main(_):
             iterator.switch_to_val_data(sess)
             val_accu = _run_epoch(sess, tf.estimator.ModeKeys.EVAL, epoch)
             tf.logging.info('epoch: {0:2} train accu: {1:.4f} val accu: {2:.4f}'
-                            .format(epoch+1, train_accu, val_accu))
+                            .format(epoch + 1, train_accu, val_accu))
             # Test
             if val_accu > best_val_accu:
                 best_val_accu = val_accu
@@ -111,6 +112,7 @@ def _main(_):
                 iterator.switch_to_test_data(sess)
                 test_accu = _run_epoch(sess, tf.estimator.ModeKeys.EVAL)
                 tf.logging.info('test accu: {0:.4f}'.format(test_accu))
+
 
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)

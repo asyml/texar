@@ -15,10 +15,6 @@
 Various embedders.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow as tf
 
 from texar.tf.modules.embedders.embedder_base import EmbedderBase
@@ -30,28 +26,29 @@ __all__ = [
     "WordEmbedder"
 ]
 
+
 class WordEmbedder(EmbedderBase):
-    """Simple word embedder that maps indexes into embeddings. The indexes
+    r"""Simple word embedder that maps indexes into embeddings. The indexes
     can be soft (e.g., distributions over vocabulary).
 
     Either :attr:`init_value` or :attr:`vocab_size` is required. If both are
-    given, there must be `init_value.shape[0]==vocab_size`.
+    given, there must be ``init_value.shape[0]==vocab_size``.
 
     Args:
-        init_value (optional): A `Tensor` or numpy array that contains the
+        init_value (optional): A Tensor or numpy array that contains the
             initial value of embeddings. It is typically of shape
-            `[vocab_size] + embedding-dim`. Embedding can have dimensionality
+            ``[vocab_size] + embedding-dim``. Embedding can have dimensionality
             > 1.
 
             If `None`, embedding is initialized as specified in
-            :attr:`hparams["initializer"]`. Otherwise, the
-            :attr:`"initializer"` and :attr:`"dim"`
-            hyperparameters in :attr:`hparams` are ignored.
+            ``hparams["initializer"]``. Otherwise, the
+            ``"initializer"`` and ``"dim"`` hyperparameters in
+            :attr:`hparams` are ignored.
         vocab_size (int, optional): The vocabulary size. Required if
             :attr:`init_value` is not given.
         hparams (dict, optional): Embedder hyperparameters. Missing
             hyperparamerter will be set to default values. See
-            :meth:`default_hparams` for the hyperparameter sturcture and
+            :meth:`default_hparams` for the hyperparameter structure and
             default values.
 
     See :meth:`_build` for the inputs and outputs of the embedder.
@@ -69,7 +66,7 @@ class WordEmbedder(EmbedderBase):
 
         .. code-block:: python
 
-            ## Use with Texar data module
+            # Use with Texar data module
             hparams={
                 'dataset': {
                     'embedding_init': {'file': 'word2vec.txt'}
@@ -115,7 +112,7 @@ class WordEmbedder(EmbedderBase):
 
     @staticmethod
     def default_hparams():
-        """Returns a dictionary of hyperparameters with default values.
+        r"""Returns a dictionary of hyperparameters with default values.
 
         .. code-block:: python
 
@@ -144,44 +141,43 @@ class WordEmbedder(EmbedderBase):
 
         Here:
 
-        "dim": int or list
+        `"dim"`: int or list
             Embedding dimension. Can be a list of integers to yield embeddings
             with dimensionality > 1.
 
             Ignored if :attr:`init_value` is given to the embedder constructor.
 
-        "dropout_rate": float
-            The dropout rate between 0 and 1. E.g., `dropout_rate=0.1` would
+        `"dropout_rate"`: float
+            The dropout rate between 0 and 1. E.g., ``dropout_rate=0.1`` would
             drop out 10% of the embedding. Set to 0 to disable dropout.
 
-        "dropout_strategy": str
+        `"dropout_strategy"`: str
             The dropout strategy. Can be one of the following
 
-            - :attr:`"element"`: The regular strategy that drops individual \
-            elements of embedding vectors.
-            - :attr:`"item"`: Drops individual items (e.g., words) entirely. \
-            E.g., for \
-            the word sequence 'the simpler the better', the strategy can \
-            yield '_ simpler the better', where the first `the` is dropped.
-            - :attr:`"item_type"`: Drops item types (e.g., word types). \
-            E.g., for the \
-            above sequence, the strategy can yield '_ simpler _ better', \
-            where the word type 'the' is dropped. The dropout will never \
-            yield '_ simpler the better' as in the 'item' strategy.
+            - ``"element"``: The regular strategy that drops individual
+              elements of embedding vectors.
+            - ``"item"``: Drops individual items (e.g., words) entirely. E.g.,
+              for the word sequence "the simpler the better", the strategy can
+              yield "_ simpler the better", where the first "the" is dropped.
+            - :attr:`"item_type"`: Drops item types (e.g., word types). E.g.,
+              for the above sequence, the strategy can yield
+              "_ simpler _ better", where the word type "the" is dropped.
+              The dropout will never yield "_ simpler the better" as in the
+              ``"item"`` strategy.
 
-        "trainable": bool
+        `"trainable"`: bool
             Whether the embedding is trainable.
 
-        "initializer": dict or None
+        `"initializer"`: dict or None
             Hyperparameters of the initializer for embedding values. See
             :func:`~texar.tf.core.get_initializer` for the details. Ignored if
             :attr:`init_value` is given to the embedder constructor.
 
-        "regularizer": dict
+        `"regularizer"`: dict
             Hyperparameters of the regularizer for embedding values. See
             :func:`~texar.tf.core.get_regularizer` for the details.
 
-        "name": str
+        `"name"`: str
             Name of the embedding variable.
         """
         hparams = embedder_utils.default_embedding_hparams()
@@ -189,7 +185,7 @@ class WordEmbedder(EmbedderBase):
         return hparams
 
     def _build(self, ids=None, soft_ids=None, mode=None, **kwargs):
-        """Embeds (soft) ids.
+        r"""Embeds (soft) ids.
 
         Either :attr:`ids` or :attr:`soft_ids` must be given, and they
         must not be given at the same time.
@@ -208,16 +204,16 @@ class WordEmbedder(EmbedderBase):
 
         Returns:
             If :attr:`ids` is given, returns a Tensor of shape
-            `shape(ids) + embedding-dim`. For example,
-            if `shape(ids) = [batch_size, max_time]`
-            and `shape(embedding) = [vocab_size, emb_dim]`, then the return
-            tensor has shape `[batch_size, max_time, emb_dim]`.
+            ``shape(ids) + embedding-dim``. For example,
+            if ``shape(ids) = [batch_size, max_time]``
+            and ``shape(embedding) = [vocab_size, emb_dim]``, then the return
+            tensor has shape ``[batch_size, max_time, emb_dim]``.
 
             If :attr:`soft_ids` is given, returns a Tensor of shape
-            `shape(soft_ids)[:-1] + embdding-dim`. For example,
-            if `shape(soft_ids) = [batch_size, max_time, vocab_size]`
-            and `shape(embedding) = [vocab_size, emb_dim]`, then the return
-            tensor has shape `[batch_size, max_time, emb_dim]`.
+            ``shape(soft_ids)[:-1] + embdding-dim``. For example,
+            if ``shape(soft_ids) = [batch_size, max_time, vocab_size]``
+            and ``shape(embedding) = [vocab_size, emb_dim]``, then the return
+            tensor has shape ``[batch_size, max_time, emb_dim]``.
         """
         if ids is not None:
             if soft_ids is not None:
@@ -254,18 +250,18 @@ class WordEmbedder(EmbedderBase):
 
     @property
     def embedding(self):
-        """The embedding tensor, of shape `[vocab_size] + dim`.
+        r"""The embedding tensor, of shape ``[vocab_size] + dim``.
         """
         return self._embedding
 
     @property
     def dim(self):
-        """The embedding dimension.
+        r"""The embedding dimension.
         """
         return self._dim
 
     @property
     def vocab_size(self):
-        """The vocabulary size.
+        r"""The vocabulary size.
         """
         return self._vocab_size

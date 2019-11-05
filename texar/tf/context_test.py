@@ -15,6 +15,7 @@ from texar.tf import context
 
 # pylint: disable=protected-access
 
+
 class ContextTest(tf.test.TestCase):
     """Tests context.
     """
@@ -63,6 +64,7 @@ class ContextTest(tf.test.TestCase):
 
         global_mode_values = tf.get_collection_ref(context._GLOBAL_MODE_KEY)
         self.assertEqual(len(global_mode_values), 1)
+
 
 if __name__ == "__main__":
     tf.test.main()

@@ -282,7 +282,7 @@ class XLNetClassifier(ClassifierBase, PretrainedXLNetMixin):
             summary_input = tf.pad(output,
                                    paddings=[[0, 0], [0, length_diff], [0, 0]])
             summary_input_dim = \
-                self._encoder.output_size*self._hparams.max_seq_len
+                self._encoder.output_size * self._hparams.max_seq_len
             summary = tf.reshape(summary_input, shape=[-1, summary_input_dim])
         else:
             raise ValueError("Unknown classification strategy: {}"

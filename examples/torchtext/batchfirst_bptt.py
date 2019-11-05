@@ -52,8 +52,8 @@ class BatchFirstBPTTIterator(BPTTIterator):
         text = self.dataset[0].text
         TEXT = self.dataset.fields['text']
         TEXT.eos_token = None
-        pad_num = int(math.ceil(len(text) / self.batch_size) * self.batch_size \
-                      - len(text))
+        pad_num = int(math.ceil(len(text) / self.batch_size) *
+                      self.batch_size - len(text))
         text = text + ([TEXT.pad_token] * pad_num)
         data = TEXT.numericalize([text], device=self.device)
         data = data.view(self.batch_size, -1).contiguous()

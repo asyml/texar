@@ -35,6 +35,7 @@ __all__ = [
     'CategoricalPolicyNet'
 ]
 
+
 class PolicyNetBase(ModuleBase):
     """Policy net that takes in states and outputs actions.
 
@@ -142,7 +143,7 @@ class PolicyNetBase(ModuleBase):
                 kwargs,
                 module_paths=['texar.tf.modules', 'texar.tf.custom'])
 
-    def _build(self, inputs, mode=None): # pylint: disable=arguments-differ
+    def _build(self, inputs, mode=None):  # pylint: disable=arguments-differ
         raise NotImplementedError
 
     @property
@@ -152,7 +153,7 @@ class PolicyNetBase(ModuleBase):
         return self._network
 
 
-#TODO(zhiting): Allow structured discrete actions.
+# TODO(zhiting): Allow structured discrete actions.
 class CategoricalPolicyNet(PolicyNetBase):
     """Policy net with Categorical distribution for discrete scalar actions.
 
@@ -307,7 +308,7 @@ class CategoricalPolicyNet(PolicyNetBase):
         dist = tfpd.Categorical(logits=logits, **dkwargs)
 
         action = dist.sample()
-        to_shape = [-1] # for batch dimension
+        to_shape = [-1]  # for batch dimension
         to_shape.extend(list(self._action_space.shape))
         action = tf.reshape(action, to_shape)
 

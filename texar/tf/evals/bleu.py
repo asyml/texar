@@ -44,6 +44,7 @@ __all__ = [
     "corpus_bleu"
 ]
 
+
 def _get_ngrams(segment, max_order):
     """Extracts all n-grams up to a given maximum order from an input segment.
 
@@ -59,17 +60,20 @@ def _get_ngrams(segment, max_order):
     ngram_counts = collections.Counter()
     for order in range(1, max_order + 1):
         for i in range(0, len(segment) - order + 1):
-            ngram = tuple(segment[i:i+order])
+            ngram = tuple(segment[i:i + order])
             ngram_counts[ngram] += 1
     return ngram_counts
+
 
 def _maybe_str_to_list(list_or_str):
     if is_str(list_or_str):
         return list_or_str.split()
     return list_or_str
 
+
 def _lowercase(str_list):
     return [str_.lower() for str_ in str_list]
+
 
 def sentence_bleu(references, hypothesis, max_order=4, lowercase=False,
                   smooth=False, return_all=False):
@@ -99,6 +103,7 @@ def sentence_bleu(references, hypothesis, max_order=4, lowercase=False,
     return corpus_bleu(
         [references], [hypothesis], max_order=max_order, lowercase=lowercase,
         smooth=smooth, return_all=return_all)
+
 
 def corpus_bleu(list_of_references, hypotheses, max_order=4, lowercase=False,
                 smooth=False, return_all=True):
@@ -150,11 +155,11 @@ def corpus_bleu(list_of_references, hypotheses, max_order=4, lowercase=False,
 
         overlap = hyperthsis_ngram_counts & merged_ref_ngram_counts
         for ngram in overlap:
-            matches_by_order[len(ngram)-1] += overlap[ngram]
-        for order in range(1, max_order+1):
+            matches_by_order[len(ngram) - 1] += overlap[ngram]
+        for order in range(1, max_order + 1):
             possible_matches = len(hyperthsis) - order + 1
             if possible_matches > 0:
-                possible_matches_by_order[order-1] += possible_matches
+                possible_matches_by_order[order - 1] += possible_matches
 
     precisions = [0] * max_order
     for i in range(0, max_order):

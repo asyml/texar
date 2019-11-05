@@ -50,6 +50,7 @@ def get_unique_named_variable_scope(base_name):
     with tf.variable_scope(None, default_name=base_name) as vs:
         return vs
 
+
 def add_variable(variable, var_list):
     """Adds variable to a given list.
 
@@ -63,6 +64,7 @@ def add_variable(variable, var_list):
     else:
         if variable not in var_list:
             var_list.append(variable)
+
 
 def collect_trainable_variables(modules):
     """Collects all trainable variables of modules.

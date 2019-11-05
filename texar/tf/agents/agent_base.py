@@ -27,6 +27,7 @@ __all__ = [
     "AgentBase"
 ]
 
+
 class AgentBase(object):
     """
     Base class inherited by RL agents.

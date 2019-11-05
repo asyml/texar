@@ -15,14 +15,11 @@
 The base embedder class.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow as tf
 
 from texar.tf.module_base import ModuleBase
 from texar.tf.modules.embedders import embedder_utils
+from texar.tf.utils.shapes import shape_list
 
 # pylint: disable=invalid-name
 
@@ -30,15 +27,16 @@ __all__ = [
     "EmbedderBase"
 ]
 
+
 class EmbedderBase(ModuleBase):
-    """The base embedder class that all embedder classes inherit.
+    r"""The base embedder class that all embedder classes inherit.
 
     Args:
         num_embeds (int, optional): The number of embedding elements, e.g.,
             the vocabulary size of a word embedder.
         hparams (dict or HParams, optional): Embedder hyperparameters. Missing
             hyperparamerter will be set to default values. See
-            :meth:`default_hparams` for the hyperparameter sturcture and
+            :meth:`default_hparams` for the hyperparameter structure and
             default values.
     """
 
@@ -54,18 +52,17 @@ class EmbedderBase(ModuleBase):
         if hparams.trainable:
             self._add_trainable_variable(self._embedding)
 
-        self._num_embeds = self._embedding.get_shape().as_list()[0]
+        self._num_embeds = shape_list(self._embedding)[0]
 
-        self._dim = self._embedding.get_shape().as_list()[1:]
+        self._dim = shape_list(self._embedding)[1:]
         self._dim_rank = len(self._dim)
         if self._dim_rank == 1:
             self._dim = self._dim[0]
 
     def _get_dropout_layer(self, hparams, ids_rank=None, dropout_input=None,
                            dropout_strategy=None):
-        """Creates dropout layer according to dropout strategy.
-
-        Called in :meth:`_build()`.
+        r"""Creates dropout layer according to dropout strategy.
+        Called in :meth:`_build`.
         """
         dropout_layer = None
 
@@ -76,11 +73,12 @@ class EmbedderBase(ModuleBase):
             if st == 'element':
                 noise_shape = None
             elif st == 'item':
-                noise_shape = tf.concat([tf.shape(dropout_input)[:ids_rank],
-                                         tf.ones([self._dim_rank], tf.int32)],
-                                        axis=0)
+                assert dropout_input is not None
+                assert ids_rank is not None
+                noise_shape = (shape_list(dropout_input)[:ids_rank]
+                               + [1] * self._dim_rank)
             elif st == 'item_type':
-                noise_shape = [None] + [1] * self._dim_rank
+                noise_shape = [None] + [1] * self._dim_rank  # type: ignore
             else:
                 raise ValueError('Unknown dropout strategy: {}'.format(st))
 
@@ -91,7 +89,7 @@ class EmbedderBase(ModuleBase):
 
     @staticmethod
     def default_hparams():
-        """Returns a dictionary of hyperparameters with default values.
+        r"""Returns a dictionary of hyperparameters with default values.
 
         .. code-block:: python
 
@@ -103,11 +101,8 @@ class EmbedderBase(ModuleBase):
             "name": "embedder"
         }
 
-    def _build(self, *args, **kwargs):
-        raise NotImplementedError
-
     @property
     def num_embeds(self):
-        """The number of embedding elements.
+        r"""The number of embedding elements.
         """
         return self._num_embeds

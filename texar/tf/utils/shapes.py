@@ -86,7 +86,7 @@ def get_rank(tensor):
         shape = tensor.shape
         try:
             rank = len(shape.as_list())
-        except ValueError: # when `shape==TensorShape(None)`
+        except ValueError:  # when `shape==TensorShape(None)`
             rank = None
     else:
         array = np.asarray(tensor)
@@ -367,16 +367,18 @@ def flatten(tensor, preserve_dims, flattened_dim=None):
 
 
 def shape_list(x):
-    """Returns **static** shape of the input Tensor whenever possible.
+    r"""Returns **static** shape of the input Tensor whenever possible.
 
     Args:
         x: A Tensor.
 
     Returns:
-        - If the rank of :attr:`x` is unknown, returns the dynamic shape: \
-        `tf.shape(x)`
-        - Otherwise, returns a list of dims, each of which is either an `int` \
-        whenever it can be statically determined, or a scalar Tensor otherwise.
+        - If the rank of `x` is unknown, returns the dynamic shape
+          ``tf.shape(x)``
+
+        - Otherwise, returns a list of dims, each of which is either an `int`
+          whenever it can be statically determined, or a scalar Tensor
+          otherwise.
     """
     x = tf.convert_to_tensor(x)
     # If unknown rank, return dynamic shape
@@ -544,7 +546,7 @@ def varlength_concat(x, y, x_length, dtype=None, tensor_rank=None):
     def _body(index, outputs_ta):
         y_aug_i_rolled = tf.roll(
             input=y_aug[index],
-            shift=x_length[index] - max_length_x, # shift to left
+            shift=x_length[index] - max_length_x,  # shift to left
             axis=0)
         xy = x_aug[index] + y_aug_i_rolled
         return [index + 1, outputs_ta.write(index, xy)]
@@ -663,7 +665,7 @@ def varlength_roll(input, shift, axis=1, dtype=None):
             #        [6, 7, 8, 5]]
     """
     x = tf.convert_to_tensor(input)
-    #x = input
+    # x = input
     shift = tf.convert_to_tensor(shift)
 
     batch_size = tf.shape(x)[0]
@@ -681,7 +683,7 @@ def varlength_roll(input, shift, axis=1, dtype=None):
         x_i_rolled = tf.roll(
             input=x[index],
             shift=shift[index],
-            axis=axis-1)
+            axis=axis - 1)
         return [index + 1, outputs_ta.write(index, x_i_rolled)]
 
     res = tf.while_loop(_cond, _body, [initial_index, initial_outputs_ta])

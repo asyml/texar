@@ -26,6 +26,7 @@ import tensorflow as tf
 import horovod.tensorflow as hvd
 import texar.tf as tx
 
+
 def ptb_iterator(data, batch_size, num_steps, is_train=False):
     """Iterates through the ptb data.
     """
@@ -33,7 +34,7 @@ def ptb_iterator(data, batch_size, num_steps, is_train=False):
     data_length = len(data)
 
     batch_length = data_length // batch_size
-    data = np.asarray(data[:batch_size*batch_length])
+    data = np.asarray(data[:batch_size * batch_length])
     data = data.reshape([batch_size, batch_length])
 
     epoch_size = (batch_length - 1) // num_steps
@@ -43,7 +44,7 @@ def ptb_iterator(data, batch_size, num_steps, is_train=False):
     def _sharded_data(data):
         _batch_size = len(data)
         _shard_size = _batch_size // hvd.size()
-        data = [data[i*_shard_size: (i+1) * _shard_size]
+        data = [data[i * _shard_size: (i + 1) * _shard_size]
                 for i in range(_shard_size)]
         data = data[hvd.rank()]
         return data
@@ -54,9 +55,10 @@ def ptb_iterator(data, batch_size, num_steps, is_train=False):
         data = _sharded_data(data)
 
     for i in range(epoch_size):
-        x = data[:, i * num_steps : (i+1) * num_steps]
-        y = data[:, i * num_steps + 1 : (i+1) * num_steps + 1]
+        x = data[:, i * num_steps: (i + 1) * num_steps]
+        y = data[:, i * num_steps + 1: (i + 1) * num_steps + 1]
         yield (x, y)
+
 
 def prepare_data(data_path):
     """Preprocess PTB data.

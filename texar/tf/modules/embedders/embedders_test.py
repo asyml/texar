@@ -1,14 +1,6 @@
-#
 """
 Unit tests for embedders.
 """
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
-# pylint: disable=no-member
 
 import numpy as np
 
@@ -17,6 +9,7 @@ import tensorflow as tf
 from texar.tf.modules.embedders.embedders import WordEmbedder
 from texar.tf.modules.embedders.position_embedders import PositionEmbedder
 from texar.tf.context import global_mode
+
 
 class EmbedderTest(tf.test.TestCase):
     """Tests parameterized embedder.
@@ -64,7 +57,6 @@ class EmbedderTest(tf.test.TestCase):
         inputs_soft = tf.placeholder(dtype=tf.int64, shape=[None, None, None])
         outputs_soft = embedder(soft_ids=inputs_soft)
         self.assertEqual(len(outputs_soft.get_shape()), 2 + len(hparams_dim))
-
 
     def _test_position_embedder(self, hparams):
         """Tests :class:`texar.tf.modules.PositionEmbedder`.
@@ -198,6 +190,7 @@ class EmbedderTest(tf.test.TestCase):
             sess.run(tf.global_variables_initializer())
             outputs_, soft_outputs_ = sess.run([outputs, soft_outputs])
             self.assertEqual(outputs_, soft_outputs_)
+
 
 if __name__ == "__main__":
     tf.test.main()

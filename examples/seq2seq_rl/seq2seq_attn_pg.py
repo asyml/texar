@@ -17,7 +17,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
-#pylint: disable=invalid-name, too-many-arguments, too-many-locals
+# pylint: disable=invalid-name, too-many-arguments, too-many-locals
 
 import importlib
 import numpy as np
@@ -45,6 +45,7 @@ config_data = importlib.import_module(FLAGS.config_data)
 # `texar.tf.data.FeedableDataIterator` to periodically switch to dev/test data
 # for evaluation and switch back to the training data to resume from the
 # breakpoint.
+
 
 def build_model(batch, train_data):
     """Assembles the seq2seq model.
@@ -199,6 +200,7 @@ def main():
         agent.sess = sess
 
         _train_and_eval(sess, agent)
+
 
 if __name__ == '__main__':
     main()

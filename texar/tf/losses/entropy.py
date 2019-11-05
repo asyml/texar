@@ -31,11 +31,13 @@ __all__ = [
     "sequence_entropy_with_logits"
 ]
 
+
 def _get_entropy(logits):
     probs = tf.nn.softmax(logits) + 1e-8
     entropy = - probs * tf.log(probs)
     entropy = tf.reduce_sum(entropy, -1)
     return entropy
+
 
 def entropy_with_logits(logits,
                         rank=None,
@@ -89,7 +91,7 @@ def entropy_with_logits(logits,
         rank = get_rank(logits)
     if rank is None:
         rank = 2
-    rank -= 1 # reduced last dimension
+    rank -= 1  # reduced last dimension
 
     # Reduces
     if average_across_batch and sum_over_batch:
@@ -112,6 +114,7 @@ def entropy_with_logits(logits,
         entropy, average_axes=average_axes, sum_axes=sum_axes)
 
     return entropy
+
 
 def sequence_entropy_with_logits(logits,
                                  rank=None,
@@ -185,7 +188,7 @@ def sequence_entropy_with_logits(logits,
         rank = get_rank(logits)
     if rank is None:
         rank = 3
-    rank -= 1 # reduced last dimension
+    rank -= 1  # reduced last dimension
 
     entropy = mask_and_reduce(
         entropy,

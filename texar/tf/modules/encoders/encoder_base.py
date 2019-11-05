@@ -25,6 +25,7 @@ __all__ = [
     "EncoderBase"
 ]
 
+
 class EncoderBase(ModuleBase):
     """Base class inherited by all encoder classes.
     """
@@ -52,4 +53,3 @@ class EncoderBase(ModuleBase):
           Encoding results.
         """
         raise NotImplementedError
-

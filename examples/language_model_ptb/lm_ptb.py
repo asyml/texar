@@ -68,6 +68,7 @@ FLAGS = flags.FLAGS
 
 config = importlib.import_module(FLAGS.config)
 
+
 def _main(_):
     # Data
     batch_size = config.batch_size
@@ -96,7 +97,7 @@ def _main(_):
             decoding_strategy="train_greedy",
             impute_finished=True,
             inputs=emb_inputs,
-            sequence_length=[num_steps]*batch_size,
+            sequence_length=[num_steps] * batch_size,
             initial_state=initial_state)
 
     # Losses & train ops
@@ -147,7 +148,7 @@ def _main(_):
             ppl = np.exp(loss / iters)
             if verbose and is_train and step % (epoch_size // 10) == 10:
                 print("%.3f perplexity: %.3f speed: %.0f wps" %
-                      ((step+1) * 1.0 / epoch_size, ppl,
+                      ((step + 1) * 1.0 / epoch_size, ppl,
                        iters * batch_size / (time.time() - start_time)))
 
         ppl = np.exp(loss / iters)
@@ -175,6 +176,7 @@ def _main(_):
             data["test_text_id"], batch_size, num_steps)
         test_ppl = _run_epoch(sess, test_data_iter, 0)
         print("Test Perplexity: %.3f" % (test_ppl))
+
 
 if __name__ == '__main__':
     tf.app.run(main=_main)

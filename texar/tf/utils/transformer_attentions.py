@@ -32,6 +32,7 @@ __all__ = [
     'attention_bias_local',
 ]
 
+
 def attention_bias_lower_triangle(length, bias_value=-1e18):
     """Create an bias tensor to be added to attention logits.
     Allows a query to attend to all positions up to and including its own.
@@ -43,6 +44,7 @@ def attention_bias_lower_triangle(length, bias_value=-1e18):
         a `Tensor` with shape [1, 1, length, length].
     """
     return attention_bias_local(length, -1, 0, bias_value)
+
 
 def attention_bias_local(length, max_backward, max_forward, bias_value=-1e18):
     """Create an bias tensor to be added to attention logits.
@@ -70,6 +72,7 @@ def attention_bias_local(length, max_backward, max_forward, bias_value=-1e18):
         out_shape=[1, 1, length, length])
     return bias_value * (1.0 - band)
 
+
 def attention_bias_ignore_padding(memory_padding, bias_value=-1e18):
     """Create an bias tensor to be added to attention logits.
 
@@ -84,13 +87,14 @@ def attention_bias_ignore_padding(memory_padding, bias_value=-1e18):
     ret = memory_padding * bias_value
     return tf.expand_dims(tf.expand_dims(ret, axis=1), axis=1)
 
+
 def _ones_matrix_band_part(rows, cols, num_lower, num_upper,
     out_shape=None):
     """Matrix band part of ones.
     """
     if all([isinstance(el, int) for el in [rows, cols, num_lower,
         num_upper]]):
-    # Needed info is constant, so we construct in numpy
+        # Needed info is constant, so we construct in numpy
         if num_lower < 0:
             num_lower = rows - 1
         if num_upper < 0:

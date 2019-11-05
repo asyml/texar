@@ -38,8 +38,9 @@ __all__ = [
     "MLPTransformConnector",
     "ReparameterizedStochasticConnector",
     "StochasticConnector",
-    #"ConcatConnector"
+    # "ConcatConnector"
 ]
+
 
 def _assert_same_size(outputs, output_size):
     """Check if outputs match output_size
@@ -61,6 +62,7 @@ def _assert_same_size(outputs, output_size):
             raise ValueError(
                 "The output size does not match the the required output_size")
 
+
 def _get_tensor_depth(x):
     """Returns the size of a tensor excluding the first dimension
     (typically the batch dimension).
@@ -69,6 +71,7 @@ def _get_tensor_depth(x):
         x: A tensor.
     """
     return np.prod(x.get_shape().as_list()[1:])
+
 
 def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
     """Transforms inputs through a fully-connected layer that creates the output
@@ -105,7 +108,7 @@ def _mlp_transform(inputs, output_size, activation_fn=tf.identity):
         size_list = flat_output_size
     sum_output_size = sum(size_list)
 
-    #fc_output = tf.contrib.layers.fully_connected(
+    # fc_output = tf.contrib.layers.fully_connected(
     #    concat_input, sum_output_size, activation_fn=activation_fn)
     fc_output = tf.layers.dense(
         concat_input, sum_output_size, activation=activation_fn)
@@ -540,7 +543,7 @@ class ReparameterizedStochasticConnector(ConnectorBase):
         else:
             sample = dstr.sample()
 
-        #if dstr.event_shape == []:
+        # if dstr.event_shape == []:
         #    sample = tf.reshape(
         #        sample,
         #        sample.shape.concatenate(tf.TensorShape(1)))
@@ -692,7 +695,7 @@ class StochasticConnector(ConnectorBase):
         return output, sample
 
 
-#class ConcatConnector(ConnectorBase):
+# class ConcatConnector(ConnectorBase):
 #    """Concatenates multiple connectors into one connector. Used in, e.g.,
 #    semi-supervised variational autoencoders, disentangled representation
 #    learning, and other models.

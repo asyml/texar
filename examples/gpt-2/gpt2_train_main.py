@@ -85,7 +85,7 @@ def main(_):
 
     tf.logging.set_verbosity(tf.logging.INFO)
 
-    ## Loads GPT-2 model configuration
+    # Loads GPT-2 model configuration
 
     if FLAGS.config_type == "json":
         gpt2_config = model_utils.transform_gpt2_to_texar_config(
@@ -104,7 +104,7 @@ def main(_):
         "max_decoding_length should not be greater than position_size. "
         "{}>{}".format(max_decoding_length, gpt2_config.position_size))
 
-    ## Loads data
+    # Loads data
 
     # Configures training data shard in distributed mode
     if FLAGS.distributed:
@@ -126,7 +126,7 @@ def main(_):
     batch = iterator.get_next()
     batch_size = tf.shape(batch['text_ids'])[0]
 
-    ## Builds the GPT-2 model
+    # Builds the GPT-2 model
 
     word_embedder = tx.modules.WordEmbedder(
         vocab_size=gpt2_config.vocab_size,
@@ -154,7 +154,7 @@ def main(_):
     loss = tx.losses.sequence_sparse_softmax_cross_entropy(
         labels=batch['text_ids'][:, 1:],
         logits=outputs.logits[:, :-1, :],
-        sequence_length=batch['length']-1,
+        sequence_length=batch['length'] - 1,
         average_across_timesteps=True,
         sum_over_timesteps=False)
     ppl = tf.exp(loss)
@@ -194,8 +194,7 @@ def main(_):
         helper=helper)
     sample_id = outputs_infer.sample_id
 
-
-    ## Train/eval/test routine
+    # Train/eval/test routine
     saver = tf.train.Saver()
     saver_best = tf.train.Saver(max_to_keep=1)
     dev_best = {'loss': 1e8, 'ppl': 1e8}
@@ -282,7 +281,6 @@ def main(_):
             ckpt_fn = saver_best.save(sess, ckpt_fn)
             tf.logging.info('Checkpoint best to {}'.format(ckpt_fn))
 
-
     def _test_epoch(sess):
         """Generates samples on the test set.
         """
@@ -346,7 +344,6 @@ def main(_):
         tx.utils.write_paired_text(
             _all_input_text, _all_samples_text, output_file)
 
-
     # Broadcasts global variables from rank-0 process
     if FLAGS.distributed:
         bcast = hvd.broadcast_global_variables(0)
@@ -388,4 +385,3 @@ def main(_):
 
 if __name__ == "__main__":
     tf.app.run()
-

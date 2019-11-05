@@ -40,7 +40,7 @@ __all__ = [
     "get_files"
 ]
 
-#def get_tf_logger(fname,
+# def get_tf_logger(fname,
 #                  verbosity=tf.logging.INFO,
 #                  to_stdio=False,
 #                  stdio_verbosity=None):
@@ -50,7 +50,7 @@ __all__ = [
 #    Args:
 #        fname (str): The log filename.
 #        verbosity: The threshold for what messages will be logged. Default is
-#            `INFO`. Other options include `DEBUG`, `ERROR`, `FATAL`, and `WARN`.
+#           `INFO`. Other options include `DEBUG`, `ERROR`, `FATAL`, and `WARN`.
 #            See :tf_main:`tf.logging <logging>`.
 #        to_stdio (bool): Whether to print messages to stdio at the same time.
 #        stido_verbosity (optional): The verbosity level when printing to stdio.
@@ -60,6 +60,7 @@ __all__ = [
 #    Returns:
 #        The TF logger.
 #    """
+
 
 def _load_config_python(fname):
     config = {}
@@ -71,10 +72,12 @@ def _load_config_python(fname):
 
     return config
 
+
 def _load_config_yaml(fname):
     with tf.gfile.GFile(fname) as config_file:
         config = yaml.load(config_file)
     return config
+
 
 def load_config_single(fname, config=None):
     """Loads config from a single file.
@@ -109,6 +112,7 @@ def load_config_single(fname, config=None):
                 config[key] = value
 
     return config
+
 
 def load_config(config_path, config=None):
     """Loads configs from (possibly multiple) file(s).
@@ -149,6 +153,7 @@ def load_config(config_path, config=None):
         config = load_config_single(fname, config)
 
     return config
+
 
 # pylint: disable=too-many-locals
 def write_paired_text(src, tgt, fname, append=False, mode='h', sep='\t',
@@ -218,6 +223,7 @@ def write_paired_text(src, tgt, fname, append=False, mode='h', sep='\t',
                 else:
                     raise ValueError('Unknown mode: {}'.format(mode))
         return fname
+
 
 def maybe_create_dir(dirname):
     """Creates directory if doesn't exist

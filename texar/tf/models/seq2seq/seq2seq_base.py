@@ -288,7 +288,7 @@ class Seq2seqBase(ModelBase):
             train_op=train_op,
             eval_metric_ops=eval_metric_ops)
 
-    def get_input_fn(self, mode, hparams=None): #pylint:disable=arguments-differ
+    def get_input_fn(self, mode, hparams=None):
         """Creates an input function `input_fn` that provides input data
         for the model in an :tf_main:`Estimator <estimator/Estimator>`.
         See, e.g., :tf_main:`tf.estimator.train_and_evaluate

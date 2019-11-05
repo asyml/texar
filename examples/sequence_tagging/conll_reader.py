@@ -178,7 +178,8 @@ def construct_init_word_vecs(vocab, word_vecs, glove_dict):
             embedding = glove_dict[word]
         elif word.lower() in glove_dict:
             embedding = glove_dict[word.lower()]
-        else: embedding = None
+        else:
+            embedding = None
 
         if embedding is not None:
             word_vecs[index] = embedding

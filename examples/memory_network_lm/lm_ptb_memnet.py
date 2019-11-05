@@ -59,6 +59,7 @@ FLAGS = flags.FLAGS
 
 config = importlib.import_module(FLAGS.config)
 
+
 def _main(_):
     # Data
     batch_size = config.batch_size
@@ -136,7 +137,7 @@ def _main(_):
         try:
             saver.restore(sess, "ckpt/model.ckpt")
             print('restored checkpoint.')
-        except:
+        except BaseException:
             print('restore checkpoint failed.')
 
         last_valid_ppl = None
@@ -166,7 +167,7 @@ def _main(_):
                 try:
                     saver.save(sess, "ckpt/model.ckpt")
                     print("saved checkpoint.")
-                except:
+                except BaseException:
                     print("save checkpoint failed.")
 
             # Valid
@@ -179,9 +180,9 @@ def _main(_):
             if last_valid_ppl:
                 if heuristic_lr_decay:
                     if valid_ppl > last_valid_ppl * config.heuristic_threshold:
-                        lr /= 1. + (valid_ppl / last_valid_ppl \
+                        lr /= 1. + (valid_ppl / last_valid_ppl
                                     - config.heuristic_threshold) \
-                                   * config.heuristic_rate
+                              * config.heuristic_rate
                     last_valid_ppl = last_valid_ppl \
                                      * (1 - config.heuristic_smooth_rate) \
                                      + valid_ppl * config.heuristic_smooth_rate
@@ -201,6 +202,6 @@ def _main(_):
         test_ppl = _run_epoch(sess, test_data_iter, 0)
         print("Test Perplexity: {:.3f}".format(test_ppl))
 
+
 if __name__ == '__main__':
     tf.app.run(main=_main)
-

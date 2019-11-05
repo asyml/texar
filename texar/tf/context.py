@@ -31,6 +31,7 @@ __all__ = [
 
 _GLOBAL_MODE_KEY = "GLOBAL_MODE"
 
+
 def global_mode():
     """Returns the Tensor of global mode.
 
@@ -51,17 +52,18 @@ def global_mode():
     """
     mode = tf.get_collection_ref(_GLOBAL_MODE_KEY)
     if len(mode) < 1:
-        #mode_tensor = tf.placeholder(tf.string, name="global_mode")
+        # mode_tensor = tf.placeholder(tf.string, name="global_mode")
         mode_tensor = tf.placeholder_with_default(
             input=tf.estimator.ModeKeys.TRAIN,
             shape=(),
             name="global_mode")
-        #mode_tensor = tf.constant(
+        # mode_tensor = tf.constant(
         #    value=tf.estimator.ModeKeys.TRAIN,
         #    dtype=tf.string,
         #    name="global_mode")
         mode.append(mode_tensor)
     return mode[0]
+
 
 def global_mode_train():
     """Returns a bool Tensor indicating whether the global mode is TRAIN.
@@ -81,17 +83,20 @@ def global_mode_train():
     mode = global_mode()
     return tf.equal(mode, tf.estimator.ModeKeys.TRAIN)
 
+
 def global_mode_eval():
     """Returns a bool Tensor indicating whether the global mode is EVAL.
     """
     mode = global_mode()
     return tf.equal(mode, tf.estimator.ModeKeys.EVAL)
 
+
 def global_mode_predict():
     """Returns a bool Tensor indicating whether the global mode is PREDICT.
     """
     mode = global_mode()
     return tf.equal(mode, tf.estimator.ModeKeys.PREDICT)
+
 
 def valid_modes():
     """Returns a set of possible values of mode.

@@ -17,6 +17,7 @@ import tensorflow as tf
 
 import texar.tf as tx
 
+
 class MLELossesTest(tf.test.TestCase):
     """Tests mle losses.
     """
@@ -109,6 +110,7 @@ class MLELossesTest(tf.test.TestCase):
                 tf.rank(loss),
                 feed_dict={labels: np.ones([self._batch_size, self._max_time])})
             self.assertEqual(rank, 0)
+
 
 if __name__ == "__main__":
     tf.test.main()

@@ -1,4 +1,4 @@
-num_epochs = 50 # the best epoch occurs within 10 epochs in most cases
+num_epochs = 50  # the best epoch occurs within 10 epochs in most cases
 observe_steps = 500
 
 eval_metric = 'bleu'

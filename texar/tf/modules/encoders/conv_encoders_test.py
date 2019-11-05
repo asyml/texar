@@ -53,7 +53,7 @@ class Conv1DEncoderTest(tf.test.TestCase):
         }
         encoder_2 = Conv1DEncoder(hparams)
         # nlayers = nconv-pool + nconv + npool + ndense + ndropout + flatten
-        self.assertEqual(len(encoder_2.layers), 1+1+1+3+4+1)
+        self.assertEqual(len(encoder_2.layers), 1 + 1 + 1 + 3 + 4 + 1)
         self.assertTrue(isinstance(encoder_2.layer_by_name("conv_pool_1"),
                                    tx.core.MergeLayer))
         for layer in encoder_2.layers[1].layers:
@@ -86,7 +86,7 @@ class Conv1DEncoderTest(tf.test.TestCase):
         }
         encoder = Conv1DEncoder(hparams)
         # nlayers = nconv-pool + nconv + npool + ndense + ndropout + flatten
-        self.assertEqual(len(encoder.layers), 1+1+1+1+1+1)
+        self.assertEqual(len(encoder.layers), 1 + 1 + 1 + 1 + 1 + 1)
         self.assertTrue(isinstance(encoder.layer_by_name('pool_2'),
                                    tx.core.AverageReducePooling1D))
 

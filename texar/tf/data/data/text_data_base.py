@@ -31,7 +31,8 @@ __all__ = [
     "TextDataBase"
 ]
 
-class TextDataBase(DataBase): # pylint: disable=too-few-public-methods
+
+class TextDataBase(DataBase):  # pylint: disable=too-few-public-methods
     """Base class inheritted by all text data classes.
     """
 
@@ -88,4 +89,3 @@ class TextDataBase(DataBase): # pylint: disable=too-few-public-methods
                     lambda *args: filter_fn(dsutils.maybe_tuple(args)))
 
         return dataset
-

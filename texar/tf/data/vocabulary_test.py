@@ -16,6 +16,7 @@ from texar.tf.data import vocabulary
 
 # pylint: disable=protected-access
 
+
 class VocabularyTest(tf.test.TestCase):
     """Tests vocabulary related operations.
     """
@@ -57,4 +58,3 @@ class VocabularyTest(tf.test.TestCase):
 
 if __name__ == "__main__":
     tf.test.main()
-

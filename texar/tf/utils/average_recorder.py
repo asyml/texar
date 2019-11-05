@@ -28,6 +28,7 @@ __all__ = [
     "AverageRecorder"
 ]
 
+
 class _SingleAverageRecorder(object):
     """Maintains the moving average (i.e., the average of the latest N records)
     of a single metric.
@@ -120,6 +121,7 @@ class _SingleAverageRecorder(object):
         """The name of the recorder.
         """
         return self.name
+
 
 class AverageRecorder(object):
     """Maintains the moving averages (i.e., the average of the latest N
@@ -306,7 +308,7 @@ class AverageRecorder(object):
                 for name, rec in self._recorders.items()}
         str_list = []
         if self._record_type in {list, tuple}:
-            for i in range(len(strs)):# pylint: disable=consider-using-enumerate
+            for i in range(len(strs)):
                 # Enumerates the keys in order, which are the indexes
                 str_list.append(strs[i])
         elif self._record_type == dict:

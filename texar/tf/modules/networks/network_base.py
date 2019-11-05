@@ -35,6 +35,7 @@ __all__ = [
     "FeedForwardNetworkBase"
 ]
 
+
 def _build_layers(network, layers=None, layer_hparams=None):
     """Builds layers.
 
@@ -64,6 +65,7 @@ def _build_layers(network, layers=None, layer_hparams=None):
         layer_name = uniquify_str(layer.name, network._layer_names)
         network._layer_names.append(layer_name)
         network._layers_by_name[layer_name] = layer
+
 
 class FeedForwardNetworkBase(ModuleBase):
     """Base class inherited by all feed-forward network classes.

@@ -17,6 +17,7 @@ from texar.tf.modules.classifiers.rnn_classifiers import \
 
 # pylint: disable=too-many-locals, no-member
 
+
 class UnidirectionalRNNClassifierTest(tf.test.TestCase):
     """Tests :class:`~texar.tf.modules.UnidirectionalRNNClassifierTest` class.
     """
@@ -30,7 +31,7 @@ class UnidirectionalRNNClassifierTest(tf.test.TestCase):
         # case 1
         clas = UnidirectionalRNNClassifier()
         _, _ = clas(inputs)
-        self.assertEqual(len(clas.trainable_variables), 2+2)
+        self.assertEqual(len(clas.trainable_variables), 2 + 2)
 
         # case 2
         hparams = {
@@ -39,9 +40,9 @@ class UnidirectionalRNNClassifierTest(tf.test.TestCase):
         }
         clas = UnidirectionalRNNClassifier(hparams=hparams)
         _, _ = clas(inputs)
-        self.assertEqual(len(clas.trainable_variables), 2+2+2+1)
+        self.assertEqual(len(clas.trainable_variables), 2 + 2 + 2 + 1)
         _, _ = clas(inputs)
-        self.assertEqual(len(clas.trainable_variables), 2+2+2+1)
+        self.assertEqual(len(clas.trainable_variables), 2 + 2 + 2 + 1)
 
     def test_encode(self):
         """Tests encoding.
@@ -95,7 +96,6 @@ class UnidirectionalRNNClassifierTest(tf.test.TestCase):
             self.assertEqual(logits_.shape,
                              (batch_size, max_time, 10))
             self.assertEqual(pred_.shape, (batch_size, max_time))
-
 
         # case 4
         hparams = {
@@ -158,7 +158,6 @@ class UnidirectionalRNNClassifierTest(tf.test.TestCase):
             self.assertEqual(logits_.shape, (batch_size, max_time))
             self.assertEqual(pred_.shape, (batch_size, max_time))
 
-
         # case 4
         hparams = {
             "num_classes": 1,
@@ -176,6 +175,7 @@ class UnidirectionalRNNClassifierTest(tf.test.TestCase):
                 feed_dict={inputs: np.random.randn(batch_size, 6, emb_dim)})
             self.assertEqual(logits_.shape, (batch_size, ))
             self.assertEqual(pred_.shape, (batch_size, ))
+
 
 if __name__ == "__main__":
     tf.test.main()

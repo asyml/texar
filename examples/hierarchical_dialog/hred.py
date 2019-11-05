@@ -42,6 +42,7 @@ encoder_hparams = config_model.encoder_hparams
 decoder_hparams = config_model.decoder_hparams
 opt_hparams = config_model.opt_hparams
 
+
 def main():
     """Entrypoint.
     """
@@ -58,8 +59,10 @@ def main():
     spk_src = tf.stack([data_batch['spk_{}'.format(i)]
                         for i in range(config_data.max_utterance_cnt)], 1)
     spk_tgt = data_batch['spk_tgt']
+
     def _add_source_speaker_token(x):
         return tf.concat([x, tf.reshape(spk_src, (-1, 1))], 1)
+
     def _add_target_speaker_token(x):
         return (x, ) + (tf.reshape(spk_tgt, (-1, 1)), )
 
@@ -196,9 +199,9 @@ def main():
             res = []
             for weight in [[1, 0, 0, 0],
                            [1, 0, 0, 0],
-                           [1/2., 1/2., 0, 0],
-                           [1/3., 1/3., 1/3., 0],
-                           [1/4., 1/4., 1/4., 1/4.]]:
+                           [1 / 2., 1 / 2., 0, 0],
+                           [1 / 3., 1 / 3., 1 / 3., 0],
+                           [1 / 4., 1 / 4., 1 / 4., 1 / 4.]]:
                 res.append(sentence_bleu(
                     [ref],
                     sample,
@@ -239,9 +242,8 @@ def main():
                         bleu_i_precision = bleu_i.max(axis=1).mean()
                         bleu_i_recall = bleu_i.max(axis=0).mean()
 
-                        bleu_prec[i-1].append(bleu_i_precision)
-                        bleu_recall[i-1].append(bleu_i_recall)
-
+                        bleu_prec[i - 1].append(bleu_i_precision)
+                        bleu_recall[i - 1].append(bleu_i_recall)
 
             except tf.errors.OutOfRangeError:
                 break
@@ -252,7 +254,7 @@ def main():
         print('epoch {}:'.format(epoch))
         for i in range(1, 5):
             print(' -- bleu-{} prec={}, recall={}'.format(
-                i, bleu_prec[i-1], bleu_recall[i-1]))
+                i, bleu_prec[i - 1], bleu_recall[i - 1]))
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -260,7 +262,7 @@ def main():
         sess.run(tf.tables_initializer())
 
         num_epochs = 10
-        for epoch in range(1, num_epochs+1):
+        for epoch in range(1, num_epochs + 1):
             _train_epoch(sess, epoch)
             _test_epoch_ppl(sess, epoch)
 

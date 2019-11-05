@@ -35,6 +35,7 @@ __all__ = [
     "Conv1DNetwork"
 ]
 
+
 def _to_list(value, name=None, list_length=None):
     """Converts hparam value into a list.
 
@@ -52,6 +53,7 @@ def _to_list(value, name=None, list_length=None):
         raise ValueError("hparams '%s' must be a list of length %d"
                          % (name, list_length))
     return value
+
 
 class Conv1DNetwork(FeedForwardNetworkBase):
     """Simple Conv-1D network which consists of a sequence of conv layers
@@ -318,7 +320,7 @@ class Conv1DNetwork(FeedForwardNetworkBase):
         pool_hparams = []
         for i in range(npool):
             kwargs_i = {"pool_size": pool_size[i], "strides": strides[i],
-                        "name": "pool_%d" % (i+1)}
+                        "name": "pool_%d" % (i + 1)}
             kwargs_i.update(other_kwargs)
             pool_hparams_ = get_pooling_layer_hparams({"type": pool_type,
                                                        "kwargs": kwargs_i})
@@ -359,7 +361,7 @@ class Conv1DNetwork(FeedForwardNetworkBase):
             hparams_i = []
             names = []
             for ks_ij in kernel_size[i]:
-                name = uniquify_str("conv_%d" % (i+1), names)
+                name = uniquify_str("conv_%d" % (i + 1), names)
                 names.append(name)
                 conv_kwargs_ij = {
                     "filters": filters[i],
@@ -380,7 +382,7 @@ class Conv1DNetwork(FeedForwardNetworkBase):
                         {"type": "SequentialLayer", "kwargs": seq_kwargs_j})
                 mrg_hparams = {"type": "MergeLayer",
                                "kwargs": {"layers": mrg_kwargs_layers,
-                                          "name": "conv_pool_%d" % (i+1)}}
+                                          "name": "conv_pool_%d" % (i + 1)}}
                 conv_pool_hparams.append(mrg_hparams)
 
         return conv_pool_hparams
@@ -407,7 +409,7 @@ class Conv1DNetwork(FeedForwardNetworkBase):
 
             kwargs_i = {"units": dense_size[i],
                         "activation": activation_fn,
-                        "name": "dense_%d" % (i+1)}
+                        "name": "dense_%d" % (i + 1)}
             kwargs_i.update(other_kwargs)
 
             dense_hparams.append({"type": "Dense", "kwargs": kwargs_i})
@@ -439,7 +441,7 @@ class Conv1DNetwork(FeedForwardNetworkBase):
             layers_hparams.append(_dropout_hparams(nconv))
 
         ndense = self._hparams.num_dense_layers
-        if ndense > 0: # Add flatten layers before dense layers
+        if ndense > 0:  # Add flatten layers before dense layers
             layers_hparams.append({"type": "Flatten"})
         for dense_i in range(ndense):
             if dense_i in dropout_dense:
@@ -478,4 +480,3 @@ class Conv1DNetwork(FeedForwardNetworkBase):
                 inputs, sequence_length, dtype=dtype, time_major=False,
                 tensor_rank=3)
         return super(Conv1DNetwork, self)._build(inputs, mode=mode)
-

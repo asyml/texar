@@ -29,7 +29,8 @@ import tensorflow as tf
 
 from texar.tf.data import embedding
 
-Py3 = sys.version_info[0] == 3 # pylint: disable=invalid-name
+Py3 = sys.version_info[0] == 3  # pylint: disable=invalid-name
+
 
 class EmbeddingTest(tf.test.TestCase):
     """Tests embedding related operations.
@@ -84,6 +85,6 @@ class EmbeddingTest(tf.test.TestCase):
         emb = embedding.Embedding(vocab)
         self.assertEqual(len(emb.word_vecs), len(vocab))
 
+
 if __name__ == "__main__":
     tf.test.main()
-

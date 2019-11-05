@@ -31,6 +31,7 @@ __all__ = [
     "SeqPGAgent"
 ]
 
+
 class SeqPGAgent(SeqAgentBase):
     """Policy Gradient agent for sequence prediction.
 

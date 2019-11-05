@@ -135,7 +135,7 @@ class BasicSeq2seq(Seq2seqBase):
             initial_state=initial_state,
             decoding_strategy=self._hparams.decoding_strategy_train,
             inputs=self.embed_target(features, labels, mode),
-            sequence_length=labels['target_length']-1,
+            sequence_length=labels['target_length'] - 1,
             mode=mode)
 
     def _decode_infer(self, initial_state, encoder_results, features,
@@ -178,4 +178,3 @@ class BasicSeq2seq(Seq2seqBase):
         return {'outputs': outputs,
                 'final_state': final_state,
                 'sequence_length': sequence_length}
-

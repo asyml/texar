@@ -35,8 +35,9 @@ flags.DEFINE_string(
     "config_downstream", "config_classifier",
     "Configuration of the downstream part of the model.")
 flags.DEFINE_string(
-    "pretrained_model_name", "bert-base-uncased",
-    "Name of the pre-trained checkpoint to load.")
+    "pretrained_model_name", 'bert-base-uncased',
+    "The name of pre-trained BERT model. See the doc of "
+    "`texar.tf.modules.PretrainedBERTMixin for all supported models.`")
 flags.DEFINE_string(
     "config_data", "config_data",
     "The dataset config.")
