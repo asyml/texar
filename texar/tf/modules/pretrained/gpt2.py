@@ -53,6 +53,7 @@ class PretrainedGPT2Mixin(PretrainedMixin, ABC):
       * ``gpt2-small``: Small version of GPT-2, 124M parameters.
       * ``gpt2-medium``: Medium version of GPT-2, 355M parameters.
       * ``gpt2-large``: Large version of GPT-2, 774M parameters.
+      * ``gpt2-xl``: XL version of GPT-2, 1558M parameters.
 
     We provide the following GPT2 classes:
 
@@ -74,6 +75,8 @@ class PretrainedGPT2Mixin(PretrainedMixin, ABC):
                         for file in _CHECKPOINT_FILES],
         'gpt2-large': [_GPT2_PATH + f"774M/{file}"
                        for file in _CHECKPOINT_FILES],
+        'gpt2-xl': [_GPT2_PATH + f"1558M/{file}"
+                    for file in _CHECKPOINT_FILES],
     }
 
     # Raise warning for the deprecated pre-trained model names

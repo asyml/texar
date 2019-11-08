@@ -58,6 +58,7 @@ class GPT2Tokenizer(TokenizerBase, PretrainedGPT2Mixin):
         'gpt2-small': 1024,
         'gpt2-medium': 1024,
         'gpt2-large': 1024,
+        'gpt2-xl': 1024,
     }
     _DEPRECATED_MAX_INPUT_SIZE = {
         '117M': 1024,
