@@ -18,6 +18,8 @@ class XLNetTokenizerTest(tf.test.TestCase):
 
     def setUp(self):
         self.tmp_dir = tempfile.TemporaryDirectory()
+        # Use the test sentencepiece model downloaded from huggingface
+        # transformers
         self.SAMPLE_VOCAB = maybe_download(
             'https://github.com/huggingface/transformers/blob/master/'
             'transformers/tests/fixtures/test_sentencepiece.model?raw=true',
