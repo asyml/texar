@@ -13,7 +13,7 @@ ignore=CVS
 
 # Add files or directories matching the regex patterns to the blacklist. The
 # regex matches against base names, not paths.
-ignore-patterns=
+ignore-patterns=.*_test.py
 
 # Pickle collected data for later comparisons.
 persistent=yes
@@ -65,7 +65,20 @@ confidence=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
-disable=print-statement,parameter-unpacking,unpacking-in-except,old-raise-syntax,backtick,import-star-module-level,apply-builtin,basestring-builtin,buffer-builtin,cmp-builtin,coerce-builtin,execfile-builtin,file-builtin,long-builtin,raw_input-builtin,reduce-builtin,standarderror-builtin,unicode-builtin,xrange-builtin,coerce-method,delslice-method,getslice-method,setslice-method,no-absolute-import,old-division,dict-iter-method,dict-view-method,next-method-called,metaclass-assignment,indexing-exception,raising-string,reload-builtin,oct-method,hex-method,nonzero-method,cmp-method,input-builtin,round-builtin,intern-builtin,unichr-builtin,map-builtin-not-iterating,zip-builtin-not-iterating,range-builtin-not-iterating,filter-builtin-not-iterating,using-cmp-argument,long-suffix,old-ne-operator,old-octal-literal,suppressed-message,useless-suppression
+disable=invalid-name,too-many-branches,too-many-statements,too-many-arguments,  # Unnecessarily strict checks
+        too-many-instance-attributes,too-few-public-methods,too-many-locals,
+        too-many-lines,too-many-return-statements,too-many-boolean-expressions,
+        too-many-ancestors,
+        fixme,
+        no-else-return,no-else-raise,len-as-condition,unnecessary-pass,         # Not exactly good conventions
+        bad-continuation,inconsistent-return-statements,stop-iteration-return,
+        no-member,not-callable,invalid-unary-operand-type,arguments-differ,     # We have mypy for this
+        no-name-in-module,unsubscriptable-object,import-error,
+        access-member-before-definition,
+        redefined-builtin,abstract-method,missing-docstring,                    # Too many false positives
+        no-self-use,                                                            # (cannot ignore overridden methods)
+        unused-wildcard-import,                                                 # (https://github.com/rogalski/astroid/commit/82c6ef644a2efb77217a23d9b8a6cfb5caffb4ba)
+        duplicate-code,                                                         # (will be fixed in next release)
 
 
 [REPORTS]
@@ -82,7 +95,7 @@ output-format=text
 files-output=no
 
 # Tells whether to display a full report or only the messages
-reports=yes
+reports=no
 
 # Python expression which should return a note less than 10 (10 is the highest
 # note). You have access to the variables errors warning, statement which
@@ -253,7 +266,7 @@ ignore-comments=yes
 ignore-docstrings=yes
 
 # Ignore imports when computing similarities.
-ignore-imports=no
+ignore-imports=yes
 
 
 [VARIABLES]
@@ -263,7 +276,7 @@ init-import=no
 
 # A regular expression matching the name of dummy variables (i.e. expectedly
 # not used).
-dummy-variables-rgx=(_+[a-zA-Z0-9]*?$)|dummy
+dummy-variables-rgx=(_+[a-zA-Z0-9]*?$)|dummy|unused
 
 # List of additional names supposed to be defined in builtins. Remember that
 # you should avoid to define new builtins when possible.
@@ -291,7 +304,8 @@ logging-modules=logging
 max-line-length=80
 
 # Regexp for a line that is allowed to be longer than the limit.
-ignore-long-lines=^\s*(# )?<?https?://\S+>?$
+# This regex matches URLs and link anchors.
+ignore-long-lines=^\s*((# )?`?<?https?://\S+>?|\.\. _`.*`:|`.*`_)$
 
 # Allow the body of an if to be on the same line as the test if there is no
 # else.
@@ -314,7 +328,7 @@ indent-string='    '
 indent-after-paren=4
 
 # Expected format of line ending, e.g. empty (any line ending), LF or CRLF.
-expected-line-ending-format=
+expected-line-ending-format=LF
 
 
 [DESIGN]
@@ -367,7 +381,7 @@ valid-metaclass-classmethod-first-arg=mcs
 
 # List of member names, which should be excluded from the protected access
 # warning.
-exclude-protected=_asdict,_fields,_replace,_source,_make
+exclude-protected=_asdict,_fields,_replace,_source,_make,_get_name
 
 
 [IMPORTS]
@@ -398,6 +412,8 @@ known-third-party=enchant
 # 3 compatible code, which means that the block might have code that exists
 # only in one or another interpreter, leading to false positives when analysed.
 analyse-fallback-blocks=no
+
+allow-wildcard-with-all=yes
 
 
 [EXCEPTIONS]

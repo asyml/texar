@@ -1,5 +1,0 @@
-/data/*
-!/data/download_glue_data.py
-!/data/README.md
-/output
-/runs

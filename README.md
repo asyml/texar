@@ -18,13 +18,14 @@
 * **Two Versions, (Mostly) Same Interfaces**. Texar-TensorFlow (this repo) and **[Texar-PyTorch](https://github.com/asyml/texar-pytorch)** have mostly the same interfaces. Both further combine the best design of TF and PyTorch:
   - Interfaces and variable sharing in *PyTorch convention*
   - Excellent factorization and rich functionalities in *TF convention*.
-* **Rich Pre-trained Models, Rich Usage with Uniform Interfaces**. BERT, GPT2, XLNet, etc, for encoding, classification, generation, and composing complex models with other Texar components!
-* **Fully Customizable** at multiple abstraction level -- both novice-friendly and expert-friendly. 
-  - Free to plug in whatever external modules, since Texar is fully compatible with the native TF/PyTorch APIs. 
-* **Versatile** to support broad tasks, models, algorithms, data processing, evaluation, etc. 
+* **Versatile** to support broad needs:
+   - data processing, model architectures, loss functions, training and inference algorithms, evaluation, ...
    - encoder(s) to decoder(s), sequential- and self-attentions, memory, hierarchical models, classifiers... 
    - maximum likelihood learning, reinforcement learning, adversarial learning, probabilistic modeling, ... 
+* **Fully Customizable** at multiple abstraction level -- both novice-friendly and expert-friendly. 
+  - Free to plug in whatever external modules, since Texar is fully compatible with the native TensorFlow/PyTorch APIs. 
 * **Modularized** for maximal re-use and clean APIs, based on principled decomposition of *Learning-Inference-Model Architecture*. 
+* **Rich Pre-trained Models, Rich Usage with Uniform Interfaces**. BERT, GPT2, XLNet, etc, for encoding, classification, generation, and composing complex models with other Texar components!
 * **Distributed** model training with multiple GPUs.
 * Clean, detailed [documentation](https://texar.readthedocs.io) and rich [examples](./examples).
 
@@ -33,8 +34,13 @@
    <img src="./docs/_static/img/texar_stack.png"><br><br>
 </div> 
 
+<div align="center">
+   <img src="./docs/_static/img/texar_modules_big.png"><br><br>
+</div> 
+
 ### Library API Example
 Builds an encoder-decoder model, with maximum likelihood learning:
+
 ```python
 import texar.tf as tx
 
@@ -72,6 +78,7 @@ outputs_bs, _, _ = tx.modules.beam_search_decode(
     end_token=data.target_vocab.eos_token_id)
 ```
 The same model, but with adversarial learning:
+
 ```python
 helper = tx.modules.GumbelSoftmaxTraingHelper( # Gumbel-softmax decoding
     start_tokens=[BOS]*batch_size, end_token=EOS, embedding=embedder)
@@ -85,6 +92,7 @@ G_loss, D_loss = tx.losses.binary_adversarial_losses(
     discriminator_fn=discriminator)
 ```
 The same model, but with RL policy gradient learning:
+
 ```python
 agent = tx.agents.SeqPGAgent(samples=outputs.sample_id,
                              logits=outputs.logits,
@@ -99,16 +107,18 @@ Many more examples are available [here](./examples)
 
 Texar requires:
 
-* `tensorflow >= 1.10.0 (but < 2.0.0)`. Follow the [tensorflow official instructions](https://www.tensorflow.org/install) to install the appropriate version
-* `tensorflow_probability >= 0.3.0 (but < 0.8.0)`. Follow the [tensorflow_probability official instractions](https://www.tensorflow.org/probability/install) to install.
+* `tensorflow >= 2.0.0`. Follow the [tensorflow official instructions](https://www.tensorflow.org/install) to install the appropriate version
+* `tensorflow_probability >= 0.3.0`. Follow the [tensorflow_probability official instractions](https://www.tensorflow.org/probability/install) to install.
 
 After `tensorflow` and `tensorflow_probability` are installed, install Texar from PyPI: 
+
 ```bash
 pip install texar
 ```
 
 To use cutting-edge features or develop locally, install from source: 
-```
+
+```bash
 git clone https://github.com/asyml/texar.git
 cd texar
 pip install .
@@ -120,6 +130,7 @@ pip install .
 
 ### Reference
 If you use Texar, please cite the [tech report](https://arxiv.org/abs/1809.00794) with the following BibTex entry:
+
 ```
 Texar: A Modularized, Versatile, and Extensible Toolkit for Text Generation
 Zhiting Hu, Haoran Shi, Bowen Tan, Wentao Wang, Zichao Yang, Tiancheng Zhao, Junxian He, Lianhui Qin, Di Wang, Xuezhe Ma, Zhengzhong Liu, Xiaodan Liang, Wanrong Zhu, Devendra Sachan and Eric Xing

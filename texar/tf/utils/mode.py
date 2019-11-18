@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,71 +15,26 @@
 Utility functions related to mode.
 """
 
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
-
 import tensorflow as tf
 
-from texar.tf import context
-
 __all__ = [
-    "maybe_global_mode",
-    "is_train_mode",
-    "is_eval_mode",
-    "is_predict_mode",
-    "is_train_mode_py",
-    "is_eval_mode_py",
-    "is_predict_mode_py",
-    "switch_dropout"
+    'valid_modes',
+    'is_train_mode',
+    'is_eval_mode',
+    'is_predict_mode',
 ]
 
 
-def maybe_global_mode(mode):
-    """Returns :func:`texar.tf.global_mode` if :attr:`mode` is `None`,
-    otherwise returns :attr:`mode` as-is.
+def valid_modes():
+    r"""Returns a set of possible values of mode.
     """
-    if mode is None:
-        return context.global_mode()
-    else:
-        return mode
+    return {tf.estimator.ModeKeys.TRAIN,
+            tf.estimator.ModeKeys.EVAL,
+            tf.estimator.ModeKeys.PREDICT}
 
 
-def is_train_mode(mode):
-    """Returns a bool Tensor indicating whether the global mode is TRAIN.
-    If :attr:`mode` is `None`, the mode is determined by
-    :func:`texar.tf.global_mode`.
-    """
-    if mode is None:
-        return context.global_mode_train()
-    else:
-        return tf.equal(mode, tf.estimator.ModeKeys.TRAIN)
-
-
-def is_eval_mode(mode):
-    """Returns a bool Tensor indicating whether the global mode is EVAL.
-    If :attr:`mode` is `None`, the mode is determined by
-    :func:`texar.tf.global_mode`.
-    """
-    if mode is None:
-        return context.global_mode_eval()
-    else:
-        return tf.equal(mode, tf.estimator.ModeKeys.EVAL)
-
-
-def is_predict_mode(mode):
-    """Returns a bool Tensor indicating whether the global mode is PREDICT.
-    If :attr:`mode` is `None`, the mode is determined by
-    :func:`texar.tf.global_mode`.
-    """
-    if mode is None:
-        return context.global_mode_predict()
-    else:
-        return tf.equal(mode, tf.estimator.ModeKeys.PREDICT)
-
-
-def is_train_mode_py(mode, default=True):
-    """Returns a python boolean indicating whether the mode is TRAIN.
+def is_train_mode(mode, default=True):
+    r"""Returns a python boolean indicating whether the mode is TRAIN.
 
     Args:
         mode: A string taking value in
@@ -93,13 +48,13 @@ def is_train_mode_py(mode, default=True):
     """
     if mode is None:
         return default
-    if mode not in context.valid_modes():
+    if mode not in valid_modes():
         raise ValueError('Unknown mode: {}'.format(mode))
     return mode == tf.estimator.ModeKeys.TRAIN
 
 
-def is_eval_mode_py(mode, default=False):
-    """Returns a python boolean indicating whether the mode is EVAL.
+def is_eval_mode(mode, default=False):
+    r"""Returns a python boolean indicating whether the mode is EVAL.
 
     Args:
         mode: A string taking value in
@@ -113,13 +68,13 @@ def is_eval_mode_py(mode, default=False):
     """
     if mode is None:
         return default
-    if mode not in context.valid_modes():
+    if mode not in valid_modes():
         raise ValueError('Unknown mode: {}'.format(mode))
     return mode == tf.estimator.ModeKeys.EVAL
 
 
-def is_predict_mode_py(mode, default=False):
-    """Returns a python boolean indicating whether the mode is PREDICT.
+def is_predict_mode(mode, default=False):
+    r"""Returns a python boolean indicating whether the mode is PREDICT.
 
     Args:
         mode: A string taking value in
@@ -133,25 +88,6 @@ def is_predict_mode_py(mode, default=False):
     """
     if mode is None:
         return default
-    if mode not in context.valid_modes():
+    if mode not in valid_modes():
         raise ValueError('Unknown mode: {}'.format(mode))
     return mode == tf.estimator.ModeKeys.PREDICT
-
-
-def switch_dropout(dropout_keep_prob, mode=None):
-    """Turns off dropout when not in training mode.
-
-    Args:
-        dropout_keep_prob: Dropout keep probability in training mode
-        mode (optional): A Tensor taking values of
-            :tf_main:`tf.estimator.ModeKeys <estimator/ModeKeys>`.
-            Dropout is activated if :attr:`mode` is `TRAIN`.
-            If `None`, the mode is inferred from
-            :func:`texar.tf.global_mode`.
-
-    Returns:
-        A unit Tensor that equals the dropout keep probability in `TRAIN` mode,
-        and `1.0` in other modes.
-    """
-    return 1. - (1. - dropout_keep_prob) \
-        * tf.cast(is_train_mode(mode), tf.float32)

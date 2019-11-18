@@ -3,6 +3,7 @@
 ### New features
 
 * Support only Python 3.6 and 3.7. Drop support of older Python versions.
+* Support TensorFlow 2.0.
 
 ### Feature improvements
 

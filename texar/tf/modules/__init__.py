@@ -1,4 +1,4 @@
-# Copyright 2018 The Texar Authors. All Rights Reserved.
+# Copyright 2019 The Texar Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,21 +14,3 @@
 """
 Modules of Texar library module.
 """
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-# pylint: disable=wildcard-import
-
-from texar.tf.modules.classifiers import *
-from texar.tf.modules.connectors import *
-from texar.tf.modules.decoders import *
-from texar.tf.modules.embedders import *
-from texar.tf.modules.encoders import *
-from texar.tf.modules.memory import *
-from texar.tf.modules.networks import *
-from texar.tf.modules.policies import *
-from texar.tf.modules.pretrained import *
-from texar.tf.modules.qnets import *
-from texar.tf.modules.regressors import *
