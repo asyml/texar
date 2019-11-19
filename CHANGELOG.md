@@ -2,11 +2,29 @@
 
 ### New features
 
-* Support only Python 3.6 and 3.7. Drop support of older Python versions.
-
 ### Feature improvements
 
 ### Fixes
+
+## [v0.2.4](https://github.com/asyml/texar/releases/tag/v0.2.4) (2019-11-18)
+
+### New features
+
+* Support only Python 3.6 and 3.7. Drop support of older Python versions. ([#211](https://github.com/asyml/texar/pull/211))
+* Add Tokenizers including tokenizers for pretrained models (`BERTTokenizer`, `XLNetTokenizer`, etc). ([#225](https://github.com/asyml/texar/pull/225))
+* Add GPT2 modules (`GPT2Encoder`, `GPT2Decoder`, `GPT2Classifier`, etc). ([#228](https://github.com/asyml/texar/pull/228))
+
+### Feature improvements
+
+* Update embedder modules `dropout_strategy=='item'` to support TensorFlow v1.15. ([#231](https://github.com/asyml/texar/pull/231))
+* Update `.gitignore` and add `.gitignore` files to all examples. ([#233](https://github.com/asyml/texar/pull/233)) 
+* Polish code style according to flake8. ([#234](https://github.com/asyml/texar/pull/234))
+* Add GPT2 XL pretrained checkpoint. ([#243](https://github.com/asyml/texar/pull/243))
+
+### Fixes
+
+* Fix `examples/transformer/scripts/wmt14_en_de.sh` to create output dir automatically. ([#238](https://github.com/asyml/texar/pull/238))
+* Fix variable scope issue in `texar.tf.modules.decoders.dynamic_decode`. ([#246](https://github.com/asyml/texar/pull/246))
 
 ## [v0.2.3](https://github.com/asyml/texar/releases/tag/v0.2.3) (2019-09-22)
 
