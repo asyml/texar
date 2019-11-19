@@ -2,11 +2,21 @@
 
 ### New features
 
+### Feature improvements
+
+### Fixes
+
+## [v0.2.4](https://github.com/asyml/texar/releases/tag/v0.2.4) (2019-11-18)
+
+### New features
+
 * Support only Python 3.6 and 3.7. Drop support of older Python versions.
 
 ### Feature improvements
 
 ### Fixes
+
+* Fix variable scope issue in `texar.tf.modules.decoders.dynamic_decode`. ([#246](https://github.com/asyml/texar/pull/246))
 
 ## [v0.2.3](https://github.com/asyml/texar/releases/tag/v0.2.3) (2019-09-22)
 
