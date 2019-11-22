@@ -12,6 +12,7 @@ install:
   - pip install --progress-bar off .[tensorflow-cpu]
   - pip install pylint==2.3.1 flake8==3.7.7
   - pip install pytest
+  - pip install coverage codecov
 
 script:
   # Linting
@@ -19,6 +20,11 @@ script:
   - flake8 texar/ examples/
   # Unit tests
   - pytest
+  # Test coverage
+  - coverage run -m pytest
+
+after_success:
+  - codecov
 
 # jobs:
 #   include:
