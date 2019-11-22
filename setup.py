@@ -17,7 +17,7 @@ if sys.version_info < (3, 6):
 
 setuptools.setup(
     name="texar",
-    version="0.2.5-unreleased",
+    version="0.4.0-unreleased",
     url="https://github.com/asyml/texar",
 
     description="Toolkit for Machine Learning and Text Generation",
