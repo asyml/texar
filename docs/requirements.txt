@@ -2,6 +2,8 @@ sphinx
 sphinx-rtd-theme >= 0.2.4
 Pygments >= 2.1.1
 funcsigs
+packaging
+pyyaml
 recommonmark
 sphinxcontrib-napoleon >= 0.6.1
 sphinxcontrib-spelling
@@ -12,7 +14,6 @@ sentencepiece >= 0.1.8
 
 # Agent module dependency
 gym
-
 
 # TensorFlow installation for ReadTheDocs
 tensorflow == 1.14.0
