@@ -180,24 +180,23 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
 
         1. The :attr:`decoding_strategy` argument: A string taking value of:
 
-            - **"train_greedy"**: decoding in teacher-forcing fashion \
-              (i.e., feeding \
-              `ground truth` to decode the next step), and each sample is \
-              obtained by taking the `argmax` of the RNN output logits. \
-              Arguments :attr:`(inputs, sequence_length, input_time_major)` \
-              are required for this strategy, and argument :attr:`embedding` \
-              is optional.
-            - **"infer_greedy"**: decoding in inference fashion (i.e., feeding \
-              the `generated` sample to decode the next step), and each sample\
-              is obtained by taking the `argmax` of the RNN output logits.\
-              Arguments :attr:`(embedding, start_tokens, end_token)` are \
-              required for this strategy, and argument \
+            - **"train_greedy"**: decoding in teacher-forcing fashion
+              (i.e., feeding `ground truth` to decode the next step), and each
+              sample is obtained by taking the `argmax` of the RNN output
+              logits. Arguments
+              :attr:`(inputs, sequence_length, input_time_major)` are required
+              for this strategy, and argument :attr:`embedding` is optional.
+            - **"infer_greedy"**: decoding in inference fashion (i.e., feeding
+              the `generated` sample to decode the next step), and each sample
+              is obtained by taking the `argmax` of the RNN output logits.
+              Arguments :attr:`(embedding, start_tokens, end_token)` are
+              required for this strategy, and argument
               :attr:`max_decoding_length` is optional.
             - **"infer_sample"**: decoding in inference fashion, and each
               sample is obtained by `random sampling` from the RNN output
-              distribution. Arguments \
-              :attr:`(embedding, start_tokens, end_token)` are \
-              required for this strategy, and argument \
+              distribution. Arguments
+              :attr:`(embedding, start_tokens, end_token)` are
+              required for this strategy, and argument
               :attr:`max_decoding_length` is optional.
 
           This argument is used only when argument :attr:`helper` is `None`.
@@ -223,25 +222,25 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                     embedding=embedder,
                     max_decoding_length=60)
 
-        2. The :attr:`helper` argument: An instance of subclass of \
+        2. The :attr:`helper` argument: An instance of subclass of
            :class:`texar.tf.modules.Helper`. This
            provides a superset of decoding strategies than above, for example:
 
-            - :class:`~texar.tf.modules.TrainingHelper` corresponding to the \
+            - :class:`~texar.tf.modules.TrainingHelper` corresponding to the
               "train_greedy" strategy.
-            - :class:`~texar.tf.modules.GreedyEmbeddingHelper` and \
-              :class:`~texar.tf.modules.SampleEmbeddingHelper` corresponding to \
+            - :class:`~texar.tf.modules.GreedyEmbeddingHelper` and
+              :class:`~texar.tf.modules.SampleEmbeddingHelper` corresponding to
               the "infer_greedy" and "infer_sample", respectively.
-            - :class:`~texar.tf.modules.TopKSampleEmbeddingHelper` for Top-K \
+            - :class:`~texar.tf.modules.TopKSampleEmbeddingHelper` for Top-K
               sample decoding.
-            - :class:`ScheduledEmbeddingTrainingHelper` and \
-              :class:`ScheduledOutputTrainingHelper` for scheduled \
+            - :class:`ScheduledEmbeddingTrainingHelper` and
+              :class:`ScheduledOutputTrainingHelper` for scheduled
               sampling.
-            - :class:`~texar.tf.modules.SoftmaxEmbeddingHelper` and \
-              :class:`~texar.tf.modules.GumbelSoftmaxEmbeddingHelper` for \
+            - :class:`~texar.tf.modules.SoftmaxEmbeddingHelper` and
+              :class:`~texar.tf.modules.GumbelSoftmaxEmbeddingHelper` for
               soft decoding and gradient backpropagation.
 
-          Helpers give the maximal flexibility of configuring the decoding\
+          Helpers give the maximal flexibility of configuring the decoding
           strategy.
 
           Example:
@@ -267,15 +266,15 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                 outputs_2, _, sequence_length = decoder(
                     max_decoding_length=60, helper=helper_2)
 
-        3. :attr:`hparams["helper_train"]` and :attr:`hparams["helper_infer"]`:\
-           Specifying the helper through hyperparameters. Train and infer \
-           strategy is toggled based on :attr:`mode`. Appriopriate arguments \
-           (e.g., :attr:`inputs`, :attr:`start_tokens`, etc) are selected to \
-           construct the helper. Additional arguments for helper constructor \
-           can be provided either through :attr:`**kwargs`, or through \
+        3. :attr:`hparams["helper_train"]` and :attr:`hparams["helper_infer"]`:
+           Specifying the helper through hyperparameters. Train and infer
+           strategy is toggled based on :attr:`mode`. Appriopriate arguments
+           (e.g., :attr:`inputs`, :attr:`start_tokens`, etc) are selected to
+           construct the helper. Additional arguments for helper constructor
+           can be provided either through :attr:`**kwargs`, or through
            :attr:`hparams["helper_train/infer"]["kwargs"]`.
 
-           This means is used only when both :attr:`decoding_strategy` and \
+           This means is used only when both :attr:`decoding_strategy` and
            :attr:`helper` are `None`.
 
            Example:
@@ -289,7 +288,8 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
                      }
                  }
                  embedder = WordEmbedder(vocab_size=data.vocab.size)
-                 decoder = BasicRNNDecoder(vocab_size=data.vocab.size, hparams=h)
+                 decoder = BasicRNNDecoder(vocab_size=data.vocab.size,
+                                           hparams=h)
 
                  # Gumbel-softmax decoding
                  output, _, _ = decoder(
@@ -304,48 +304,46 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         Args:
             decoding_strategy (str): A string specifying the decoding
                 strategy. Different arguments are required based on the
-                strategy.
-                Ignored if :attr:`helper` is given.
+                strategy. Ignored if :attr:`helper` is given.
             initial_state (optional): Initial state of decoding.
                 If `None` (default), zero state is used.
 
             inputs (optional): Input tensors for teacher forcing decoding.
-                Used when `decoding_strategy` is set to "train_greedy", or
-                when `hparams`-configured helper is used.
+                Used when :attr:`decoding_strategy` is set to
+                ``"train_greedy"``, or when `hparams`-configured helper is used.
 
-                - If :attr:`embedding` is `None`, `inputs` is directly \
-                fed to the decoder. E.g., in `"train_greedy"` strategy, \
-                `inputs` must be a 3D Tensor of shape \
-                `[batch_size, max_time, emb_dim]` (or \
-                `[max_time, batch_size, emb_dim]` if `input_time_major`==True).
-                - If `embedding` is given, `inputs` is used as index \
-                to look up embeddings and feed in the decoder. \
-                E.g., if `embedding` is an instance of \
-                :class:`~texar.tf.modules.WordEmbedder`, \
-                then :attr:`inputs` is usually a 2D int Tensor \
-                `[batch_size, max_time]` (or \
-                `[max_time, batch_size]` if `input_time_major`==True) \
-                containing the token indexes.
+                - If `embedding` is `None`, `inputs` is directly fed to
+                  the decoder. E.g., in `"train_greedy"` strategy, `inputs` must
+                  be a 3D Tensor of shape `[batch_size, max_time, emb_dim]` (or
+                  `[max_time, batch_size, emb_dim]` if
+                  `input_time_major` == `True`).
+                - If `embedding` is given, `inputs` is used as index to look up
+                  embeddings and feed in the decoder. E.g., if `embedding` is
+                  an instance of :class:`~texar.tf.modules.WordEmbedder`,
+                  then :attr:`inputs` is usually a 2D int Tensor
+                  `[batch_size, max_time]` (or `[max_time, batch_size]` if
+                  `input_time_major` == `True`) containing the token indexes.
             sequence_length (optional): A 1D int Tensor containing the
                 sequence length of :attr:`inputs`.
                 Used when `decoding_strategy="train_greedy"` or
                 `hparams`-configured helper is used.
             embedding (optional): Embedding used when:
 
-                - "infer_greedy" or "infer_sample" `decoding_strategy` is \
-                used. This can be a callable or the `params` argument for \
-                :tf_main:`embedding_lookup <nn/embedding_lookup>`. \
-                If a callable, it can take a vector tensor of token `ids`, \
-                or take two arguments (`ids`, `times`), where `ids` \
-                is a vector tensor of token ids, and `times` is a vector tensor\
-                of time steps (i.e., position ids). The latter case can be used\
-                when attr:`embedding` is a combination of word embedding and\
-                position embedding. `embedding` is required in this case.
-                - "train_greedy" `decoding_strategy` is used.\
-                This can be a callable or the `params` argument for \
-                :tf_main:`embedding_lookup <nn/embedding_lookup>`. \
-                If a callable, it can take :attr:`inputs` and returns \
-                the input embedding. `embedding` is optional in this case.
+                - "infer_greedy" or "infer_sample" `decoding_strategy` is
+                  used. This can be a callable or the `params` argument for
+                  :tf_main:`embedding_lookup <nn/embedding_lookup>`.
+                  If a callable, it can take a vector tensor of token `ids`,
+                  or take two arguments (`ids`, `times`), where `ids`
+                  is a vector tensor of token ids, and `times` is a vector
+                  tensor
+                  of time steps (i.e., position ids). The latter case can be
+                  used when attr:`embedding` is a combination of word embedding
+                  and position embedding. `embedding` is required in this case.
+                - "train_greedy" `decoding_strategy` is used.
+                  This can be a callable or the `params` argument for
+                  :tf_main:`embedding_lookup <nn/embedding_lookup>`.
+                  If a callable, it can take :attr:`inputs` and returns
+                  the input embedding. `embedding` is optional in this case.
             start_tokens (optional): A int Tensor of shape `[batch_size]`,
                 the start tokens. Used when `decoding_strategy="infer_greedy"`
                 or `"infer_sample"`, or when the helper specified in `hparams`
@@ -409,11 +407,11 @@ class RNNDecoderBase(ModuleBase, TFDecoder):
         Returns:
             `(outputs, final_state, sequence_lengths)`, where
 
-            - **`outputs`**: an object containing the decoder output on all \
-            time steps.
+            - **`outputs`**: an object containing the decoder output on all
+              time steps.
             - **`final_state`**: is the cell state of the final time step.
-            - **`sequence_lengths`**: is an int Tensor of shape `[batch_size]` \
-            containing the length of each sample.
+            - **`sequence_lengths`**: is an int Tensor of shape `[batch_size]`
+              containing the length of each sample.
         """
         # Helper
         if helper is not None:

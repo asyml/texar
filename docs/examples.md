@@ -28,7 +28,7 @@ More examples are continuously added...
 
 * [vae_text](https://github.com/asyml/texar/tree/master/examples/vae_text): VAE language model
 
-### GANs / Discriminiator-supervision ###
+### GANs / Discriminator-supervision ###
 
 * [seqGAN](https://github.com/asyml/texar/tree/master/examples/seqgan): GANs for text generation
 * [text_style_transfer](https://github.com/asyml/texar/tree/master/examples/text_style_transfer): Discriminator supervision for controlled text generation
@@ -37,7 +37,7 @@ More examples are continuously added...
 
 * [seq2seq_rl](https://github.com/asyml/texar/tree/master/examples/seq2seq_rl): Attentional seq2seq trained with policy gradient.
 * [seqGAN](https://github.com/asyml/texar/tree/master/examples/seqgan): Policy gradient for sequence generation
-* [rl_gym](https://github.com/asyml/texar/tree/master/examples/rl_gym): Various RL algoritms for games on OpenAI Gym
+* [rl_gym](https://github.com/asyml/texar/tree/master/examples/rl_gym): Various RL algorithms for games on OpenAI Gym
 
 ### Memory Network ###
 
@@ -96,7 +96,7 @@ More examples are continuously added...
 
 ### Games ###
 
-* [rl_gym](https://github.com/asyml/texar/tree/master/examples/rl_gym): Various RL algoritms for games on OpenAI Gym
+* [rl_gym](https://github.com/asyml/texar/tree/master/examples/rl_gym): Various RL algorithms for games on OpenAI Gym
 
 ---
 

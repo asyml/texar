@@ -35,7 +35,9 @@ jobs:
       script:
         - cd docs
         # Build documents
-        - sphinx-build -b html -d _build/doctrees . _build/html
+        - sphinx-build -W -b html -d _build/doctrees . _build/html
+        # Check for typos
+        - sphinx-build -b spelling -d _build/doctrees . _build/spelling
 
 notifications:
   email: false

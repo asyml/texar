@@ -75,7 +75,7 @@ class AttentionRNNDecoderOutput(
             "AttentionRNNDecoderOutput",
             ["logits", "sample_id", "cell_output",
              "attention_scores", "attention_context"])):
-    """The outputs of attention RNN decoders that additionally include
+    r"""The outputs of attention RNN decoders that additionally include
     attention results.
 
     Attributes:
@@ -84,8 +84,8 @@ class AttentionRNNDecoderOutput(
             :class:`~texar.tf.modules.AttentionRNNDecoder`, this is a Tensor of
             shape `[batch_size, max_time, vocab_size]` after decoding.
         sample_id: The sampled results (at each step/of all steps). E.g., in
-            :class:`~texar.tf.modules.AttentionRNNDecoder` with decoding strategy
-            of train_greedy, this
+            :class:`~texar.tf.modules.AttentionRNNDecoder` with decoding
+            strategy of train_greedy, this
             is a Tensor of shape `[batch_size, max_time]` containing the
             sampled token indexes of all steps.
         cell_output: The output of RNN cell (at each step/of all steps).
@@ -94,7 +94,7 @@ class AttentionRNNDecoderOutput(
             hyperparameters, this is a Tensor of
             shape `[batch_size, max_time, cell_output_size]` after decoding
             the whole sequence.
-        attention_scores: A single or tuple of `Tensor`(s) containing the
+        attention_scores: A single or tuple of `Tensor(s)` containing the
             alignments emitted (at the previous time step/of all time steps)
             for each attention mechanism.
         attention_context: The attention emitted (at the previous time step/of

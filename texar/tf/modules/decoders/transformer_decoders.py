@@ -319,9 +319,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         """Performs decoding.
 
         The interface is mostly the same with that of RNN decoders
-        (see :meth:`~texar.tf.modules.RNNDecoderBase._build`). The main difference
-        is that, here, `sequence_length` is not needed, and continuation
-        generation is additionally supported.
+        (see :meth:`~texar.tf.modules.RNNDecoderBase._build`). The main
+        difference is that, here, `sequence_length` is not needed, and
+        continuation generation is additionally supported.
 
         The function provides **3 ways** to specify the decoding method, with
         varying flexibility:
@@ -357,7 +357,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
            :class:`~texar.tf.modules.TrainingHelper` corresponds to the
            "train_greedy" strategy above and will get the same output results,
            the implementation is *slower* than
-           directly setting `decoding_strategy="train_greedy"`.
+           directly setting `decoding_strategy = "train_greedy"`.
 
            Argument :attr:`max_decoding_length` is optional.
 
@@ -412,10 +412,10 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 the logits by before computing the softmax. Larger values
                 (above 1.0) result in more random samples. Must > 0. If `None`,
                 1.0 is used.
-                Used when :attr:`decoding_strategy` = "infer_sample"`.
+                Used when `decoding_strategy = "infer_sample"`.
             max_decoding_length (optional): An int scalar Tensor indicating
                 the maximum allowed number of decoding steps.
-                If `None` (default), use "max_decoding_length" defined in
+                If `None` (default), use `"max_decoding_length"` defined in
                 :attr:`hparams`. Ignored in "train_greedy" decoding.
             impute_finished (bool): If `True`, then states for batch
                 entries which are marked as finished get copied through and
@@ -447,27 +447,27 @@ class TransformerDecoder(ModuleBase, TFDecoder):
 
         Returns:
 
-            - For **"train_greedy"** decoding, returns an instance of \
-            :class:`~texar.tf.modules.TransformerDecoderOutput` which contains\
-            `sample_id` and `logits`.
+            - For **"train_greedy"** decoding, returns an instance of
+              :class:`~texar.tf.modules.TransformerDecoderOutput` which contains
+              `sample_id` and `logits`.
 
-            - For **"infer_greedy"** and **"infer_sample"** decoding or\
-            decoding with :attr:`helper`, returns\
-            a tuple `(outputs, sequence_lengths)`, where `outputs` is an \
-            instance of :class:`~texar.tf.modules.TransformerDecoderOutput` as\
-            in "train_greedy", and `sequence_lengths` is a Tensor of shape\
-            `[batch_size]` containing the length of each sample.
+            - For **"infer_greedy"** and **"infer_sample"** decoding or
+              decoding with :attr:`helper`, returns
+              a tuple `(outputs, sequence_lengths)`, where `outputs` is an
+              instance of :class:`~texar.tf.modules.TransformerDecoderOutput` as
+              in "train_greedy", and `sequence_lengths` is a Tensor of shape
+              `[batch_size]` containing the length of each sample.
 
-            - For **beam search** decoding, returns a `dict` containing keys\
-            "sample_id" and "log_prob".
+            - For **beam search** decoding, returns a `dict` containing keys
+              "sample_id" and "log_prob".
 
-                - **"sample_id"** is an int Tensor of shape \
-                `[batch_size, max_time, beam_width]` containing generated\
-                token indexes. `sample_id[:,:,0]` is the highest-probable \
-                sample.
-                - **"log_prob"** is a float Tensor of shape \
-                `[batch_size, beam_width]` containing the log probability \
-                of each sequence sample.
+                - **"sample_id"** is an int Tensor of shape
+                  `[batch_size, max_time, beam_width]` containing generated
+                  token indexes. `sample_id[:,:,0]` is the highest-probable
+                  sample.
+                - **"log_prob"** is a float Tensor of shape
+                  `[batch_size, beam_width]` containing the log probability
+                  of each sequence sample.
         """
 
         if memory is not None:

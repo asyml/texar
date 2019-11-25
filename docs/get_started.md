@@ -4,7 +4,7 @@
 
 
 ### Key Features
-* **Two Versions, (Mostly) Same Interfaces**. Texar-TensorFlow (this repo) and **[Texar-PyTorch](https://github.com/asyml/texar-pytorch)** have mostly the same interfaces. Both further combine the best design of TF and PyTorch:
+* **Two Versions, (Mostly) Same Interfaces**. Texar-TensorFlow (this repository) and **[Texar-PyTorch](https://github.com/asyml/texar-pytorch)** have mostly the same interfaces. Both further combine the best design of TF and PyTorch:
   - Interfaces and variable sharing in *PyTorch convention*
   - Excellent factorization and rich functionalities in *TF convention*.
 * **Rich Pre-trained Models, Rich Usage with Uniform Interfaces**. BERT, GPT2, XLNet, etc, for encoding, classification, generation, and composing complex models with other Texar components!
@@ -120,5 +120,5 @@ ACL 2019
 ```
 
 ### License
-[Apache License 2.0](./LICENSE)
+[Apache License 2.0](https://github.com/asyml/texar/tree/master/LICENSE)
 

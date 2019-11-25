@@ -1,16 +1,19 @@
 sphinx
 sphinx-rtd-theme >= 0.2.4
-sphinxcontrib-napoleon >= 0.6.1
 Pygments >= 2.1.1
+funcsigs
 recommonmark
+sphinxcontrib-napoleon >= 0.6.1
+sphinxcontrib-spelling
 
 # Tokenizer module dependency
 regex >= 2018.01.10
 sentencepiece >= 0.1.8
 
-pyyaml
-funcsigs
-packaging
+# Agent module dependency
+gym
 
+
+# TensorFlow installation for ReadTheDocs
 tensorflow == 1.14.0
 tensorflow-probability >= 0.3.0, < 0.8.0
