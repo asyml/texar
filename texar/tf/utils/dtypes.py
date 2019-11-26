@@ -12,9 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Modules of Texar library utils.
+Utility functions related to data types.
 """
 
-from texar.tf.utils.dtypes import *
-from texar.tf.utils.mode import *
-from texar.tf.utils.utils import *
+__all__ = [
+    "is_callable",
+    "is_str",
+]
+
+
+def is_callable(x):
+    r"""Return `True` if :attr:`x` is callable.
+    """
+    return callable(x)
+
+
+def is_str(x):
+    r"""Returns `True` if :attr:`x` is either a str or unicode.
+    Returns `False` otherwise.
+    """
+    return isinstance(x, str)
