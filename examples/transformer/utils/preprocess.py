@@ -15,7 +15,6 @@
 preprocessing text data. Generally it's to generate plain text vocab file,
 truncate sequence by length, generate the preprocessed dataset.
 """
-from __future__ import unicode_literals
 import collections
 import re
 import json

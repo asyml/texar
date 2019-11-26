@@ -19,11 +19,6 @@ Utility functions for decoding. This file is modified from
 `tf.contrib.seq2seq.dynamic_decode`.
 """
 
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 # pylint: disable=invalid-name, no-member, protected-access
 
 import tensorflow as tf

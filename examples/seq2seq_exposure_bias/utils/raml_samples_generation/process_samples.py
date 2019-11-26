@@ -1,4 +1,3 @@
-from __future__ import print_function
 from nltk.translate.bleu_score import sentence_bleu
 from nltk.translate.bleu_score import SmoothingFunction
 import sys

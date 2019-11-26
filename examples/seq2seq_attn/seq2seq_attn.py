@@ -13,9 +13,6 @@
 # limitations under the License.
 """Attentional Seq2seq.
 """
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
 
 # pylint: disable=invalid-name, too-many-arguments, too-many-locals
 

@@ -15,10 +15,6 @@
 Base class for connectors that transform inputs into specified output shape.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 from texar.tf.module_base import ModuleBase
 
 __all__ = [

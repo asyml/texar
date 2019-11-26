@@ -14,10 +14,6 @@
 """Example of building OpenAI GPT-2 language model for sample generation.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import importlib
 import numpy as np
 import tensorflow as tf

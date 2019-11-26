@@ -15,10 +15,6 @@
 Various encoders that encode data with hierarchical structure.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import collections
 
 import tensorflow as tf

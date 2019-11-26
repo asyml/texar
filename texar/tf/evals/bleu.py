@@ -26,11 +26,6 @@ Smooth BLEU is computed following the method outlined in the paper:
     Chin-Yew Lin, Franz Josef Och. COLING 2004.
 """
 
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 import collections
 import math
 

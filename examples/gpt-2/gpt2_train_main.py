@@ -14,10 +14,6 @@
 """Example of fine-tuning OpenAI GPT-2 language model.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import os
 import importlib
 import tensorflow as tf

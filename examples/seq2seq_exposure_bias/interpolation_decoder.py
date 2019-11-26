@@ -16,9 +16,6 @@ Interpolation Decoder is used for interpolation algorithm
 which stores one more variable in 'state' recording the
 decoded ids(state: [decoded_ids, rnn_state]).
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 # pylint: disable=no-name-in-module, too-many-arguments, too-many-locals
 # pylint: disable=not-context-manager, protected-access, invalid-name

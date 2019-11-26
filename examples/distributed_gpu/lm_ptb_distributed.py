@@ -41,9 +41,6 @@ To run:
 
 $ python lm_ptb.py --data_path=simple-examples/data --config=config_small
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 # pylint: disable=invalid-name, no-member, too-many-locals
 

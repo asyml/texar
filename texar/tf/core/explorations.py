@@ -15,10 +15,6 @@
 Classes and utilities for exploration in RL.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 from texar.tf.hyperparams import HParams
 
 # pylint: disable=invalid-name

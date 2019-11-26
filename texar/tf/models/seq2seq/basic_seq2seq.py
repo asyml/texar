@@ -15,10 +15,6 @@
 The basic seq2seq model without attention.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow as tf
 
 from texar.tf.models.seq2seq.seq2seq_base import Seq2seqBase

@@ -19,10 +19,6 @@
 Adapted from the `tensorflow.contrib.seq2seq` package.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 # pylint: disable=no-name-in-module
 
 import abc

@@ -3,11 +3,6 @@
 Unit tests for agent utilities.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 # pylint: disable=no-member, invalid-name, too-many-arguments
 
 import numpy as np

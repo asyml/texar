@@ -15,10 +15,6 @@
 Miscellaneous Utility functions.
 """
 
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
-
 # pylint: disable=invalid-name, no-member, no-name-in-module, protected-access
 # pylint: disable=redefined-outer-name, too-many-arguments
 

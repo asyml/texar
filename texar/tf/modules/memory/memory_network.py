@@ -16,10 +16,6 @@ End-to-end memory network described in
 (Sukhbaatar et al.) End-To-End Memory Networks
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow as tf
 
 from texar.tf.module_base import ModuleBase

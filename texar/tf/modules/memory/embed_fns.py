@@ -16,10 +16,6 @@ Some embed_fn s used in :class:`~texar.tf.modules.memory.MemNetBase` and its
 subclasses.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 # pylint: disable=invalid-name, too-many-arguments
 
 __all__ = [
