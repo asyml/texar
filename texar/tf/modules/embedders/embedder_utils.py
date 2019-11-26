@@ -37,6 +37,13 @@ def default_embedding_hparams():
                 "name": "embedding",
                 "dim": 100,
                 "initializer": None,
+                "regularizer": {
+                    "type": "L1L2",
+                    "kwargs": {
+                        "l1": 0.,
+                        "l2": 0.
+                    }
+                },
                 "dropout_rate": 0.,
                 "dropout_strategy": 'element',
                 "trainable": True,
@@ -91,6 +98,36 @@ def default_embedding_hparams():
                 :attr:`"type"`.
                 Ignored if :attr:`"type"` is an initializer instance.
 
+        `"regularizer"`: dict
+            Hyperparameters of the regularizer for the embedding values. The
+            regularizer must be an instance of
+            the base :tf_main:`Regularizer <keras/regularizers/Regularizer>`
+            class. The hyperparameters include:
+
+            `"type"`: str or regularizer instance
+                Name, full path, or instance of the regularizer class. The
+                class can be
+
+                - Built-in regularizer defined in
+                  :tf_main:`tf.keras.regularizers <keras/regularizers>`, e.g.,
+                  :tf_main:`L1L2 <keras/regularizers/L1L2>`.
+                - User-defined regularizer in :mod:`texar.tf.custom`. The
+                  regularizer class should inherit the base class
+                  :tf_main:`Regularizer <keras/regularizers/Regularizer>`.
+                - External regularizer. Must provide the full path,
+                  e.g., :attr:`"my_module.MyRegularizer"`, or the instance.
+
+            `"kwargs"`: dict
+                A dictionary of arguments for constructor of the
+                regularizer class. A regularizer is created by
+                calling `regularizer_class(**kwargs)` where
+                :attr:`regularizer_class` is specified in :attr:`"type"`.
+                Ignored if :attr:`"type"` is a regularizer instance.
+
+            The default value corresponds to
+            :tf_main:`L1L2 <keras/regularizers/L1L2>` with `(l1=0, l2=0)`,
+            which disables regularization.
+
         `"dropout_rate"`: float
             The dropout rate between 0 and 1. E.g., `dropout_rate=0.1` would
             drop out 10% of the embedding.
@@ -116,6 +153,7 @@ def default_embedding_hparams():
         "name": "embedding",
         "dim": 100,
         "initializer": None,
+        "regularizer": layers.default_regularizer_hparams(),
         "dropout_rate": 0.,
         "dropout_strategy": 'element',
         "trainable": True,
