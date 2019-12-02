@@ -16,11 +16,6 @@
 Utility functions related to input/output.
 """
 
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 # pylint: disable=invalid-name, redefined-builtin, too-many-arguments
 
 from io import open

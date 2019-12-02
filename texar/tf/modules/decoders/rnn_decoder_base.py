@@ -15,10 +15,6 @@
 Base class for RNN decoders.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 # pylint: disable=too-many-arguments, no-name-in-module
 # pylint: disable=too-many-branches, protected-access, too-many-locals
 # pylint: disable=arguments-differ, unused-argument

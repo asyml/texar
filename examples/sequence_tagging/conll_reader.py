@@ -13,9 +13,6 @@
 # limitations under the License.
 """Utilities for preprocessing and iterating over the CoNLL 2003 data.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import re
 from collections import defaultdict

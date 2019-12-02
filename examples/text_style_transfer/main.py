@@ -26,9 +26,6 @@ Train the model with the cmd:
 
 $ python main.py --config config
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 # pylint: disable=invalid-name, too-many-locals, too-many-arguments, no-member
 

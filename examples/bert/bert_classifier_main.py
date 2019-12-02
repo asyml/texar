@@ -14,10 +14,6 @@
 """Example of building a sentence classifier based on pre-trained BERT model.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import os
 import importlib
 import tensorflow as tf

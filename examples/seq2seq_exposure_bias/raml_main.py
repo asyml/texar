@@ -21,10 +21,6 @@ corresponding rewards for every target sentence.
 RAML Algorithm is described in https://arxiv.org/pdf/1705.07136.pdf
 
 """
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
 
 from io import open
 import importlib

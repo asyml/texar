@@ -15,10 +15,6 @@
 Various RL losses
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow as tf
 
 from texar.tf.losses.mle_losses import _mask_sequences

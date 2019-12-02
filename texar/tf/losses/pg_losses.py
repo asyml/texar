@@ -15,10 +15,6 @@
 Various loss functions for policy gradients.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow as tf
 
 from texar.tf.losses.losses_utils import mask_and_reduce

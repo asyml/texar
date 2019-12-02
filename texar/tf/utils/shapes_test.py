@@ -2,10 +2,6 @@
 Unit tests for shape-related utility functions.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 # pylint: disable=no-member
 
 import numpy as np
