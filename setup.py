@@ -41,12 +41,12 @@ setuptools.setup(
     ],
     extras_require={
         'tensorflow-cpu': [
-            'tensorflow>=1.10.0,<2.0',
-            'tensorflow-probability>=0.3.0,<0.8.0'
+            'tensorflow>1.14.0,<2.0',
+            'tensorflow-probability>=0.3.0'
         ],
         'tensorflow-gpu': [
-            'tensorflow-gpu>=1.10.0,<2.0',
-            'tensorflow-probability>=0.3.0,<0.8.0'
+            'tensorflow-gpu>1.14.0,<2.0',
+            'tensorflow-probability>=0.3.0'
         ]
     },
     package_data={

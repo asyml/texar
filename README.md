@@ -100,8 +100,8 @@ Many more examples are available [here](./examples)
 
 Texar requires:
 
-* `tensorflow >= 1.10.0 (but < 2.0.0)`. Follow the [tensorflow official instructions](https://www.tensorflow.org/install) to install the appropriate version
-* `tensorflow_probability >= 0.3.0 (but < 0.8.0)`. Follow the [tensorflow_probability official instractions](https://www.tensorflow.org/probability/install) to install.
+* `tensorflow > 1.14.0 (but < 2.0.0)`. Follow the [tensorflow official instructions](https://www.tensorflow.org/install) to install the appropriate version
+* `tensorflow_probability >= 0.3.0`. Follow the [tensorflow_probability official instractions](https://www.tensorflow.org/probability/install) to install.
 
 After `tensorflow` and `tensorflow_probability` are installed, install Texar from PyPI: 
 ```bash
