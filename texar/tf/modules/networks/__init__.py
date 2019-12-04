@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Modules of Texar library module.
+Modules of networks.
 """
 
-from texar.tf.modules.embedders import *
-from texar.tf.modules.networks import *
+from texar.tf.modules.networks.network_base import *
+from texar.tf.modules.networks.networks import *
