@@ -16,19 +16,22 @@
 
 # pylint: disable=invalid-name, too-many-arguments, too-many-locals
 
+import argparse
 import importlib
 import tensorflow as tf
 import texar.tf as tx
 
-flags = tf.flags
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    '--config-model', type=str, default="config_model",
+    help="The model config.")
+parser.add_argument(
+    '--config-data', type=str, default="config_iwslt14",
+    help="The dataset config.")
+args = parser.parse_args()
 
-flags.DEFINE_string("config_model", "config_model", "The model config.")
-flags.DEFINE_string("config_data", "config_iwslt14", "The dataset config.")
-
-FLAGS = flags.FLAGS
-
-config_model = importlib.import_module(FLAGS.config_model)
-config_data = importlib.import_module(FLAGS.config_data)
+config_model = importlib.import_module(args.config_model)
+config_data = importlib.import_module(args.config_data)
 
 
 def build_model(batch, train_data):

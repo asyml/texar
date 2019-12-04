@@ -1,4 +1,3 @@
-
 num_epochs = 4
 display = 50
 

@@ -25,7 +25,7 @@ flags.DEFINE_string("data", "iwslt14", "Data to download [iwslt14|toy_copy]")
 FLAGS = flags.FLAGS
 
 
-def prepare_data():
+def main():
     """Downloads data.
     """
     if FLAGS.data == 'iwslt14':
@@ -44,12 +44,6 @@ def prepare_data():
             extract=True)
     else:
         raise ValueError('Unknown data: {}'.format(FLAGS.data))
-
-
-def main():
-    """Entrypoint.
-    """
-    prepare_data()
 
 
 if __name__ == '__main__':
