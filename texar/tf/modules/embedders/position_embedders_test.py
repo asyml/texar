@@ -37,7 +37,7 @@ class PositionEmbedderTest(tf.test.TestCase):
         self.assertEqual(len(embedder.trainable_variables), 1)
 
         seq_length = tf.random.uniform([64], maxval=pos_size, dtype=tf.int32)
-        outputs = embedder(None, sequence_length=seq_length)
+        outputs = embedder(sequence_length=seq_length)
         self.assertEqual(outputs.shape, (64, tf.reduce_max(seq_length)) +
                          tuple(emb_dim))
 

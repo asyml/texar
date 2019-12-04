@@ -14,7 +14,6 @@
 """
 Base class for modules.
 """
-
 from abc import ABC, abstractmethod
 
 import tensorflow as tf
@@ -29,10 +28,12 @@ __all__ = [
 class ModuleBase(tf.keras.layers.Layer, ABC):
     r"""Base class inherited by modules that create Variables and are
     configurable through hyperparameters.
+
     A Texar module inheriting :class:`~texar.tf.ModuleBase` is
     **configurable through hyperparameters**. That is, each module defines
     allowed hyperparameters and default values. Hyperparameters not
     specified by users will take default values.
+
     Args:
         hparams (dict, optional): Hyperparameters of the module. See
             :meth:`default_hparams` for the structure and default values.
@@ -63,7 +64,9 @@ class ModuleBase(tf.keras.layers.Layer, ABC):
         r"""Returns a `dict` of hyperparameters of the module with default
         values. Used to replace the missing values of input `hparams`
         during module construction.
+
         .. code-block:: python
+
             {
                 "name": "module"
             }

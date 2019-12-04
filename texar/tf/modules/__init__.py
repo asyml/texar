@@ -14,3 +14,5 @@
 """
 Modules of Texar library module.
 """
+
+from texar.tf.modules.embedders import *

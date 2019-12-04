@@ -17,4 +17,5 @@ Modules of Texar library utils.
 
 from texar.tf.utils.dtypes import *
 from texar.tf.utils.mode import *
+from texar.tf.utils.shapes import *
 from texar.tf.utils.utils import *

@@ -138,13 +138,15 @@ class PositionEmbedder(EmbedderBase):
         Returns:
             A `Tensor` of shape `shape(inputs) + embedding dimension`.
         """
-        return super().__call__(positions, sequence_length, mode, **kwargs)
+        return super().__call__([positions, sequence_length], mode, **kwargs)
 
-    def call(self, inputs, sequence_length, mode, **kwargs):
+    def call(self, inputs, mode, **kwargs):
         r"""Embeds the positions.
         """
         # Gets embedder inputs
-        if inputs is None:
+        position, sequence_length = inputs
+        inputs = position
+        if position is None:
             if sequence_length is None:
                 raise ValueError(
                     "Either `positions` or `sequence_length` is required.")
@@ -161,7 +163,7 @@ class PositionEmbedder(EmbedderBase):
 
         # Gets dropout strategy
         st = self._hparams.dropout_strategy
-        if inputs is None and st == "item":
+        if position is None and st == "item":
             # If `inputs` is based on `sequence_length`, then dropout
             # strategies 'item' and 'item_type' have the same effect, we
             # use 'item_type' to avoid unknown noise_shape in the 'item'

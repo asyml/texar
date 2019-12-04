@@ -51,7 +51,7 @@ class WordEmbedder(EmbedderBase):
             :meth:`default_hparams` for the hyperparameter structure and
             default values.
 
-    See :meth:`call` for the inputs and outputs of the embedder.
+    See :meth:`__call__` for the inputs and outputs of the embedder.
 
     Example:
 
@@ -61,9 +61,8 @@ class WordEmbedder(EmbedderBase):
             soft_ids = tf.random_uniform(shape=[32, 10, 100])
 
             embedder = WordEmbedder(vocab_size=100, hparams={'dim': 256})
-            ids_emb = embedder(ids) # shape: [32, 10, 256]
-            soft_ids_emb = embedder(None,
-                                    soft_ids=soft_ids) # shape: [32, 10, 256]
+            ids_emb = embedder(ids=ids) # shape: [32, 10, 256]
+            soft_ids_emb = embedder(soft_ids=soft_ids) # shape: [32, 10, 256]
 
         .. code-block:: python
 
@@ -209,16 +208,17 @@ class WordEmbedder(EmbedderBase):
             and ``shape(embedding) = [vocab_size, emb_dim]``, then the return
             tensor has shape ``[batch_size, max_time, emb_dim]``.
         """
-        return super().__call__(ids, soft_ids, mode, **kwargs)
+        return super().__call__([ids, soft_ids], mode, **kwargs)
 
-    def call(self, inputs, soft_ids, mode, **kwargs):
+    def call(self, inputs, mode, **kwargs):
         r"""Embeds (soft) ids.
         """
-        if inputs is not None:
+        ids, soft_ids = inputs
+        if ids is not None:
             if soft_ids is not None:
                 raise ValueError(
                     'Must not specify `ids` and `soft_ids` at the same time.')
-            ids_rank = get_rank(inputs)
+            ids_rank = get_rank(ids)
         elif soft_ids is not None:
             ids_rank = get_rank(soft_ids) - 1
         else:
@@ -233,8 +233,8 @@ class WordEmbedder(EmbedderBase):
                 embedding = dropout_layer(inputs=embedding,
                                           training=is_training)
 
-        if inputs is not None:
-            outputs = tf.nn.embedding_lookup(embedding, inputs, **kwargs)
+        if ids is not None:
+            outputs = tf.nn.embedding_lookup(embedding, ids, **kwargs)
         else:
             outputs = embedder_utils.soft_embedding_lookup(embedding, soft_ids)
 
