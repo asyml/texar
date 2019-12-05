@@ -12,12 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Modules of Texar library utils.
+Base class for encoders.
 """
 
-from texar.tf.utils.dtypes import *
-from texar.tf.utils.mode import *
-from texar.tf.utils.shapes import *
-from texar.tf.utils.transformer_attentions import *
-from texar.tf.utils.transformer_utils import *
-from texar.tf.utils.utils import *
+from abc import ABC
+
+from texar.tf.module_base import ModuleBase
+
+__all__ = [
+    "EncoderBase",
+]
+
+
+class EncoderBase(ModuleBase, ABC):
+    r"""Base class inherited by all encoder classes.
+    """
+
+    @staticmethod
+    def default_hparams():
+        r"""Returns a dictionary of hyperparameters with default values.
+        """
+        return {
+            "name": "encoder"
+        }

@@ -16,4 +16,5 @@ Modules of Texar library module.
 """
 
 from texar.tf.modules.embedders import *
+from texar.tf.modules.encoders import *
 from texar.tf.modules.networks import *

@@ -12,12 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Modules of Texar library utils.
+Modules of Texar library encoders.
 """
 
-from texar.tf.utils.dtypes import *
-from texar.tf.utils.mode import *
-from texar.tf.utils.shapes import *
-from texar.tf.utils.transformer_attentions import *
-from texar.tf.utils.transformer_utils import *
-from texar.tf.utils.utils import *
+from texar.tf.modules.encoders.encoder_base import *
+from texar.tf.modules.encoders.multihead_attention import *
+from texar.tf.modules.encoders.transformer_encoder import *
