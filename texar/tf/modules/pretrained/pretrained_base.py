@@ -19,10 +19,11 @@ import sys
 
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Dict, Optional
 
 from texar.tf.data.data_utils import maybe_download
 from texar.tf.hyperparams import HParams
-from texar.tf.module_base import ModuleBase
+from texar.tf.utils.types import MaybeList
 
 
 __all__ = [
@@ -72,14 +73,14 @@ def set_default_download_dir(path):
     _default_texar_download_dir = path
 
 
-class PretrainedMixin(ModuleBase, ABC):
+class PretrainedMixin(ABC):
     r"""A mixin class for all pre-trained classes to inherit.
     """
 
-    _MODEL_NAME = None
-    _MODEL2URL = None
+    _MODEL_NAME: str
+    _MODEL2URL: Dict[str, MaybeList[str]]
 
-    pretrained_model_dir = None
+    pretrained_model_dir: Optional[str]
 
     @classmethod
     def available_checkpoints(cls):

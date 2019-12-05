@@ -28,6 +28,7 @@ __all__ = [
     "get_instance",
     "get_function",
     "uniquify_str",
+    "truncate_seq_pair",
 ]
 
 
@@ -259,3 +260,34 @@ def uniquify_str(str_, str_set):
             if unique_str not in str_set:
                 return unique_str
     raise ValueError("Failed to uniquify string: " + str_)
+
+
+def truncate_seq_pair(tokens_a, tokens_b, max_length):
+    r"""Truncates a sequence pair in place to the maximum length.
+
+    This is a simple heuristic which will always truncate the longer sequence
+    one token at a time. This makes more sense than truncating an equal
+    percent of tokens from each, since if one sequence is very short then
+    each token that's truncated likely contains more information than a
+    longer sequence.
+
+    Example:
+        tokens_a = [1, 2, 3, 4, 5]
+        tokens_b = [6, 7]
+        truncate_seq_pair(tokens_a, tokens_b, 5)
+        tokens_a  # [1, 2, 3]
+        tokens_b  # [6, 7]
+
+    Args:
+        tokens_a: A list of tokens or token ids.
+        tokens_b: A list of tokens or token ids.
+        max_length: maximum sequence length.
+    """
+    while True:
+        total_length = len(tokens_a) + len(tokens_b)
+        if total_length <= max_length:
+            break
+        if len(tokens_a) > len(tokens_b):
+            tokens_a.pop()
+        else:
+            tokens_b.pop()

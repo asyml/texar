@@ -246,4 +246,4 @@ class PretrainedBERTMixin(PretrainedMixin, ABC):
 
     def _init_from_checkpoint(self, pretrained_model_name,
                               cache_dir, **kwargs):
-        raise NotImplementedError
+        return

@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Modules of Texar library data.
+Tokenizer modules of Texar library.
 """
 
-from texar.tf.data.tokenizers import *
-from texar.tf.data.data_utils import *
+from texar.tf.data.tokenizers.bert_tokenizer import *
+from texar.tf.data.tokenizers.tokenizer_base import *
