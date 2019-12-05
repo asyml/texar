@@ -12,13 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Modules of Texar library utils.
+Pre-trained modules of Texar library.
 """
 
-from texar.tf.utils.dtypes import *
-from texar.tf.utils.mode import *
-from texar.tf.utils.shapes import *
-from texar.tf.utils.transformer_attentions import *
-from texar.tf.utils.transformer_utils import *
-from texar.tf.utils.utils import *
-from texar.tf.utils.utils_io import *
+from texar.tf.modules.pretrained.pretrained_base import *
+from texar.tf.modules.pretrained.bert import *

@@ -12,13 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Modules of Texar library utils.
+Utils for unit tests.
 """
 
-from texar.tf.utils.dtypes import *
-from texar.tf.utils.mode import *
-from texar.tf.utils.shapes import *
-from texar.tf.utils.transformer_attentions import *
-from texar.tf.utils.transformer_utils import *
-from texar.tf.utils.utils import *
-from texar.tf.utils.utils_io import *
+import os
+
+
+def pretrained_test(func):
+    r"""Tests involving pre-trained checkpoints are skipped using the
+    `@pretrained_test` decorator. They can be tested locally by setting the
+    environment variable `TEST_PRETRAINED=1`.
+    """
+    def wrapper(*args, **kwargs):
+        if os.environ.get('TEST_PRETRAINED', 0) or \
+                os.environ.get('TEST_ALL', 0):
+            return func(*args, **kwargs)
+    return wrapper
