@@ -15,5 +15,9 @@
 Modules of Texar library data.
 """
 
+from texar.tf.data.data import *
 from texar.tf.data.tokenizers import *
+from texar.tf.data.data_decoders import *
 from texar.tf.data.data_utils import *
+from texar.tf.data.embedding import *
+from texar.tf.data.vocabulary import *
