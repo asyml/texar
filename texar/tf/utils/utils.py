@@ -20,6 +20,8 @@ from pydoc import locate
 
 import funcsigs
 
+import numpy as np
+
 __all__ = [
     "get_args",
     "check_or_get_class",
@@ -27,6 +29,7 @@ __all__ = [
     "check_or_get_instance",
     "get_instance",
     "get_function",
+    "dict_lookup",
     "uniquify_str",
     "ceildiv",
     "truncate_seq_pair",
@@ -227,6 +230,27 @@ def get_function(fn_or_name, module_paths=None):
             "Method not found in {}: {}".format(module_paths, fn_or_name))
 
     return fn
+
+
+def dict_lookup(dict_, keys, default=None):
+    r"""Looks up :attr:`keys` in the dict, returns the corresponding values.
+
+    The :attr:`default` is used for keys not present in the dict.
+
+    Args:
+        dict_ (dict): A dictionary for lookup.
+        keys: A numpy array or a (possibly nested) list of keys.
+        default (optional): Value to be returned when a key is not in
+            :attr:`dict_`. Error is raised if :attr:`default` is not given and
+            key is not in the dict.
+
+    Returns:
+        A numpy array of values with the same structure as :attr:`keys`.
+
+    Raises:
+        TypeError: If key is not in :attr:`dict_` and :attr:`default` is `None`.
+    """
+    return np.vectorize(lambda x: dict_.get(x, default))(keys)
 
 
 def uniquify_str(str_, str_set):
