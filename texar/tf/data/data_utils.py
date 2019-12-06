@@ -22,11 +22,15 @@ import tarfile
 import urllib.request
 import zipfile
 
+import numpy as np
+
 from texar.tf.utils import utils_io
+from texar.tf.utils.types import MaybeList
 
 
 __all__ = [
     "maybe_download",
+    "count_file_lines",
 ]
 
 
@@ -156,3 +160,20 @@ def _download_from_google_drive(url: str, filename: str, path: str) -> str:
     print(f'Successfully downloaded {filename}')
 
     return filepath
+
+
+def count_file_lines(filenames: MaybeList[str]) -> int:
+    r"""Counts the number of lines in the file(s).
+    """
+
+    def _count_lines(fn):
+        with open(fn, "rb") as f:
+            i = -1
+            for i, _ in enumerate(f):
+                pass
+            return i + 1
+
+    if not isinstance(filenames, (list, tuple)):
+        filenames = [filenames]
+    num_lines = np.sum([_count_lines(fn) for fn in filenames]).item()
+    return num_lines

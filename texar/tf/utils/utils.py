@@ -28,6 +28,7 @@ __all__ = [
     "get_instance",
     "get_function",
     "uniquify_str",
+    "ceildiv",
     "truncate_seq_pair",
 ]
 
@@ -260,6 +261,21 @@ def uniquify_str(str_, str_set):
             if unique_str not in str_set:
                 return unique_str
     raise ValueError("Failed to uniquify string: " + str_)
+
+
+def ceildiv(a, b):
+    r"""Divides with ceil.
+
+    E.g., `5 / 2 = 2.5`, `ceildiv(5, 2) = 3`.
+
+    Args:
+        a (int): Dividend integer.
+        b (int): Divisor integer.
+
+    Returns:
+        int: Ceil quotient.
+    """
+    return -(-a // b)
 
 
 def truncate_seq_pair(tokens_a, tokens_b, max_length):
