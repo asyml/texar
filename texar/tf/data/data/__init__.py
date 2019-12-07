@@ -19,3 +19,4 @@ from texar.tf.data.data.data_base import *
 from texar.tf.data.data.dataset_utils import *
 from texar.tf.data.data.mono_text_data import *
 from texar.tf.data.data.text_data_base import *
+from texar.tf.data.data.tfrecord_data import *
