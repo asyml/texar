@@ -30,6 +30,7 @@ __all__ = [
     "get_instance",
     "get_function",
     "dict_lookup",
+    "default_str",
     "uniquify_str",
     "ceildiv",
     "truncate_seq_pair",
@@ -251,6 +252,23 @@ def dict_lookup(dict_, keys, default=None):
         TypeError: If key is not in :attr:`dict_` and :attr:`default` is `None`.
     """
     return np.vectorize(lambda x: dict_.get(x, default))(keys)
+
+
+def default_str(str_, default_str_):
+    r"""Returns :attr:`str_` if it is not `None` or empty, otherwise returns
+    :attr:`default_str_`.
+
+    Args:
+        str_: A string.
+        default_str_: A string.
+
+    Returns:
+        Either :attr:`str_` or :attr:`default_str_`.
+    """
+    if str_ is not None and str_ != "":
+        return str_
+    else:
+        return default_str_
 
 
 def uniquify_str(str_, str_set):

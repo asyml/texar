@@ -18,7 +18,8 @@ Base text data class that is inherited by all text data classes.
 import tensorflow as tf
 
 from texar.tf.data.data.data_base import DataBase
-import texar.tf.data.data.dataset_utils as dsutils
+from texar.tf.data.data.dataset_utils import maybe_tuple, \
+    _make_smaller_batch_filter_fn
 
 
 __all__ = [
@@ -54,7 +55,7 @@ class TextDataBase(DataBase):
         batch_size = hparams["batch_size"]
         bucket_boundaries = hparams["bucket_boundaries"]
         if padded_shapes is None:
-            padded_shapes = dataset.output_shapes
+            padded_shapes = tf.compat.v1.data.get_output_shapes(dataset)
 
         if len(bucket_boundaries) == 0:
             if hparams["allow_smaller_final_batch"]:
@@ -78,9 +79,8 @@ class TextDataBase(DataBase):
                         "Batch size of every bucket must be the same if "
                         "smaller final batch is not allowed.")
                 batch_size = bucket_batch_size[0]
-                # pylint: disable=protected-access
-                filter_fn = dsutils._make_smaller_batch_filter_fn(batch_size)
+                filter_fn = _make_smaller_batch_filter_fn(batch_size)
                 dataset = dataset.filter(
-                    lambda *args: filter_fn(dsutils.maybe_tuple(args)))
+                    lambda *args: filter_fn(maybe_tuple(args)))
 
         return dataset
