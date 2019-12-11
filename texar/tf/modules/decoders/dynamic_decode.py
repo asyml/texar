@@ -23,7 +23,7 @@ Utility functions for decoding. This file is modified from
 
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import Decoder as TFDecoder
-from tensorflow.python.framework import tensor_shape
+from tensorflow.python.framework import tensor_shape, tensor_util
 from tensorflow.python.util import nest
 
 
@@ -55,7 +55,7 @@ def _concat(prefix, suffix, static=False):
     """
     if isinstance(prefix, tf.Tensor):
         p = prefix
-        p_static = tf.get_static_value(prefix)
+        p_static = tensor_util.constant_value(prefix)
         if p.shape.ndims == 0:
             p = tf.expand_dims(p, 0)
         elif p.shape.ndims != 1:
@@ -128,7 +128,7 @@ def _transpose_batch_time(x):
         x transposed along the first two dimensions.
     """
     x_static_shape = x.get_shape()
-    if x_static_shape.rank is not None and x_static_shape.rank < 2:
+    if x_static_shape.ndims is not None and x_static_shape.ndims < 2:
         return x
 
     x_rank = tf.rank(x)
