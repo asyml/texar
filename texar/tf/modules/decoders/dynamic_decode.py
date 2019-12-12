@@ -69,7 +69,7 @@ def _concat(prefix, suffix, static=False):
             if p.is_fully_defined() else None)
     if isinstance(suffix, tf.Tensor):
         s = suffix
-        s_static = tf.get_static_value(suffix)
+        s_static = tensor_util.constant_value(suffix)
         if s.shape.ndims == 0:
             s = tf.expand_dims(s, 0)
         elif s.shape.ndims != 1:
@@ -209,7 +209,7 @@ def dynamic_decode(decoder,
                     from_shape.ndims == 0):
                 return None
             else:
-                batch_size = tf.get_static_value(
+                batch_size = tensor_util.constant_value(
                     tf.convert_to_tensor(
                         batch_size, name="batch_size"))
                 return tensor_shape.TensorShape([batch_size]).\
