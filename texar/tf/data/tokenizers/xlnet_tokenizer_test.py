@@ -22,7 +22,7 @@ class XLNetTokenizerTest(tf.test.TestCase):
         # transformers
         self.SAMPLE_VOCAB = maybe_download(
             'https://github.com/huggingface/transformers/blob/master/'
-            'transformers/tests/fixtures/test_sentencepiece.model?raw=true',
+            'tests/fixtures/test_sentencepiece.model?raw=true',
             self.tmp_dir.name)
 
         self.tokenizer = XLNetTokenizer.load(
