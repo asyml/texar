@@ -179,13 +179,13 @@ class XLNetEncoder(EncoderBase, PretrainedXLNetMixin):
         r"""Returns a dictionary of hyperparameters with default values.
 
         * The encoder arch is determined by the constructor argument
-        :attr:`pretrained_model_name` if it's specified. In this case,
-        hparams are ignored.
+          :attr:`pretrained_model_name` if it's specified. In this case,
+          `hparams` are ignored.
         * Otherwise, the encoder arch is determined by
-        `hparams['pretrained_model_name']` if it's specified. All other
-        configs in hparams are ignored.
+          `hparams['pretrained_model_name']` if it's specified. All other
+          configurations in `hparams` are ignored.
         * If the above two are `None`, the encoder arch is defined by
-        the configs in hparams and weights are randomly initialized.
+          the configurations in `hparams` and weights are randomly initialized.
 
         .. code-block:: python
 
@@ -216,60 +216,60 @@ class XLNetEncoder(EncoderBase, PretrainedXLNetMixin):
         The default parameters are values for cased XLNet-Base model.
 
 
-        "pretrained_model_name": str or None
+        `"pretrained_model_name"`: str or None
              The name of the pre-trained bert model. If None, the model
              will be randomly initialized.
 
-        "untie_r": bool
+        `"untie_r"`: bool
             Boolean value to indicate if biases should be untied for all the
             layers
 
-        "num_layers": int
+        `"num_layers"`: int
             Number of layers in the network
 
-        "mem_len": int
+        `"mem_len"`: int
             Length of the memory to be used during attention score calculation.
 
-        "reuse_len": int
+        `"reuse_len"`: int
             Length of the memory that can be re-used
 
-        "initializer": dict, optional
+        `"initializer"`: dict, optional
             Hyperparameters of the default initializer that initializes
             variables created in this module.
             See :func:`~texar.tf.core.get_initializer` for details.
 
-        "num_heads": int
+        `"num_heads"`: int
             Number of heads in the attention
 
-        "hidden_dim": int
+        `"hidden_dim"`: int
             Hidden dimension of the embeddings
 
-        "head_dim": int
+        `"head_dim"`: int
             Size of the vectors after head projection.
 
-        "dropout": float
+        `"dropout"`: float
             Dropout rate for layers
 
-        "attention_dropout": float
+        `"attention_dropout"`: float
             Dropout rate for attention layers
 
-        "use_segments": bool
+        `"use_segments"`: bool
             Boolean to indicate if the input has segments
 
-        "ffn_inner_dim": int
+        `"ffn_inner_dim"`: int
             Dimension of PositionWise FF network's hidden layer
 
-        "activation": str or callable
+        `"activation"`: str or callable
             Activation function applied to the output of the PositionWise FF.
             See :func:`~texar.tf.core.get_activation_fn` for more details.
 
-        "vocab_size": int
+        `"vocab_size"`: int
             The vocabulary size of `inputs` in `XLNet`.
 
-        "max_seq_len": int
+        `"max_seq_len"`: int
             Maximum len of the sequence allowed in one segment
 
-        "name": str
+        `"name"`: str
             Name of the module.
         """
 
@@ -315,17 +315,19 @@ class XLNetEncoder(EncoderBase, PretrainedXLNetMixin):
 
             .. code-block:: python
 
-            grads_and_vars = optimizer.compute_gradients(loss)
+                grads_and_vars = optimizer.compute_gradients(loss)
 
-            vars_to_grads = {key: value for key, value in grads_and_vars}
+                vars_to_grads = {key: value for key, value in grads_and_vars}
 
-            vars_to_learning_rates = xlnet_encoder.param_groups(
-                                        lr=1, ly_layer_scale=0.75)
+                vars_to_learning_rates = xlnet_encoder.param_groups(
+                                                        lr=1,
+                                                        ly_layer_scale=0.75)
 
-            for key in vars_to_grads.keys():
-                vars_to_grads[key] *= vars_to_learning_rates[key]
+                for key in vars_to_grads.keys():
+                    vars_to_grads[key] *= vars_to_learning_rates[key]
 
-            train_op = optimizer.apply_gradients(zip(*vars_to_grads.items()))
+                train_op = optimizer.apply_gradients(zip(
+                    *vars_to_grads.items()))
 
 
         Args:

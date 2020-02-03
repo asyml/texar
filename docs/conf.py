@@ -14,7 +14,6 @@
 
 import sys
 import os
-from recommonmark.parser import CommonMarkParser
 #from unittest.mock import MagicMock
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -22,6 +21,7 @@ from recommonmark.parser import CommonMarkParser
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('..'))
 from texar.tf import __version__
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -37,7 +37,9 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
     'sphinx.ext.extlinks',
-    'sphinxcontrib.napoleon',
+    'sphinx.ext.napoleon',
+    'recommonmark',
+    'sphinxcontrib.spelling',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -45,11 +47,10 @@ templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
-source_parsers = {
-    '.md': CommonMarkParser,
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
 }
-source_suffix = ['.rst', '.md']
-#source_suffix = '.rst'
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
@@ -67,6 +68,7 @@ author = u'Texar'
 # built documents.
 #
 # The short X.Y version.
+#version = u'{}'.format(__version_short__)
 version = u'{}'.format(__version__)
 # The full version, including alpha/beta/rc tags.
 release = u'{}'.format(__version__)
@@ -91,7 +93,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
-#default_role = None
+# default_role = 'any'
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
 #add_function_parentheses = True
@@ -317,8 +319,8 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/2.7/', None),
-    'numpy': ('https://docs.scipy.org/doc/numpy/', None),
+    'python': ('https://docs.python.org/3/', None),
+    # 'numpy': ('http://docs.scipy.org/docs/numpy/', None),
 }
 
 extlinks = {'tf_main': (
@@ -337,9 +339,26 @@ extlinks = {'tf_main': (
 
 ##### Customize ######
 
-autodoc_member_order = 'bysource'
+# Snippet to insert at beginning of each RST file.
+rst_prolog = r"""
+.. role:: python(code)
+    :language: python
+"""
 
-# Adresses import errors. Refer to:
+autodoc_member_order = 'bysource'
+autodoc_typehints = 'none'
+
+napoleon_numpy_docstring = False
+
+spelling_lang = 'en_US'
+spelling_word_list_filename = 'spelling_wordlist.txt'
+
+## Exclude imports
+#autodoc_mock_imports = [
+#    "torch"
+#]
+
+# Addresses import errors. Refer to:
 # https://docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
 #class Mock(MagicMock):
 #    @classmethod
