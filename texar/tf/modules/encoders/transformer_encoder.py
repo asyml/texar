@@ -298,7 +298,7 @@ class TransformerEncoder(EncoderBase):
         return super().__call__([inputs, sequence_length], mode)
 
     def call(self, inputs, mode):
-        """Encodes the inputs.
+        r"""Encodes the inputs.
         """
         inputs, sequence_length = inputs
         # Multiply input embedding with the sqrt of its dimension for
