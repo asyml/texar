@@ -32,9 +32,6 @@ $ python lm_ptb_memnet.py --data_path=simple-examples/data \
 This code will automatically save and restore from directory `ckpt/`.
 If the directory doesn't exist, it will be created automatically.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 # pylint: disable=invalid-name, no-member, too-many-locals
 

@@ -13,9 +13,6 @@
 # limitations under the License.
 """Policy Gradient agent for sequence prediction.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 # pylint: disable=too-many-instance-attributes, too-many-arguments, no-member
 

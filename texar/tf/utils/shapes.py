@@ -15,10 +15,6 @@
 Utility functions related to tensor shapes.
 """
 
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
-
 # pylint: disable=no-name-in-module, protected-access, no-member, invalid-name
 
 import numpy as np

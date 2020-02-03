@@ -26,11 +26,6 @@ Usage: python bleu_tool.py --translation=my-wmt13.de --reference=wmt13_deen.de
 # BLEU score will be similar to the one obtained using: mteval-v14.pl
 # Note:compound splitting is not implemented in this module
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 from argparse import ArgumentParser
 from io import open
 import collections

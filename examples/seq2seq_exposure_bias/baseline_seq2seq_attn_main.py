@@ -15,10 +15,6 @@
 Attentional Seq2seq.
 same as examples/seq2seq_attn except that here Rouge is also supported.
 """
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
 
 # pylint: disable=invalid-name, too-many-arguments, too-many-locals
 

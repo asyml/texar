@@ -3,11 +3,6 @@
 Unit tests for connectors.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import tensorflow as tf
 from tensorflow_probability import distributions as tfpd
 from tensorflow.python.util import nest    # pylint: disable=E0611

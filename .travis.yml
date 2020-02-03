@@ -17,9 +17,7 @@ install:
 script:
   # Linting
   - flake8 texar/ examples/
-  # Unit tests
-  - pytest
-  # Test coverage
+  # Unit tests & Test coverage
   - coverage run -m pytest
 
 after_success:

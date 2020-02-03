@@ -15,10 +15,6 @@
 Base class for feed forward neural networks.
 """
 
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
-
 import tensorflow as tf
 
 from texar.tf.module_base import ModuleBase

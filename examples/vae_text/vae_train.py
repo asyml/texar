@@ -22,10 +22,6 @@ $ python vae_train.py
 Hyperparameters and data path may be specified in config_trans.py
 
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
 
 # pylint: disable=invalid-name, no-member, too-many-locals
 # pylint: disable=too-many-branches, too-many-statements, redefined-variable-type

@@ -14,9 +14,6 @@
 """
 Base class for reinforcement learning agents for sequence prediction.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 from texar.tf.agents.agent_base import AgentBase
 

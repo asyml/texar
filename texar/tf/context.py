@@ -15,10 +15,6 @@
 Global context manager that handles train/infer mode, etc
 """
 
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
-
 import tensorflow as tf
 
 __all__ = [

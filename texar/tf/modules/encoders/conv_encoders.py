@@ -15,10 +15,6 @@
 Various convolutional network encoders.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 from texar.tf.modules.encoders.encoder_base import EncoderBase
 from texar.tf.modules.networks.conv_networks import Conv1DNetwork
 

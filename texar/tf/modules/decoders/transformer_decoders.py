@@ -15,10 +15,6 @@
 Transformer decoder.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 # pylint: disable=no-name-in-module, too-many-arguments, too-many-locals
 # pylint: disable=invalid-name, too-many-instance-attributes,
 # pylint: disable=too-many-branches, redefined-variable-type

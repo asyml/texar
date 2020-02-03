@@ -15,11 +15,6 @@
 Unit tests for sequence prediction policy gradient agents.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import tensorflow as tf
 
 from texar.tf.modules.decoders.rnn_decoders import BasicRNNDecoder
