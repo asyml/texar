@@ -331,13 +331,14 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             - **"infer_greedy"**: decoding in inference fashion (i.e., feeding
               `generated` sample to decode the next step), and for each step
               sample is obtained by taking the `argmax` of logits.
-              Arguments :attr:`(start_tokens, end_token)` are
+              Arguments :attr:`(start_tokens, end_token, embedding)` are
               required for this strategy, and argument
               :attr:`max_decoding_length` is optional.
             - **"infer_sample"**: decoding in inference fashion, and for each
               step sample is obtained by `random sampling` from the logits.
-              Arguments :attr:`(start_tokens, end_token)` are required for this
-              strategy, and argument :attr:`max_decoding_length` is optional.
+              Arguments :attr:`(start_tokens, end_token, embedding)` are
+              required for this strategy, and argument
+              :attr:`max_decoding_length` is optional.
 
           This argument is used only when arguments :attr:`helper` and
           :attr:`beam_width` are both `None`.
