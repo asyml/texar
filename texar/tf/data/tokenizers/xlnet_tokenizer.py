@@ -278,13 +278,13 @@ class XLNetTokenizer(PretrainedXLNetMixin, TokenizerBase):
     def default_hparams() -> Dict[str, Any]:
         r"""Returns a dictionary of hyperparameters with default values.
 
-        * The tokenizer is determined by the constructor argument
+        * The tokenizers is determined by the constructor argument
           :attr:`pretrained_model_name` if it's specified. In this case,
           `hparams` are ignored.
-        * Otherwise, the tokenizer is determined by
+        * Otherwise, the tokenizers is determined by
           `hparams['pretrained_model_name']` if it's specified. All other
           configurations in `hparams` are ignored.
-        * If the above two are `None`, the tokenizer is defined by the
+        * If the above two are `None`, the tokenizers is defined by the
           configurations in `hparams`.
 
         .. code-block:: python
@@ -351,7 +351,7 @@ class XLNetTokenizer(PretrainedXLNetMixin, TokenizerBase):
             Whether to keep the accents in the text.
 
         `"name"`: str
-            Name of the tokenizer.
+            Name of the tokenizers.
         """
         return {
             'pretrained_model_name': 'xlnet-base-cased',
@@ -375,7 +375,7 @@ class XLNetTokenizer(PretrainedXLNetMixin, TokenizerBase):
     @classmethod
     def _transform_config(cls, pretrained_model_name: str,
                           cache_dir: str):
-        r"""Returns the configuration of the pre-trained XLNet tokenizer."""
+        r"""Returns the configuration of the pre-trained XLNet tokenizers."""
         return {
             'vocab_file': None,
             'max_len': None,

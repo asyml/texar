@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Pre-trained GPT-2 tokenizer.
+Pre-trained GPT-2 tokenizers.
 
 Code structure adapted from:
     `https://github.com/huggingface/pytorch-transformers/blob/master/pytorch_transformers/tokenization_gpt2.py`
@@ -133,7 +133,7 @@ class GPT2Tokenizer(TokenizerBase, PretrainedGPT2Mixin):
         return bpe_tokens
 
     def save_vocab(self, save_dir: str) -> Tuple[str, str]:
-        r"""Save the tokenizer vocabulary and merge files to a directory."""
+        r"""Save the tokenizers vocabulary and merge files to a directory."""
         if not os.path.isdir(save_dir):
             raise ValueError("Vocabulary path ({}) should be a "
                              "directory".format(save_dir))
@@ -153,7 +153,7 @@ class GPT2Tokenizer(TokenizerBase, PretrainedGPT2Mixin):
                                                   key=lambda kv: kv[1]):
                 if index != token_index:
                     print("Saving vocabulary to {}: BPE merge indices are "
-                          "not consecutive. Please check that the tokenizer "
+                          "not consecutive. Please check that the tokenizers "
                           "is not corrupted!".format(merge_file))
                     index = token_index
                 writer.write(' '.join(bpe_tokens) + u'\n')
@@ -280,13 +280,13 @@ class GPT2Tokenizer(TokenizerBase, PretrainedGPT2Mixin):
     def default_hparams() -> Dict[str, Any]:
         r"""Returns a dictionary of hyperparameters with default values.
 
-        * The tokenizer is determined by the constructor argument
+        * The tokenizers is determined by the constructor argument
           :attr:`pretrained_model_name` if it's specified. In this case,
           `hparams` are ignored.
-        * Otherwise, the tokenizer is determined by
+        * Otherwise, the tokenizers is determined by
           `hparams['pretrained_model_name']` if it's specified. All other
           configurations in `hparams` are ignored.
-        * If the above two are `None`, the tokenizer is defined by the
+        * If the above two are `None`, the tokenizers is defined by the
           configurations in `hparams`.
 
         .. code-block:: python
@@ -334,7 +334,7 @@ class GPT2Tokenizer(TokenizerBase, PretrainedGPT2Mixin):
             `ignore`, `replace`, and `strict`.
 
         `"name"`: str
-            Name of the tokenizer.
+            Name of the tokenizers.
         """
         return {
             'pretrained_model_name': '117M',
@@ -353,7 +353,7 @@ class GPT2Tokenizer(TokenizerBase, PretrainedGPT2Mixin):
     @classmethod
     def _transform_config(cls, pretrained_model_name: str,
                           cache_dir: str):
-        r"""Returns the configuration of the pre-trained GPT2 tokenizer."""
+        r"""Returns the configuration of the pre-trained GPT2 tokenizers."""
         return {
             'vocab_file': None,
             'merges_file': None,

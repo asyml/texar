@@ -1,5 +1,5 @@
 """
-Unit tests for pre-trained GPT2 tokenizer.
+Unit tests for pre-trained GPT2 tokenizers.
 """
 
 import json
@@ -69,7 +69,7 @@ class GPT2TokenizerTest(tf.test.TestCase):
         subwords = tokenizer.map_text_to_token(text)
 
         with tempfile.TemporaryDirectory() as tmpdirname:
-            filename = os.path.join(tmpdirname, u"tokenizer.bin")
+            filename = os.path.join(tmpdirname, u"tokenizers.bin")
             with open(filename, "wb") as f:
                 pickle.dump(tokenizer, f)
             with open(filename, "rb") as f:
