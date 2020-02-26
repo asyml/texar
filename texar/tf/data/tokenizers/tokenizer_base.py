@@ -36,8 +36,8 @@ CONFIG_FILE = 'config.json'
 
 
 class TokenizerBase(ModuleBase):
-    r"""Base class inherited by all tokenizers classes. This class
-    handles downloading and loading pre-trained tokenizers and adding tokens to
+    r"""Base class inherited by all tokenizer classes. This class
+    handles downloading and loading pre-trained tokenizer and adding tokens to
     the vocabulary.
 
     Derived class can set up a few special tokens to be used in common scripts
@@ -87,21 +87,21 @@ class TokenizerBase(ModuleBase):
 
     @classmethod
     def load(cls, pretrained_model_path: str, configs: Optional[Dict] = None):
-        r"""Instantiate a tokenizers from the vocabulary files or the saved
-        tokenizers files.
+        r"""Instantiate a tokenizer from the vocabulary files or the saved
+        tokenizer files.
 
         Args:
             pretrained_model_path: The path to a vocabulary file or a folder
-                that contains the saved pre-trained tokenizers files.
+                that contains the saved pre-trained tokenizer files.
             configs: Tokenizer configurations. You can overwrite the original
-                tokenizers configurations saved in the configuration file
+                tokenizer configurations saved in the configuration file
                 by this dictionary.
 
         Returns:
-            A tokenizers instance.
+            A tokenizer instance.
         """
         vocab_files = {}
-        # Look for the tokenizers main vocabulary files
+        # Look for the tokenizer main vocabulary files
         for file_id, file_name in cls._VOCAB_FILE_NAMES.items():
             full_file_name: Optional[str]
             if os.path.isdir(pretrained_model_path):
@@ -109,7 +109,7 @@ class TokenizerBase(ModuleBase):
                 full_file_name = os.path.join(pretrained_model_path, file_name)
             else:
                 # If a path to a file is provided we use it (will only work
-                # for non-BPE tokenizers using a single vocabulary file)
+                # for non-BPE tokenizer using a single vocabulary file)
                 full_file_name = pretrained_model_path
             if not os.path.exists(full_file_name):
                 print("Can't find file {}. We won't load it.".format(
@@ -139,7 +139,7 @@ class TokenizerBase(ModuleBase):
 
         if all(full_file_name is None for full_file_name in
                vocab_files.values()):
-            raise ValueError("Can't find tokenizers files in {}.".format(
+            raise ValueError("Can't find tokenizer files in {}.".format(
                 saved_directory))
 
         kwargs: Dict[str, Any]
@@ -188,14 +188,14 @@ class TokenizerBase(ModuleBase):
         return tokenizer
 
     def save(self, save_dir: str) -> Tuple[str]:
-        r"""Save the tokenizers vocabulary files (with added tokens), tokenizers
+        r"""Save the tokenizer vocabulary files (with added tokens), tokenizer
         configuration file and a dictionary mapping special token class
         attributes (:attr:`cls_token`, :attr:`unk_token`, ...) to their values
         (`<unk>`, `<cls>`, ...) to a directory, so that it can be re-loaded
         using the :meth:`~load`.
 
         Args:
-            save_dir: The path to a folder in which the tokenizers files
+            save_dir: The path to a folder in which the tokenizer files
                 will be saved.
 
         Return:
@@ -234,10 +234,10 @@ class TokenizerBase(ModuleBase):
                               config_file)
 
     def save_vocab(self, save_dir):
-        r"""Save the tokenizers vocabulary to a directory. This method does not
+        r"""Save the tokenizer vocabulary to a directory. This method does not
         save added tokens, special token mappings, and the configuration file.
 
-        Please use :meth:`~save` to save the full tokenizers state so
+        Please use :meth:`~save` to save the full tokenizer state so
         that it can be reloaded using :meth:`~load`.
         """
         raise NotImplementedError
@@ -250,7 +250,7 @@ class TokenizerBase(ModuleBase):
         return self.vocab_size + len(self.added_tokens_encoder)
 
     def add_tokens(self, new_tokens: List[Optional[str]]) -> int:
-        r"""Add a list of new tokens to the tokenizers class. If the new tokens
+        r"""Add a list of new tokens to the tokenizer class. If the new tokens
         are not in the vocabulary, they are added to the
         :attr:`added_tokens_encoder` with indices starting from the last index
         of the current vocabulary.
@@ -318,7 +318,7 @@ class TokenizerBase(ModuleBase):
     def map_text_to_token(self, text: Optional[str],
                           **kwargs) -> List[str]:
         r"""Maps a string to a sequence of tokens (string), using the
-        tokenizers. Split in words for word-based vocabulary or sub-words for
+        tokenizer. Split in words for word-based vocabulary or sub-words for
         sub-word-based vocabularies (`BPE`/`SentencePiece`/`WordPiece`).
         This function also takes care of the added tokens.
 
@@ -346,7 +346,7 @@ class TokenizerBase(ModuleBase):
 
     def _map_text_to_token(self, text: str, **kwargs) -> List[str]:
         r"""Maps a string to a sequence of tokens (string), using the
-        tokenizers. Split in words for word-based vocabulary or sub-words for
+        tokenizer. Split in words for word-based vocabulary or sub-words for
         sub-word-based vocabularies (`BPE`/`SentencePiece`/`WordPiece`).
         This function does not take care of the added tokens.
         """
@@ -399,7 +399,7 @@ class TokenizerBase(ModuleBase):
 
     def map_text_to_id(self, text: str) -> List[int]:
         r"""Maps a string to a sequence of ids (integer), using the
-        tokenizers and vocabulary. Same as
+        tokenizer and vocabulary. Same as
         `self.map_token_to_id(self.map_text_to_token(text))`.
 
         Args:
@@ -465,7 +465,7 @@ class TokenizerBase(ModuleBase):
                        skip_special_tokens: bool = False,
                        clean_up_tokenization_spaces: bool = True) -> str:
         r"""Maps a sequence of ids (integer) to a string, using the
-        tokenizers and vocabulary with options to remove special tokens and
+        tokenizer and vocabulary with options to remove special tokens and
         clean up tokenization spaces.
 
         Args:

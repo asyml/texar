@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Pre-trained BERT tokenizers.
+Pre-trained BERT tokenizer.
 
 Code structure adapted from:
     `https://github.com/huggingface/pytorch-transformers/blob/master/pytorch_transformers/tokenization_bert.py`
@@ -119,7 +119,7 @@ class BERTTokenizer(PretrainedBERTMixin, TokenizerBase):
         return split_tokens
 
     def save_vocab(self, save_dir: str) -> Tuple[str]:
-        r"""Save the tokenizers vocabulary to a directory or file."""
+        r"""Save the tokenizer vocabulary to a directory or file."""
         index = 0
         if os.path.isdir(save_dir):
             save_dir = os.path.join(save_dir,
@@ -236,13 +236,13 @@ class BERTTokenizer(PretrainedBERTMixin, TokenizerBase):
     def default_hparams() -> Dict[str, Any]:
         r"""Returns a dictionary of hyperparameters with default values.
 
-        * The tokenizers is determined by the constructor argument
+        * The tokenizer is determined by the constructor argument
           :attr:`pretrained_model_name` if it's specified. In this case,
           `hparams` are ignored.
-        * Otherwise, the tokenizers is determined by
+        * Otherwise, the tokenizer is determined by
           `hparams['pretrained_model_name']` if it's specified. All other
           configurations in `hparams` are ignored.
-        * If the above two are `None`, the tokenizers is defined by the
+        * If the above two are `None`, the tokenizer is defined by the
           configurations in `hparams`.
 
         .. code-block:: python
@@ -304,7 +304,7 @@ class BERTTokenizer(PretrainedBERTMixin, TokenizerBase):
             Only has an effect when `do_basic_tokenize=True`
 
         `"name"`: str
-            Name of the tokenizers.
+            Name of the tokenizer.
 
         """
         return {
@@ -327,7 +327,7 @@ class BERTTokenizer(PretrainedBERTMixin, TokenizerBase):
     @classmethod
     def _transform_config(cls, pretrained_model_name: str,
                           cache_dir: str):
-        r"""Returns the configuration of the pre-trained BERT tokenizers."""
+        r"""Returns the configuration of the pre-trained BERT tokenizer."""
         return {
             'vocab_file': None,
             'max_len': 512,

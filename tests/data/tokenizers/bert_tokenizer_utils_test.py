@@ -1,5 +1,5 @@
 """
-Unit tests for pre-trained BERT tokenizers utils.
+Unit tests for pre-trained BERT tokenizer utils.
 """
 
 import tensorflow as tf

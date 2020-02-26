@@ -1,5 +1,5 @@
 """
-Unit tests for pre-trained BERT tokenizers.
+Unit tests for pre-trained BERT tokenizer.
 """
 
 import os
@@ -55,7 +55,7 @@ class BERTTokenizerTest(tf.test.TestCase):
         subwords = tokenizer.map_text_to_token(text)
 
         with tempfile.TemporaryDirectory() as tmpdirname:
-            filename = os.path.join(tmpdirname, u"tokenizers.bin")
+            filename = os.path.join(tmpdirname, u"tokenizer.bin")
             with open(filename, "wb") as f:
                 pickle.dump(tokenizer, f)
             with open(filename, "rb") as f:
