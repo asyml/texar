@@ -5,3 +5,6 @@ coverage:
         threshold: 1%
 
     patch: false
+
+ignore:
+  - "tests/"
