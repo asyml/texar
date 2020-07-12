@@ -80,12 +80,13 @@
 }
 
 .marketing-buttons a {
-  width: 120px;
+  width: 45%;
+  max-width: 120px;
   text-align: left;
 }
 .marketing-buttons a img {
-  height: 25px;
-  width: 25px;
+  height: 20px;
+  width: 20px;
   margin-right: 4px;
   vertical-align: bottom;
 }
