@@ -15,7 +15,7 @@
 Various encoders that encode data with hierarchical structure.
 """
 
-import collections
+import collections.abc
 
 import tensorflow as tf
 from tensorflow.contrib.rnn import LSTMStateTuple
@@ -256,7 +256,7 @@ class HierarchicalRNNEncoder(EncoderBase):
         if medium is None:
             states_minor = self.flatten(states_minor)
         else:
-            if not isinstance(medium, collections.Sequence):
+            if not isinstance(medium, collections.abc.Sequence):
                 medium = [medium]
             for fn in medium:
                 if isinstance(fn, str) and fn == 'flatten':
@@ -355,7 +355,7 @@ class HierarchicalRNNEncoder(EncoderBase):
         """
         if isinstance(x, LSTMStateTuple):
             return x.h
-        if isinstance(x, collections.Sequence):
+        if isinstance(x, collections.abc.Sequence):
             return tf.concat(
                 [HierarchicalRNNEncoder.flatten(v) for v in x], -1)
         else:
