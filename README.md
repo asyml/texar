@@ -136,3 +136,10 @@ ACL 2019
 
 ### License
 [Apache License 2.0](./LICENSE)
+
+### Companies and Universities Supporting Texar
+<p float="left">
+   <img src="https://petuum.com/wp-content/themes/petuum/img/logo_white.gif" width="200" align="top">
+   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+   <img src="https://asyml.io/assets/institutions/cmu.png", width="200" align="top">
+</p>
