@@ -16,7 +16,7 @@
 
 Texar was originally developed and is 
 actively contributed by [Petuum](https://petuum.com/) and [CMU](https://www.cmu.edu/) in collaboration with other institutes.
-
+A mirror of this repository is maintained by [Petuum Open Source](https://github.com/petuum).
 
 ### Key Features
 * **Two Versions, (Mostly) Same Interfaces**. Texar-TensorFlow (this repo) and **[Texar-PyTorch](https://github.com/asyml/texar-pytorch)** have mostly the same interfaces. Both further combine the best design of TF and PyTorch:
