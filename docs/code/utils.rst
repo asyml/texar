@@ -15,6 +15,7 @@ Frequent Use
 :hidden:`collect_trainable_variables`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.tf.utils.collect_trainable_variables
+    :noindex:
 
 :hidden:`compat_as_text`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
