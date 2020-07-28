@@ -1,43 +1,36 @@
 sudo: required
 language: python
-dist: xenial  # Required for Python 3.7
+dist: xenial
 cache: pip
-
 python:
-  - "3.6"
-  - "3.7"
-
+- '3.6'
+- '3.7'
 install:
-  - pip install --upgrade pip
-  - pip install --progress-bar off .[tensorflow-cpu]
-  - pip install flake8==3.7.7
-  - pip install pytest
-  - pip install coverage codecov
-
+- pip install --upgrade pip
+- pip install --progress-bar off .[tensorflow-cpu]
+- pip install flake8==3.7.7
+- pip install pytest
+- pip install coverage codecov
 script:
-  # Linting
-  - flake8 texar/ examples/
-  # Unit tests & Test coverage
-  - coverage run -m pytest
-
+- flake8 texar/ examples/
+- coverage run -m pytest
 after_success:
-  - codecov
-
+- codecov
+- "./scripts/travis_after_success.sh"
 jobs:
   include:
-    - stage: docs
-      python: "3.7"
-      install:
-        - pip install --upgrade pip
-        # Install library required for spellcheck
-        - sudo apt-get install libenchant1c2a myspell-en-us
-        - pip install --progress-bar off -r docs/requirements.txt
-      script:
-        - cd docs
-        # Build documents
-        - sphinx-build -W -b html -d _build/doctrees . _build/html
-        # Check for typos
-        - sphinx-build -b spelling -d _build/doctrees . _build/spelling
-
+  - stage: docs
+    python: '3.7'
+    install:
+    - pip install --upgrade pip
+    - sudo apt-get install libenchant1c2a myspell-en-us
+    - pip install --progress-bar off -r docs/requirements.txt
+    script:
+    - cd docs
+    - sphinx-build -W -b html -d _build/doctrees . _build/html
+    - sphinx-build -b spelling -d _build/doctrees . _build/spelling
 notifications:
   email: false
+env:
+  matrix:
+    secure: jQZF9OwVz1Mk80BNUiOvYe7Z/mnsDhBCeIjafYzmRYe6ADNb57HFgvndTVzh6Exk/irH6Xas4pULjjevmC0uk5EhmwmpEKCET58RiNs0vE67+3hRlH0jlXoYSdPWOt+h9spXFUaP9HIg4eFIQUrvERQlkqUi/mFpnckkZGTA9aS/vjuEX4HI8G+usIIWCSuw2gay2hGPNbS8KAsJhwc5a0dm2FoPYQYyy4dfA/274LpGbP+TJMj5chklHYX3AoNt65X7J63mEUwmbQyFM0EaT30QH4H5P2YyNdyUt/sciJpv7jX3xo0IJNP3UhrLaIJnobZ8MgHqlKWNp44nwlT148qPHcvx3TwosOmD7KKyP2K6jYzIVHRCcoyIVooXlVRWbcauG9LsWxqSiyj2g9jRvLgH5Y6sAbsZBh0WokAWiHg/fWceutVNQXg2n1oqVJRNG6nvuYTYBvrrkOmS48unFqFzYkhIPVZBCf4xqj+oPRMxu3plYJeHvw87tY1X6knb3jO3Oou4/vMGmopLHY1zf+ebaYekxAKjHA9VL0M/LBV4o0vucAr2tRfFUQlhc4Bvr7WGNot4H6R3SzdIqGyQoE1u48klG27bMhViLoSQPjUKWsBkXrQo4t3oMipDwRPsL6vOzL6pc/qCSp6mmYHOf4kSW8mbruQvEx5H7M0SknU=
