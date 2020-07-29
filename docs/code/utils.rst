@@ -20,18 +20,22 @@ Frequent Use
 :hidden:`compat_as_text`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.tf.utils.compat_as_text
+    :noindex:
 
 :hidden:`map_ids_to_strs`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.tf.utils.map_ids_to_strs
+    :noindex:
 
 :hidden:`write_paired_text`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.tf.utils.write_paired_text
+    :noindex:
 
 :hidden:`straight_through`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: texar.tf.utils.straight_through
+    :noindex:
 
 
 Variables
