@@ -10,6 +10,7 @@ Frequent Use
 :hidden:`AverageRecorder`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: texar.tf.utils.AverageRecorder
+    :noindex:
     :members:
 
 :hidden:`collect_trainable_variables`
