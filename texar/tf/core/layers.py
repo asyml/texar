@@ -17,7 +17,7 @@ Various neural network layers
 
 import copy
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import tensorflow.contrib.rnn as rnn
 
 from texar.tf.hyperparams import HParams
