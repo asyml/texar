@@ -38,7 +38,7 @@ class ActorCriticAgent(EpisodicAgentBase):
         that wraps a `policy net` and provides proper interfaces to perform \
         the role of an actor.
         - **Critic** that provides learning signals to the actor. Again, as \
-        a temporary implemetation, here by default we use a \
+        a temporary implementation, here by default we use a \
         :class:`~texar.tf.agents.DQNAgent` instance that wraps a `Q net` and \
         provides proper interfaces to perform the role of a critic.
 
