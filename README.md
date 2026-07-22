@@ -146,3 +146,7 @@ ACL 2019
    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
    <img src="https://asyml.io/assets/institutions/cmu.png", width="200" align="top">
 </p>
+
+---
+
+*[Mukller](https://github.com/Mukller)*
