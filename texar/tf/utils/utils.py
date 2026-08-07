@@ -25,6 +25,7 @@ import funcsigs
 from pydoc import locate
 import copy
 import collections
+import collections.abc
 import numpy as np
 
 import tensorflow as tf
@@ -577,7 +578,7 @@ def flatten_dict(dict_, parent_key="", sep="."):
     items = []
     for key, value in dict_.items():
         key_ = parent_key + sep + key if parent_key else key
-        if isinstance(value, collections.MutableMapping):
+        if isinstance(value, collections.abc.MutableMapping):
             items.extend(flatten_dict(value, key_, sep=sep).items())
         elif isinstance(value, tuple) and hasattr(value, "_asdict"):
             dict_items = collections.OrderedDict(zip(value._fields, value))
