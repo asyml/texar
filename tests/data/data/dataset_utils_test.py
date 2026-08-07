@@ -34,7 +34,7 @@ class TransformationTest(tf.test.TestCase):
 
         chained_tran = dsutils.make_chained_transformation(
             [_tran_a, _tran_b, _tran_c])
-        dataset = dataset.map(chained_tran)
+        dataset = dataset.map(chained_tran,num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
         iterator = dataset.make_one_shot_iterator()
         elem = iterator.get_next()
